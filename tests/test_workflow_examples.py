@@ -2,7 +2,7 @@
 
 The workflows (cases/expansion-focus, cases/polarization-control, cases/mirror-alignment) are catalog-free (native
 ideal models) and run here with reduced studies. The catalog beam-expander case is skipped when no catalog release
-is installed.
+is installed; without the engine the whole module is skipped.
 Run from the repository root: python -m unittest discover -s tests -v
 """
 
@@ -16,7 +16,11 @@ import subprocess
 import sys
 import unittest
 
-from tests.workflow_fixtures import ROOT, TempDir, catalog_available, invoke, quiet_environment
+from tests.workflow_fixtures import (ENGINE_MISSING, HAS_ENGINE, ROOT, TempDir, catalog_available, invoke,
+                                     quiet_environment)
+
+if not HAS_ENGINE:  # the workflows and the design builders (os_optics_kit.optical_designs) run the engine
+    raise unittest.SkipTest(ENGINE_MISSING)
 
 quiet_environment()
 
