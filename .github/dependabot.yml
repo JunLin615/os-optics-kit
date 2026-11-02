@@ -1,0 +1,24 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci
+
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      python:
+        patterns: ["*"]
+    # The supported os-optics range moves with baseline.json, in a reviewed pull request.
+    ignore:
+      - dependency-name: os-optics
+    commit-message:
+      prefix: build
