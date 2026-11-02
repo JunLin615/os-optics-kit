@@ -32,6 +32,28 @@
       "sha256": "466a70aea357e41eb7032259edbe77bcdb95fc4834ccbe50f58f96182b1b9925"
     },
     {
+      "name": "contrib-case",
+      "kind": "contribution",
+      "description": "Turn a finished os-optics design into a PR-ready os-optics-kit case: engine-verified project.json, CASE.md, README with rendered images, expected outcome and a git patch. Use when the user wants to share a design as a case.",
+      "version": "0.1.0",
+      "command": "os-optics-kit contrib case",
+      "requires": "os-optics>=0.12,<0.13",
+      "path": "skills/contrib-case/SKILL.md",
+      "tokens": 745,
+      "sha256": "528aad311ee17dfddbe032567b4943363ef8b20a8693e39a7801dba80c0a7281"
+    },
+    {
+      "name": "contrib-tool",
+      "kind": "contribution",
+      "description": "Package a helper script as an os-optics-kit command with its skill page and tests, verified and exported as a PR-ready git patch. Use when a helper is useful beyond one design or case.",
+      "version": "0.1.0",
+      "command": "os-optics-kit contrib tool",
+      "requires": "none",
+      "path": "skills/contrib-tool/SKILL.md",
+      "tokens": 744,
+      "sha256": "6d27664b98efc42dd537a2e44b46678517c17d952619f10a6d8b64eb0f18a373"
+    },
+    {
       "name": "edit",
       "kind": "tool",
       "description": "List a Project's objects with editable values, units and frames, then apply edit operations by object ID with explicit units, checked by the engine and written atomically to a new file (optionally run). Use it to change a design reproducibly.",
@@ -74,6 +96,17 @@
       "path": "skills/report/SKILL.md",
       "tokens": 505,
       "sha256": "8d1314a364ffb3f73e18fdc8028e29f12bd0176b4b00b8e46cdb713c5e85049b"
+    },
+    {
+      "name": "run-case",
+      "kind": "guide",
+      "description": "Find an engine-reproducible OS Optics case, copy it, run it, check it against its recorded outcome and adapt it. Use when a worked design close to the user's question exists or a known-good starting Project is needed.",
+      "version": "1.0.0",
+      "command": "os-optics-kit cases",
+      "requires": "os-optics>=0.12,<0.13",
+      "path": "skills/run-case/SKILL.md",
+      "tokens": 673,
+      "sha256": "3924e1480eb309fc841f192cf5274fa5c1d4424f5e6e580828bbc32ea0a2ced3"
     },
     {
       "name": "sensitivity",
