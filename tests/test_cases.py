@@ -206,12 +206,15 @@ class CopyTests(unittest.TestCase):
             done = subprocess.run([sys.executable, "-c", script, tmp], capture_output=True, cwd=ROOT)
         self.assertEqual(done.returncode, 0, done.stderr.decode("utf-8", "replace"))
         self.assertIn(b"CODES [0, 0, 0, 0] False", done.stdout)
-        with patch.object(C, "find_spec", return_value=None), patch.object(C.shutil, "which", return_value=None):
+        with patch.object(C._kit_engine, "engine_version", return_value=None):
             code, _out, err = call(["verify", CATALOG_FREE])
-        self.assertEqual((code, json.loads(err)["error"]["code"]), (4, "ENGINE_MISSING"))
+        self.assertEqual((code, json.loads(err)["error"]["code"]), (4, "ENGINE_NOT_INSTALLED"))
+        self.assertIn('os-optics>=0.12,<0.13', json.loads(err)["error"]["message"])
+        with patch.object(C._kit_engine, "engine_version", return_value="0.11.0"):
+            code, _out, err = call(["verify", CATALOG_FREE])
+        self.assertEqual((code, json.loads(err)["error"]["code"]), (4, "ENGINE_UNSUPPORTED"))
 
 
-@unittest.skipUnless(HAS_ENGINE, "verify runs the engine: os_optics is not importable")
 class RootTests(unittest.TestCase):
     def test_root_selects_a_checkout(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -227,6 +230,7 @@ class RootTests(unittest.TestCase):
                 # the copied index still lists every case: the checkout's own index is stale
                 self.assertEqual(code, 1)
                 self.assertIn("INDEX_STALE", {problem["code"] for problem in document["problems"]})
+                self.assertNotIn("OS_OPTICS_KIT_ROOT", __import__("os").environ)
 
     def test_root_without_cases_is_refused(self):
         with tempfile.TemporaryDirectory() as tmp, patch.dict("os.environ", {}, clear=False):
@@ -235,6 +239,7 @@ class RootTests(unittest.TestCase):
         self.assertIn("BAD_ARGUMENT", err)
 
 
+@unittest.skipUnless(HAS_ENGINE, "verify runs the engine: os_optics is not importable")
 class VerifyTests(unittest.TestCase):
     def test_catalog_free_case_matches_expected(self):
         with tempfile.TemporaryDirectory() as tmp:

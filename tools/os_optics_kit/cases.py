@@ -36,6 +36,7 @@ import subprocess
 import sys
 import tempfile
 
+from . import _engine as _kit_engine
 from . import _frontmatter as fm
 from ._resources import ROOT_ENV, data_root
 
@@ -376,13 +377,15 @@ def check_all(root=None):
 # ----------------------------------------------------------------------------------------------- verify
 
 def engine_command():
-    """argv prefix of the installed engine CLI: this interpreter's ``os_optics`` if importable, else PATH."""
-    if find_spec("os_optics") is not None:
-        return [sys.executable, "-m", "os_optics"]
-    found = shutil.which("os-optics")
-    if found:
-        return [found]
-    raise CaseError("ENGINE_MISSING", "verify runs the engine: install os-optics (pip install os-optics)")
+    """argv prefix of the engine CLI installed with this kit (same interpreter); refuses an engine outside the
+    kit's supported range (ENGINE_NOT_INSTALLED / ENGINE_UNSUPPORTED, with the install command)."""
+    try:
+        _kit_engine.require_engine()
+    except _kit_engine.DependencyError as exc:
+        raise CaseError(exc.code, str(exc)) from None
+    if find_spec("os_optics") is None:
+        raise CaseError("ENGINE_NOT_INSTALLED", f"this command needs os-optics: {_kit_engine.install_hint()}")
+    return [sys.executable, "-m", "os_optics"]
 
 
 def _engine(argv, env, *, json_out=True):
@@ -617,6 +620,7 @@ def run(argv):
 
 
 def main(argv=None):
+    previous_root = os.environ.get(ROOT_ENV)
     try:
         return run(list(sys.argv[1:] if argv is None else argv))
     except CaseError as exc:
@@ -625,6 +629,11 @@ def main(argv=None):
         return EXIT_USAGE
     except SystemExit as exc:  # --help
         return int(exc.code or 0)
+    finally:  # --root applies to this call only
+        if previous_root is None:
+            os.environ.pop(ROOT_ENV, None)
+        else:
+            os.environ[ROOT_ENV] = previous_root
 
 
 if __name__ == "__main__":
