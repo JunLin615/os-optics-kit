@@ -41,6 +41,7 @@ import copy
 import math
 from typing import Any, Mapping, Sequence
 
+import numpy as np
 from os_optics.composition import axis_angle_quaternion
 from os_optics.math import quat_multiply
 from os_optics.native_library import add_to_project, build_native_model
@@ -84,12 +85,14 @@ def _num(value: float) -> str:
 def turned(quaternion_wxyz: Sequence[float], axis_local: Sequence[float], angle_deg: float) -> list[float]:
     """``quaternion_wxyz`` turned by ``angle_deg`` about ``axis_local`` given in the element's own frame (right
     multiplication: the rotation axis passes through the element origin)."""
-    return [float(v) for v in quat_multiply(tuple(quaternion_wxyz), axis_angle_quaternion(tuple(axis_local), angle_deg))]
+    return [float(v) for v in quat_multiply(np.asarray(quaternion_wxyz, dtype=float),
+                                            np.asarray(axis_angle_quaternion(tuple(axis_local), angle_deg)))]
 
 
 def _rotated_in_design(quaternion_wxyz: Sequence[float], axis_design: Sequence[float], angle_deg: float) -> list[float]:
     """``quaternion_wxyz`` turned by ``angle_deg`` about ``axis_design`` given in the design frame (left multiplication)."""
-    return [float(v) for v in quat_multiply(axis_angle_quaternion(tuple(axis_design), angle_deg), tuple(quaternion_wxyz))]
+    return [float(v) for v in quat_multiply(np.asarray(axis_angle_quaternion(tuple(axis_design), angle_deg)),
+                                            np.asarray(quaternion_wxyz, dtype=float))]
 
 
 def gaussian_source(*, wavelength_nm: float, waist_radius_mm: float, power_w: float = 1e-3,
@@ -507,10 +510,11 @@ def alignment_errors(run: Any, *, near: str = "near", far: str = "far") -> dict[
         row = hits[name]
         out[f"{label}_u_mm"] = row["u_mm"] if row else None
         out[f"{label}_v_mm"] = row["v_mm"] if row else None
-    if hits[near] and hits[far]:
+    far_hit = hits[far]
+    if hits[near] and far_hit:
         out.update(two_plane_pointing(out["near_u_mm"], out["near_v_mm"], out["far_u_mm"], out["far_v_mm"], separation))
-        out["far_direction_pointing_u_mrad"] = 1e3 * math.asin(hits[far]["direction_u"])
-        out["far_direction_pointing_v_mrad"] = 1e3 * math.asin(hits[far]["direction_v"])
+        out["far_direction_pointing_u_mrad"] = 1e3 * math.asin(far_hit["direction_u"])
+        out["far_direction_pointing_v_mrad"] = 1e3 * math.asin(far_hit["direction_v"])
     else:
         out.update({"pointing_u_mrad": None, "pointing_v_mrad": None, "far_direction_pointing_u_mrad": None,
                     "far_direction_pointing_v_mrad": None})
