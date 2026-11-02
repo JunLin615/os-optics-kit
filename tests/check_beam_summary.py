@@ -1,7 +1,8 @@
-"""Catalog integration check and same-run output comparison.
+"""Catalog integration check and same-run output comparison for `os-optics-kit summary`.
 
-Run from the repository root: python -m tests.check_beam_summary
-Requires the published package and an available (or cached) optical catalog.
+Run from the repository root: python -m tests.check_beam_summary [--out DIR] [--project PROJECT.json]
+Requires os-optics, os-optics-kit and an active optical catalog. Without --project it runs the engine's catalog beam
+expander example (the design of cases/beam-expander).
 """
 
 import argparse
@@ -13,11 +14,22 @@ import sys
 from unittest.mock import patch
 
 from os_optics.catalog import CatalogError
-from os_optics.local import LocalRunError
+from os_optics.local import LocalRunError, example_project_of_kind, load_project, run_optical_project
 from os_optics.results import load_run
 
-from examples.beam_expander import run_example
-from examples.result_summary import summarize_run
+from os_optics_kit.result_summary import summarize_run
+
+
+def run_example(output_dir, project=None):
+    """Run once, keep the complete native artifacts, summarize them and export the arrivals."""
+    output_dir = Path(output_dir)
+    document = load_project(project) if project else example_project_of_kind("beam_expander")
+    run_optical_project(document, output_dir=output_dir)
+    summary = summarize_run(output_dir)
+    csv_path = output_dir.parent / f"{output_dir.name}-arrivals.csv"
+    csv_path.write_bytes(load_run(output_dir).export("arrivals", "csv"))
+    summary["exports"] = {"arrivals_csv": str(csv_path)}
+    return summary
 
 
 def snapshot(directory):
@@ -28,8 +40,10 @@ def snapshot(directory):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, default=Path("run-summary-check"))
-    directory = parser.parse_args(argv).out
-    summary = run_example(directory)
+    parser.add_argument("--project", type=Path, help="Project to run instead of the engine's beam expander example")
+    args = parser.parse_args(argv)
+    directory = args.out
+    summary = run_example(directory, args.project)
     results = load_run(directory)
     # Reproduce the original example's JSON layout using this exact saved result.
     legacy = {

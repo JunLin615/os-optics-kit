@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: os-optics engine, catalog and results
+    url: https://github.com/JunLin615/os-optics/issues
+    about: Problems or requests for the os-optics engine, its commands, the optical catalog or simulation results.
+  - name: OS Optics documentation
+    url: https://github.com/JunLin615/os-optics#readme
+    about: Install os-optics, get started, and find the product, kit and catalog in one place.
+  - name: Security vulnerability
+    url: https://github.com/JunLin615/os-optics-kit/blob/main/SECURITY.md
+    about: Report vulnerabilities privately as described in SECURITY.md, not in a public issue.

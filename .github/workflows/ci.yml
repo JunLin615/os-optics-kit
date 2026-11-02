@@ -1,0 +1,259 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  merge_group:
+
+# Pull-request code never receives a write token or secrets.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  setup:
+    name: Read baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      python: ${{ steps.baseline.outputs.python }}
+      newest: ${{ steps.baseline.outputs.newest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: baseline.json
+          sparse-checkout-cone-mode: false
+      - name: Python versions from baseline.json
+        id: baseline
+        run: |
+          python3 - <<'PY'
+          import json, os
+          with open("baseline.json", encoding="utf-8") as source:
+              versions = json.load(source)["python"]
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write("python=" + json.dumps(versions) + "\n")
+              output.write("newest=" + versions[-1] + "\n")
+          PY
+
+  ruff:
+    name: Lint (ruff)
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ needs.setup.outputs.newest }}
+      - name: Install the development tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --group dev
+      - run: ruff check --output-format=github .
+
+  mypy:
+    name: Types (mypy)
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ needs.setup.outputs.newest }}
+      - name: Install the development tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --group dev
+      - run: mypy
+
+  tests:
+    name: Unit tests (Python ${{ matrix.python }}, no engine)
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ${{ fromJSON(needs.setup.outputs.python) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install the kit without the engine
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --group dev
+          python -m pip install --no-deps -e .
+          if python -c "import os_optics" 2>/dev/null; then
+            echo "::error::os-optics is installed; this job checks the kit without the engine"
+            exit 1
+          fi
+      - name: Tests (engine-dependent tests skip themselves)
+        run: python -m pytest
+
+  repository:
+    name: Repository, skills and cases
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ needs.setup.outputs.newest }}
+      - name: Links, file sizes, paths, secrets, JSON, baseline, pins and language pairs
+        run: python scripts/check_repo.py
+      - name: Install the kit without the engine
+        if: ${{ !cancelled() }}
+        run: python -m pip install --no-deps -e .
+      - name: skills.json is current
+        if: ${{ !cancelled() }}
+        run: python -m os_optics_kit skills index --check
+      - name: cases.json is current
+        if: ${{ !cancelled() }}
+        run: python -m os_optics_kit cases index --check
+
+  package:
+    name: Build and install the package
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ needs.setup.outputs.newest }}
+      - name: Build the wheel and source archive
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --group dev
+          python -m build
+      - name: Check metadata and contents
+        run: |
+          python -m twine check --strict dist/*
+          python scripts/check_dist.py dist
+      - name: Clean install without dependencies, then smoke-test
+        run: |
+          python -m venv "$RUNNER_TEMP/smoke"
+          "$RUNNER_TEMP/smoke/bin/python" -m pip install --no-deps dist/*.whl
+          cd "$RUNNER_TEMP"
+          kit="$RUNNER_TEMP/smoke/bin/os-optics-kit"
+          "$kit" --help
+          "$kit" --version
+          "$kit" skills list
+          "$kit" cases list
+          "$kit" skills install --dest "$RUNNER_TEMP/skills-out"
+          test -f "$RUNNER_TEMP/skills-out/skills.json"
+          if "$RUNNER_TEMP/smoke/bin/python" -c "import os_optics" 2>/dev/null; then
+            echo "::error::os-optics was installed by a --no-deps install"
+            exit 1
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  dco:
+    name: DCO sign-off
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Every commit is signed off by its author
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: python3 scripts/check_dco.py "$BASE" "$HEAD"
+
+  engine:
+    name: Engine checks (published os-optics)
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ needs.setup.outputs.newest }}
+      - name: Is the verified engine on PyPI?
+        id: gate
+        run: python scripts/engine_release.py
+      - name: Cases changed by the pull request
+        id: cases
+        if: steps.gate.outputs.run == 'true' && github.event_name == 'pull_request'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: python scripts/changed_cases.py "$BASE" "$HEAD"
+      - name: Tests, tools and cases against the published engine and the pinned catalog
+        if: steps.gate.outputs.run == 'true'
+        env:
+          # A pull request verifies the cases it changes (next step); main and the merge queue verify all of them.
+          SKIP: ${{ github.event_name == 'pull_request' && steps.cases.outputs.all != 'true' && 'cases-verify' || '' }}
+        run: |
+          args=(--out run-alignment)
+          if [[ -n "$SKIP" ]]; then
+            args+=(--skip "$SKIP")
+          fi
+          python scripts/check_alignment.py "${args[@]}"
+      - name: Verify the changed cases
+        if: >-
+          ${{ !cancelled() && steps.gate.outputs.run == 'true' && github.event_name == 'pull_request'
+          && steps.cases.outputs.all != 'true' && steps.cases.outputs.cases != '' }}
+        env:
+          CASES: ${{ steps.cases.outputs.cases }}
+          OPENSCI_CATALOG_DIR: ${{ github.workspace }}/run-alignment/.catalog
+          OPENSCI_CATALOG_CHECK_INTERVAL: "0"
+        run: |
+          status=0
+          for name in $CASES; do
+            run-alignment/.venv/bin/python -m os_optics_kit cases verify "$name" --out "run-alignment/cases/$name" \
+              || status=1
+          done
+          exit "$status"
+      - name: Preserve reports, logs and runs
+        id: artifact
+        if: ${{ !cancelled() && steps.gate.outputs.run == 'true' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: engine-checks
+          path: |
+            run-alignment/
+            !run-alignment/.venv*/**
+            !run-alignment/.catalog/**
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Write job summary
+        if: ${{ !cancelled() && steps.gate.outputs.run == 'true' }}
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ARTIFACT_URL: ${{ steps.artifact.outputs.artifact-url }}
+        run: |
+          python scripts/report_alignment.py run-alignment/report.json \
+            --summary "$GITHUB_STEP_SUMMARY" --run-url "$RUN_URL" --artifact-url "$ARTIFACT_URL"

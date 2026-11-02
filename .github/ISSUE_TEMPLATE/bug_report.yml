@@ -1,0 +1,52 @@
+name: Bug report
+description: A tool, case, skill or contribution command of os-optics-kit does not behave as documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Write in the language you prefer. Problems in the engine itself (`os-optics` commands, simulation results,
+        the catalog) belong in the [os-optics issue tracker](https://github.com/JunLin615/os-optics/issues).
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: The task, the result you got and the result you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The exact commands, the case name or a small Project file, with input values and units.
+    validations:
+      required: true
+  - type: input
+    id: kit_version
+    attributes:
+      label: os-optics-kit version
+      description: Output of `os-optics-kit --version`.
+    validations:
+      required: true
+  - type: input
+    id: engine_version
+    attributes:
+      label: os-optics version and catalog release
+      description: >-
+        Output of `os-optics --version`, and the active release from `os-optics catalog status` if the task uses
+        catalog products.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Operating system and Python version.
+  - type: textarea
+    id: output
+    attributes:
+      label: Output
+      description: >-
+        The JSON the command printed, its exit code, and any traceback. Remove anything you do not want to make
+        public.
+      render: text
