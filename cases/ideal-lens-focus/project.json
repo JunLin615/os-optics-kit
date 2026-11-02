@@ -1,0 +1,133 @@
+{
+  "components": [
+    {
+      "custom_part": {
+        "custom_part_key": "user-laser",
+        "description": "Gaussian laser source"
+      },
+      "instance_id": "SRC",
+      "nominal_pose": {
+        "position_mm": [
+          0.0,
+          0.0,
+          20.0
+        ],
+        "quaternion_wxyz": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ]
+      },
+      "optical_role": "source",
+      "retained_dofs": [],
+      "selected_parameters": [],
+      "source_model": {
+        "m2": 1.0,
+        "model_kind": "GAUSSIAN_BEAM",
+        "polarization": {
+          "angle_deg": 0.0,
+          "kind": "LINEAR"
+        },
+        "power_w": 0.001,
+        "waist_position_mm": 0.0,
+        "waist_radius_mm": 1.0,
+        "wavelength_nm": 532.0
+      }
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "ideal-f100",
+        "description": "Ideal thin lens f = 100 mm (native component lens.ideal_thin)"
+      },
+      "instance_id": "LENS",
+      "nominal_pose": {
+        "position_mm": [
+          10.0,
+          0.0,
+          20.0
+        ],
+        "quaternion_wxyz": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ]
+      },
+      "optical_model_id": "ideal-f100",
+      "optical_role": "lens",
+      "retained_dofs": [],
+      "selected_parameters": []
+    }
+  ],
+  "materials": [],
+  "observations": [
+    {
+      "absorbing": false,
+      "aperture": {
+        "center_offset_mm": [
+          0.0,
+          0.0
+        ],
+        "obstruction_radius_mm": 0.0,
+        "radius_mm": 5.0,
+        "shape": "circle"
+      },
+      "medium": "air",
+      "observation_id": "focus",
+      "pose": {
+        "position_mm": [
+          110.0,
+          0.0,
+          20.0
+        ],
+        "quaternion_wxyz": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ]
+      }
+    }
+  ],
+  "optical_models": [
+    {
+      "design_geometry": {
+        "diameter_mm": "25.4",
+        "kind": "CYLINDER",
+        "status": "NOMINAL",
+        "z_max_mm": "1",
+        "z_min_mm": "0"
+      },
+      "display_name": "Ideal thin lens f = 100 mm",
+      "model": {
+        "clear_radius_mm": "12.7",
+        "edge_radius_mm": "12.7",
+        "focal_length_mm": "100",
+        "model_kind": "IDEAL_THIN_LENS",
+        "model_version": "1",
+        "plane_z_mm": "0",
+        "status": "DESIGN_BASIS",
+        "transmittance": "1",
+        "valid_band_nm": {
+          "max_nm": "20000",
+          "min_nm": "200",
+          "status": "DESIGN_BASIS"
+        }
+      },
+      "model_id": "ideal-f100"
+    }
+  ],
+  "project_schema_version": "2.0",
+  "schema": "opensci.project",
+  "targets": [
+    {
+      "maximum": 0.05,
+      "metric": "beam_radius_mm",
+      "observation_id": "focus",
+      "parameters": [],
+      "target_id": "spot_radius",
+      "unit": "mm"
+    }
+  ]
+}

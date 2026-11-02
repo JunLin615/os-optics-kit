@@ -1,0 +1,234 @@
+{
+  "components": [
+    {
+      "custom_part": {
+        "custom_part_key": "user-laser",
+        "description": "532 nm laser, 1 mW"
+      },
+      "instance_id": "SRC",
+      "nominal_pose": {
+        "position_mm": [
+          -100.0,
+          0.0,
+          50.0
+        ],
+        "quaternion_wxyz": [
+          0.0,
+          0.7071067811865475,
+          0.0,
+          0.7071067811865476
+        ]
+      },
+      "optical_role": "source",
+      "retained_dofs": [],
+      "selected_parameters": [],
+      "source_model": {
+        "m2": 1.0,
+        "model_kind": "GAUSSIAN_BEAM",
+        "polarization": {
+          "angle_deg": 0.0,
+          "kind": "LINEAR"
+        },
+        "power_w": 0.001,
+        "waist_position_mm": 0.0,
+        "waist_radius_mm": 0.5,
+        "wavelength_nm": 532.0
+      }
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "bs-50-50",
+        "description": "Plate beamsplitter R = 0.5 (native component splitter.plate)"
+      },
+      "instance_id": "BS",
+      "nominal_pose": {
+        "position_mm": [
+          0.0,
+          0.0,
+          50.0
+        ],
+        "quaternion_wxyz": [
+          0.6532814824381884,
+          -0.27059805007309856,
+          -0.6532814824381883,
+          -0.27059805007309856
+        ]
+      },
+      "optical_model_id": "bs-50-50",
+      "optical_role": "splitter",
+      "retained_dofs": [],
+      "selected_parameters": []
+    }
+  ],
+  "design_intent": "OPTICAL_SYSTEM",
+  "materials": [],
+  "model_coatings": [
+    {
+      "aoi_reference": "AIR_EQUIVALENT",
+      "bands": [
+        {
+          "max_nm": "700",
+          "min_nm": "400",
+          "reflectance": "0.5",
+          "status": "DESIGN_BASIS",
+          "transmittance": "0.5"
+        }
+      ],
+      "basis": "Declared beamsplitter coating",
+      "coating_id": "NATIVE-BS_400-700R0.5T0.5_AOI0-90",
+      "display_name": "Declared beamsplitter R=0.5",
+      "kind": "BEAMSPLITTER",
+      "valid_aoi_deg": {
+        "max_deg": "90",
+        "min_deg": "0",
+        "status": "DESIGN_BASIS"
+      }
+    }
+  ],
+  "observations": [
+    {
+      "absorbing": true,
+      "aperture": {
+        "center_offset_mm": [
+          0.0,
+          0.0
+        ],
+        "obstruction_radius_mm": 0.0,
+        "radius_mm": 2.5,
+        "shape": "circle"
+      },
+      "medium": "air",
+      "observation_id": "signal",
+      "pose": {
+        "position_mm": [
+          100.0,
+          0.0,
+          50.0
+        ],
+        "quaternion_wxyz": [
+          0.0,
+          0.7071067811865475,
+          0.0,
+          0.7071067811865476
+        ]
+      }
+    },
+    {
+      "absorbing": true,
+      "aperture": {
+        "center_offset_mm": [
+          0.0,
+          0.0
+        ],
+        "obstruction_radius_mm": 0.0,
+        "radius_mm": 2.5,
+        "shape": "circle"
+      },
+      "medium": "air",
+      "observation_id": "reference",
+      "pose": {
+        "position_mm": [
+          0.0,
+          100.0,
+          50.0
+        ],
+        "quaternion_wxyz": [
+          -0.5,
+          0.5,
+          0.5,
+          0.5
+        ]
+      }
+    }
+  ],
+  "optical_models": [
+    {
+      "design_geometry": {
+        "diameter_mm": "25.4",
+        "kind": "CYLINDER",
+        "status": "NOMINAL",
+        "z_max_mm": "0",
+        "z_min_mm": "-1"
+      },
+      "display_name": "Plate beamsplitter R = 0.5",
+      "frame": {
+        "nominal_propagation": "SPLIT_ABOUT_+Z",
+        "optical_axis": "+Z",
+        "origin": "REFLECTING_FACE_CENTER",
+        "reference_axis": "FACE_NORMAL",
+        "symmetry": "ROTATIONAL_ABOUT_LOCAL_Z"
+      },
+      "model": {
+        "approximations": [
+          "COATING_AT_SPECIFIED_BOUND",
+          "COATING_PHASE_NOT_MODELLED",
+          "EDGE_AS_OPAQUE_RIM",
+          "IDEAL_SURFACE_FIGURE",
+          "LOSSLESS_COATING",
+          "POLARIZATION_INDEPENDENT_COATING",
+          "SUBSTRATE_NOT_MODELLED"
+        ],
+        "edge_radius_mm": "12.7",
+        "fidelity": "SPECIFICATION_ENVELOPE",
+        "media": [],
+        "model_kind": "SURFACE_SEQUENCE",
+        "model_version": "2",
+        "status": "DESIGN_BASIS",
+        "surfaces": [
+          {
+            "clear_radius_mm": "11.43",
+            "coating_id": "NATIVE-BS_400-700R0.5T0.5_AOI0-90",
+            "status": "DESIGN_BASIS",
+            "surface_id": "S1",
+            "traced": "TRANSMITTED_AND_REFLECTED",
+            "vertex_z_mm": "0"
+          }
+        ],
+        "valid_band_nm": {
+          "max_nm": "700",
+          "min_nm": "400",
+          "status": "DESIGN_BASIS"
+        }
+      },
+      "model_id": "bs-50-50"
+    }
+  ],
+  "project_schema_version": "2.0",
+  "schema": "opensci.project",
+  "targets": [
+    {
+      "metric": "power_W",
+      "observation_id": "signal",
+      "parameters": [],
+      "target_id": "signal_power",
+      "target_value": 0.0005,
+      "tolerance_rel": 0.01,
+      "unit": "W"
+    },
+    {
+      "metric": "power_W",
+      "observation_id": "reference",
+      "parameters": [],
+      "target_id": "reference_power",
+      "target_value": 0.0005,
+      "tolerance_rel": 0.01,
+      "unit": "W"
+    },
+    {
+      "maximum": 1.0,
+      "metric": "beam_radius_mm",
+      "observation_id": "signal",
+      "parameters": [],
+      "target_id": "signal_beam_radius",
+      "unit": "mm"
+    },
+    {
+      "maximum": 1.0,
+      "metric": "beam_radius_mm",
+      "observation_id": "reference",
+      "parameters": [],
+      "target_id": "reference_beam_radius",
+      "unit": "mm"
+    }
+  ]
+}

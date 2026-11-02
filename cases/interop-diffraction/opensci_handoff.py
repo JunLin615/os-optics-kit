@@ -21,7 +21,7 @@ written with what an external diffraction code needs, all taken from the run:
 The Engine's focal irradiance is a paraxial Gaussian quantity, not a diffracted
 field; ``external_focus.py`` computes the diffraction from the handoff file.
 
-Usage: python examples/interop/diffraction/opensci_handoff.py --out run-interop-diffraction [--stop-radius-mm 3 1.2 0.5]
+Usage: python cases/interop-diffraction/opensci_handoff.py --out run-interop-diffraction [--stop-radius-mm 3 1.2 0.5]
 """
 
 from __future__ import annotations
@@ -30,14 +30,9 @@ import math
 from pathlib import Path
 import sys
 
-if __package__:
-    from ..common import ArgumentParser, decimal_text, emit, require_engine, run_identity, write_json
-    from .tem00_field import propagate_state
-else:
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from common import ArgumentParser, decimal_text, emit, require_engine, run_identity, write_json
-    from tem00_field import propagate_state
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # this case's own modules
+from os_optics_kit.interop import ArgumentParser, decimal_text, emit, require_engine, run_identity, write_json
+from tem00_field import propagate_state
 
 PLUS_X = [0.7071067811865476, 0.0, 0.7071067811865476, 0.0]  # local +Z along design +X
 WAVELENGTH_NM, WAIST_MM, POWER_W = 532.0, 1.0, 0.001

@@ -19,7 +19,7 @@ propagation neglects the vector field. Tilted inputs reuse the normal-incidence 
 responses (only the incident phase ramp changes), an approximation that worsens with
 angle. These are stated limits of this reference.
 
-Usage: python examples/interop/metasurface/step2_focusing.py run-interop-metasurface [--samples 1024] [--nG 101]
+Usage: python cases/interop-metasurface/step2_focusing.py run-interop-metasurface [--samples 1024] [--nG 101]
 """
 
 from __future__ import annotations
@@ -32,11 +32,7 @@ import time
 
 import numpy as np
 
-if __package__:
-    from ..common import ArgumentParser, emit, environment, write_json
-else:
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from common import ArgumentParser, emit, environment, write_json
+from os_optics_kit.interop import ArgumentParser, emit, environment, write_json
 
 DESIGN = {"focal_length_um": 200.0, "design_wavelength_nm": 532, "diameter_um": 100.0, "input_waist_radius_um": 30.0,
           "minimum_atom_transmittance": 0.8}

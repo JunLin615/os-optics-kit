@@ -13,7 +13,7 @@ with optical path (with pillar radius); ``t`` is grcwa's zeroth-order amplitude 
 tau = t sqrt(T / |t|^2) (|tau|^2 = T), because |t|^2 alone is not a power fraction
 across media of different index.
 
-Usage: python examples/interop/metasurface/step1_unit_cells.py --out run-interop-metasurface [--nG 101]
+Usage: python cases/interop-metasurface/step1_unit_cells.py --out run-interop-metasurface [--nG 101]
 """
 
 from __future__ import annotations
@@ -31,11 +31,7 @@ for _name in ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS"):
 
 import numpy as np  # noqa: E402
 
-if __package__:
-    from ..common import ArgumentParser, emit, environment, package_versions, write_json
-else:
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from common import ArgumentParser, emit, environment, package_versions, write_json
+from os_optics_kit.interop import ArgumentParser, emit, environment, package_versions, write_json
 
 PERIOD_UM, HEIGHT_UM = 0.325, 0.60
 N_TIO2, N_SIO2 = 2.43, 1.46

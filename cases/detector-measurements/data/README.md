@@ -1,9 +1,8 @@
-# Synthetic measurement fixtures and attribution
+# Synthetic measurement data and attribution
 
-All readings in these two CSVs are invented for checking the helper. They are
-not measurements, calibration certificates, or a claim about actual hardware.
-See the walkthrough in [English](../../../docs/en/measurements.md) or
-[Simplified Chinese](../../../docs/zh-CN/measurements.md).
+The readings in these two CSV files are synthetic: constructed from the formulas
+below with known answers, for the `os-optics-kit measurements` analysis of this
+case ([README](../README.md)).
 
 ## Detector response
 
@@ -57,5 +56,5 @@ a calibrated-power scan, add explicit offsets, deterministic residuals and
 invalid records, and turn the reference case's 7% shared-drift idea into concrete
 CSV values. The Python implementation, equations for these fixtures, and actual
 data values were created for this repository. No benchmark dataset, gold answer,
-or scorer is copied. The bilingual walkthroughs explain the adapted workflows;
+or scorer is copied. The case README explains the adapted workflows;
 generated provenance records these source links and the exact revision.

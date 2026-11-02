@@ -22,7 +22,7 @@ Requires network exports made by os-optics 0.10.0. Perceval is MIT licensed;
 its required dependency exqalibur declares CC BY-NC-ND 4.0 in its package
 metadata. Piquasso is Apache-2.0.
 
-Usage: python examples/interop/quantum/run_quantum.py run-interop-quantum [--inputs quantum_inputs.json]
+Usage: python cases/interop-quantum/run_quantum.py run-interop-quantum [--inputs quantum_inputs.json]
 """
 
 from __future__ import annotations
@@ -37,16 +37,10 @@ import time
 
 import numpy as np
 
-if __package__:
-    from ..common import ArgumentParser, comparison_status, emit, environment, write_json
-    from . import network_io as nio
-    from . import reference as ref
-else:
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from common import ArgumentParser, comparison_status, emit, environment, write_json
-    import network_io as nio
-    import reference as ref
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # this case's own modules
+from os_optics_kit.interop import ArgumentParser, comparison_status, emit, environment, write_json
+import network_io as nio
+import reference as ref
 
 DEFAULT_INPUTS = Path(__file__).resolve().parent / "quantum_inputs.json"
 TOLERANCES = {"perceval_vs_reference": 1e-6, "piquasso_vs_reference": 1e-6, "relative_delay_vs_reference_ps": 1e-4,

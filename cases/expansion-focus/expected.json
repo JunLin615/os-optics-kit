@@ -1,0 +1,12 @@
+{
+  "catalog": null,
+  "engine": "0.12.0",
+  "schema": "os-optics-kit.case-expected",
+  "schema_version": 1,
+  "status": "PASS",
+  "targets": {
+    "expanded_radius": "MET",
+    "spot_radius": "MET",
+    "waist_location": "MET"
+  }
+}

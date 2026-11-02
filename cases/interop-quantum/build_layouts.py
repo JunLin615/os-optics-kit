@@ -21,7 +21,7 @@ the network; the photons, wavepackets and detectors come from ``quantum_inputs.j
 The group indices used to place source B are an experimental choice made here, not
 read from the export.
 
-Usage: python examples/interop/quantum/build_layouts.py --out run-interop-quantum
+Usage: python cases/interop-quantum/build_layouts.py --out run-interop-quantum
 """
 
 from __future__ import annotations
@@ -32,14 +32,9 @@ from pathlib import Path
 import subprocess
 import sys
 
-if __package__:
-    from ..common import ArgumentParser, decimal_text, emit, pose, require_engine, write_json
-    from .reference import N_BK7_SELLMEIER, group_index, sellmeier_index
-else:
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from common import ArgumentParser, decimal_text, emit, pose, require_engine, write_json
-    from reference import N_BK7_SELLMEIER, group_index, sellmeier_index
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # this case's own modules
+from os_optics_kit.interop import ArgumentParser, decimal_text, emit, pose, require_engine, write_json
+from reference import N_BK7_SELLMEIER, group_index, sellmeier_index
 
 INV = 1.0 / math.sqrt(2.0)
 HEIGHT = 20.0

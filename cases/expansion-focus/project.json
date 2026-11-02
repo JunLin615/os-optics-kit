@@ -1,0 +1,278 @@
+{
+  "components": [
+    {
+      "custom_part": {
+        "custom_part_key": "user-laser",
+        "description": "Gaussian laser source"
+      },
+      "instance_id": "SRC",
+      "nominal_pose": {
+        "position_mm": [
+          -100.0,
+          0.0,
+          0.0
+        ],
+        "quaternion_wxyz": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ]
+      },
+      "optical_role": "source",
+      "retained_dofs": [],
+      "selected_parameters": [],
+      "source_model": {
+        "m2": 1.0,
+        "model_kind": "GAUSSIAN_BEAM",
+        "polarization": {
+          "angle_deg": 0.0,
+          "kind": "LINEAR"
+        },
+        "power_w": 0.001,
+        "waist_position_mm": 0.0,
+        "waist_radius_mm": 0.5,
+        "wavelength_nm": 780.0
+      }
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "thin-lens-l1",
+        "description": "Ideal thin lens f = 50 mm (native component lens.ideal_thin)"
+      },
+      "instance_id": "L1",
+      "nominal_pose": {
+        "position_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "quaternion_wxyz": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ]
+      },
+      "optical_model_id": "thin-lens-l1",
+      "optical_role": "lens",
+      "retained_dofs": [],
+      "selected_parameters": []
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "thin-lens-l2",
+        "description": "Ideal thin lens f = 150 mm (native component lens.ideal_thin)"
+      },
+      "instance_id": "L2",
+      "nominal_pose": {
+        "position_mm": [
+          200.0,
+          0.0,
+          0.0
+        ],
+        "quaternion_wxyz": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ]
+      },
+      "optical_model_id": "thin-lens-l2",
+      "optical_role": "lens",
+      "retained_dofs": [],
+      "selected_parameters": []
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "thin-lens-l3",
+        "description": "Ideal thin lens f = 100 mm (native component lens.ideal_thin)"
+      },
+      "instance_id": "L3",
+      "nominal_pose": {
+        "position_mm": [
+          300.0,
+          0.0,
+          0.0
+        ],
+        "quaternion_wxyz": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ]
+      },
+      "optical_model_id": "thin-lens-l3",
+      "optical_role": "lens",
+      "retained_dofs": [],
+      "selected_parameters": []
+    }
+  ],
+  "materials": [],
+  "observations": [
+    {
+      "absorbing": false,
+      "aperture": {
+        "center_offset_mm": [
+          0.0,
+          0.0
+        ],
+        "obstruction_radius_mm": 0.0,
+        "radius_mm": 12.5,
+        "shape": "circle"
+      },
+      "medium": "air",
+      "observation_id": "collimated",
+      "pose": {
+        "position_mm": [
+          250.0,
+          0.0,
+          0.0
+        ],
+        "quaternion_wxyz": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ]
+      }
+    },
+    {
+      "absorbing": false,
+      "aperture": {
+        "center_offset_mm": [
+          0.0,
+          0.0
+        ],
+        "obstruction_radius_mm": 0.0,
+        "radius_mm": 12.5,
+        "shape": "circle"
+      },
+      "medium": "air",
+      "observation_id": "focus",
+      "pose": {
+        "position_mm": [
+          400.0,
+          0.0,
+          0.0
+        ],
+        "quaternion_wxyz": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ]
+      }
+    }
+  ],
+  "optical_models": [
+    {
+      "design_geometry": {
+        "diameter_mm": "25",
+        "kind": "CYLINDER",
+        "status": "NOMINAL",
+        "z_max_mm": "1",
+        "z_min_mm": "0"
+      },
+      "display_name": "Ideal thin lens f = 50 mm",
+      "model": {
+        "clear_radius_mm": "12.5",
+        "edge_radius_mm": "12.5",
+        "focal_length_mm": "50",
+        "model_kind": "IDEAL_THIN_LENS",
+        "model_version": "1",
+        "plane_z_mm": "0",
+        "status": "DESIGN_BASIS",
+        "transmittance": "1",
+        "valid_band_nm": {
+          "max_nm": "1100",
+          "min_nm": "400",
+          "status": "DESIGN_BASIS"
+        }
+      },
+      "model_id": "thin-lens-l1"
+    },
+    {
+      "design_geometry": {
+        "diameter_mm": "25",
+        "kind": "CYLINDER",
+        "status": "NOMINAL",
+        "z_max_mm": "1",
+        "z_min_mm": "0"
+      },
+      "display_name": "Ideal thin lens f = 150 mm",
+      "model": {
+        "clear_radius_mm": "12.5",
+        "edge_radius_mm": "12.5",
+        "focal_length_mm": "150",
+        "model_kind": "IDEAL_THIN_LENS",
+        "model_version": "1",
+        "plane_z_mm": "0",
+        "status": "DESIGN_BASIS",
+        "transmittance": "1",
+        "valid_band_nm": {
+          "max_nm": "1100",
+          "min_nm": "400",
+          "status": "DESIGN_BASIS"
+        }
+      },
+      "model_id": "thin-lens-l2"
+    },
+    {
+      "design_geometry": {
+        "diameter_mm": "25",
+        "kind": "CYLINDER",
+        "status": "NOMINAL",
+        "z_max_mm": "1",
+        "z_min_mm": "0"
+      },
+      "display_name": "Ideal thin lens f = 100 mm",
+      "model": {
+        "clear_radius_mm": "12.5",
+        "edge_radius_mm": "12.5",
+        "focal_length_mm": "100",
+        "model_kind": "IDEAL_THIN_LENS",
+        "model_version": "1",
+        "plane_z_mm": "0",
+        "status": "DESIGN_BASIS",
+        "transmittance": "1",
+        "valid_band_nm": {
+          "max_nm": "1100",
+          "min_nm": "400",
+          "status": "DESIGN_BASIS"
+        }
+      },
+      "model_id": "thin-lens-l3"
+    }
+  ],
+  "project_schema_version": "2.0",
+  "schema": "opensci.project",
+  "targets": [
+    {
+      "metric": "beam_radius_mm",
+      "observation_id": "collimated",
+      "parameters": [],
+      "target_id": "expanded_radius",
+      "target_value": 1.5,
+      "tolerance_rel": 0.02,
+      "unit": "mm"
+    },
+    {
+      "maximum": 0.02,
+      "metric": "beam_radius_mm",
+      "observation_id": "focus",
+      "parameters": [],
+      "target_id": "spot_radius",
+      "unit": "mm"
+    },
+    {
+      "maximum": 0.5,
+      "metric": "waist_distance_x_mm",
+      "minimum": -0.5,
+      "observation_id": "focus",
+      "parameters": [],
+      "target_id": "waist_location",
+      "unit": "mm"
+    }
+  ]
+}

@@ -2,10 +2,10 @@
 polarization direction after the plate, and study one parameter at a time.
 
 Usage:
-  python examples/polarization_control.py --out DIR [design inputs] [--study NAME=VALUES ...]
-  python examples/polarization_control.py --list-parameters
+  python cases/polarization-control/workflow.py --out DIR [design inputs] [--study NAME=VALUES ...]
+  python cases/polarization-control/workflow.py --list-parameters
 
-Design (examples/optical_designs.py ``polarization_control``, no catalog needed): linearly polarized Gaussian source
+Design (os_optics_kit.optical_designs ``polarization_control``, no catalog needed): linearly polarized Gaussian source
 (x = -100 mm) -> waveplate HWP (native retarder, x = 0) -> plane ``after_hwp`` (x = 25) -> linear polarizer POL
 (x = 50) -> plane ``detector`` (x = 100). Beam along design +X. Angles are measured from design +Y toward design +Z
 (right-handed about the beam): the source polarization, the plate fast axis, the polarizer transmission axis and the
@@ -29,7 +29,7 @@ polarizer with finite extinction ratio (optical_designs.jones_polarization_refer
 the saved run on after_hwp (absolute 1e-12); Malus' law P0 T_hwp T_pol [cos^2(2 theta - phi - alpha) +
 sin^2(...)/ER] whenever the effective retardance is exactly half a wave. Model basis: ideal thin Jones elements.
 
-Output: DIR as described in examples/design_workflow.py; every sample's after_hwp Stokes parameters, azimuth and
+Output: DIR as described in os_optics_kit.design_workflow; every sample's after_hwp Stokes parameters, azimuth and
 ellipticity are in studies/<NAME>/closed_form.json ("analysis"). Stdout: one compact JSON document.
 Exit code from the nominal design: 0 PASS (WARNING included), 1 FAIL, 2 UNKNOWN, 3 OUT_OF_MODEL, 4 ERROR (the
 Engine refused the nominal design: the summary holds nominal.error) or refused input (JSON error on stderr,
@@ -39,10 +39,7 @@ output.
 
 from __future__ import annotations
 
-if __package__:
-    from . import design_workflow as dw
-else:
-    import design_workflow as dw
+from os_optics_kit import design_workflow as dw
 
 DEFAULT_STUDIES = [
     "hwp_angle_deg=0,7.5,15,22.5,30,45,60,67.5",
@@ -64,10 +61,7 @@ def _after_hwp(record):
 
 def checks(params, record):
     """Engine values (targets and the saved after_hwp arrival) vs Jones calculus / Malus' law for one sample."""
-    if __package__:
-        from . import optical_designs as D
-    else:
-        import optical_designs as D
+    from os_optics_kit import optical_designs as D
 
     jones = D.jones_polarization_reference(**params)
     values = dw.target_values(record)
@@ -97,10 +91,7 @@ def checks(params, record):
 
 
 def config():
-    if __package__:
-        from . import optical_designs as D
-    else:
-        import optical_designs as D
+    from os_optics_kit import optical_designs as D
 
     return {"workflow": "polarization_control", "design": "polarization_control",
             "info": D.DESIGN_INFO["polarization_control"], "builder": D.polarization_control, "checks": checks,

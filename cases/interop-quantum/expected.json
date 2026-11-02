@@ -1,0 +1,11 @@
+{
+  "catalog": null,
+  "engine": "0.12.0",
+  "schema": "os-optics-kit.case-expected",
+  "schema_version": 1,
+  "status": "PASS",
+  "targets": {
+    "d1_power": "MET",
+    "d2_power": "MET"
+  }
+}

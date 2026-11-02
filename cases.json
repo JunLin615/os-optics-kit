@@ -1,0 +1,348 @@
+{
+  "schema": "os-optics-kit.cases",
+  "schema_version": 1,
+  "kit_version": "0.1.0",
+  "cases": [
+    {
+      "name": "beam-expander",
+      "title": "Catalog beam expander: swap a lens, sweep its spacing, restore collimation",
+      "summary": "A Keplerian beam expander of two catalog plano-convex lenses (f = 50 mm and 100 mm, 780 nm, 1 mm waist) reaches its 1.9961 mm output waist. The studies swap L2 for a 100.3 mm fused-silica lens, sweep L2 along the beam and apply the best shift.",
+      "path": "cases/beam-expander",
+      "engine": "0.12.0",
+      "catalog": "2026-10-28.1",
+      "tools": [
+        "candidates",
+        "edit",
+        "sweep",
+        "compare",
+        "plot",
+        "report"
+      ],
+      "tags": [
+        "catalog",
+        "beam-expander",
+        "lens-swap",
+        "parameter-sweep",
+        "edit-by-id"
+      ],
+      "files": [
+        "CASE.md",
+        "README.md",
+        "README.zh-CN.md",
+        "expected.json",
+        "images/iso.png",
+        "images/section.png",
+        "project.json",
+        "studies/beam_expander_l2_sweep.json",
+        "studies/beam_expander_move_l2.json",
+        "studies/beam_expander_swap_l2.json"
+      ],
+      "project_sha256": "6aac4d2bbf4ca24ddc039b919a78d15d4df4ab84288e6b47cee840f42926744f"
+    },
+    {
+      "name": "detector-measurements",
+      "title": "Detector linearity and reference-channel normalization",
+      "summary": "A 1 mW, 532 nm beam is split 50:50 onto a signal and a reference detector, each with a 2.5 mm radius active area. Two synthetic data sets with known answers calibrate the signal detector's linearity and normalize slow source drift by the reference channel.",
+      "path": "cases/detector-measurements",
+      "engine": "0.12.0",
+      "catalog": null,
+      "tools": [
+        "measurements"
+      ],
+      "tags": [
+        "catalog-free",
+        "measurements",
+        "detector",
+        "calibration",
+        "beam-splitter",
+        "reference-channel"
+      ],
+      "files": [
+        "CASE.md",
+        "README.md",
+        "README.zh-CN.md",
+        "data/README.md",
+        "data/detector_response.csv",
+        "data/reference_drift.csv",
+        "expected.json",
+        "images/top.png",
+        "project.json"
+      ],
+      "project_sha256": "bbd4fade9d56c1c7b9cc0d1458c841aff66672004d27d28f9e31b3fda47cbd6a"
+    },
+    {
+      "name": "expansion-focus",
+      "title": "Beam expansion and focusing workflow",
+      "summary": "A Keplerian expander (ideal thin lenses f = 50 mm and 150 mm) and a 100 mm focusing lens take a 780 nm, 0.5 mm waist beam to a 1.5 mm expanded radius and a focus below 20 um. The workflow studies gap error, focal length, wavelength and waist one at a time against a complex-q reference.",
+      "path": "cases/expansion-focus",
+      "engine": "0.12.0",
+      "catalog": null,
+      "tools": [
+        "sweep",
+        "compare",
+        "plot",
+        "report",
+        "sensitivity",
+        "tolerance"
+      ],
+      "tags": [
+        "catalog-free",
+        "gaussian-beam",
+        "beam-expander",
+        "focusing",
+        "parameter-study",
+        "sensitivity",
+        "tolerance"
+      ],
+      "files": [
+        "CASE.md",
+        "README.md",
+        "README.zh-CN.md",
+        "expected.json",
+        "images/iso.png",
+        "images/section.png",
+        "project.json",
+        "studies/compute_budget_default.json",
+        "studies/compute_budget_limited.json",
+        "studies/sensitivity_expander.json",
+        "studies/sensitivity_expander_band_edge.json",
+        "studies/tolerance_expander.json",
+        "workflow.py"
+      ],
+      "project_sha256": "617fc34c578308c9a4a7555884bf07502cd41ddb0cb3e7a6bee026077d3a59ee"
+    },
+    {
+      "name": "ideal-lens-focus",
+      "title": "Gaussian focus of an ideal thin lens",
+      "summary": "A 532 nm Gaussian beam with a 1 mm waist radius is focused by an ideal thin lens (f = 100 mm); the 1/e^2 radius in the back focal plane must stay below 50 um. Catalog-free: the lens is the engine's native ideal thin lens.",
+      "path": "cases/ideal-lens-focus",
+      "engine": "0.12.0",
+      "catalog": null,
+      "tools": [
+        "summary"
+      ],
+      "tags": [
+        "catalog-free",
+        "gaussian-beam",
+        "focusing",
+        "ideal-lens",
+        "python-api"
+      ],
+      "files": [
+        "CASE.md",
+        "README.md",
+        "README.zh-CN.md",
+        "expected.json",
+        "ideal_lens_focus.py",
+        "images/section.png",
+        "project.json"
+      ],
+      "project_sha256": "401a949796b11b477d4cf4f2821610a1b5613eb359d72e3f214786fbdb39b0fd"
+    },
+    {
+      "name": "interop-diffraction",
+      "title": "Diffraction at a declared stop, handed off to external codes",
+      "summary": "A 532 nm TEM00 beam (1 mm waist, 1 mW) passes a 1.2 mm radius stop and an ideal f = 200 mm lens. The engine's transverse-plane handoff feeds LightPipes, prysm, POPPY and Diffractio, which compute the diffracted focus the paraxial Gaussian result cannot give after truncation.",
+      "path": "cases/interop-diffraction",
+      "engine": "0.12.0",
+      "catalog": null,
+      "tools": [],
+      "tags": [
+        "catalog-free",
+        "interop",
+        "diffraction",
+        "aperture-stop",
+        "gaussian-beam",
+        "lightpipes",
+        "handoff"
+      ],
+      "files": [
+        "CASE.md",
+        "README.md",
+        "README.zh-CN.md",
+        "expected.json",
+        "external_focus.py",
+        "hankel_reference.py",
+        "images/section.png",
+        "images/stop.png",
+        "opensci_handoff.py",
+        "project.json",
+        "requirements-diffractio.txt",
+        "requirements-diffraction.txt",
+        "tem00_field.py"
+      ],
+      "project_sha256": "7d8410e09e085bc50f9047ef18a201d517c9c9bbff7fea0136dfd82817241e3e"
+    },
+    {
+      "name": "interop-metasurface",
+      "title": "Metasurface lens as a tabulated virtual component",
+      "summary": "A TiO2 nanopillar metalens (f = 200 um at 532 nm, 100 um diameter) is characterized with RCWA (grcwa) and angular-spectrum focusing, fitted as a TABULATED_THIN_LENS with stated errors and domain, and checked in the engine on held-out test cases and out-of-domain counterexamples.",
+      "path": "cases/interop-metasurface",
+      "engine": "0.12.0",
+      "catalog": null,
+      "tools": [],
+      "tags": [
+        "catalog-free",
+        "interop",
+        "metasurface",
+        "rcwa",
+        "tabulated-thin-lens",
+        "model-validation"
+      ],
+      "files": [
+        "CASE.md",
+        "README.md",
+        "README.zh-CN.md",
+        "expected.json",
+        "images/section.png",
+        "project.json",
+        "requirements-metasurface.txt",
+        "step1_unit_cells.py",
+        "step2_focusing.py",
+        "step3_fit_model.py",
+        "step4_engine_check.py"
+      ],
+      "project_sha256": "638e01aae3b8127708318a0df185da7b83f6e71c24f23fd2dd9f3a28ac486b05"
+    },
+    {
+      "name": "interop-optimization",
+      "title": "External optimization and Sobol tolerance of a beam expander",
+      "summary": "SciPy and Optuna collimate a catalog-free Keplerian expander (ideal thin lenses f = 50 mm and 150 mm, 532 nm, 0.5 mm waist) by moving L2, with every design run by the engine; SALib Sobol indices then rank the mounting errors. An ABCD reference checks every value.",
+      "path": "cases/interop-optimization",
+      "engine": "0.12.0",
+      "catalog": null,
+      "tools": [],
+      "tags": [
+        "catalog-free",
+        "interop",
+        "optimization",
+        "scipy",
+        "optuna",
+        "salib",
+        "sensitivity"
+      ],
+      "files": [
+        "CASE.md",
+        "README.md",
+        "README.zh-CN.md",
+        "expected.json",
+        "images/section.png",
+        "optimize_expander.py",
+        "project.json",
+        "requirements-optimization.txt"
+      ],
+      "project_sha256": "ffad5b2b86fd25280838899a4e92528d09e379e54f9e3ee02fb84f49614a14d9"
+    },
+    {
+      "name": "interop-quantum",
+      "title": "Hong-Ou-Mandel interference from the linear optical network export",
+      "summary": "Two 780 nm sources meet on a native 50:50 plate splitter. The engine exports the layout as a linear optical network (modes, transfer matrix, path group delays); Perceval and Piquasso compute two-photon statistics from it and match a closed-form reference.",
+      "path": "cases/interop-quantum",
+      "engine": "0.12.0",
+      "catalog": null,
+      "tools": [],
+      "tags": [
+        "catalog-free",
+        "interop",
+        "quantum-optics",
+        "hong-ou-mandel",
+        "linear-optical-network",
+        "perceval",
+        "piquasso"
+      ],
+      "files": [
+        "CASE.md",
+        "README.md",
+        "README.zh-CN.md",
+        "build_layouts.py",
+        "expected.json",
+        "images/top.png",
+        "network_io.py",
+        "project.json",
+        "quantum_inputs.json",
+        "reference.py",
+        "requirements-quantum.txt",
+        "run_quantum.py"
+      ],
+      "project_sha256": "87cc76b4b9428d83c606cd2c5f82a14692f3c86364d4b999731542efa4ed8303"
+    },
+    {
+      "name": "mirror-alignment",
+      "title": "Beam position and pointing after a fold mirror",
+      "summary": "A 633 nm beam folds 90 deg at a flat mirror onto planes 100 mm and 400 mm away; positions must stay within 0.1 mm and pointing within 0.5 mrad. The workflow studies mirror tilt and source offset against exact reflection geometry and the 2-theta law.",
+      "path": "cases/mirror-alignment",
+      "engine": "0.12.0",
+      "catalog": null,
+      "tools": [
+        "measurements",
+        "edit",
+        "sweep",
+        "compare",
+        "plot",
+        "report",
+        "sensitivity",
+        "tolerance"
+      ],
+      "tags": [
+        "catalog-free",
+        "alignment",
+        "mirror",
+        "pointing",
+        "parameter-study",
+        "measurements"
+      ],
+      "files": [
+        "CASE.md",
+        "README.md",
+        "README.zh-CN.md",
+        "expected.json",
+        "images/iso.png",
+        "images/top.png",
+        "project.json",
+        "studies/sensitivity_alignment.json",
+        "studies/tolerance_alignment.json",
+        "workflow.py"
+      ],
+      "project_sha256": "136629b24714052338cf06d5031b7a3481723cc4626cebf84a03c17b0962622a"
+    },
+    {
+      "name": "polarization-control",
+      "title": "Polarization control with a half-wave plate and a polarizer",
+      "summary": "A linearly polarized 1030 nm beam passes a rotatable half-wave plate and a linear polarizer. At 22.5 deg the plate turns the polarization to 45 deg and 0.891 mW of 1 mW reaches the detector. The workflow studies plate angle and wavelength against Jones calculus and Malus' law.",
+      "path": "cases/polarization-control",
+      "engine": "0.12.0",
+      "catalog": null,
+      "tools": [
+        "edit",
+        "sweep",
+        "compare",
+        "plot",
+        "report",
+        "sensitivity",
+        "tolerance"
+      ],
+      "tags": [
+        "catalog-free",
+        "polarization",
+        "waveplate",
+        "polarizer",
+        "jones-calculus",
+        "parameter-study"
+      ],
+      "files": [
+        "CASE.md",
+        "README.md",
+        "README.zh-CN.md",
+        "expected.json",
+        "images/iso.png",
+        "project.json",
+        "studies/polarization_hwp_wavelength_sweep.json",
+        "studies/polarization_threshold.json",
+        "studies/sensitivity_polarization.json",
+        "studies/tolerance_polarization.json",
+        "workflow.py"
+      ],
+      "project_sha256": "11c5eafdddba0c2aa4599b2d4c2ad9d9d5754e2b19a22d0d9f8bc72d44dbf4cd"
+    }
+  ]
+}
