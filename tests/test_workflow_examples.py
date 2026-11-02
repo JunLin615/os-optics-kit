@@ -1,12 +1,13 @@
-"""End-to-end checks of the three parameterized workflows and of the JSON specs in examples/specs.
+"""End-to-end checks of the three parameterized workflow cases and of the JSON specs in cases/*/studies.
 
-The workflows are catalog-free (native ideal models) and run here with reduced studies. The catalog beam-expander
-demonstration is skipped when no catalog release is installed.
+The workflows (cases/expansion-focus, cases/polarization-control, cases/mirror-alignment) are catalog-free (native
+ideal models) and run here with reduced studies. The catalog beam-expander case is skipped when no catalog release
+is installed.
 Run from the repository root: python -m unittest discover -s tests -v
 """
 
 import csv
-from importlib.util import find_spec
+from importlib.util import find_spec, module_from_spec, spec_from_file_location
 import json
 import math
 from pathlib import Path
@@ -19,20 +20,31 @@ from tests.workflow_fixtures import ROOT, TempDir, catalog_available, invoke, qu
 
 quiet_environment()
 
-from examples import alignment_analysis as aa  # noqa: E402
-from examples import beam_expansion_focus as bef  # noqa: E402
-from examples import build_report as br  # noqa: E402
-from examples import catalog_candidates as cc  # noqa: E402
-from examples import compare_runs as cr  # noqa: E402
-from examples import design_workflow as dw  # noqa: E402
-from examples import edit_project as ep  # noqa: E402
-from examples import optical_designs as D  # noqa: E402
-from examples import polarization_control as pc  # noqa: E402
-from examples import sweep_parameters as sp  # noqa: E402
-from examples import workflow_common as wc  # noqa: E402
+from os_optics_kit import build_report as br  # noqa: E402
+from os_optics_kit import catalog_candidates as cc  # noqa: E402
+from os_optics_kit import compare_runs as cr  # noqa: E402
+from os_optics_kit import design_workflow as dw  # noqa: E402
+from os_optics_kit import edit_project as ep  # noqa: E402
+from os_optics_kit import optical_designs as D  # noqa: E402
+from os_optics_kit import sweep_parameters as sp  # noqa: E402
+from os_optics_kit import workflow_common as wc  # noqa: E402
 
+CASES = ROOT / "cases"
+
+
+def case_workflow(case):
+    """The workflow.py of a case, imported under a unique module name."""
+    spec = spec_from_file_location(f"case_{case.replace('-', '_')}_workflow", CASES / case / "workflow.py")
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+aa = case_workflow("mirror-alignment")
+bef = case_workflow("expansion-focus")
+pc = case_workflow("polarization-control")
 HAS_MATPLOTLIB = find_spec("matplotlib") is not None
-SPECS = ROOT / "examples" / "specs"
+SPECS = {path.name: path for path in sorted(CASES.glob("*/studies/*.json"))}
 MAX_STDOUT_BYTES = 6000
 
 
@@ -79,8 +91,9 @@ class StudySyntaxTests(unittest.TestCase):
             self.assertLessEqual(1 + samples + 1, module.config()["max_evaluations"])
 
     def test_help_is_english_on_stdout(self):
-        for script in ("beam_expansion_focus.py", "polarization_control.py", "alignment_analysis.py"):
-            done = subprocess.run([sys.executable, str(ROOT / "examples" / script), "--help"], cwd=ROOT,
+        for case in ("expansion-focus", "polarization-control", "mirror-alignment"):
+            script = f"cases/{case}/workflow.py"
+            done = subprocess.run([sys.executable, str(ROOT / script), "--help"], cwd=ROOT,
                                   capture_output=True, text=True, timeout=120)
             self.assertEqual(done.returncode, 0, done.stderr)
             for text in ("Usage:", "--out", "--study", "Independent check", "Exit code"):
@@ -335,13 +348,14 @@ class AlignmentAnalysisTests(unittest.TestCase):
 
 class SpecFileTests(unittest.TestCase):
     def test_every_spec_is_documented_and_valid(self):
-        names = sorted(p.name for p in SPECS.glob("*.json"))
+        self.assertEqual(len(SPECS), len(list(CASES.glob("*/studies/*.json"))), "spec names are unique")
+        names = sorted(SPECS)
         edit_and_sweep = ["beam_expander_l2_sweep.json", "beam_expander_move_l2.json",
                           "beam_expander_swap_l2.json", "polarization_hwp_wavelength_sweep.json",
                           "polarization_threshold.json"]
         self.assertTrue(set(edit_and_sweep) <= set(names), names)
         for name in names:  # sensitivity_*/tolerance_* specs are validated by their own tests
-            spec = wc.read_json(SPECS / name)
+            spec = wc.read_json(SPECS[name])
             if name.startswith("compute_budget_"):
                 self.assertEqual(set(spec), {"ops"})
                 self.assertEqual(spec["ops"][0]["op"], "set_compute_budget")
@@ -350,12 +364,12 @@ class SpecFileTests(unittest.TestCase):
             self.assertGreater(len(spec["description"]), 40, name)
         base = D.polarization_control(azimuth_target_deg=45.0)
         for name in edit_and_sweep:
-            spec = wc.read_json(SPECS / name)
+            spec = wc.read_json(SPECS[name])
             if "parameters" in spec:
                 sp.normalize_spec(spec)
             else:
                 ep.normalize_ops(base, spec)
-        for path in SPECS.glob("*.json"):
+        for path in SPECS.values():
             self.assertNotIn(b"\r\n", path.read_bytes(), path.name)
 
 
@@ -369,9 +383,9 @@ class PolarizationSpecDemoTests(unittest.TestCase):
         code, _out, err = invoke(pc.main, ["--out", str(cls.dir / "design"), "--no-studies"])
         assert code == 0, err
         cls.edit = invoke(ep.main, [str(cls.dir / "design" / "nominal" / "project.json"), "--edits",
-                                    str(SPECS / "polarization_threshold.json"), "--out", str(cls.dir / "strict.json"),
+                                    str(SPECS["polarization_threshold.json"]), "--out", str(cls.dir / "strict.json"),
                                     "--run", str(cls.dir / "strict-run")])
-        cls.sweep = invoke(sp.main, [str(SPECS / "polarization_hwp_wavelength_sweep.json"), "--base",
+        cls.sweep = invoke(sp.main, [str(SPECS["polarization_hwp_wavelength_sweep.json"]), "--base",
                                      str(cls.dir / "strict.json"), "--out", str(cls.dir / "sweep")])
 
     @classmethod
@@ -403,7 +417,7 @@ class PolarizationSpecDemoTests(unittest.TestCase):
 
     @unittest.skipUnless(HAS_MATPLOTLIB, "matplotlib is not installed")
     def test_heatmap_comparison_and_report(self):
-        from examples import plot_results as pr
+        from os_optics_kit import plot_results as pr
 
         plot = pr.plot_sweep(self.dir / "sweep", "target:transmitted_power")
         svg = Path(plot["out"]["svg"]).read_text(encoding="utf-8")
@@ -419,36 +433,42 @@ class PolarizationSpecDemoTests(unittest.TestCase):
 
 @unittest.skipUnless(catalog_available(), "no catalog release is installed")
 class CatalogBeamExpanderDemoTests(unittest.TestCase):
-    """#5 primary demonstration on the catalog beam_expander example (catalog-gated)."""
+    """#5 primary demonstration on the catalog beam-expander case (catalog-gated)."""
 
     @classmethod
     def setUpClass(cls):
-        from examples import beam_expander
+        from os_optics.local import load_project, run_optical_project
+        from os_optics.results import load_run
 
         cls._tmp = TempDir()
         cls.dir = d = cls._tmp.__enter__()
-        cls.base = invoke(beam_expander.main, ["--out", str(d / "base-run")])
+        run_optical_project(load_project(CASES / "beam-expander" / "project.json"), output_dir=str(d / "base-run"))
+        cls.base = load_run(d / "base-run").describe()["status"]
         cls.candidates = invoke(cc.main, [
             "--category", "LENS", "--form", "PLANO_CONVEX_LENS", "--wavelength-nm", "780",
             "--range", "focal_length_mm=95..105", "--range", "outer_diameter_mm=12.7..12.7",
             "--near", "focal_length_mm=100", "--limit", "8", "--out", str(d / "l2-candidates.csv")])
         cls.swap = invoke(ep.main, [str(d / "base-run" / "project.json"), "--edits",
-                                    str(SPECS / "beam_expander_swap_l2.json"), "--out", str(d / "swapped.json"),
+                                    str(SPECS["beam_expander_swap_l2.json"]), "--out", str(d / "swapped.json"),
                                     "--run", str(d / "swapped-run")])
-        cls.sweep = invoke(sp.main, [str(SPECS / "beam_expander_l2_sweep.json"), "--base", str(d / "swapped.json"),
+        cls.sweep = invoke(sp.main, [str(SPECS["beam_expander_l2_sweep.json"]), "--base", str(d / "swapped.json"),
                                      "--out", str(d / "l2-sweep")])
-        cls.move = invoke(ep.main, [str(d / "swapped.json"), "--edits", str(SPECS / "beam_expander_move_l2.json"),
+        cls.move = invoke(ep.main, [str(d / "swapped.json"), "--edits", str(SPECS["beam_expander_move_l2.json"]),
                                     "--out", str(d / "final.json"), "--run", str(d / "final-run")])
 
     @classmethod
     def tearDownClass(cls):
         cls._tmp.__exit__(None, None, None)
 
+    def test_case_project_passes(self):
+        self.assertEqual(self.base.get("validation_status") or self.base["engine_status"], "PASS")
+        self.assertTrue((self.dir / "base-run" / "project.json").is_file())
+
     def test_bounded_candidate_query_lists_the_swapped_lens(self):
         code, out, err = self.candidates
         self.assertEqual(code, 0, err)
         self.assertLessEqual(out["shown"], 8)
-        sku = wc.read_json(SPECS / "beam_expander_swap_l2.json")["ops"][1]["optical_sku"]
+        sku = wc.read_json(SPECS["beam_expander_swap_l2.json"])["ops"][1]["optical_sku"]
         self.assertIn(sku, [row["optical_sku"] for row in out["rows"]])
 
     def test_validated_edit_and_sweep_with_unmet_samples(self):
@@ -481,7 +501,7 @@ class CatalogBeamExpanderDemoTests(unittest.TestCase):
                                                                           "PASS"])
         plots = []
         if HAS_MATPLOTLIB:
-            from examples import plot_results as pr
+            from os_optics_kit import plot_results as pr
 
             for column in ("target:expanded_waist", "target:output_beam_radius"):
                 plots.append(pr.plot_sweep(d / "l2-sweep", column)["out"]["png"])

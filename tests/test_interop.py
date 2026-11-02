@@ -1,4 +1,4 @@
-"""Offline checks of the external-tool (interop) examples.
+"""Offline checks of the external-tool (interop) cases: cases/interop-*.
 
 Run from the repository root: python -m unittest tests.test_interop -v
 
@@ -8,11 +8,13 @@ Checks that run the Engine need os-optics 0.10.0 or newer and are skipped
 otherwise, as is any check whose optional dependency is missing.
 """
 
+from importlib import import_module
 from importlib.util import find_spec
 import copy
 import json
 import math
 from pathlib import Path
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -21,7 +23,15 @@ ROOT = Path(__file__).resolve().parents[1]
 HAS_NUMPY = find_spec("numpy") is not None
 HAS_SCIPY = HAS_NUMPY and find_spec("scipy") is not None
 
-from examples.interop import common  # noqa: E402  (stdlib only)
+from os_optics_kit import interop as common  # noqa: E402  (stdlib only)
+
+
+def case_module(case, name):
+    """A module of cases/<case>/ (the case scripts import their sibling modules by plain name)."""
+    folder = str(ROOT / "cases" / case)
+    if folder not in sys.path:
+        sys.path.insert(0, folder)
+    return import_module(name)
 
 
 def engine_supported():
@@ -72,7 +82,8 @@ class CommonTests(unittest.TestCase):
 @unittest.skipUnless(engine_supported(), "os-optics 0.10.0 or newer is required")
 class OptimizationOutcomeTests(unittest.TestCase):
     def test_refused_sample_is_logged_and_counts_toward_budget(self):
-        from examples.interop.optimization.optimize_expander import EngineObjective, INFEASIBLE_PENALTY_RAD
+        oe = case_module("interop-optimization", "optimize_expander")
+        EngineObjective, INFEASIBLE_PENALTY_RAD = oe.EngineObjective, oe.INFEASIBLE_PENALTY_RAD
         with tempfile.TemporaryDirectory() as tmp:
             objective = EngineObjective(Path(tmp) / "eval.jsonl", max_evaluations=1)
             with patch.object(objective, "_run", side_effect=ValueError("invalid design")):
@@ -86,7 +97,8 @@ class OptimizationOutcomeTests(unittest.TestCase):
         self.assertIsNone(row["identity"])
 
     def test_existing_evaluations_are_preserved(self):
-        from examples.interop.optimization.optimize_expander import EngineObjective
+        oe = case_module("interop-optimization", "optimize_expander")
+        EngineObjective = oe.EngineObjective
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "eval.jsonl"
             path.write_text("existing evidence", encoding="utf-8")
@@ -95,7 +107,8 @@ class OptimizationOutcomeTests(unittest.TestCase):
             self.assertEqual(path.read_text(), "existing evidence")
 
     def test_unmet_objective_stays_available_for_sensitivity(self):
-        from examples.interop.optimization.optimize_expander import EngineObjective, INFEASIBLE_PENALTY_RAD
+        oe = case_module("interop-optimization", "optimize_expander")
+        EngineObjective, INFEASIBLE_PENALTY_RAD = oe.EngineObjective, oe.INFEASIBLE_PENALTY_RAD
         with tempfile.TemporaryDirectory() as tmp:
             objective = EngineObjective(Path(tmp) / "eval.jsonl", max_divergence_rad=0)
             self.assertEqual(objective(200), INFEASIBLE_PENALTY_RAD)
@@ -106,7 +119,8 @@ class OptimizationOutcomeTests(unittest.TestCase):
         self.assertTrue(all(r["identity"]["result_hash"] for r in rows))
 
     def test_budget_limited_sample_keeps_failure_evidence(self):
-        from examples.interop.optimization.optimize_expander import EngineObjective, INFEASIBLE_PENALTY_RAD
+        oe = case_module("interop-optimization", "optimize_expander")
+        EngineObjective, INFEASIBLE_PENALTY_RAD = oe.EngineObjective, oe.INFEASIBLE_PENALTY_RAD
         with tempfile.TemporaryDirectory() as tmp:
             objective = EngineObjective(Path(tmp) / "eval.jsonl", compute_budget={"max_trace_steps": 1})
             self.assertEqual(objective(200), INFEASIBLE_PENALTY_RAD)
@@ -117,7 +131,7 @@ class OptimizationOutcomeTests(unittest.TestCase):
         self.assertIn("max_trace_steps", row["execution"]["budgets"]["exhausted"])
 
     def test_unrelated_scope_issue_does_not_invalidate_selected_objective(self):
-        from examples.interop.optimization import optimize_expander as oe
+        oe = case_module("interop-optimization", "optimize_expander")
         from os_optics.local import load_project, run_optical_project
         from os_optics.results import load_run
         results = load_run(run_optical_project(load_project(oe.base_project())))
@@ -136,7 +150,8 @@ class DiffractionReferenceTests(unittest.TestCase):
     def setUp(self):
         import numpy as np
 
-        from examples.interop.diffraction import hankel_reference, tem00_field
+        hankel_reference = case_module("interop-diffraction", "hankel_reference")
+        tem00_field = case_module("interop-diffraction", "tem00_field")
 
         self.np, self.hankel, self.field = np, hankel_reference, tem00_field
 
@@ -176,7 +191,8 @@ class QuantumReferenceTests(unittest.TestCase):
     def setUp(self):
         import numpy as np
 
-        from examples.interop.quantum import network_io, reference
+        network_io = case_module("interop-quantum", "network_io")
+        reference = case_module("interop-quantum", "reference")
 
         self.np, self.ref, self.nio = np, reference, network_io
 
@@ -283,10 +299,10 @@ class QuantumReferenceTests(unittest.TestCase):
 @unittest.skipUnless(HAS_NUMPY, "numpy is needed for the quantum input parser")
 class QuantumInputTests(unittest.TestCase):
     def setUp(self):
-        from examples.interop.quantum import network_io
+        network_io = case_module("interop-quantum", "network_io")
 
         self.nio = network_io
-        self.document = json.loads((ROOT / "examples/interop/quantum/quantum_inputs.json").read_text(encoding="utf-8"))
+        self.document = json.loads((ROOT / "cases/interop-quantum/quantum_inputs.json").read_text(encoding="utf-8"))
 
     def test_the_example_inputs_parse(self):
         parsed = self.nio.parse_inputs(self.document)
@@ -330,7 +346,7 @@ class QuantumInputTests(unittest.TestCase):
 @unittest.skipUnless(HAS_NUMPY, "numpy is needed by the metasurface steps")
 class MetasurfaceFitTests(unittest.TestCase):
     def setUp(self):
-        from examples.interop.metasurface import step3_fit_model
+        step3_fit_model = case_module("interop-metasurface", "step3_fit_model")
 
         self.fit = step3_fit_model
 
@@ -411,7 +427,7 @@ class EngineInteropTests(unittest.TestCase):
     def test_hom_layout_exports_a_four_mode_lossless_network(self):
         from os_optics.local import json_api
 
-        from examples.interop.quantum import build_layouts
+        build_layouts = case_module("interop-quantum", "build_layouts")
 
         layout = build_layouts.hom()
         exported = json_api.linear_optical_network(layout.document)
@@ -426,7 +442,7 @@ class EngineInteropTests(unittest.TestCase):
         from os_optics.local import load_project, run_optical_project
         from os_optics.results import load_run
 
-        from examples.interop.metasurface import step4_engine_check
+        step4_engine_check = case_module("interop-metasurface", "step4_engine_check")
 
         model = {"model_id": "metalens", "model": {
             "model_kind": "TABULATED_THIN_LENS", "model_version": "1",

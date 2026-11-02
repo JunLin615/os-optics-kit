@@ -437,6 +437,8 @@ def compare_outcome(expected, actual):
 
 def verify_case(name, out_dir, env, *, root=None, update_expected=False):
     path = case_dir(name, root)
+    if update_expected:
+        _require_checkout(path)
     expected = json.loads((path / "expected.json").read_text(encoding="utf-8"))
     work = Path(out_dir) / name
     if work.exists() and any(work.iterdir()):
@@ -467,15 +469,21 @@ def verify_case(name, out_dir, env, *, root=None, update_expected=False):
     entry["differences"] = compare_outcome(expected, actual)
     entry["result"] = "MISMATCH" if entry["differences"] else "MATCH"
     if update_expected:
-        entry["updated"] = write_expected(path, actual)
+        entry["updated"] = write_expected(path, actual, run_dir)
     return entry
 
 
-def write_expected(path, actual):
-    """Record a verified run as the case baseline: expected.json and the CASE.md engine / catalog lines."""
-    path = Path(path)
-    if (path.parent.parent / "pyproject.toml").is_file() is False:
+def _require_checkout(path):
+    if not (Path(path).parent.parent / "pyproject.toml").is_file():
         raise CaseError("NOT_A_CHECKOUT", "--update-expected writes into a kit checkout, not an installed wheel")
+
+
+def write_expected(path, actual, run_dir):
+    """Record a verified run as the case baseline: the engine-written project.json of the run (normalized form),
+    expected.json and the CASE.md engine / catalog lines."""
+    path = Path(path)
+    _require_checkout(path)
+    shutil.copyfile(Path(run_dir) / "project.json", path / "project.json")
     expected = {"schema": EXPECTED_SCHEMA, "schema_version": SCHEMA_VERSION, "engine": actual["engine"],
                 "catalog": actual["catalog"], "status": actual["status"], "targets": actual["targets"]}
     (path / "expected.json").write_text(normalized_json(expected), encoding="utf-8", newline="\n")
@@ -483,7 +491,7 @@ def write_expected(path, actual):
     text = re.sub(r"(?m)^engine:.*$", f"engine: {actual['engine']}", text, count=1)
     text = re.sub(r"(?m)^catalog:.*$", f"catalog: {actual['catalog'] or 'none'}", text, count=1)
     (path / "CASE.md").write_text(text, encoding="utf-8", newline="\n")
-    return ["expected.json", "CASE.md"]
+    return ["project.json", "expected.json", "CASE.md"]
 
 
 def verify(names, *, out=None, catalog=None, root=None, update_expected=False):
