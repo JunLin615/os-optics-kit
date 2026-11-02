@@ -37,7 +37,7 @@ One JSON object on stdout: `status`, `bundle`, `patch`, `files`, `requires`, `ve
 without the engine, test count and result, skills index), `warnings`, `next_step`.
 
 The bundle directory: `tool/tools/os_optics_kit/MODULE.py`, `tool/skills/NAME/SKILL.md`, `tool/tests/test_MODULE.py`,
-`0001-feat-tools-add-the-COMMAND-command.patch` (one signed-off commit that also registers the command in `cli.py`),
+`0001-feat-tools-add-the-COMMAND-command.patch` (one signed-off commit that also registers the command in `cli.py` and regenerates `skills.json`),
 `PR_BODY.md`, `bundle.json`.
 
 Exit codes: 0 ready, 1 `--help` or the tests failed, 4 refusal (`error.code`, `error.problems`, `error.hint`).

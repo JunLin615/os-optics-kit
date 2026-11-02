@@ -50,8 +50,8 @@
       "command": "os-optics-kit contrib tool",
       "requires": "none",
       "path": "skills/contrib-tool/SKILL.md",
-      "tokens": 744,
-      "sha256": "6d27664b98efc42dd537a2e44b46678517c17d952619f10a6d8b64eb0f18a373"
+      "tokens": 752,
+      "sha256": "b385204579f1b32bb50efb58998a44004d69b87e1a97fbb3b8ce06625d258729"
     },
     {
       "name": "edit",
