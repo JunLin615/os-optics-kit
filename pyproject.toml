@@ -1,0 +1,68 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "os-optics-kit"
+dynamic = ["version"]
+description = "Tools, engine-reproducible cases and vendor-neutral agent skills for OS Optics (os-optics)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "OpenSci" }]
+keywords = ["optics", "optical design", "os-optics", "agent skills", "parameter sweep", "tolerance analysis"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Scientific/Engineering :: Physics",
+]
+# The kit follows the engine's minor releases: each kit release declares the engine minor it was verified with.
+dependencies = ["os-optics>=0.12,<0.13"]
+
+[project.optional-dependencies]
+plot = ["matplotlib>=3.10,<4"]
+
+[project.scripts]
+os-optics-kit = "os_optics_kit.cli:main"
+
+[project.urls]
+Homepage = "https://opensci-optics.com/"
+Documentation = "https://github.com/JunLin615/os-optics-kit#readme"
+Source = "https://github.com/JunLin615/os-optics-kit"
+Issues = "https://github.com/JunLin615/os-optics-kit/issues"
+
+[tool.hatch.version]
+path = "tools/os_optics_kit/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["tools/os_optics_kit"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"skills" = "os_optics_kit/_data/skills"
+"cases" = "os_optics_kit/_data/cases"
+"skills.json" = "os_optics_kit/_data/skills.json"
+"cases.json" = "os_optics_kit/_data/cases.json"
+"baseline.json" = "os_optics_kit/_data/baseline.json"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "tools/os_optics_kit",
+  "skills",
+  "cases",
+  "tests",
+  "skills.json",
+  "cases.json",
+  "baseline.json",
+  "README.md",
+  "README.zh-CN.md",
+  "LICENSE",
+]
+exclude = ["cases/*/run*", "cases/*/out"]
