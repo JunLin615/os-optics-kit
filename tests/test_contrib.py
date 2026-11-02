@@ -311,6 +311,22 @@ class ValidationTests(unittest.TestCase):
             self.assertEqual(list(out.iterdir()), [])
 
 
+class OwnSkillTests(unittest.TestCase):
+    def test_contribution_skills_meet_the_format(self):
+        for name, command in (("contrib-case", "contrib case"), ("contrib-tool", "contrib tool")):
+            with self.subTest(name=name):
+                path = ROOT / "skills" / name / "SKILL.md"
+                self.assertEqual(tool_mod.validate_skill(path, name, command), [])
+                front, _ = C.parse_front_matter(path.read_text(encoding="utf-8"))
+                self.assertEqual(front["kind"], "contribution")
+                self.assertLessEqual(len(front["description"]), 300)
+
+    def test_doc_names_both_commands(self):
+        text = (ROOT / "docs" / "contributing-with-an-agent.md").read_text(encoding="utf-8")
+        for needle in ("os-optics-kit contrib case", "os-optics-kit contrib tool", "--open-pr", "--refresh"):
+            self.assertIn(needle, text)
+
+
 class CliArgumentTests(unittest.TestCase):
     def test_usage(self):
         code, text = call([])
