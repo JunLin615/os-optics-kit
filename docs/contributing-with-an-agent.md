@@ -43,7 +43,7 @@ A tool is a helper used beyond one design. It needs `main(argv) -> int` with an 
 
 1. `os-optics-kit contrib tool my_helper.py --name my-helper --dry-run` copies it to
    `tools/os_optics_kit/my_helper.py`, registers `os-optics-kit my-helper`, writes `skills/my-helper/SKILL.md`
-   from its `--help` and `tests/test_my_helper.py`, and runs those tests in a private clone.
+   from its `--help` and `tests/test_my_helper.py`, and runs those tests in a temporary clone.
 2. The agent completes the skill page (when not to use, outputs, a real example) and adds tests of the helper's
    behaviour under `tool/tests/`.
 3. `os-optics-kit contrib tool --refresh contrib-tool-my-helper` re-runs the tests and rebuilds the patch.
@@ -55,7 +55,7 @@ Logic that belongs to one case stays in that case directory.
 - `--open-pr` (with or after `--refresh`): forks `JunLin615/os-optics-kit` under your account, pushes the branch
   `contrib/case-NAME` or `contrib/tool-NAME`, and opens the pull request with `PR_BODY.md`.
 - Or apply the patch yourself: `git am 0001-*.patch` in your fork, push, and open the pull request on GitHub.
-- Without GitHub credentials: attach the patch and `PR_BODY.md` to a new issue at
+- Without the `gh` CLI: attach the patch and `PR_BODY.md` to a new issue at
   <https://github.com/JunLin615/os-optics-kit/issues>. `git am` keeps you as the commit author.
 
 Every command prints one JSON object (`status`, `bundle`, `patch`, `verification`, `warnings`, `next_step`);

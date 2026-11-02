@@ -45,7 +45,7 @@ assessments are `MET`, `UNMET`, `INDETERMINATE` or `NOT_APPLICABLE`. A bounded q
 interval; an unrelated unavailable quantity does not invalidate every result. No configured target
 means no requirement was assessed.
 
-Study `PASS`/`FAIL` classes summarize the selected targets, not universal scientific approval. Keep
+Study `PASS`/`FAIL` classes summarize the selected targets. Keep
 every sample, including invalid, partial and indeterminate ones. Objective validity and feasibility
 are separate; report `NO_FEASIBLE` when no sample meets the constraints. Fractions state their
 denominator; a tolerance fraction describes simulated samples under the declared distributions.

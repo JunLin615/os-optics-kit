@@ -101,12 +101,12 @@
       "name": "run-case",
       "kind": "guide",
       "description": "Find an engine-reproducible OS Optics case, copy it, run it, check it against its recorded outcome and adapt it. Use when a worked design close to the user's question exists or a known-good starting Project is needed.",
-      "version": "1.0.0",
+      "version": "0.1.0",
       "command": "os-optics-kit cases",
       "requires": "os-optics>=0.12,<0.13",
       "path": "skills/run-case/SKILL.md",
-      "tokens": 673,
-      "sha256": "3924e1480eb309fc841f192cf5274fa5c1d4424f5e6e580828bbc32ea0a2ced3"
+      "tokens": 676,
+      "sha256": "2796722ba9e0ad381c6dca7c7bd2e62df7be281fec29e1fa2f5f4925acb9da78"
     },
     {
       "name": "sensitivity",

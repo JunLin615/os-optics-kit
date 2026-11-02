@@ -3,7 +3,7 @@
 HELPER.py must define ``main(argv) -> int`` (argparse ``--help`` included). It becomes
 ``tools/os_optics_kit/MODULE.py`` and ``os-optics-kit COMMAND``, with ``skills/NAME/SKILL.md`` (from its ``--help``)
 and ``tests/test_MODULE.py`` (import, registration, ``--help`` with and without the engine, doctests). The tests run
-in a private clone of your kit checkout before the patch is written. Edit the bundle's SKILL.md and tests, then
+in a temporary clone of your kit checkout before the patch is written. Edit the bundle's SKILL.md and tests, then
 ``--refresh BUNDLE`` re-runs them and rebuilds the patch. ``--open-pr`` opens the pull request with your own ``gh``
 login; ``--dry-run`` stays on this device.
 
