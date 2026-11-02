@@ -40,6 +40,8 @@ def split(text):
         raise FrontMatterError(f"the file must start with a '{DELIMITER}' line", 1)
     fields = {}
     for number, line in enumerate(lines[1:], start=2):
+        if line == "" and number == len(lines):
+            break  # end of the file
         if line == DELIMITER:
             if not fields:
                 raise FrontMatterError("the front matter is empty", number)

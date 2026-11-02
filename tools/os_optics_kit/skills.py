@@ -276,7 +276,8 @@ def install(dest, *, only=None, force=False, root=None):
     plan = []  # (target, content bytes, relative path)
     for name in names:
         source = root / "skills" / name
-        for file in sorted(p for p in source.rglob("*") if p.is_file()):
+        for file in sorted((p for p in source.rglob("*") if p.is_file()),
+                           key=lambda p: p.relative_to(source).as_posix()):
             relative = Path(name) / file.relative_to(source)
             plan.append((dest / relative, file.read_bytes(), relative.as_posix()))
     present = [name for name in by_name if name in names or (dest / name / SKILL_FILE).is_file()]
