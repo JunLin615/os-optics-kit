@@ -1,79 +1,79 @@
 # Agent guide
 
-Select one task below and read its linked recipe. Human tutorials share the same
-scripts: [English](docs/en/README.md) · [简体中文](docs/zh-CN/README.md).
+os-optics-kit: tools, engine-reproducible cases and skills for the OS Optics engine (`os-optics`).
+Install with `python -m pip install "os-optics[protected]" os-optics-kit` (Python 3.11+); kit 0.1.x
+requires `os-optics>=0.12,<0.13`. Engine guide:
+[os-optics AGENT_GUIDE](https://github.com/JunLin615/os-optics/blob/main/AGENT_GUIDE.md).
 
-## Version and environment
+## Load the skills
 
-These examples and workflow helpers use the published **0.10.0** release of
-os-optics, the version recorded in [engine-baseline.json](engine-baseline.json)
-with its wheel and source hashes and the tested environment. Install the exact version
-in a fresh environment and run the alignment checks to reproduce the verified result.
-See [installation](docs/en/installation.md) and [alignment](docs/engine-alignment.md).
+```bash
+os-optics-kit skills list
+os-optics-kit skills show NAME
+os-optics-kit skills install --dest DIR
+```
 
-Run scripts from the repository root in a Python 3.11+ virtual environment. Install
-`requirements-examples.txt` for plotting. External tools use separate environments
-and pinned dependencies in [the interop guide](docs/en/interop.md).
+`skills list` prints the index (name, description, command, requirement) as compact JSON. Read one
+skill before using its command. `skills install` copies the skill directories and `skills.json` into
+DIR, the skills directory of your agent host; it never overwrites a different file without `--force`.
 
-## Select a task
+## Route by task
 
-| Task | Command | Detail |
-| --- | --- | --- |
-| Installation check without catalog | `python examples/ideal_lens_focus.py --out run-focus` | [Results](docs/en/results.md) |
-| Editable catalog design | `python examples/beam_expander.py --out run-example` | Saves `project.json` and native run |
-| Discover object IDs, units and axes | `python examples/edit_project.py run-example/project.json --describe --ids L2` | [Find objects](docs/workflow-recipes.md#find-objects) |
-| Edit, check, run, read | `python examples/edit_project.py BASE.json --edits OPS.json --out NEW.json --run NEW-run` | [Edit and retry](docs/workflow-recipes.md#edit-a-project-by-id) |
-| Check a Project | `os-optics project check NEW.json` | [Native controls](docs/workflow-recipes.md#native-project-controls) |
-| Compact targets | `os-optics results targets NEW-run` | [Interpretation](docs/en/results.md#interpret-the-result) |
-| Check saved-run freshness | `os-optics results freshness NEW-run --project NEW.json` | [Freshness](docs/workflow-recipes.md#compare-and-freshness) |
-| Parameter sweep | `python examples/sweep_parameters.py SPEC.json --base BASE.json --out STUDY` | [Sweep](docs/workflow-recipes.md#sweep) |
-| Compare saved results | `python examples/compare_runs.py RUN_A RUN_B --project CURRENT.json --out CMP` | No simulation |
-| Plot and report | `python examples/plot_results.py sweep STUDY --y target:ID` then `python examples/build_report.py STUDY --project CURRENT.json --plots STUDY/plots` | [Recipes](docs/workflow-recipes.md) |
-| Sensitivity | `python examples/sensitivity_analysis.py examples/specs/sensitivity_expander.json --out run-sensitivity` | [Sensitivity](docs/workflow-recipes.md#sensitivity) |
-| Seeded tolerances | `python examples/tolerance_study.py examples/specs/tolerance_expander.json --out run-tolerance` | [Tolerance](docs/workflow-recipes.md#tolerance) |
-| Beam, polarization or alignment design | `python examples/beam_expansion_focus.py --out run-expansion` | [Three workflows](docs/en/workflows.md#parameterized-workflows) |
-| Catalog selection or detector CSV | `python examples/catalog_candidates.py --help` / `python examples/analyze_measurements.py --help` | [Catalog recipe](docs/workflow-recipes.md#catalog-candidates) · [Measurements](docs/en/measurements.md) |
-| Optimization, diffraction, quantum or metasurface | Select one topic's environment and example | [Interop](docs/en/interop.md) |
+| Task | Skill / command |
+| --- | --- |
+| Start from a worked design | `run-case`: `os-optics-kit cases list`, `cases copy NAME --dest .`, `cases verify NAME` |
+| Read a run before deciding | `summary RUN` |
+| Discover IDs, units, axes; edit by ID | `edit P.json --describe --ids ID`; `edit P.json --edits OPS.json --out NEW.json --run RUN` |
+| Explore one or two parameters | `sweep SPEC.json --base P.json --out STUDY` |
+| Explain what an edit changed | `compare RUN_A RUN_B --project CURRENT.json --out CMP` |
+| Plots and a report | `plot sweep STUDY --y target:ID`; `report STUDY --project CURRENT.json` |
+| Sensitivity, tolerance | `sensitivity SPEC.json --out DIR`; `tolerance SPEC.json --out DIR` |
+| Catalog parts | `candidates --category ... --wavelength-nm ...` |
+| Detector CSV data | `measurements DATA.csv --x ... --signal ... --out DIR` |
+| Share a design or helper | `contrib-case`, `contrib-tool` |
 
-Workflow inputs are discoverable with `--list-parameters`; use unit-bearing values,
-for example `--gap-error-mm 250um`, and bounded studies such as
-`--study gap_error_mm=-1..1:5`. `--no-studies` runs only the nominal design.
+Each command is `os-optics-kit <command>`; `--help` holds its full specification.
+[Workflow recipes](docs/workflow-recipes.md) give spec keys, outputs and error codes.
+Cases `expansion-focus`, `polarization-control` and `mirror-alignment` include a parameterized
+`workflow.py` (`--list-parameters`, unit-bearing inputs such as `--gap-error-mm 250um`,
+`--study NAME=START..STOP:COUNT`, `--no-studies`).
 
 ## Interpret before deciding
 
-Read computation completion, quantity validity, optional target assessment and
-freshness separately. Engine target assessments are `MET`, `UNMET`,
-`INDETERMINATE` or `NOT_APPLICABLE`. Retain bounds and scope diagnostics: a bounded
-quantity is an interval, and an unrelated unavailable quantity does not invalidate
-every result. No configured target means no requirement was assessed.
+Read computation completion, quantity validity, target assessment and freshness separately. Engine
+assessments are `MET`, `UNMET`, `INDETERMINATE` or `NOT_APPLICABLE`. A bounded quantity is an
+interval; an unrelated unavailable quantity does not invalidate every result. No configured target
+means no requirement was assessed.
 
-Study `PASS`/`FAIL` classes summarize selected targets, not universal scientific
-approval. Keep every sample, distinguish objective validity from constraint
-feasibility, and report `NO_FEASIBLE` when appropriate. Fractions state their
-denominator; tolerance fractions describe simulated samples under the declared
-distributions. See [result meanings and exits](docs/en/results.md).
+Study `PASS`/`FAIL` classes summarize the selected targets, not universal scientific approval. Keep
+every sample, including invalid, partial and indeterminate ones. Objective validity and feasibility
+are separate; report `NO_FEASIBLE` when no sample meets the constraints. Fractions state their
+denominator; a tolerance fraction describes simulated samples under the declared distributions.
 
-Saved results retain their identities after edits. Use engine freshness reasons to
-identify physical, target or computation-budget changes. Inspect older results as
-historical evidence and rerun when the task needs the edited design. Hash checks
-establish artifact consistency; analytical or experimental checks establish other
-claims. Purchasing eligibility is reported by the commercial operation separately.
+Saved results keep their identities after edits. `compare` and `os-optics results freshness RUN
+--project P` report `CURRENT`, `HISTORICAL` or `UNDETERMINED` with reasons (`PHYSICS_CHANGED`,
+`TARGETS_CHANGED`, ...). A historical result describes the earlier design; rerun when the task needs
+the edited one.
 
-## Inputs, limits and recovery
+Exit codes: 0 completed or PASS; 1 FAIL, `NO_FEASIBLE`, `NO_MATCH` or a case mismatch; 2 UNKNOWN or
+`INCOMPLETE`; 3 OUT_OF_MODEL; 4 refused input, with a JSON error on stderr. Stdout is compact JSON;
+details stay in files.
 
-Establish wavelength (nm), power (W), Gaussian 1/e² intensity **radius** and position
-(mm), object IDs, poses and the customer's actual target bounds. Coordinates are
-right-handed; quaternions are `[w, x, y, z]`. Discover local axes before translating
-or rotating. Example geometry is a starting point to adapt.
+## Inputs and recovery
 
-Set both the study's `max_evaluations` and the Project's computation budget.
-[Budget recipes](docs/workflow-recipes.md#computation-budgets) explain their separate
-effects. Inspect limited or partial results before increasing a limit.
+Establish wavelength (nm), power (W), Gaussian 1/e² intensity radius and positions (mm), object IDs,
+poses and the user's actual target bounds. Coordinates are right-handed; quaternions are
+`[w, x, y, z]`. Read `local_axes` before moving along a local axis.
 
-Scripts print compact JSON and preserve details in files. Invalid edits are refused
-atomically. The helper preserves BASE and records the new output; repeating its
-identical command returns `already_applied`. Native update uses `--ops` and
-`--expect-hash`; the helper uses `--edits` and `--expect-base-hash`. After an interrupted
-native response, inspect the saved project/hash before retrying a relative transform.
-See [recovery](docs/workflow-recipes.md#recovery). Report the command, versions, units,
-selected assessments, freshness and artifact paths.
+Inputs are never modified; an existing output is refused (`OUTPUT_EXISTS`) unless `--overwrite`.
+Invalid edits are refused atomically. Repeating an identical `edit` returns `already_applied`;
+`--expect-base-hash` refuses a changed base. Set both a study's `max_evaluations` and the Project's
+compute budget, and inspect limited or partial results before raising a limit. Report commands,
+versions, units, selected assessments, freshness and artifact paths.
+
+## Contribute
+
+`os-optics-kit skills show contrib-case` or `contrib-tool`, then `os-optics-kit contrib case
+P.json --name NAME --dry-run`. The user's own GitHub account opens the pull request (`--open-pr`);
+without it the command leaves a bundle with the patch. See
+[contributing with an agent](docs/contributing-with-an-agent.md).
