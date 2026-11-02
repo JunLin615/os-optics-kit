@@ -1,0 +1,168 @@
+{
+  "components": [
+    {
+      "custom_part": {
+        "custom_part_key": "user-laser",
+        "description": "532 nm laser"
+      },
+      "instance_id": "SRC",
+      "nominal_pose": {
+        "position_mm": [
+          0.0,
+          0.0,
+          50.0
+        ],
+        "quaternion_wxyz": [
+          0.7071067811865476,
+          0.0,
+          0.7071067811865476,
+          0.0
+        ]
+      },
+      "optical_role": "source",
+      "retained_dofs": [],
+      "selected_parameters": [],
+      "source_model": {
+        "m2": 1.0,
+        "model_kind": "GAUSSIAN_BEAM",
+        "polarization": {
+          "angle_deg": 0.0,
+          "kind": "LINEAR"
+        },
+        "power_w": 0.001,
+        "waist_position_mm": 0.0,
+        "waist_radius_mm": 0.5,
+        "wavelength_nm": 532.0
+      }
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "own-l1",
+        "description": "customer lens"
+      },
+      "instance_id": "L1",
+      "nominal_pose": {
+        "position_mm": [
+          100.0,
+          0.0,
+          50.0
+        ],
+        "quaternion_wxyz": [
+          0.7071067811865476,
+          0.0,
+          0.7071067811865476,
+          0.0
+        ]
+      },
+      "optical_model_id": "f50",
+      "optical_role": "lens",
+      "retained_dofs": [],
+      "selected_parameters": []
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "own-l2",
+        "description": "customer lens"
+      },
+      "instance_id": "L2",
+      "nominal_pose": {
+        "position_mm": [
+          300.0,
+          0.0,
+          50.0
+        ],
+        "quaternion_wxyz": [
+          0.7071067811865476,
+          0.0,
+          0.7071067811865476,
+          0.0
+        ]
+      },
+      "optical_model_id": "f150",
+      "optical_role": "lens",
+      "retained_dofs": [],
+      "selected_parameters": []
+    }
+  ],
+  "design_intent": "OPTICAL_SYSTEM",
+  "materials": [],
+  "observations": [
+    {
+      "absorbing": false,
+      "aperture": {
+        "center_offset_mm": [
+          0.0,
+          0.0
+        ],
+        "obstruction_radius_mm": 0.0,
+        "radius_mm": 20.0,
+        "shape": "circle"
+      },
+      "medium": "air",
+      "observation_id": "output",
+      "pose": {
+        "position_mm": [
+          700.0,
+          0.0,
+          50.0
+        ],
+        "quaternion_wxyz": [
+          0.7071067811865476,
+          0.0,
+          0.7071067811865476,
+          0.0
+        ]
+      }
+    }
+  ],
+  "optical_models": [
+    {
+      "model": {
+        "clear_radius_mm": "12",
+        "edge_radius_mm": "12.7",
+        "focal_length_mm": "50",
+        "model_kind": "IDEAL_THIN_LENS",
+        "model_version": "1",
+        "plane_z_mm": "0",
+        "status": "SPECIFIED",
+        "transmittance": "1",
+        "valid_band_nm": {
+          "max_nm": "600",
+          "min_nm": "500",
+          "status": "SPECIFIED"
+        }
+      },
+      "model_id": "f50"
+    },
+    {
+      "model": {
+        "clear_radius_mm": "12",
+        "edge_radius_mm": "12.7",
+        "focal_length_mm": "150",
+        "model_kind": "IDEAL_THIN_LENS",
+        "model_version": "1",
+        "plane_z_mm": "0",
+        "status": "SPECIFIED",
+        "transmittance": "1",
+        "valid_band_nm": {
+          "max_nm": "600",
+          "min_nm": "500",
+          "status": "SPECIFIED"
+        }
+      },
+      "model_id": "f150"
+    }
+  ],
+  "project_schema_version": "2.0",
+  "schema": "opensci.project",
+  "targets": [
+    {
+      "maximum": 0.001,
+      "metric": "divergence_half_angle_x_rad",
+      "observation_id": "output",
+      "parameters": [],
+      "target_id": "collimated",
+      "unit": "rad"
+    }
+  ]
+}
