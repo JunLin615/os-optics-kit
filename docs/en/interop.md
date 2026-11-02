@@ -1,29 +1,25 @@
 # External scientific tools
 
-[User guide](README.md) · English · [简体中文](../zh-CN/interop.md)
+[os-optics-kit](../../README.md) · English · [简体中文](../zh-CN/interop.md)
 
 OpenSci computes ray paths, Gaussian beams, polarization, power and a linear optical
 network of your design. Optimizers, diffraction codes, quantum-optics simulators and
 electromagnetic solvers run in your own Python environment and read what OpenSci
-exports. The four worked examples below were validated against independent references;
-the [validation record](../interop-validation.md) lists versions, inputs, outputs and
-deviations.
+exports. Each of the four cases below compares the external result with an independent
+reference; its `CASE.md` records the versions, the commands and the verified outcome.
 
-The engine-running scripts use os-optics **0.10.0**; use
-[version matching](installation.md#match-the-examples-to-the-installed-version) for the
-matching installation. The numerical comparisons below are the recorded validation runs
-unless identified as a new result. They use the linear optical
-network with per-path group delays, native components and the `TABULATED_THIN_LENS`
-model kind. The scripts that run the Engine check the installed version and stop with a
-clear message on an older engine; the external-side scripts read only exported files and
-do not import the Engine.
+The cases were verified with os-optics 0.12.0. The numerical comparisons below are those
+verified runs. They use the linear optical network with per-path group delays, native
+components and the `TABULATED_THIN_LENS` model kind. The scripts that run the Engine check
+the installed version and stop with a clear message on an older engine; the external-side
+scripts read only exported files and do not import the Engine.
 
-| Topic | OpenSci provides | External tool computes | Example |
+| Topic | OpenSci provides | External tool computes | Case |
 | --- | --- | --- | --- |
-| [Optimization and tolerance](#optimization-and-tolerance) | Each design's run, target metrics, run identity | Next design values (SciPy, Optuna), sensitivity indices (SALib) | `examples/interop/optimization/` |
-| [Diffraction at a declared stop](#diffraction-at-a-declared-stop) | Gaussian beam state, power, stop and lens parameters, plane frames | Diffracted focal field (LightPipes; prysm, POPPY, Diffractio as cross-checks) | `examples/interop/diffraction/` |
-| [Quantum photonics](#quantum-photonics-from-the-network-export) | Linear optical network: modes, lossy transfer matrix, path delays, conventions | Photon statistics (Perceval; Piquasso as cross-check) | `examples/interop/quantum/` |
-| [Metasurface lens as a virtual component](#metasurface-lens-as-a-virtual-focusing-component) | Runs with a tabulated thin focusing element inside its validated domain | Unit-cell responses (grcwa) and focusing (angular spectrum) | `examples/interop/metasurface/` |
+| [Optimization and tolerance](#optimization-and-tolerance) | Each design's run, target metrics, run identity | Next design values (SciPy, Optuna), sensitivity indices (SALib) | [interop-optimization](../../cases/interop-optimization) |
+| [Diffraction at a declared stop](#diffraction-at-a-declared-stop) | Gaussian beam state, power, stop and lens parameters, plane frames | Diffracted focal field (LightPipes; prysm, POPPY, Diffractio as cross-checks) | [interop-diffraction](../../cases/interop-diffraction) |
+| [Quantum photonics](#quantum-photonics-from-the-network-export) | Linear optical network: modes, lossy transfer matrix, path delays, conventions | Photon statistics (Perceval; Piquasso as cross-check) | [interop-quantum](../../cases/interop-quantum) |
+| [Metasurface lens as a virtual component](#metasurface-lens-as-a-virtual-focusing-component) | Runs with a tabulated thin focusing element inside its validated domain | Unit-cell responses (grcwa) and focusing (angular spectrum) | [interop-metasurface](../../cases/interop-metasurface) |
 
 External results stay in their own files next to the OpenSci run they used, with that
 run's identity. They do not change the run, its hashes or its Local Validation, and a
@@ -35,19 +31,20 @@ Prompts for your own agent: [English](interop-prompts.md) · [简体中文](../z
 
 The external-tool environments need Python 3.12 or newer, because the pinned numpy
 2.5.4 and scipy 1.18.1 require it: 3.12 to 3.14 for the quantum topic, 3.12 for the
-separate Diffractio environment. The examples were verified with Python 3.12.14; the
-core examples of this repository run on Python 3.11 or newer. Use one fresh virtual
-environment per topic and run the commands from the repository root:
+separate Diffractio environment. The cases were verified with Python 3.14.7 (Diffractio:
+3.12.14); the kit itself runs on Python 3.11 or newer. Use one fresh virtual environment
+per topic, copy the case and run its commands inside the case directory:
 
 ```bash
-python -m venv .venv-optimization
-.venv-optimization/bin/python -m pip install -r examples/interop/optimization/requirements-optimization.txt
+os-optics-kit cases copy interop-optimization --dest .
+cd interop-optimization
+python -m venv .venv
+.venv/bin/python -m pip install -r requirements-optimization.txt
 ```
 
-On Windows use `.venv-optimization\Scripts\python`. The requirements files request
-os-optics 0.10.0 or newer. They pin the tested
-versions of the third-party packages, which are never dependencies of `os-optics`
-itself.
+On Windows use `.venv\Scripts\python`. The requirements files request
+`os-optics>=0.12,<0.13` and `os-optics-kit>=0.1,<0.2` and pin the tested versions of the
+third-party packages, which are never dependencies of `os-optics` or `os-optics-kit`.
 
 Every script prints one JSON summary on stdout. Its `outcome` compares OpenSci with an
 external tool or an independent reference, and is not an OpenSci run status:
@@ -63,7 +60,7 @@ statuses (`PASS`, `WARNING`, `OUT_OF_MODEL_SCOPE`, ...) appear separately as
 thin lenses, f = 50 mm and 150 mm, 532 nm, 0.5 mm waist) by moving lens `L2`:
 
 ```bash
-python examples/interop/optimization/optimize_expander.py --out run-interop-optimization
+python optimize_expander.py --out opt
 ```
 
 Each evaluation copies the Project, sets `L2`'s position by `instance_id`, runs the
@@ -76,10 +73,10 @@ optimum and the reference value of every evaluated design.
 
 Outputs in the `--out` directory: `evaluations.jsonl` (one line per Engine run with its
 inputs, metric value, status and `project_hash`, `input_hash`, `result_hash`,
-`engine_build_id`), `project-baseline.json` and `report.json`. On the published 0.10.0
-wheel SciPy reached the reference optimum (200.0573 mm separation) to 9e-7 mm in 10
+`engine_build_id`), `project-baseline.json` and `report.json`. In the verified run
+SciPy reached the reference optimum (200.0573 mm separation) to 9e-7 mm in 10
 evaluations, every Engine value matched the ABCD reference to 2e-14 relative, and the
-Sobol indices of Engine and reference agreed to 2e-14. The optimizer chooses values and OpenSci computes each design. The updated workflow
+Sobol indices of Engine and reference agreed to 2e-14. The optimizer chooses values and OpenSci computes each design. The workflow
 keeps objective validity separate from feasibility: the selected divergence must be
 an exact usable quantity; the `collimated` requirement must have assessment `MET`
 for a feasible optimum. Unrelated scope findings do not invalidate that objective.
@@ -91,7 +88,7 @@ work, and `--max-trace-steps` / `--max-interactions-per-path` for per-design eng
 For example, tighten the divergence requirement while retaining the same search:
 
 ```bash
-python examples/interop/optimization/optimize_expander.py --out run-optimization-strict --max-divergence-rad 1e-9
+python optimize_expander.py --out opt-strict --max-divergence-rad 1e-9
 ```
 
 SALib analysis uses every valid objective, including unmet targets; an incomplete
@@ -105,8 +102,10 @@ A 532 nm TEM00 beam (1 mm waist radius, 1 mW) passes a declared circular
 in the back focal plane. Run both sides, possibly in two environments:
 
 ```bash
-python examples/interop/diffraction/opensci_handoff.py --out run-interop-diffraction
-python examples/interop/diffraction/external_focus.py run-interop-diffraction
+os-optics-kit cases copy interop-diffraction --dest .
+cd interop-diffraction
+python opensci_handoff.py --out diff
+python external_focus.py diff
 ```
 
 `opensci_handoff.py` runs the Project for stop radii 3, 1.2 and 0.5 mm and writes a
@@ -133,7 +132,7 @@ the Gaussian state under a stated convention (`tem00_field.py`):
 LightPipes propagates the field with absolute units on six grids and windows (the
 convergence study); prysm and POPPY recompute the normalized radial profile, Diffractio
 the absolute peak; a Hankel integral (`hankel_reference.py`) is the independent
-reference. Results of the validated run:
+reference. Results of the verified run:
 
 | Stop radius | Engine status | Engine focal peak vs reference | LightPipes finest grid: relative peak error (convergence spread) |
 | --- | --- | --- | --- |
@@ -165,8 +164,10 @@ the primary environment's reports and figure.
 glass) and exports each with the public command:
 
 ```bash
-python examples/interop/quantum/build_layouts.py --out run-interop-quantum
-python examples/interop/quantum/run_quantum.py run-interop-quantum --inputs examples/interop/quantum/quantum_inputs.json
+os-optics-kit cases copy interop-quantum --dest .
+cd interop-quantum
+python build_layouts.py --out q
+python run_quantum.py q --inputs quantum_inputs.json
 ```
 
 Cases: Hong-Ou-Mandel interference at 780 nm; a delay scan from 13 exports with source
@@ -203,7 +204,7 @@ Sellmeier formula, Fresnel loss of the uncoated faces and the Gaussian wavepacke
 overlap. For lossy layouts it takes the loss amplitudes of both photons from
 `L = I − M†M`, so loss through a shared element interferes as it does physically,
 and threshold detection with dark counts acts on the complete photon-number
-distribution (one, two or no photons at each detector). In the validated run Perceval matched the reference to 4e-8 and Piquasso to
+distribution (one, two or no photons at each detector). In the verified run Perceval matched the reference to 4e-8 and Piquasso to
 2e-9 over all cases; the HOM dip visibility over the scan was 0.9491 (reference
 0.9491; analytic 0.95 at infinite delay range). Compensating the 3 mm window by its
 phase delay leaves a 0.163 ps group-delay mismatch and lowers the photons'
@@ -216,23 +217,19 @@ the script gives each run a fresh `NUMBA_CACHE_DIR`.
 
 ## Metasurface lens as a virtual focusing component
 
-Step 4 passes on 0.10.0: the in-domain comparisons and convergence checks are inside
-their tolerances, and the four out-of-domain counterexamples (a 450 nm wavelength and
-the 5°, 8° and 20° field angles) report their scope codes with `INDETERMINATE` target
-assessments. See the [validation record](../interop-validation.md) for the exact cases;
-the numerical tables below record the full run on the published 0.9.0 wheel.
-
 A TiO2 nanopillar metalens (f = 200 µm at 532 nm, 100 µm diameter) is characterized
 externally and turned into an OpenSci `TABULATED_THIN_LENS` model:
 
 ```bash
-python examples/interop/metasurface/step1_unit_cells.py --out run-interop-metasurface
-python examples/interop/metasurface/step1_unit_cells.py --out run-interop-metasurface --nG 201 --wavelengths-nm 490 515 532 545 580
-python examples/interop/metasurface/step2_focusing.py run-interop-metasurface
-python examples/interop/metasurface/step2_focusing.py run-interop-metasurface --nG 201
-python examples/interop/metasurface/step2_focusing.py run-interop-metasurface --samples 2048 --wavelengths-nm 490 515 532 545 580
-python examples/interop/metasurface/step3_fit_model.py run-interop-metasurface
-python examples/interop/metasurface/step4_engine_check.py run-interop-metasurface
+os-optics-kit cases copy interop-metasurface --dest .
+cd interop-metasurface
+python step1_unit_cells.py --out ms
+python step1_unit_cells.py --out ms --nG 201 --wavelengths-nm 490 515 532 545 580
+python step2_focusing.py ms
+python step2_focusing.py ms --nG 201
+python step2_focusing.py ms --samples 2048 --wavelengths-nm 490 515 532 545 580
+python step3_fit_model.py ms
+python step4_engine_check.py ms
 ```
 
 The second step-1 command and the last two step-2 commands compute the convergence
@@ -276,13 +273,13 @@ The external results are split into three sets that play different roles:
    test set, and refuse the counterexamples. The calibration set's deviations are
    reported as an envelope only: they set the bounds, so they cannot test them.
 
-Results of the validated run on the published PyPI 0.9.0 wheel (external spread: 0.50 % in focus
-position, 0.71 % in spot radius, 0.015 in efficiency):
+Results of the verified run (external spread: 0.50 % in focus position, 0.71 % in spot
+radius, 0.015 in efficiency):
 
 | Quantity | Calibration set (sets the bound) | Test set (checks it) | Stated model error |
 | --- | --- | --- | --- |
 | Focus position | ≤ 0.30 µm | ≤ 0.32 µm | `waist_distance_*_mm` ± 0.0014 mm |
-| Spot radius (Engine Gaussian vs external second moment) | −0.6 … −7.3 % | −1.6 … −5.8 % | `waist_radius_*_mm` ± 8.1 % |
+| Spot radius (Engine Gaussian vs external second moment) | −0.6 … −7.3 % | −1.6 … −4.3 % | `waist_radius_*_mm` ± 8.1 % |
 | Delivered power | −5.4 … +15.9 % | −3.6 … +15.7 % | `power_W` ± 19 % |
 
 All test cases stay inside the stated errors. The focal position follows the external
@@ -317,7 +314,7 @@ Other unit-cell solvers fit the same pipeline as long as step 1 writes the same 
 fields: meent (MIT) and torcwa (LGPL) install with pip; DFlat (`dflat-opt`) and metabox
 depend on gdspy, which needs a C compiler on Windows, and metabox runs on Python 3.8 with
 TensorFlow 2.11, so it belongs in its own environment exchanging files. Only grcwa
-(GPLv3, as declared in its package metadata) was executed for this example.
+(GPLv3, as declared in its package metadata) was executed for this case.
 
 A single external focus does not define a general component. The model is valid only
 for its wavelength rows, field angles up to `max_field_angle_deg`, input beam radii up to

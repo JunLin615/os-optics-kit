@@ -1,20 +1,22 @@
 # 分析实验测量数据
 
-[用户指南](README.md) · [English](../en/measurements.md) · 简体中文
+[os-optics-kit](../../README.zh-CN.md) · [English](../en/measurements.md) · 简体中文
 
-使用 [analyze_measurements.py](../../examples/analyze_measurements.py) 扣除背景，
-按需利用同步参考通道归一化，并进行线性拟合。此流程无需运行光学仿真，也无需安装
-OS Optics。示例 CSV 全部是**合成数据**，包含已知关系和刻意设置的无效行。
+`os-optics-kit measurements` 扣除测得的背景，按需利用同步参考通道归一化，并进行线性拟合。
+此流程无需运行光学仿真。[detector-measurements](../../cases/detector-measurements) 案例
+提供两个**合成** CSV 文件，包含已知关系和刻意设置的无效行。
 
 ## 安装与运行
 
-在 Python 3.11+ 虚拟环境中，从仓库根目录执行：
+在 Python 3.11+ 虚拟环境中执行：
 
 ```bash
-python -m pip install -r requirements-examples.txt
-python examples/analyze_measurements.py --help
-python examples/analyze_measurements.py examples/data/measurements/detector_response.csv --x input_power_mW --signal signal_V --background dark_V --x-unit mW --signal-unit V --maximum-rmse 0.003 --out run-detector
-python examples/analyze_measurements.py examples/data/measurements/reference_drift.csv --x time_s --signal signal_V --background dark_V --x-unit s --signal-unit V --reference reference_V --reference-background reference_dark_V --reference-unit V --maximum-rmse 0.000000000001 --out run-reference
+python -m pip install "os-optics[protected]" "os-optics-kit[plot]"
+os-optics-kit cases copy detector-measurements --dest .
+cd detector-measurements
+os-optics-kit measurements --help
+os-optics-kit measurements data/detector_response.csv --x input_power_mW --signal signal_V --background dark_V --x-unit mW --signal-unit V --maximum-rmse 0.003 --out run-detector
+os-optics-kit measurements data/reference_drift.csv --x time_s --signal signal_V --background dark_V --x-unit s --signal-unit V --reference reference_V --reference-background reference_dark_V --reference-unit V --maximum-rmse 0.000000000001 --out run-reference
 ```
 
 每条命令向标准输出写入一个紧凑 JSON 对象。每次运行必须使用**新的输出目录**；
@@ -27,7 +29,7 @@ python examples/analyze_measurements.py examples/data/measurements/reference_dri
 | 参考通道 | 13 / 8 / 5 | `ratio = 0 * time_s + 0.4`，RMSE < 1e-12 | 斜率和截距的绝对误差均 ≤ 1e-12 |
 
 探测器示例扣除 0.020 V 暗背景后，恢复 2 V/mW 响应，保留 0.005 V 截距及小幅确定性
-残差。脚本不会强制拟合线穿过原点。实际校准时，应记录经校准的入射功率或滤光片
+残差。该工具不会强制拟合线穿过原点。实际校准时，应记录经校准的入射功率或滤光片
 透射率及暗读数，保持带宽和增益不变，并检查残差是否显示饱和或其他非线性。
 RMSE 较小本身并不能确定探测器的线性工作范围或完成探测器验证。
 
@@ -46,15 +48,15 @@ ratio = corrected_signal / corrected_reference
 ## 使用自己的 CSV
 
 输入应为 UTF-8 CSV（可带 BOM），使用逗号分隔和小数点，表头列名必须唯一且非空。
-用 `--x`、`--signal`、`--background` 显式指定列名，脚本不会根据名称推断含义。
-信号和背景必须使用 `--signal-unit` 指定的相同单位；脚本不进行单位换算。
+用 `--x`、`--signal`、`--background` 显式指定列名，工具不会根据名称推断含义。
+信号和背景必须使用 `--signal-unit` 指定的相同单位；工具不进行单位换算。
 
 归一化时，必须同时提供 `--reference`、`--reference-background` 和 `--reference-unit`。
 两个参考列必须使用相同的参考单位，每个角色须选择不同的列。单位参数只是标签：
 信号与参考的单位标签相同时，响应单位为 `1`，否则为两者之比。自变量单位由
 `--x-unit` 指定，斜率单位为响应单位除以自变量单位。运行前需确认物理量及单位匹配。
 
-脚本不填补缺失值，也不自动剔除离群点。扣除背景后为负的信号仍然有效。
+工具不填补缺失值，也不自动剔除离群点。扣除背景后为负的信号仍然有效。
 以下情况会排除该行：
 
 - 必需字段为空、缺失、不是数值，或为 NaN、正负无穷。
@@ -75,7 +77,7 @@ ratio = corrected_signal / corrected_reference
 | `original-input.csv` | 原始输入的逐字节副本；不会写入源文件 |
 | `processed.csv` | 原始列和全部记录，以及以 `_analysis_` 开头的记录号、末尾行号、可用标记、排除原因、校正值、响应、拟合值、有符号残差和输入 SHA-256；多余单元格保存在 `_analysis_extra_cells` |
 | `measurements.png` | 校正后通道、响应及拟合、残差，包含坐标轴名称、单位、行数及输入哈希 |
-| `provenance.json` | 输入路径/哈希/大小、列映射、单位、算法、UTC 时间、脚本哈希、Python/Matplotlib 版本、来源署名及文件哈希 |
+| `provenance.json` | 输入路径/哈希/大小、列映射、单位、算法、UTC 时间、工具哈希、Python/Matplotlib 版本、来源署名及文件哈希 |
 | `summary.json` | 与标准输出相同的紧凑摘要 |
 
 拟合采用带截距的非加权普通最小二乘法，至少需要三条可用观测，且自变量至少有两个
@@ -92,7 +94,7 @@ ratio = corrected_signal / corrected_reference
 调整输入数值尺度及单位标签。
 
 `--maximum-rmse` 使用响应单位设定目标。应结合 `targets`、`issues`、`rows`、`fit`
-查看结果；状态与仓库其他示例的退出码一致：
+查看结果；状态与其他工具的退出码一致：
 
 | 状态 / 退出码 | 含义 |
 | --- | --- |
@@ -102,17 +104,17 @@ ratio = corrected_signal / corrected_reference
 | `UNKNOWN` / 2 | 可用观测不足或自变量无变化；仍保存审计文件 |
 | 错误 / 4 | 输入、配置、依赖或运行错误；标准错误输出 JSON 错误对象 |
 
-拟合完成不等于科学结论已通过验收。未指定 `--maximum-rmse` 时，不检查验收边界。
+未指定 `--maximum-rmse` 时，不检查验收边界。
 即使标量误差满足要求，残差结构仍可能提示模型不合适。不要忽略排除行，也不要将
 常数响应的 R² 未定义误认为拟合失败。
 
 ## 在 Python 中复用
 
 ```python
-from examples.analyze_measurements import MeasurementConfig, analyze_measurements
+from os_optics_kit.analyze_measurements import MeasurementConfig, analyze_measurements
 
 summary = analyze_measurements(
-    "examples/data/measurements/detector_response.csv",
+    "data/detector_response.csv",
     "run-detector-python",
     MeasurementConfig(
         x="input_power_mW", signal="signal_V", background="dark_V",
@@ -123,6 +125,6 @@ print(summary["fit"]["slope"])
 ```
 
 `preprocess_csv(bytes, config)` 和 `fit_linear(x, y)` 也可独立导入，不写入文件，也无需
-绘图库。参见英文[数据集定义与来源署名](../../examples/data/measurements/README.md)
-及[验证记录](../measurement-validation.md)。此流程用于补充光学仿真；修改仿真设计时，
-另行使用英文 [agent 编辑配方](../agent-recipes.md)。
+绘图库。参见英文[数据集定义与来源署名](../../cases/detector-measurements/data/README.md)。
+[mirror-alignment](../../cases/mirror-alignment) 工作流程用同一工具分析标记为 `SYNTHETIC`
+的引擎位置；修改仿真项目时，使用英文 [Agent 编辑步骤](../agent-recipes.md)。
