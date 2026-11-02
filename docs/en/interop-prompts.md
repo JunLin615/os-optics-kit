@@ -4,25 +4,23 @@
 
 Copy one template into your own coding agent and replace the parts in angle
 brackets. Each template asks the agent to work in your environment, with your
-installed tools, and to keep OpenSci results and external results apart. The examples
-use os-optics **0.10.0**; follow the
-[version matching instructions](installation.md#match-the-examples-to-the-installed-version).
+installed tools, and to keep OpenSci results and external results apart. The matching
+cases (`interop-optimization`, `interop-diffraction`, `interop-quantum`,
+`interop-metasurface`) run on os-optics 0.12 with os-optics-kit 0.1.
 
-The templates cover simulation and analysis only. Ordering, sending feedback and
-uploading a design to a commercial cloud service are separate decisions you make
-explicitly; nothing in these templates asks for them.
+The templates cover simulation and analysis only.
 
 ## Optimization and tolerance (SciPy, Optuna, SALib)
 
 ```text
-Use OS Optics (the version required by the companion examples) with SciPy, Optuna or SALib in this Python
+Use OS Optics 0.12 and os-optics-kit with SciPy, Optuna or SALib in this Python
 environment. My design: <Project file or description>. Goal: <metric, e.g. output divergence
 half-angle in rad at plane "output">; variables: <component ids and fields, with ranges and units>;
 tolerances to study: <fields and +/- ranges>.
 
-1. Read the OpenSci agent guide and docs/en/interop.md of the os-optics companion repository,
-   `os-optics --help`, `os-optics results metrics`, and the official documentation of the
-   optimizer you choose.
+1. Read the os-optics-kit agent guide, docs/en/interop.md of os-optics-kit,
+   `os-optics-kit cases show interop-optimization`, `os-optics --help`,
+   `os-optics results metrics`, and the official documentation of the optimizer you choose.
 2. State the objective as an OpenSci target metric with unit and selectors, the variables as Project
    fields edited by id, and which part OpenSci computes (each design) and which part the optimizer
    decides (the next values). Project retained_dofs are design intent, not optimizer variables.
@@ -43,11 +41,12 @@ tolerances to study: <fields and +/- ranges>.
 ## Diffraction and imaging (prysm, POPPY, LightPipes or Diffractio)
 
 ```text
-Use OS Optics (the version required by the companion examples) with <prysm / POPPY / LightPipes / Diffractio> in
+Use OS Optics 0.12 and os-optics-kit with <prysm / POPPY / LightPipes / Diffractio> in
 my environment. Layout: <Project file or description: source, stop or aperture, lens, observation
 planes>. Question: <e.g. focal-plane peak irradiance and encircled power within 50 um>.
 
-1. Read docs/en/interop.md of the os-optics companion repository, `os-optics results --help`
+1. Read docs/en/interop.md of os-optics-kit, `os-optics-kit cases show interop-diffraction`,
+   `os-optics results --help`
    and the field-construction convention it states, and the official documentation of the chosen
    diffraction package.
 2. State which numbers come from OpenSci (Gaussian beam state, power, aperture geometry, plane frames)
@@ -70,13 +69,13 @@ planes>. Question: <e.g. focal-plane peak irradiance and encircled power within 
 ## Quantum photonics (Perceval, with Piquasso as cross-check)
 
 ```text
-Use OS Optics (the version required by the companion examples) with Perceval in my environment, and Piquasso as an
+Use OS Optics 0.12 and os-optics-kit with Perceval in my environment, and Piquasso as an
 independent cross-check if it is installed. Layout: <Project file or description>. Quantum inputs:
 photons per source <...>, polarization mode <H/V>, wavepacket <shape, rms duration, zero-delay
 indistinguishability>, detectors <type, efficiency, dark-count probability, which planes>.
 
-1. Read docs/en/interop.md of the os-optics companion repository, `os-optics project network
-   --help`, the conventions block inside the exported network, and the Perceval documentation for
+1. Read docs/en/interop.md of os-optics-kit, `os-optics-kit cases show interop-quantum`,
+   `os-optics project network --help`, the conventions block inside the exported network, and the Perceval documentation for
    circuits, noise models and simulators.
 2. State the split: OpenSci exports the linear optical network (modes, transfer matrix T with losses,
    paths with optical and group delays, conventions); Perceval computes photon statistics. Photon
@@ -99,12 +98,13 @@ indistinguishability>, detectors <type, efficiency, dark-count probability, whic
 ## Metasurface response to a virtual focusing component (grcwa, meent, DFlat or metabox)
 
 ```text
-Use OS Optics (the version required by the companion examples) with <grcwa / meent / DFlat / metabox> in my
+Use OS Optics 0.12 and os-optics-kit with <grcwa / meent / DFlat / metabox> in my
 environment to turn a metasurface lens response into an OpenSci TABULATED_THIN_LENS model and use it
 in my layout. Metasurface: <materials, lattice, pillar family, design wavelength, focal length,
 diameter>. Use range: <wavelengths, input beam size, field angles, polarization>.
 
-1. Read docs/en/interop.md of the os-optics companion repository, the TABULATED_THIN_LENS fields
+1. Read docs/en/interop.md of os-optics-kit, `os-optics-kit cases show interop-metasurface`,
+   the TABULATED_THIN_LENS fields
    in `os-optics schema project`, and the documentation of the chosen electromagnetic tool.
    metabox runs on Python 3.8: keep it in its own environment and exchange files.
 2. State the split: the external tool computes the unit-cell responses and the focusing (with stated

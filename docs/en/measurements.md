@@ -1,21 +1,23 @@
 # Analyze experimental measurements
 
-[User guide](README.md) · English · [简体中文](../zh-CN/measurements.md)
+[os-optics-kit](../../README.md) · English · [简体中文](../zh-CN/measurements.md)
 
-Use [analyze_measurements.py](../../examples/analyze_measurements.py) to subtract
-measured backgrounds, optionally divide by a simultaneous reference channel, and
-fit a linear response. It runs independently of OS Optics or a simulation.
-The supplied CSVs are **synthetic**, with known answers and deliberate bad rows.
+`os-optics-kit measurements` subtracts measured backgrounds, optionally divides by a
+simultaneous reference channel, and fits a linear response. It needs no simulation.
+The [detector-measurements](../../cases/detector-measurements) case supplies two
+**synthetic** CSV files with known answers and deliberate bad rows.
 
 ## Install and run
 
-Use Python 3.11+ in a virtual environment. From the repository root:
+Use Python 3.11+ in a virtual environment:
 
 ```bash
-python -m pip install -r requirements-examples.txt
-python examples/analyze_measurements.py --help
-python examples/analyze_measurements.py examples/data/measurements/detector_response.csv --x input_power_mW --signal signal_V --background dark_V --x-unit mW --signal-unit V --maximum-rmse 0.003 --out run-detector
-python examples/analyze_measurements.py examples/data/measurements/reference_drift.csv --x time_s --signal signal_V --background dark_V --x-unit s --signal-unit V --reference reference_V --reference-background reference_dark_V --reference-unit V --maximum-rmse 0.000000000001 --out run-reference
+python -m pip install "os-optics[protected]" "os-optics-kit[plot]"
+os-optics-kit cases copy detector-measurements --dest .
+cd detector-measurements
+os-optics-kit measurements --help
+os-optics-kit measurements data/detector_response.csv --x input_power_mW --signal signal_V --background dark_V --x-unit mW --signal-unit V --maximum-rmse 0.003 --out run-detector
+os-optics-kit measurements data/reference_drift.csv --x time_s --signal signal_V --background dark_V --x-unit s --signal-unit V --reference reference_V --reference-background reference_dark_V --reference-unit V --maximum-rmse 0.000000000001 --out run-reference
 ```
 
 Each command writes one compact JSON document to stdout. Choose a **new output
@@ -30,7 +32,7 @@ both RMSE targets pass. Their full results are saved even if a target fails.
 
 The detector example subtracts a 0.020 V dark offset and recovers a 2 V/mW
 response with a remaining 0.005 V offset and small deterministic residuals. A
-nonzero fitted intercept is retained; the helper never forces a fit through zero.
+nonzero fitted intercept is retained; the tool never forces a fit through zero.
 For real calibration, record calibrated incident power or filter transmission and
 the dark readings, keep bandwidth/gain fixed, and inspect residuals for saturation
 or other nonlinearity. A small RMSE alone does not establish a linear operating
@@ -55,7 +57,7 @@ after the beam split or uncorrelated detector noise.
 Use UTF-8 CSV (an optional BOM is accepted), comma separators, decimal points,
 and a unique, nonempty header. Map columns explicitly with `--x`, `--signal`, and
 `--background`; their names have no built-in meaning. Signal and background must
-share the unit named by `--signal-unit`; the helper does no unit conversion.
+share the unit named by `--signal-unit`; the tool does no unit conversion.
 
 For normalization, supply all three of `--reference`, `--reference-background`,
 and `--reference-unit`. The two reference columns must share that unit. Select
@@ -88,7 +90,7 @@ syntax, missing columns, or invalid configuration stops the command with an erro
 | `original-input.csv` | Byte-for-byte input snapshot; the source file is never written |
 | `processed.csv` | Original columns and every record, plus `_analysis_` fields for record/line numbers, eligibility, exclusion reasons, corrected values, response, fitted response, signed residual and input SHA-256; excess cells are retained in `_analysis_extra_cells` |
 | `measurements.png` | Corrected channels, processed response/fit, and residuals; labeled axes and units, row counts and input hash |
-| `provenance.json` | Input path/hash/size, exact column mapping and units, numerical method, UTC time, helper hash, Python/Matplotlib versions, source attribution and artifact hashes |
+| `provenance.json` | Input path/hash/size, exact column mapping and units, numerical method, UTC time, tool hash, Python/Matplotlib versions, source attribution and artifact hashes |
 | `summary.json` | The compact summary also emitted on stdout |
 
 The fit uses unweighted ordinary least squares with an intercept, at least three
@@ -110,7 +112,7 @@ round away a small residual. Numeric ranges that cannot be represented produce
 an error; rescale those inputs and their unit labels.
 
 `--maximum-rmse` adds a target in response units. Inspect `targets`, `issues`,
-`rows`, and `fit` together. Status and exit conventions match other examples:
+`rows`, and `fit` together. Status and exit conventions match the other tools:
 
 | Status / exit | Meaning |
 | --- | --- |
@@ -120,18 +122,17 @@ an error; rescale those inputs and their unit labels.
 | `UNKNOWN` / 2 | Too few usable observations or no x variation; audit artifacts retained |
 | Error / 4 | Input, configuration, dependency or runtime error; JSON error on stderr |
 
-A successful fit is not automatic scientific acceptance. Without
-`--maximum-rmse`, no acceptance bound is checked. Residual structure may expose a
+Without `--maximum-rmse`, no acceptance bound is checked. Residual structure may expose a
 poor model even when a scalar error bound passes. Never silently discard excluded
 rows or interpret a constant-reference trace's undefined R² as a failed fit.
 
 ## Reuse from Python
 
 ```python
-from examples.analyze_measurements import MeasurementConfig, analyze_measurements
+from os_optics_kit.analyze_measurements import MeasurementConfig, analyze_measurements
 
 summary = analyze_measurements(
-    "examples/data/measurements/detector_response.csv",
+    "data/detector_response.csv",
     "run-detector-python",
     MeasurementConfig(
         x="input_power_mW", signal="signal_V", background="dark_V",
@@ -142,8 +143,8 @@ print(summary["fit"]["slope"])
 ```
 
 `preprocess_csv(bytes, config)` and `fit_linear(x, y)` are also importable and do
-not write files or require plotting. See [dataset definitions and
-attribution](../../examples/data/measurements/README.md) and [validation
-evidence](../measurement-validation.md). These helpers complement optical
-simulation; use the [agent editing recipes](../agent-recipes.md) to revise a
-simulated project separately.
+not write files or require plotting. See the [dataset definitions and
+attribution](../../cases/detector-measurements/data/README.md). The
+[mirror-alignment](../../cases/mirror-alignment) workflow uses the same tool on
+engine positions labelled `SYNTHETIC`; use the [agent editing recipes](../agent-recipes.md)
+to revise a simulated project.

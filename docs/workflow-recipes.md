@@ -1,21 +1,20 @@
 # Workflow recipes for agents
 
-[Agent guide](../AGENT_GUIDE.md). English-only reference for the workflow scripts in
-`examples/`; read only the section the task needs. Each script's `--help` holds its
-complete specification. These workflows use os-optics **0.10.0**, the version
-recorded in [engine-baseline.json](../engine-baseline.json) with the matching
-[installation guide](en/installation.md). Human walkthrough: [English](en/workflows.md) ·
-[简体中文](zh-CN/workflows.md).
+[Agent guide](../AGENT_GUIDE.md). English-only reference for the kit's tools
+(`os-optics-kit <command>`) and the case workflows; read only the section the task needs.
+Each command's `--help` holds its complete specification. os-optics-kit 0.1.x works with
+os-optics 0.12 ([installation](https://github.com/JunLin615/os-optics/blob/main/docs/en/installation.md));
+the quoted results come from os-optics 0.12.0 and catalog release `2026-10-28.1`. Human
+walkthrough: [English](en/workflows.md) · [简体中文](zh-CN/workflows.md).
 
 ## Conventions
 
-- Run from the repository root. Stdout is one compact JSON document; diagnostics go to
-  stderr. A refusal prints `{"error": {"code", "message", ...}}` on stderr, nothing on
+- Stdout is one compact JSON document; diagnostics go to stderr. A refusal prints `{"error": {"code", "message", ...}}` on stderr, nothing on
   stdout, and exits 4. Invalid edit requests are rejected before changing the Project;
-  study sample failures remain recorded alongside successful samples. One exception: when `edit_project.py
+  study sample failures remain recorded alongside successful samples. One exception: when `edit
   --run` writes a valid edit and the Engine refuses the run, stdout reports
   `run.status` `RUN_REFUSED` with its `problems` (exit 4).
-- Inputs are never modified. Edit, study and workflow scripts refuse an existing output
+- Inputs are never modified. Edit, study and workflow commands refuse an existing output
   (`OUTPUT_EXISTS`) unless `--overwrite`; on a study directory `--overwrite` also removes
   its `plots/` and `report/`, which describe the previous samples.
 - Numbers keep their schema unit (`_mm`, `_nm`, `_w`/`_W`, `_deg`, `_rad`; target bounds
@@ -29,17 +28,20 @@ recorded in [engine-baseline.json](../engine-baseline.json) with the matching
   with a catalog installed. A study's `catalog_versions` preserves distinct run
   versions, including null, when its samples differ.
 
-| Script | Exit 0 | 1 | 2 | 3 | 4 |
+| Command | Exit 0 | 1 | 2 | 3 | 4 |
 | --- | --- | --- | --- | --- | --- |
-| `edit_project.py` | `EDITED`, `ALREADY_APPLIED`, `DESCRIBED`; with `--run` outcome `PASS` or `NOT_APPLICABLE` | outcome `FAIL` | outcome `UNKNOWN` | outcome `OUT_OF_MODEL` | refused, `RUN_REFUSED` |
-| `sweep_parameters.py` | `COMPLETED` | `NO_FEASIBLE` (constraints given, none met) | | | refused |
-| `sensitivity_analysis.py` | `COMPLETED` | | `INCOMPLETE` (a derivative unavailable) | | refused |
-| `tolerance_study.py` | `COMPLETED` (at least one PASS), `DRAWN`, `REPRODUCED` | `NO_FEASIBLE` (no PASS), `MISMATCH` | | | refused |
-| `compare_runs.py`, `plot_results.py`, `build_report.py` | `COMPLETED` | | | | invalid input |
-| `catalog_candidates.py` | `COMPLETED` | `NO_MATCH` | | | invalid input, no catalog |
-| three design workflows | nominal `PASS` | nominal `FAIL` | `UNKNOWN` | `OUT_OF_MODEL` | `ERROR`, refused |
+| `summary` | `PASS`, `WARNING`, `NOT_APPLICABLE` | `FAIL` | `UNKNOWN` | `OUT_OF_MODEL`, `OUT_OF_MODEL_SCOPE` | error |
+| `edit` | `EDITED`, `ALREADY_APPLIED`, `DESCRIBED`; with `--run` outcome `PASS` or `NOT_APPLICABLE` | outcome `FAIL` | outcome `UNKNOWN` | outcome `OUT_OF_MODEL` | refused, `RUN_REFUSED` |
+| `sweep` | `COMPLETED` | `NO_FEASIBLE` (constraints given, none met) | | | refused |
+| `sensitivity` | `COMPLETED` | | `INCOMPLETE` (a derivative unavailable) | | refused |
+| `tolerance` | `COMPLETED` (at least one PASS), `DRAWN`, `REPRODUCED` | `NO_FEASIBLE` (no PASS), `MISMATCH` | | | refused |
+| `compare`, `plot`, `report` | `COMPLETED` | | | | invalid input |
+| `candidates` | `COMPLETED` | `NO_MATCH` | | | invalid input, no catalog |
+| `measurements` | `PASS`, `WARNING` | `FAIL` (RMSE bound exceeded) | `UNKNOWN` (no fit) | | error |
+| `cases verify` | every case matches `expected.json` | a case differs | | | usage error, unknown case, no engine |
+| case `workflow.py` | nominal `PASS` | nominal `FAIL` | `UNKNOWN` | `OUT_OF_MODEL` | `ERROR`, refused |
 
-`edit_project.py --run` uses the outcome of its selected targets. It retains the
+`edit --run` uses the outcome of its selected targets. It retains the
 engine's execution, requirements, quantity validity and issue fields. Outcome classes
 are workflow routing summaries; inspect those fields for the scientific meaning.
 
@@ -88,15 +90,15 @@ After an interrupted response to an in-place relative transform, repeat only wit
 **original** expected hash. A mismatch means inspect the current Project before making
 a new decision; do not substitute the new hash and blindly repeat the transform.
 Absolute assignments are unchanged when reapplied, but relative moves accumulate.
-The helper below instead preserves a base/output pair and an edit record for retries.
+`os-optics-kit edit` instead preserves a base/output pair and an edit record for retries.
 
 ## Computation budgets
 
 Study `max_evaluations` caps the number of designs. A Project `compute_budget` caps work
 inside each design. Inspect effective limits in `project check` or `capabilities`.
-To see a limited run with the catalog-free expansion workflow, first generate
-`run-expansion/nominal/project.json` using `beam_expansion_focus.py --no-studies`, then
-save the following as `budget.json`:
+To see a limited run with the catalog-free expansion design, copy its case
+(`os-optics-kit cases copy expansion-focus --dest .`, then `cd expansion-focus`; its
+`project.json` is the workflow's nominal design) and save the following as `budget.json`:
 
 ```json
 [{"op": "set_compute_budget", "compute_budget": {
@@ -108,11 +110,12 @@ save the following as `budget.json`:
 ```
 
 ```bash
-os-optics project update run-expansion/nominal/project.json --ops budget.json --out limited.json
+os-optics project update project.json --ops budget.json --out limited.json
 os-optics project check limited.json
 os-optics project run limited.json --out-dir limited-run
 os-optics results targets limited-run
-os-optics results freshness run-expansion/nominal/run --project limited.json
+os-optics project run project.json --out-dir run
+os-optics results freshness run --project limited.json
 ```
 
 The one-interaction limit stops this three-lens design early. Inspect
@@ -122,17 +125,20 @@ write another Project and run directory, then compare which quantities become av
 Choose limits for the requested topology and accuracy: higher caps permit more work
 and larger artifacts. Changing a cap makes the previous result historical with
 `PHYSICS_CHANGED`. `set_compute_budget` with `compute_budget: null` restores engine
-defaults; it does not remove all limits. The reusable operation files
-[`compute_budget_limited.json`](../examples/specs/compute_budget_limited.json) (one trace
-step) and [`compute_budget_default.json`](../examples/specs/compute_budget_default.json)
+defaults; it does not remove all limits. The case's operation files
+[`studies/compute_budget_limited.json`](../cases/expansion-focus/studies/compute_budget_limited.json)
+(one trace step) and
+[`studies/compute_budget_default.json`](../cases/expansion-focus/studies/compute_budget_default.json)
 (default restoration) offer the same limited-versus-default comparison. Pass either
-file to native `--ops` or the helper's `--edits`.
+file to native `--ops` or to `os-optics-kit edit --edits`.
 
 ## Find objects
 
+In the copied beam-expander case (`os-optics-kit cases copy beam-expander --dest .`):
+
 ```bash
-python examples/edit_project.py run-example/project.json --describe
-python examples/edit_project.py run-example/project.json --describe --ids SRC,L2,expanded_waist
+os-optics-kit edit project.json --describe
+os-optics-kit edit project.json --describe --ids SRC,L2,expanded_waist
 ```
 
 The first prints every component, observation and target with `id`, `kind`, `role`,
@@ -146,15 +152,15 @@ axis: in the catalog beam expander L2's local +Z is design −X.
 ## Edit a project by ID
 
 ```bash
-python examples/edit_project.py BASE.json --edits EDITS.json --out NEW.json [--run RUN_DIR] \
+os-optics-kit edit BASE.json --edits EDITS.json --out NEW.json [--run RUN_DIR] \
     [--changes FILE] [--expect-base-hash HASH] [--overwrite]
 ```
 
 `EDITS.json` is a list of operations (or `{"ops": [...]}`) in the engine semantic-edit
-vocabulary, applied by the engine in order to a copy of BASE. The helper adds unit
+vocabulary, applied by the engine in order to a copy of BASE. The command adds unit
 conversion, original-file preservation and a durable retry record. `changes` objects merge;
-`null` removes a field. An argument left out is refused (`BAD_ARGUMENT`), as in the
-Designer: `set_retained_dof` needs `control` (`null` releases the DOF) and
+`null` removes a field. An argument left out is refused (`BAD_ARGUMENT`):
+`set_retained_dof` needs `control` (`null` releases the DOF) and
 `set_design_intent` needs `design_intent` (`null` removes it).
 
 | Op | Arguments |
@@ -177,7 +183,7 @@ moves L2 0.25 mm along its own optical axis. Observation ids in the selector mov
 The workspace frames `{"group": ID}` and `{"instance": ID}` exist only in a Designer
 workspace; on a Project file the Engine refuses them (`FRAME_INVALID`).
 
-Example on the catalog beam expander (`python examples/beam_expander.py --out run-example`):
+Example on the beam-expander case (`project.json` of the copied case):
 change the wavelength, move L2 and the output plane 1 mm along design +X, and replace the
 waist target by an interval. Save as `edits.json`:
 
@@ -191,7 +197,7 @@ waist target by an interval. Save as `edits.json`:
 ```
 
 ```bash
-python examples/edit_project.py run-example/project.json --edits edits.json --out run-edit/project.json --run run-edit/run
+os-optics-kit edit project.json --edits edits.json --out run-edit/project.json --run run-edit/run
 ```
 
 Result on catalog `2026-10-28.1`: exit 1, `run.outcome` `FAIL`, `expanded_waist`
@@ -216,7 +222,7 @@ Retry and concurrency:
 ## Sweep
 
 ```bash
-python examples/sweep_parameters.py SPEC.json [--base BASE.json] --out STUDY_DIR
+os-optics-kit sweep SPEC.json [--base BASE.json] --out STUDY_DIR
 ```
 
 | Key | Meaning |
@@ -237,8 +243,9 @@ the unchanged base. Columns: `param:<name>`, `target:<id>` (target unit),
 any run, a target id that is in neither the base nor the first sample is refused with
 `TARGET_UNKNOWN`, and an objective, constraint or derived column that the spec cannot
 produce with `COLUMN_UNKNOWN`; both list the known ids or columns. Examples:
-`examples/specs/beam_expander_l2_sweep.json` (one parameter, constraint, objective and a
-derived column in mm) and `examples/specs/polarization_hwp_wavelength_sweep.json`
+[`cases/beam-expander/studies/beam_expander_l2_sweep.json`](../cases/beam-expander/studies/beam_expander_l2_sweep.json)
+(one parameter, constraint, objective and a derived column in mm) and
+[`cases/polarization-control/studies/polarization_hwp_wavelength_sweep.json`](../cases/polarization-control/studies/polarization_hwp_wavelength_sweep.json)
 (2-parameter grid with out-of-model samples).
 
 Writes `study.json` (spec as given and normalized, base hash, identities, budget),
@@ -253,13 +260,13 @@ codes) and at most five rows, each with its `warnings`.
 ## Compare and freshness
 
 ```bash
-python examples/compare_runs.py RUN_A RUN_B --project CURRENT.json --out CMP
+os-optics-kit compare RUN_A RUN_B --project CURRENT.json --out CMP
 os-optics results freshness RUN_A --project CURRENT.json
 ```
 
 Targets and observation planes align by ID; missing quantities remain explicit.
 Input differences include geometry, sources, targets, budgets and catalog identity.
-The helper uses engine freshness: `CURRENT`, `HISTORICAL` or `UNDETERMINED`, preserving
+The command uses engine freshness: `CURRENT`, `HISTORICAL` or `UNDETERMINED`, preserving
 reasons such as `PHYSICS_CHANGED`, `TARGETS_CHANGED`, `OTHER_PROJECT_CHANGED`,
 `CATALOG_CHANGED` and `RUN_UNVERIFIED`. A budget change is `PHYSICS_CHANGED`.
 
@@ -272,11 +279,13 @@ the current design. Nothing is rerun by comparison. Files: `CMP/compare.json` an
 ## Plots and reports
 
 ```bash
-python examples/plot_results.py sweep STUDY_DIR --y target:expanded_waist
-python examples/plot_results.py power RUN_DIR
-python examples/build_report.py STUDY_DIR --project CURRENT.json --plots STUDY_DIR/plots --changes NEW.changes.json
-python examples/build_report.py RUN_A RUN_B --project CURRENT.json --out REPORT_DIR
+os-optics-kit plot sweep STUDY_DIR --y target:expanded_waist
+os-optics-kit plot power RUN_DIR
+os-optics-kit report STUDY_DIR --project CURRENT.json --plots STUDY_DIR/plots --changes NEW.changes.json
+os-optics-kit report RUN_A RUN_B --project CURRENT.json --out REPORT_DIR
 ```
+
+`plot` needs the plot extra: `python -m pip install "os-optics-kit[plot]"`.
 
 `sweep` draws a curve (one parameter) or heatmap (two) with axis units, the target
 bounds (a band on the curve, dashed lines on the heatmap colour bar) and every sample's
@@ -299,7 +308,7 @@ path and sha256.
 ## Catalog candidates
 
 ```bash
-python examples/catalog_candidates.py --category LENS --form PLANO_CONVEX_LENS --wavelength-nm 780 \
+os-optics-kit candidates --category LENS --form PLANO_CONVEX_LENS --wavelength-nm 780 \
     --range focal_length_mm=95..105 --range outer_diameter_mm=12.7..12.7 --near focal_length_mm=100 \
     --limit 8 --columns optical_sku,focal_length_mm,outer_diameter_mm,working_band_nm --out candidates.csv
 ```
@@ -317,12 +326,12 @@ without a `--range`, `--near` or `--sort` field, per field), `shown` and `omitte
 ## Sensitivity
 
 ```bash
-python examples/sensitivity_analysis.py SPEC.json --out STUDY_DIR [--base BASE.json] [--no-plots] [--no-report]
+os-optics-kit sensitivity SPEC.json --out STUDY_DIR [--base BASE.json] [--no-plots] [--no-report]
 ```
 
 | Key | Meaning |
 | --- | --- |
-| `base_project` or `design` | Project file, or `{"builder": NAME, "arguments": {...}}` from `examples/optical_designs.py` (catalog-free) |
+| `base_project` or `design` | Project file, or `{"builder": NAME, "arguments": {...}}` from `os_optics_kit.optical_designs` (catalog-free) |
 | `targets` | target ids to differentiate (unknown ids refused: `TARGET_UNKNOWN`) |
 | `parameters` | `{name, unit, ops, nominal = 0, steps (≥ 2; numbers, quantities or {"relative": r}), scale?}` |
 | `consistency_threshold` | relative difference of two step estimates that is flagged (default 0.01) |
@@ -338,14 +347,14 @@ second difference reported; flags `STEP_DEPENDENT`, `NEAR_EXTREMUM` (use the sec
 difference there), `NO_CHANGE`, `ONE_SIDED`, `METHOD_DIFFERS`, `UNAVAILABLE`. Units are
 target unit per parameter unit. With `scale`, `scaled` = D·s and the ranking uses
 |D|·s + |f″|·s²/2. Files add `sensitivity.csv` and `plots/sensitivity_<target>`,
-`plots/tornado_<target>`. Specs: `examples/specs/sensitivity_*.json`;
-`sensitivity_expander_band_edge.json` shows a one-sided estimate next to the band edge.
+`plots/tornado_<target>`. Specs: `cases/*/studies/sensitivity_*.json`;
+`cases/expansion-focus/studies/sensitivity_expander_band_edge.json` shows a one-sided estimate next to the band edge.
 
 ## Tolerance
 
 ```bash
-python examples/tolerance_study.py SPEC.json --out STUDY_DIR [--seed N] [--samples N] [--zero-tolerance] [--draw-only]
-python examples/tolerance_study.py --verify-seed STUDY_DIR
+os-optics-kit tolerance SPEC.json --out STUDY_DIR [--seed N] [--samples N] [--zero-tolerance] [--draw-only]
+os-optics-kit tolerance --verify-seed STUDY_DIR
 ```
 
 | Key | Meaning |
@@ -363,17 +372,21 @@ larger run are the same; `--verify-seed` redraws and compares. `--zero-tolerance
 reproduces the nominal project and result hashes exactly. Stdout: counts per outcome
 class with denominators, target-value statistics over exact valid selected quantities
 (count stated), `samples_with_warnings`, sampling assumptions. Specs:
-`examples/specs/tolerance_*.json`.
+`cases/*/studies/tolerance_*.json`.
 
 ## Design workflows
 
+The cases `expansion-focus`, `polarization-control` and `mirror-alignment` each hold a
+`workflow.py`. Copy the case (`os-optics-kit cases copy NAME --dest .`) and run it inside
+the case directory:
+
 ```bash
-python examples/beam_expansion_focus.py --out run-expansion-gap --gap-error-mm 250um --study f3_mm=75..125:5
-python examples/polarization_control.py --out run-pol-1064 --wavelength-nm 1064 --no-studies
-python examples/alignment_analysis.py --out run-alignment-tilt --study mirror_tilt_local_y_mrad=-1..1:5
+python workflow.py --out run-expansion-gap --gap-error-mm 250um --study f3_mm=75..125:5   # expansion-focus
+python workflow.py --out run-pol-1064 --wavelength-nm 1064 --no-studies                    # polarization-control
+python workflow.py --out run-alignment-tilt --study mirror_tilt_local_y_mrad=-1..1:5       # mirror-alignment
 ```
 
-Each builds a catalog-free design from `examples/optical_designs.py`, runs it, runs its
+Each builds a catalog-free design from `os_optics_kit.optical_designs`, runs it, runs its
 studies, compares each study with the nominal run, plots changing targets, compares the
 Engine values with an independent closed-form reference and writes reports.
 `--list-parameters` prints every input with unit, default, meaning and role. Inputs take
@@ -383,15 +396,15 @@ replaces the default studies; `--max-evaluations` (default 40) bounds nominal pl
 samples before anything runs. Output: `DIR/workflow.json`, `DIR/nominal/`,
 `DIR/studies/<NAME>/` (sweep study, `compare/`, `plots/`, `closed_form.json`, `report/`),
 `DIR/report/report.md`. Exit follows the nominal outcome; study samples are counted in
-`studies[].counts` and `pass_fraction` ("n/N"). `alignment_analysis.py
---synthetic-measurements` adds a fit of rows labelled `SYNTHETIC` (not measurements).
+`studies[].counts` and `pass_fraction` ("n/N"). The mirror-alignment workflow's
+`--synthetic-measurements` adds a fit of rows labelled `SYNTHETIC` (not measurements).
 
 ## Recovery
 
 | Error code | Cause | Next step |
 | --- | --- | --- |
 | `OUTPUT_EXISTS` | output file or directory already holds other results | new `--out`; `--overwrite` only to replace it |
-| `BASE_CHANGED` | `--expect-base-hash` differs from the base | re-read the base (`--describe`) and rebuild the edit |
+| `BASE_CHANGED` | `--expect-base-hash` differs from the base | re-read the base (`edit --describe`) and rebuild the edit |
 | `PROJECT_OP_INVALID` | `op_code` `UNKNOWN_OP`, `NOT_FOUND`, `DUPLICATE_ID`, `BAD_ARGUMENT`, `IN_USE`, `UNIT_UNKNOWN`, `UNIT_INCOMPATIBLE` at `op_index` | fix that op; check ids with `--describe` |
 | `PROJECT_OP_INVALID` with `TRANSFORM_REFUSED` | transform selector, frame or pivot cannot be applied | inspect the named operation and its problems |
 | `PROJECT_REJECTED` | the Engine check refuses the edited Project; `problems` list codes and locations | change the offending values |
