@@ -1,0 +1,38 @@
+name: Tool or skill proposal
+description: Propose a reusable tool (an os-optics-kit command) or an agent skill.
+labels: [tool]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Tools are shared helpers that more than one case or workflow can use; a helper that serves a single case
+        stays with that case. If you already have a working helper, `os-optics-kit contrib tool` packages it with a
+        skill page and tests (see [CONTRIBUTING.md](https://github.com/JunLin615/os-optics-kit/blob/main/CONTRIBUTING.md)).
+  - type: textarea
+    id: task
+    attributes:
+      label: Task
+      description: What the tool or skill does, and when a person or an agent would use it.
+    validations:
+      required: true
+  - type: textarea
+    id: interface
+    attributes:
+      label: Inputs and outputs
+      description: Command-line arguments, input files (Projects, run directories, specs) and the JSON it prints.
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: Engine features it relies on and any third-party packages.
+  - type: dropdown
+    id: contribution
+    attributes:
+      label: Will you open the pull request?
+      options:
+        - Yes, I or my agent will open it
+        - Not yet, this is an idea
+    validations:
+      required: true
