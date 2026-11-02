@@ -1,0 +1,387 @@
+{
+  "schema_version": 1,
+  "default_requirements": [
+    "requirements-examples.txt"
+  ],
+  "checks": [
+    {
+      "name": "offline-tests",
+      "description": "Offline unittest discovery",
+      "argv": ["{python}", "-m", "unittest", "discover", "-s", "tests", "-v"],
+      "timeout": 600
+    },
+    {
+      "name": "ideal-pass",
+      "description": "Catalog-free ideal lens; target met",
+      "argv": ["{python}", "examples/ideal_lens_focus.py", "--out", "{runs}/ideal-pass"],
+      "expected_status": "PASS"
+    },
+    {
+      "name": "ideal-unmet-target",
+      "description": "Catalog-free ideal lens; strict bound must report FAIL with exit 1",
+      "argv": ["{python}", "examples/ideal_lens_focus.py", "--out", "{runs}/ideal-fail", "--maximum-radius-mm", "0.001"],
+      "expected_exit": 1,
+      "expected_status": "FAIL"
+    },
+    {
+      "name": "ideal-invalid-input",
+      "description": "Invalid bound must exit 4 with a JSON error on stderr and empty stdout",
+      "argv": ["{python}", "examples/ideal_lens_focus.py", "--maximum-radius-mm", "nan"],
+      "expected_exit": 4,
+      "json_error": true
+    },
+    {
+      "name": "beam-summary",
+      "description": "Catalog beam expander and saved-result summary comparison",
+      "argv": ["{python}", "-m", "tests.check_beam_summary", "--out", "{runs}/beam"],
+      "needs_catalog": true,
+      "expected_status": "PASS"
+    },
+    {
+      "name": "catalog-tests",
+      "description": "Catalog-dependent unit tests, run after the catalog is prepared; a missing catalog fails them",
+      "argv": ["{python}", "-m", "unittest", "-v", "tests.test_optical_designs.CatalogVariantTests", "tests.test_workflow_examples.CatalogBeamExpanderDemoTests", "tests.test_workflow_postprocess.CandidateTests"],
+      "needs_catalog": true,
+      "env": {"OPENSCI_EXAMPLES_REQUIRE_CATALOG": "1"},
+      "timeout": 600
+    },
+    {
+      "name": "saved-run-summary",
+      "description": "Summarize the saved beam-expander run without simulating",
+      "argv": ["{python}", "examples/result_summary.py", "{runs}/beam"],
+      "needs": ["beam-summary"],
+      "expected_status": "PASS"
+    },
+    {
+      "name": "workflow-expansion",
+      "description": "Beam expansion/focus workflow with a three-value gap study",
+      "argv": ["{python}", "examples/beam_expansion_focus.py", "--out", "{runs}/wf-expansion", "--study", "gap_error_mm=-2,0,2"],
+      "expected_status": "PASS",
+      "timeout": 300
+    },
+    {
+      "name": "workflow-polarization-out-of-model",
+      "description": "1064 nm lies outside the retarder band: affected targets are indeterminate, workflow OUT_OF_MODEL, exit 3",
+      "argv": ["{python}", "examples/polarization_control.py", "--out", "{runs}/wf-pol-oom", "--no-studies", "--wavelength-nm", "1064"],
+      "expected_exit": 3,
+      "expected_status": "OUT_OF_MODEL"
+    },
+    {
+      "name": "workflow-alignment-synthetic",
+      "description": "Alignment with the labelled synthetic-measurement fit; a 1 mrad tilt misses the tolerance",
+      "argv": ["{python}", "examples/alignment_analysis.py", "--out", "{runs}/wf-alignment-synthetic", "--no-studies", "--mirror-tilt-local-y-mrad", "1", "--synthetic-measurements"],
+      "expected_exit": 1,
+      "expected_status": "FAIL"
+    },
+    {
+      "name": "spec-pol-design",
+      "description": "Nominal polarization Project used as the sweep base",
+      "argv": ["{python}", "examples/polarization_control.py", "--out", "{runs}/spec-pol", "--no-studies"],
+      "expected_status": "PASS"
+    },
+    {
+      "name": "spec-pol-sweep",
+      "description": "HWP by wavelength sweep keeping OUT_OF_MODEL samples",
+      "argv": ["{python}", "examples/sweep_parameters.py", "examples/specs/polarization_hwp_wavelength_sweep.json", "--base", "{runs}/spec-pol/nominal/project.json", "--out", "{runs}/spec-pol-sweep"],
+      "needs": ["spec-pol-design"],
+      "expected_status": "COMPLETED",
+      "timeout": 300
+    },
+    {
+      "name": "sensitivity-polarization",
+      "description": "Finite-difference sensitivity of transmitted power, two steps per parameter",
+      "argv": ["{python}", "examples/sensitivity_analysis.py", "examples/specs/sensitivity_polarization.json", "--out", "{runs}/sensitivity-polarization", "--no-plots", "--no-report"],
+      "expected_status": "COMPLETED",
+      "timeout": 300
+    },
+    {
+      "name": "tolerance-polarization",
+      "description": "Seeded tolerance sampling, 20 samples, out-of-model samples counted",
+      "argv": ["{python}", "examples/tolerance_study.py", "examples/specs/tolerance_polarization.json", "--out", "{runs}/tolerance-polarization", "--samples", "20", "--no-plots", "--no-report"],
+      "expected_status": "COMPLETED",
+      "timeout": 300
+    },
+    {
+      "name": "tolerance-verify-seed",
+      "description": "Redraw the tolerance samples from the recorded seed",
+      "argv": ["{python}", "examples/tolerance_study.py", "--verify-seed", "{runs}/tolerance-polarization"],
+      "needs": ["tolerance-polarization"],
+      "optional": true,
+      "expected_status": "REPRODUCED"
+    },
+    {
+      "name": "tolerance-zero",
+      "description": "Zero tolerance reproduces the nominal Project and result",
+      "argv": ["{python}", "examples/tolerance_study.py", "examples/specs/tolerance_expander.json", "--out", "{runs}/tolerance-zero", "--zero-tolerance", "--samples", "3", "--no-plots", "--no-report"],
+      "optional": true,
+      "expected_status": "COMPLETED"
+    },
+    {
+      "name": "sensitivity-band-edge",
+      "description": "Band-edge sensitivity: nominal FAIL kept, the out-of-model side gives a one-sided estimate",
+      "argv": ["{python}", "examples/sensitivity_analysis.py", "examples/specs/sensitivity_expander_band_edge.json", "--out", "{runs}/sensitivity-band-edge", "--no-plots", "--no-report"],
+      "optional": true,
+      "expected_status": "COMPLETED"
+    },
+    {
+      "name": "workflow-expansion-full",
+      "description": "Beam expansion/focus workflow, default studies",
+      "argv": ["{python}", "examples/beam_expansion_focus.py", "--out", "{runs}/wf-expansion-full"],
+      "optional": true,
+      "expected_status": "PASS",
+      "timeout": 300
+    },
+    {
+      "name": "workflow-expansion-unmet",
+      "description": "Strict spot bound (10 um) must report FAIL with exit 1",
+      "argv": ["{python}", "examples/beam_expansion_focus.py", "--out", "{runs}/wf-expansion-unmet", "--no-studies", "--max-spot-radius-mm", "10um"],
+      "optional": true,
+      "expected_exit": 1,
+      "expected_status": "FAIL"
+    },
+    {
+      "name": "workflow-budget-refused",
+      "description": "Study budget exceeded: JSON error, exit 4, nothing run",
+      "argv": ["{python}", "examples/beam_expansion_focus.py", "--out", "{runs}/wf-budget", "--max-evaluations", "5"],
+      "optional": true,
+      "expected_exit": 4,
+      "json_error": true
+    },
+    {
+      "name": "workflow-polarization-full",
+      "description": "Polarization workflow, default studies",
+      "argv": ["{python}", "examples/polarization_control.py", "--out", "{runs}/wf-polarization-full"],
+      "optional": true,
+      "expected_status": "PASS",
+      "timeout": 300
+    },
+    {
+      "name": "workflow-alignment-full",
+      "description": "Alignment workflow, default studies",
+      "argv": ["{python}", "examples/alignment_analysis.py", "--out", "{runs}/wf-alignment-full"],
+      "optional": true,
+      "expected_status": "PASS",
+      "timeout": 300
+    },
+    {
+      "name": "spec-pol-edit",
+      "description": "Threshold edit in mW, validated and run",
+      "argv": ["{python}", "examples/edit_project.py", "{runs}/spec-pol/nominal/project.json", "--edits", "examples/specs/polarization_threshold.json", "--out", "{runs}/spec-pol-strict.json", "--run", "{runs}/spec-pol-strict-run"],
+      "needs": ["spec-pol-design"],
+      "optional": true,
+      "expected_status": "PASS"
+    },
+    {
+      "name": "spec-pol-edit-retry",
+      "description": "Repeating the same edit reports already_applied and reuses the current run",
+      "argv": ["{python}", "examples/edit_project.py", "{runs}/spec-pol/nominal/project.json", "--edits", "examples/specs/polarization_threshold.json", "--out", "{runs}/spec-pol-strict.json", "--run", "{runs}/spec-pol-strict-run"],
+      "needs": ["spec-pol-edit"],
+      "optional": true,
+      "expected_status": "PASS"
+    },
+    {
+      "name": "catalog-candidates",
+      "description": "Bounded candidate table of plano-convex lenses at 780 nm",
+      "argv": ["{python}", "examples/catalog_candidates.py", "--category", "LENS", "--form", "PLANO_CONVEX_LENS", "--wavelength-nm", "780", "--range", "focal_length_mm=95..105", "--near", "focal_length_mm=100", "--limit", "5"],
+      "needs_catalog": true,
+      "expected_status": "COMPLETED"
+    },
+    {
+      "name": "spec-be-base",
+      "description": "Catalog beam expander base run for the L2 demonstration",
+      "argv": ["{python}", "examples/beam_expander.py", "--out", "{runs}/spec-be-base"],
+      "needs_catalog": true,
+      "expected_status": "PASS"
+    },
+    {
+      "name": "spec-be-swap",
+      "description": "Swap L2 for the 100.3 mm candidate: expanded_waist FAIL",
+      "argv": ["{python}", "examples/edit_project.py", "{runs}/spec-be-base/project.json", "--edits", "examples/specs/beam_expander_swap_l2.json", "--out", "{runs}/spec-be-swapped.json", "--run", "{runs}/spec-be-swapped-run"],
+      "needs": ["spec-be-base"],
+      "needs_catalog": true,
+      "expected_exit": 1,
+      "expected_status": "FAIL"
+    },
+    {
+      "name": "spec-be-sweep",
+      "description": "L2 spacing sweep; best shift 0.54 mm",
+      "argv": ["{python}", "examples/sweep_parameters.py", "examples/specs/beam_expander_l2_sweep.json", "--base", "{runs}/spec-be-swapped.json", "--out", "{runs}/spec-be-sweep"],
+      "needs": ["spec-be-swap"],
+      "needs_catalog": true,
+      "expected_status": "COMPLETED",
+      "timeout": 300
+    },
+    {
+      "name": "spec-be-move",
+      "description": "Move L2 by 540 um: PASS",
+      "argv": ["{python}", "examples/edit_project.py", "{runs}/spec-be-swapped.json", "--edits", "examples/specs/beam_expander_move_l2.json", "--out", "{runs}/spec-be-final.json", "--run", "{runs}/spec-be-final-run"],
+      "needs": ["spec-be-swap"],
+      "needs_catalog": true,
+      "expected_status": "PASS"
+    },
+    {
+      "name": "spec-be-compare",
+      "description": "Compare base, swapped and final runs with freshness against the final Project",
+      "argv": ["{python}", "examples/compare_runs.py", "{runs}/spec-be-base", "{runs}/spec-be-swapped-run", "{runs}/spec-be-final-run", "--project", "{runs}/spec-be-final.json", "--out", "{runs}/spec-be-compare"],
+      "needs": ["spec-be-move"],
+      "needs_catalog": true,
+      "expected_status": "COMPLETED"
+    },
+    {
+      "name": "spec-be-plot",
+      "description": "Sweep curve of expanded_waist with outcome markers",
+      "argv": ["{python}", "examples/plot_results.py", "sweep", "{runs}/spec-be-sweep", "--y", "target:expanded_waist"],
+      "needs": ["spec-be-sweep"],
+      "needs_catalog": true,
+      "expected_status": "COMPLETED"
+    },
+    {
+      "name": "spec-be-report",
+      "description": "Study report with plots, edit record and freshness",
+      "argv": ["{python}", "examples/build_report.py", "{runs}/spec-be-sweep", "--project", "{runs}/spec-be-final.json", "--plots", "{runs}/spec-be-sweep/plots", "--changes", "{runs}/spec-be-swapped.changes.json"],
+      "needs": ["spec-be-plot", "spec-be-move"],
+      "needs_catalog": true,
+      "expected_status": "COMPLETED"
+    },
+    {
+      "name": "interop-optimization",
+      "description": "SciPy, Optuna and SALib loop over a catalog-free Project",
+      "argv": ["{python}", "examples/interop/optimization/optimize_expander.py", "--out", "{runs}/interop-optimization"],
+      "requirements": "examples/interop/optimization/requirements-optimization.txt",
+      "optional": true,
+      "requires_python": "3.12",
+      "status_field": "outcome",
+      "expected_status": "WITHIN_TOLERANCE",
+      "timeout": 1800
+    },
+    {
+      "name": "interop-diffraction-handoff",
+      "description": "Engine transverse-plane handoffs for three stop radii",
+      "argv": ["{python}", "examples/interop/diffraction/opensci_handoff.py", "--out", "{runs}/interop-diffraction"],
+      "requirements": "examples/interop/diffraction/requirements-diffraction.txt",
+      "optional": true,
+      "requires_python": "3.12",
+      "status_field": "outcome",
+      "expected_status": "COMPLETED",
+      "timeout": 900
+    },
+    {
+      "name": "interop-diffraction-external",
+      "description": "LightPipes, prysm and POPPY propagation of the handoffs",
+      "argv": ["{python}", "examples/interop/diffraction/external_focus.py", "{runs}/interop-diffraction"],
+      "requirements": "examples/interop/diffraction/requirements-diffraction.txt",
+      "needs": ["interop-diffraction-handoff"],
+      "optional": true,
+      "requires_python": "3.12",
+      "status_field": "outcome",
+      "expected_status": "WITHIN_TOLERANCE",
+      "timeout": 1800
+    },
+    {
+      "name": "interop-quantum-layouts",
+      "description": "Catalog-free layouts exported as linear optical networks",
+      "argv": ["{python}", "examples/interop/quantum/build_layouts.py", "--out", "{runs}/interop-quantum"],
+      "requirements": "examples/interop/quantum/requirements-quantum.txt",
+      "optional": true,
+      "requires_python": "3.12",
+      "status_field": "outcome",
+      "expected_status": "COMPLETED",
+      "timeout": 900
+    },
+    {
+      "name": "interop-quantum-simulation",
+      "description": "Perceval and Piquasso on the exported networks",
+      "argv": ["{python}", "examples/interop/quantum/run_quantum.py", "{runs}/interop-quantum", "--inputs", "examples/interop/quantum/quantum_inputs.json"],
+      "requirements": "examples/interop/quantum/requirements-quantum.txt",
+      "needs": ["interop-quantum-layouts"],
+      "optional": true,
+      "requires_python": "3.12",
+      "status_field": "outcome",
+      "expected_status": "WITHIN_TOLERANCE",
+      "timeout": 900
+    },
+    {
+      "name": "interop-metasurface-unit-cells",
+      "description": "grcwa unit-cell library",
+      "argv": ["{python}", "examples/interop/metasurface/step1_unit_cells.py", "--out", "{runs}/interop-metasurface"],
+      "requirements": "examples/interop/metasurface/requirements-metasurface.txt",
+      "optional": true,
+      "requires_python": "3.12",
+      "status_field": "outcome",
+      "expected_status": "COMPLETED",
+      "timeout": 1800
+    },
+    {
+      "name": "interop-metasurface-focusing",
+      "description": "Angular-spectrum focusing of the metalens",
+      "argv": ["{python}", "examples/interop/metasurface/step2_focusing.py", "{runs}/interop-metasurface"],
+      "requirements": "examples/interop/metasurface/requirements-metasurface.txt",
+      "needs": ["interop-metasurface-unit-cells"],
+      "optional": true,
+      "requires_python": "3.12",
+      "status_field": "outcome",
+      "expected_status": "COMPLETED",
+      "timeout": 1800
+    },
+    {
+      "name": "interop-metasurface-unit-cells-ng201",
+      "description": "grcwa unit cells at 201 orders for the convergence spread",
+      "argv": ["{python}", "examples/interop/metasurface/step1_unit_cells.py", "--out", "{runs}/interop-metasurface", "--nG", "201", "--wavelengths-nm", "490", "515", "532", "545", "580"],
+      "requirements": "examples/interop/metasurface/requirements-metasurface.txt",
+      "needs": ["interop-metasurface-unit-cells"],
+      "optional": true,
+      "requires_python": "3.12",
+      "status_field": "outcome",
+      "expected_status": "COMPLETED",
+      "timeout": 1800
+    },
+    {
+      "name": "interop-metasurface-focusing-ng201",
+      "description": "Focusing from the 201-order library (convergence spread)",
+      "argv": ["{python}", "examples/interop/metasurface/step2_focusing.py", "{runs}/interop-metasurface", "--nG", "201"],
+      "requirements": "examples/interop/metasurface/requirements-metasurface.txt",
+      "needs": ["interop-metasurface-unit-cells-ng201"],
+      "optional": true,
+      "requires_python": "3.12",
+      "status_field": "outcome",
+      "expected_status": "COMPLETED",
+      "timeout": 1800
+    },
+    {
+      "name": "interop-metasurface-focusing-n2048",
+      "description": "Focusing on a 2048-sample grid (convergence spread)",
+      "argv": ["{python}", "examples/interop/metasurface/step2_focusing.py", "{runs}/interop-metasurface", "--samples", "2048", "--wavelengths-nm", "490", "515", "532", "545", "580"],
+      "requirements": "examples/interop/metasurface/requirements-metasurface.txt",
+      "needs": ["interop-metasurface-unit-cells"],
+      "optional": true,
+      "requires_python": "3.12",
+      "status_field": "outcome",
+      "expected_status": "COMPLETED",
+      "timeout": 3600
+    },
+    {
+      "name": "interop-metasurface-model",
+      "description": "Fit the tabulated metalens model",
+      "argv": ["{python}", "examples/interop/metasurface/step3_fit_model.py", "{runs}/interop-metasurface"],
+      "requirements": "examples/interop/metasurface/requirements-metasurface.txt",
+      "needs": ["interop-metasurface-focusing", "interop-metasurface-focusing-ng201", "interop-metasurface-focusing-n2048"],
+      "optional": true,
+      "requires_python": "3.12",
+      "status_field": "outcome",
+      "expected_status": "COMPLETED",
+      "timeout": 900
+    },
+    {
+      "name": "interop-metasurface-engine-check",
+      "description": "Engine run of the fitted model against the external focus tables",
+      "argv": ["{python}", "examples/interop/metasurface/step4_engine_check.py", "{runs}/interop-metasurface"],
+      "requirements": "examples/interop/metasurface/requirements-metasurface.txt",
+      "needs": ["interop-metasurface-model"],
+      "optional": true,
+      "requires_python": "3.12",
+      "status_field": "outcome",
+      "expected_status": "WITHIN_TOLERANCE",
+      "timeout": 900
+    }
+  ]
+}

@@ -1,0 +1,140 @@
+name: Engine alignment
+
+on:
+  # Branch pushes are covered by their pull request; push runs only for main.
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      candidate:
+        description: "Published engine version or latest (blank checks the verified baseline)"
+        required: false
+        type: string
+      optional:
+        description: "Optional checks from alignment-checks.json: comma-separated names or all (blank runs the default checks)"
+        required: false
+        type: string
+  schedule:
+    - cron: "23 5 * * 1"
+
+# PR code receives no issue-writing token, including on fork pull requests.
+permissions:
+  contents: read
+
+concurrency:
+  group: engine-alignment-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      python: ${{ steps.baseline.outputs.python }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          sparse-checkout: engine-baseline.json
+          sparse-checkout-cone-mode: false
+      - name: Read baseline Python versions
+        id: baseline
+        run: |
+          python3 - <<'PY'
+          import json, os
+          with open("engine-baseline.json", encoding="utf-8") as source:
+              versions = json.load(source)["ci_python"]
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write("python=" + json.dumps(versions) + "\n")
+          PY
+
+  alignment:
+    needs: baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ${{ fromJSON(needs.baseline.outputs.python) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Check engine alignment
+        env:
+          CANDIDATE: ${{ github.event_name == 'schedule' && 'latest' || inputs.candidate || '' }}
+          OPTIONAL: ${{ inputs.optional || '' }}
+        run: |
+          args=(--out run-alignment)
+          if [[ -n "$CANDIDATE" ]]; then
+            args+=(--candidate "$CANDIDATE")
+          fi
+          if [[ -n "$OPTIONAL" ]]; then
+            args+=(--optional "$OPTIONAL")
+          fi
+          python scripts/check_alignment.py "${args[@]}"
+      - name: Preserve reports, logs and workflow outputs
+        id: artifact
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: engine-alignment-py${{ matrix.python }}
+          path: |
+            run-alignment/
+            !run-alignment/.venv*/**
+            !run-alignment/.catalog/**
+          if-no-files-found: error
+          retention-days: 30
+      - name: Write job summary
+        if: always()
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ARTIFACT_URL: ${{ steps.artifact.outputs.artifact-url }}
+        run: |
+          python scripts/report_alignment.py run-alignment/report.json \
+            --summary "$GITHUB_STEP_SUMMARY" \
+            --run-url "$RUN_URL" --artifact-url "$ARTIFACT_URL"
+
+  report-observation:
+    # Only the scheduled default-branch run can create issues. A failed alignment
+    # still produces a report; manual candidate checks never publish issues.
+    if: ${{ always() && github.event_name == 'schedule' }}
+    needs: alignment
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+    concurrency:
+      group: engine-alignment-issue-reporting
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # A schedule's SHA is a trusted default-branch commit. Use its exact
+          # reporter, not code from a PR or from the downloaded artifact.
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          sparse-checkout: scripts/report_alignment.py
+          sparse-checkout-cone-mode: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: engine-alignment-py*
+          path: run-alignment
+      - name: Report a new version or failure once
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # One report per interpreter; identical observations share one marker and one issue.
+          status=0
+          for report in run-alignment/engine-alignment-py*/report.json; do
+            python3 scripts/report_alignment.py "$report" \
+              --summary "$GITHUB_STEP_SUMMARY" --publish --run-url "$RUN_URL" || status=1
+          done
+          exit "$status"

@@ -1,0 +1,11 @@
+input_power_mW,signal_V,dark_V,data_origin
+0,0.027,0.020,synthetic
+0.1,0.222,0.020,synthetic
+0.2,0.426,0.020,synthetic
+0.3,0.625,0.020,synthetic
+0.4,0.826,0.020,synthetic
+0.5,1.022,0.020,synthetic
+0.6,1.227,0.020,synthetic
+0.7,,0.020,synthetic_missing_signal
+invalid,1.625,0.020,synthetic_invalid_power
+0.9,1.825,,synthetic_missing_background

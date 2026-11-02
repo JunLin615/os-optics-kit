@@ -1,0 +1,9 @@
+# Optional Diffractio cross-check for external_focus.py, in a SEPARATE environment without os-optics:
+# diffractio 1.0.0 requires numpy < 2, while os-optics requires numpy >= 2.3. The two processes exchange
+# the handoff.json files only. Needs Python 3.12: numpy 1.26.4 publishes no wheels for newer Python versions.
+# Versions verified with Python 3.12.14 (see docs/interop-validation.md).
+numpy==1.26.4
+scipy==1.17.1
+diffractio==1.0.0
+LightPipes==2.1.5
+matplotlib==3.11.2

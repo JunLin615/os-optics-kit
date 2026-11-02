@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "distribution": "os-optics",
+  "version": "0.10.0",
+  "ci_python": ["3.11", "3.14"],
+  "website": "https://opensci-optics.com",
+  "retired_hosts": ["opensci-optic.com"],
+  "artifacts": {
+    "wheel": {
+      "filename": "os_optics-0.10.0-py3-none-any.whl",
+      "sha256": "52dc37494df0e0e83e0a233ff750f987b788456431349eb931bdcd56f3ea871b"
+    },
+    "sdist": {
+      "filename": "os_optics-0.10.0.tar.gz",
+      "sha256": "2e44767fb0df8263b95293b4e88184fdffe88bc1390d1c35b90ff1b8644d141f"
+    }
+  },
+  "verified_environment": {
+    "date": "2026-10-29",
+    "python": "3.14.7",
+    "platform": "Windows 10 AMD64",
+    "engine_build_id": "0.10.0+502a4e1b62417916",
+    "catalog_version": "2026-10-28.1",
+    "catalog_sha256": "7d7f5f0a6fa1db7ce32503a6a1d86c5bdcd167035782b47b73c2ac00fc1acf30",
+    "evidence": [
+      "docs/engine-alignment-validation.md"
+    ]
+  },
+  "documentation": [
+    "README.md",
+    "README.zh-CN.md",
+    "AGENT_GUIDE.md",
+    "docs/en/installation.md",
+    "docs/zh-CN/installation.md",
+    {"path": "docs/en/README.md", "baseline_reference": false},
+    {"path": "docs/zh-CN/README.md", "baseline_reference": false},
+    {"path": "docs/agent-recipes.md", "baseline_reference": false},
+    {"path": "docs/workflow-recipes.md", "baseline_reference": false},
+    {"path": "docs/en/workflows.md", "baseline_reference": false},
+    {"path": "docs/zh-CN/workflows.md", "baseline_reference": false},
+    {"path": ".github/ISSUE_TEMPLATE/bug_report.yml", "baseline_reference": false}
+  ],
+  "documentation_scan": {
+    "include": [
+      "*.md",
+      "docs/**/*.md",
+      ".github/**/*.yml",
+      ".github/**/*.yaml",
+      "examples/**/*.md",
+      "examples/**/*.py",
+      "examples/**/*.txt",
+      "examples/**/*.json",
+      "requirements*.txt"
+    ],
+    "historical": [
+      "docs/agent-guide-validation.md",
+      "docs/result-summary-validation.md",
+      "docs/measurement-validation.md",
+      "docs/interop-validation.md",
+      "docs/engine-alignment-validation.md",
+      "docs/release-preview-validation.md",
+      "docs/sensitivity-tolerance-validation.md",
+      "docs/workflow-validation.md"
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+time_s,signal_V,dark_V,reference_V,reference_dark_V,data_origin
+0,0.420,0.020,1.010,0.010,synthetic
+1,0.424,0.020,1.020,0.010,synthetic
+2,0.428,0.020,1.030,0.010,synthetic
+3,0.432,0.020,1.040,0.010,synthetic
+4,0.436,0.020,1.050,0.010,synthetic
+5,0.440,0.020,1.060,0.010,synthetic
+6,0.444,0.020,1.070,0.010,synthetic
+7,0.448,0.020,1.080,0.010,synthetic
+8,0.452,0.020,0.010,0.010,synthetic_zero_corrected_reference
+9,0.456,0.020,,0.010,synthetic_missing_reference
+10,invalid,0.020,1.110,0.010,synthetic_invalid_signal
+11,0.464,0.020,0.005,0.010,synthetic_negative_corrected_reference
+12,0.468,0.020,1.130,,synthetic_missing_reference_background

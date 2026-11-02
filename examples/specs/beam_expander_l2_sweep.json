@@ -1,0 +1,61 @@
+{
+ "description": "Sweep of the L2 position along the beam (design +X) of the edited beam expander (--base: the Project written with beam_expander_swap_l2.json). Each sample moves L2 by the value with a rigid transform in the design frame. Both output targets are recorded: expanded_waist (waist_radius_x_mm) changes strongly with spacing because the nearly collimated output has a Rayleigh range of metres and its waist moves by metres per millimetre of defocus; output_beam_radius (beam_radius_mm at the plane 100 mm after L2) changes by less than 0.1 % over the same range. Feasible: expanded_waist PASS; best: smallest |expanded_waist - 1.9961240310077522 mm|.",
+ "parameters": [
+  {
+   "name": "l2_shift",
+   "unit": "mm",
+   "values": [
+    -1,
+    -0.5,
+    0,
+    0.25,
+    0.4,
+    0.5,
+    0.54,
+    0.55,
+    0.6,
+    0.7,
+    1,
+    2
+   ],
+   "ops": [
+    {
+     "op": "transform",
+     "selector": {
+      "ids": [
+       "L2"
+      ]
+     },
+     "translation_mm": [
+      "$value",
+      0,
+      0
+     ],
+     "frame": "design"
+    }
+   ]
+  }
+ ],
+ "max_evaluations": 20,
+ "constraints": [
+  {
+   "target": "expanded_waist",
+   "assessment": [
+    "MET"
+   ]
+  }
+ ],
+ "derived": [
+  {
+   "name": "waist_error_mm",
+   "op": "abs_diff",
+   "a": "target:expanded_waist",
+   "b": 1.9961240310077522,
+   "unit": "mm"
+  }
+ ],
+ "objective": {
+  "column": "derived:waist_error_mm",
+  "sense": "minimize"
+ }
+}

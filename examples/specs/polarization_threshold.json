@@ -1,0 +1,15 @@
+{
+ "description": "Edit of the polarization_control.py nominal Project (DIR/nominal/project.json): raise the transmitted_power minimum to 0.85 mW (given in mW, stored in W, the target's unit).",
+ "ops": [
+  {
+   "op": "set_target",
+   "target_id": "transmitted_power",
+   "changes": {
+    "minimum": {
+     "value": 0.85,
+     "unit": "mW"
+    }
+   }
+  }
+ ]
+}

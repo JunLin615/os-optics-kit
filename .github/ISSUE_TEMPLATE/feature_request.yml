@@ -1,0 +1,24 @@
+name: Feature or documentation
+description: Suggest a capability, example, guide, or translation.
+title: "[Idea] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Write your suggestion in your preferred language; English is not required.
+        User guides: [English](https://github.com/JunLin615/os-optics/blob/main/docs/en/README.md) · [简体中文](https://github.com/JunLin615/os-optics/blob/main/docs/zh-CN/README.md).
+        Maintainers: use English by default for issue summaries and triage notes; preserve the contributor's original wording.
+  - type: textarea
+    id: use_case
+    attributes:
+      label: What would you like to do?
+      description: Describe your experiment or workflow.
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Your suggestion
+      description: Suggest a capability, example, documentation improvement, or translation.
+    validations:
+      required: true

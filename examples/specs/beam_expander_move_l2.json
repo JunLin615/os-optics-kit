@@ -1,0 +1,22 @@
+{
+ "description": "Apply the best sweep sample to the edited beam expander: move L2 by 540 um along design +X (given in um, converted to mm by edit_project.py).",
+ "ops": [
+  {
+   "op": "transform",
+   "selector": {
+    "ids": [
+     "L2"
+    ]
+   },
+   "translation_mm": [
+    {
+     "value": 540,
+     "unit": "um"
+    },
+    0,
+    0
+   ],
+   "frame": "design"
+  }
+ ]
+}

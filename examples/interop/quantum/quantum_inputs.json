@@ -1,0 +1,64 @@
+{
+  "schema": "opensci-interop-example/quantum-inputs/1",
+  "description": "Quantum inputs for the OpenSci network export. They are user-supplied: the classical Gaussian sources of the Project only define the spatial modes, wavelength and polarization of the network.",
+  "photons": {
+    "per_source": {
+      "A": 1,
+      "B": 1
+    },
+    "polarization_mode": "V",
+    "note": "one single photon per exported source, in that source's V input mode"
+  },
+  "wavepackets": {
+    "broadband": {
+      "shape": "GAUSSIAN",
+      "rms_intensity_duration_ps": 0.25,
+      "zero_delay_indistinguishability": 0.95,
+      "note": "|psi(t)|^2 Gaussian with this rms width; zero_delay_indistinguishability = |<psi_A|psi_B>|^2 at zero delay (spectral purity and mismatch)"
+    },
+    "narrowband": {
+      "shape": "GAUSSIAN",
+      "rms_intensity_duration_ps": 1000.0,
+      "zero_delay_indistinguishability": 0.95
+    }
+  },
+  "case_wavepackets": {
+    "hom*": "broadband",
+    "mzi*": "narrowband"
+  },
+  "detectors": {
+    "type": "THRESHOLD",
+    "efficiency": 0.8,
+    "dark_count_probability": 0.0,
+    "planes": {
+      "hom*": [
+        "D1",
+        "D2"
+      ],
+      "mzi*": [
+        "port_x",
+        "port_y"
+      ]
+    },
+    "note": "one polarization-insensitive threshold detector per output plane, covering both of its output modes"
+  },
+  "extra_cases": {
+    "hom_dark_counts": {
+      "network_case": "hom",
+      "dark_count_probability": 0.01
+    },
+    "mzi_t1_dark_counts": {
+      "network_case": "mzi_t1",
+      "dark_count_probability": 0.01
+    },
+    "mzi_t1_broadband": {
+      "network_case": "mzi_t1",
+      "wavepacket": "broadband",
+      "expect_refusal": "SINGLE_FREQUENCY_MODEL_INVALID"
+    }
+  },
+  "validity": {
+    "max_delay_spread_over_duration": 0.05,
+    "note": "a single-wavelength transfer matrix is used only when the group-delay spread of one photon's paths to one output is at most this fraction of its rms duration"
+  }
+}

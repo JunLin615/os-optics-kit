@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+run*/
+run*-arrivals.csv
+shots/
+view.html
+project.json
+arrivals.csv
+rays.jsonl
+.DS_Store

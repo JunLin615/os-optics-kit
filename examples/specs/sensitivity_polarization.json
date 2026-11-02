@@ -1,0 +1,98 @@
+{
+ "description": "Sensitivity of the power transmitted through the polarizer (W) to the half-wave-plate angle (deg), with steps 0.1 and 1 deg.",
+ "design": {
+  "builder": "polarization_control",
+  "arguments": {}
+ },
+ "targets": [
+  "transmitted_power"
+ ],
+ "parameters": [
+  {
+   "name": "hwp_angle",
+   "unit": "deg",
+   "steps": [
+    0.1,
+    1
+   ],
+   "scale": 1,
+   "ops": [
+    {
+     "op": "transform",
+     "selector": {
+      "ids": [
+       "HWP"
+      ]
+     },
+     "frame": {
+      "component": "HWP"
+     },
+     "pivot": {
+      "component": "HWP"
+     },
+     "rotation": {
+      "axis": [
+       0,
+       0,
+       1
+      ],
+      "angle_deg": "$value"
+     }
+    }
+   ]
+  },
+  {
+   "name": "polarizer_angle",
+   "unit": "deg",
+   "steps": [
+    0.1,
+    1
+   ],
+   "scale": 1,
+   "ops": [
+    {
+     "op": "transform",
+     "selector": {
+      "ids": [
+       "POL"
+      ]
+     },
+     "frame": {
+      "component": "POL"
+     },
+     "pivot": {
+      "component": "POL"
+     },
+     "rotation": {
+      "axis": [
+       0,
+       0,
+       1
+      ],
+      "angle_deg": "$value"
+     }
+    }
+   ]
+  },
+  {
+   "name": "wavelength",
+   "unit": "nm",
+   "nominal": 1030,
+   "steps": [
+    1,
+    10
+   ],
+   "scale": 5,
+   "ops": [
+    {
+     "op": "set_source_model",
+     "instance_id": "SRC",
+     "changes": {
+      "wavelength_nm": "$value"
+     }
+    }
+   ]
+  }
+ ],
+ "max_evaluations": 13
+}

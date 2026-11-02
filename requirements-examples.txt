@@ -1,0 +1,2 @@
+# Optional measurement plotting dependency; the analysis itself uses the stdlib.
+matplotlib==3.10.7

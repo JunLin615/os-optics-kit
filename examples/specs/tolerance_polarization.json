@@ -1,0 +1,102 @@
+{
+ "description": "Tolerance sampling of the polarization design with a fixed seed: half-wave-plate angle (normal, sigma 4 deg) and polarizer angle (normal, sigma 2 deg), both truncated at 3 sigma, and source wavelength (uniform +-40 nm), all independent; samples outside the waveplate band are counted as out of model.",
+ "design": {
+  "builder": "polarization_control",
+  "arguments": {}
+ },
+ "targets": [
+  "transmitted_power"
+ ],
+ "samples": 100,
+ "seed": 20261018,
+ "max_evaluations": 101,
+ "parameters": [
+  {
+   "name": "hwp_angle",
+   "unit": "deg",
+   "ops": [
+    {
+     "op": "transform",
+     "selector": {
+      "ids": [
+       "HWP"
+      ]
+     },
+     "frame": {
+      "component": "HWP"
+     },
+     "pivot": {
+      "component": "HWP"
+     },
+     "rotation": {
+      "axis": [
+       0,
+       0,
+       1
+      ],
+      "angle_deg": "$value"
+     }
+    }
+   ],
+   "distribution": {
+    "kind": "normal",
+    "sigma": 4,
+    "mean_offset": 0,
+    "truncate_sigma": 3
+   }
+  },
+  {
+   "name": "polarizer_angle",
+   "unit": "deg",
+   "ops": [
+    {
+     "op": "transform",
+     "selector": {
+      "ids": [
+       "POL"
+      ]
+     },
+     "frame": {
+      "component": "POL"
+     },
+     "pivot": {
+      "component": "POL"
+     },
+     "rotation": {
+      "axis": [
+       0,
+       0,
+       1
+      ],
+      "angle_deg": "$value"
+     }
+    }
+   ],
+   "distribution": {
+    "kind": "normal",
+    "sigma": 2,
+    "mean_offset": 0,
+    "truncate_sigma": 3
+   }
+  },
+  {
+   "name": "wavelength",
+   "unit": "nm",
+   "nominal": 1030,
+   "ops": [
+    {
+     "op": "set_source_model",
+     "instance_id": "SRC",
+     "changes": {
+      "wavelength_nm": "$value"
+     }
+    }
+   ],
+   "distribution": {
+    "kind": "uniform",
+    "low": -40,
+    "high": 40
+   }
+  }
+ ]
+}

@@ -1,0 +1,8 @@
+# External optimization and tolerance example; requires os-optics 0.10.0 or newer.
+# Needs Python 3.12 or newer (numpy 2.5.4 and scipy 1.18.1 require it); versions verified with Python 3.12.14
+# (see docs/interop-validation.md).
+os-optics>=0.10.0
+numpy==2.5.4
+scipy==1.18.1
+optuna==5.0.0
+SALib==1.6.0

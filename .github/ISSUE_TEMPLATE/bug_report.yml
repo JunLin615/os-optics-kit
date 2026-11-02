@@ -1,0 +1,44 @@
+name: Bug report
+description: Help us reproduce a problem with the engine, examples, or documentation.
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Write your report in your preferred language; English is not required.
+        User guides: [English](https://github.com/JunLin615/os-optics/blob/main/docs/en/README.md) · [简体中文](https://github.com/JunLin615/os-optics/blob/main/docs/zh-CN/README.md).
+        Maintainers: use English by default for issue summaries and triage notes; preserve the reporter's original wording.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe your task, the actual result, and the expected result.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the exact commands or a small example project, with input values and units. Include the catalog version if relevant.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Installed engine version
+      description: >-
+        Run `os-optics doctor` or `python -c "from importlib.metadata import version; print(version('os-optics'))"`
+        in the environment that reproduces the problem.
+      placeholder: "0.10.0"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: "Windows 11, Python 3.12"
+  - type: textarea
+    id: output
+    attributes:
+      label: Result status and relevant output
+      description: Include the reported status, process exit code, target values with units and bounds, and relevant issue codes, messages, suggested actions, or traceback. Attach a screenshot if helpful.

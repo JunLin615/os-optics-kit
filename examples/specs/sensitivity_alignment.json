@@ -1,0 +1,126 @@
+{
+ "description": "Sensitivity of the near- and far-plane beam positions (mm) of the fold-mirror alignment design to mirror tilt about its local Y and X axes (mrad, steps 0.01 and 0.1 mrad; a 20 mrad step makes the far plane miss) and to a vertical source offset (mm). Position resolution 1 nm.",
+ "design": {
+  "builder": "alignment",
+  "arguments": {}
+ },
+ "targets": [
+  "far_position_u",
+  "far_position_v",
+  "near_position_u",
+  "near_position_v"
+ ],
+ "parameters": [
+  {
+   "name": "mirror_tilt_y",
+   "unit": "mrad",
+   "steps": [
+    0.01,
+    0.1,
+    20
+   ],
+   "scale": 0.1,
+   "ops": [
+    {
+     "op": "transform",
+     "selector": {
+      "ids": [
+       "M1"
+      ]
+     },
+     "frame": {
+      "component": "M1"
+     },
+     "pivot": {
+      "component": "M1"
+     },
+     "rotation": {
+      "axis": [
+       0,
+       1,
+       0
+      ],
+      "angle_deg": "$value"
+     }
+    }
+   ]
+  },
+  {
+   "name": "mirror_tilt_x",
+   "unit": "mrad",
+   "steps": [
+    0.01,
+    0.1
+   ],
+   "scale": 0.1,
+   "ops": [
+    {
+     "op": "transform",
+     "selector": {
+      "ids": [
+       "M1"
+      ]
+     },
+     "frame": {
+      "component": "M1"
+     },
+     "pivot": {
+      "component": "M1"
+     },
+     "rotation": {
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle_deg": "$value"
+     }
+    }
+   ]
+  },
+  {
+   "name": "source_offset_z",
+   "unit": "mm",
+   "steps": [
+    0.01,
+    0.1
+   ],
+   "scale": 0.05,
+   "ops": [
+    {
+     "op": "transform",
+     "selector": {
+      "ids": [
+       "SRC"
+      ]
+     },
+     "frame": "design",
+     "translation_mm": [
+      0,
+      0,
+      "$value"
+     ]
+    }
+   ]
+  }
+ ],
+ "resolution": {
+  "far_position_u": {
+   "value": 1,
+   "unit": "nm"
+  },
+  "far_position_v": {
+   "value": 1,
+   "unit": "nm"
+  },
+  "near_position_u": {
+   "value": 1,
+   "unit": "nm"
+  },
+  "near_position_v": {
+   "value": 1,
+   "unit": "nm"
+  }
+ },
+ "max_evaluations": 15
+}

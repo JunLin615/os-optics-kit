@@ -1,0 +1,75 @@
+{
+ "description": "Two-parameter sweep of a polarization_control.py Project (--base: its nominal/project.json or the Project written with polarization_threshold.json). hwp_turn turns the waveplate HWP about its own optical axis (local +Z, through its origin) by the value relative to its current angle; wavelength sets the source wavelength. The sample outcome is decided by transmitted_power only (\"targets\"); output_azimuth is recorded too. The default retarder is characterized for 1000-1060 nm, so every 1064 nm sample is OUT_OF_MODEL (MODEL_WAVELENGTH_OUTSIDE_BAND) whatever its target statuses. Feasible: transmitted_power PASS and in model scope; best: largest transmitted power.",
+ "parameters": [
+  {
+   "name": "hwp_turn",
+   "unit": "deg",
+   "values": [
+    -22.5,
+    -15,
+    -7.5,
+    -5,
+    0,
+    5,
+    7.5,
+    15,
+    22.5
+   ],
+   "ops": [
+    {
+     "op": "transform",
+     "selector": {
+      "ids": [
+       "HWP"
+      ]
+     },
+     "rotation": {
+      "axis": [
+       0,
+       0,
+       1
+      ],
+      "angle_deg": "$value"
+     },
+     "frame": {
+      "component": "HWP"
+     },
+     "pivot": "frame_origin"
+    }
+   ]
+  },
+  {
+   "name": "wavelength",
+   "unit": "nm",
+   "values": [
+    1030,
+    1064
+   ],
+   "ops": [
+    {
+     "op": "set_source_model",
+     "instance_id": "SRC",
+     "changes": {
+      "wavelength_nm": "$value"
+     }
+    }
+   ]
+  }
+ ],
+ "max_evaluations": 20,
+ "targets": [
+  "transmitted_power"
+ ],
+ "constraints": [
+  {
+   "target": "transmitted_power",
+   "assessment": [
+    "MET"
+   ]
+  }
+ ],
+ "objective": {
+  "column": "target:transmitted_power",
+  "sense": "maximize"
+ }
+}
