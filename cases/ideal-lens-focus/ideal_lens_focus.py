@@ -11,10 +11,7 @@ from os_optics import ValidationRequest, builders as B, validate_with_ray_paths
 from os_optics.contracts import ProjectSnapshot, Target
 from os_optics.results import results_from_engine
 
-if __package__:
-    from .result_summary import ArgumentParser, emit_cli, summarize_results
-else:
-    from result_summary import ArgumentParser, emit_cli, summarize_results
+from os_optics_kit.result_summary import ArgumentParser, emit_cli, summarize_results
 
 
 def build_project(maximum_radius_mm=0.05):

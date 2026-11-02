@@ -27,7 +27,7 @@ A single external focus does not define a general component: the model holds onl
 inside the stated wavelength span, field angle, beam size and polarization, for the
 listed metrics. The field-angle calibration requires os-optics 0.10.0.
 
-Usage: python examples/interop/metasurface/step3_fit_model.py run-interop-metasurface
+Usage: python cases/interop-metasurface/step3_fit_model.py run-interop-metasurface
 """
 
 from __future__ import annotations
@@ -40,14 +40,9 @@ from pathlib import Path
 import re
 import sys
 
-if __package__:
-    from ..common import ArgumentParser, decimal_text, emit, require_engine, sha256_file, write_json
-    from .step1_unit_cells import CALIBRATION_NM, TABLE_NM
-else:
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from common import ArgumentParser, decimal_text, emit, require_engine, sha256_file, write_json
-    from step1_unit_cells import CALIBRATION_NM, TABLE_NM
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # this case's own modules
+from os_optics_kit.interop import ArgumentParser, decimal_text, emit, require_engine, sha256_file, write_json
+from step1_unit_cells import CALIBRATION_NM, TABLE_NM
 
 MODEL_ID = "metalens_tio2_f200um"
 
@@ -122,7 +117,7 @@ def calibration_keys(table, waist):
 
 def convergence_commands(directory):
     lams = " ".join(str(w) for w in CONVERGENCE_WAVELENGTHS_NM)
-    base = "python examples/interop/metasurface"
+    base = "python cases/interop-metasurface"
     return [f"{base}/step1_unit_cells.py --out {directory} --nG 201 --wavelengths-nm {lams}",
             f"{base}/step2_focusing.py {directory} --nG 201",
             f"{base}/step2_focusing.py {directory} --samples 2048 --wavelengths-nm {lams}"]

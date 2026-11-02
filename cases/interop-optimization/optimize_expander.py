@@ -17,7 +17,7 @@ The optimizer chooses the
 values; OpenSci computes each design. Project ``retained_dofs`` are design intent,
 not optimizer variables.
 
-Usage: python examples/interop/optimization/optimize_expander.py --out run-interop-optimization
+Usage: python cases/interop-optimization/optimize_expander.py --out run-interop-optimization
 """
 
 from __future__ import annotations
@@ -29,11 +29,7 @@ from pathlib import Path
 import sys
 import time
 
-if __package__:
-    from ..common import ArgumentParser, comparison_status, decimal_text, emit, environment, require_engine, run_identity, write_json
-else:
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from common import ArgumentParser, comparison_status, decimal_text, emit, environment, require_engine, run_identity, write_json
+from os_optics_kit.interop import ArgumentParser, comparison_status, decimal_text, emit, environment, require_engine, run_identity, write_json
 
 WAVELENGTH_NM = 532.0
 WAIST_MM = 0.5

@@ -24,7 +24,7 @@ wavelength (focal length and transmittance interpolated from the same rows), the
 single-line equivalent of the tabulated model; that model kind cannot state a field-
 angle domain, so its results beyond the angle domain are reported, not judged.
 
-Usage: python examples/interop/metasurface/step4_engine_check.py run-interop-metasurface [--model tabulated]
+Usage: python cases/interop-metasurface/step4_engine_check.py run-interop-metasurface [--model tabulated]
 """
 
 from __future__ import annotations
@@ -35,16 +35,10 @@ import math
 from pathlib import Path
 import sys
 
-if __package__:
-    from ..common import ArgumentParser, comparison_status, decimal_text, emit, environment, pose, require_engine, run_identity, write_json
-    from .step1_unit_cells import CALIBRATION_NM, TABLE_NM, TEST_NM
-    from .step3_fit_model import aperture_fraction, interpolate, thin_lens_focus
-else:
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from common import ArgumentParser, comparison_status, decimal_text, emit, environment, pose, require_engine, run_identity, write_json
-    from step1_unit_cells import CALIBRATION_NM, TABLE_NM, TEST_NM
-    from step3_fit_model import aperture_fraction, interpolate, thin_lens_focus
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # this case's own modules
+from os_optics_kit.interop import ArgumentParser, comparison_status, decimal_text, emit, environment, pose, require_engine, run_identity, write_json
+from step1_unit_cells import CALIBRATION_NM, TABLE_NM, TEST_NM
+from step3_fit_model import aperture_fraction, interpolate, thin_lens_focus
 
 LENS_X_MM, HEIGHT_MM, PLANE_X_MM = 0.0, 50.0, 0.3
 SOURCE_DISTANCE_MM = 1.0

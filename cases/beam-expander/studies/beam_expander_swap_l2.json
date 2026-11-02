@@ -1,5 +1,5 @@
 {
- "description": "Edit of the catalog beam_expander example (os-optics project example --kind beam_expander). Op 0 adds target output_beam_radius: beam_radius_mm (1/e^2 radius at the output plane) with the same target value and 1 % tolerance as the example's expanded_waist target (waist_radius_x_mm: radius of the waist the output beam has or had, a collimation measure). Op 1 replaces L2 (N-BK7, focal length 100 mm) by the fused-silica plano-convex lens with focal length 100.3 mm listed by catalog_candidates.py for 780 nm (catalog 2026-10-15.1); L2 keeps its pose, so the pair is no longer afocal.",
+ "description": "Edit of the catalog beam_expander example (os-optics project example --kind beam_expander). Op 0 adds target output_beam_radius: beam_radius_mm (1/e^2 radius at the output plane) with the same target value and 1 % tolerance as the example's expanded_waist target (waist_radius_x_mm: radius of the waist the output beam has or had, a collimation measure). Op 1 replaces L2 (N-BK7, focal length 100 mm) by the fused-silica plano-convex lens with focal length 100.3 mm listed by os-optics-kit candidates for 780 nm (catalog 2026-10-28.1); L2 keeps its pose, so the pair is no longer afocal.",
  "ops": [
   {
    "op": "add_target",

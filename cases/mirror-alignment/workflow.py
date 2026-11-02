@@ -2,14 +2,14 @@
 one-parameter studies of mirror tilt and source offset; optionally a clearly labelled synthetic-measurement fit.
 
 Usage:
-  python examples/alignment_analysis.py --out DIR [design inputs] [--study NAME=VALUES ...]
+  python cases/mirror-alignment/workflow.py --out DIR [design inputs] [--study NAME=VALUES ...]
                                         [--synthetic-measurements [--synthetic-axis u|v]
                                          [--synthetic-planes-mm 100,175,250,325,400]
                                          [--synthetic-residuals-mm 0.004,-0.006,0.002,0,0]
                                          [--synthetic-camera-zero-mm 0.05]]
-  python examples/alignment_analysis.py --list-parameters
+  python cases/mirror-alignment/workflow.py --list-parameters
 
-Design (examples/optical_designs.py ``alignment``, no catalog needed): Gaussian source at x = -source_to_mirror
+Design (os_optics_kit.optical_designs ``alignment``, no catalog needed): Gaussian source at x = -source_to_mirror
 emitting along +X -> flat mirror M1 at the origin folding the beam in the design XY plane at mirror_aoi_deg (45: into
 +Y) -> planes ``near`` and ``far`` on the nominal reflected axis at near_plane_mm and far_plane_mm after the mirror.
 Plane axes: u = design +Z x (nominal reflected direction) (45 deg: design -X), v = design +Z. Mirror tilts turn M1
@@ -37,11 +37,11 @@ terms).
 Synthetic-measurement variant (--synthetic-measurements): the nominal design gets extra planes at the given
 distances after the mirror (edit_project add_observation), the Engine chief-ray position on each plane gets an
 invented residual and an invented constant camera zero, and every row of synthetic/synthetic_measurements.csv is
-labelled SYNTHETIC in its data_origin column. examples/analyze_measurements.py subtracts the camera zero and fits a
+labelled SYNTHETIC in its data_origin column. os-optics-kit measurements subtracts the camera zero and fits a
 line; the fitted slope gives the pointing (mrad), reported against the small-angle expectation and the Engine's
 two-plane pointing. These rows are not measurements.
 
-Output: DIR as described in examples/design_workflow.py, plus DIR/synthetic/ with the variant. Stdout: one compact
+Output: DIR as described in os_optics_kit.design_workflow, plus DIR/synthetic/ with the variant. Stdout: one compact
 JSON document.
 Exit code from the nominal design: 0 PASS (WARNING included), 1 FAIL, 2 UNKNOWN, 3 OUT_OF_MODEL, 4 ERROR (the
 Engine refused the nominal design: the summary holds nominal.error) or refused input (JSON error on stderr,
@@ -54,12 +54,8 @@ from __future__ import annotations
 import copy
 import math
 
-if __package__:
-    from . import design_workflow as dw
-    from . import workflow_common as wc
-else:
-    import design_workflow as dw
-    import workflow_common as wc
+from os_optics_kit import design_workflow as dw
+from os_optics_kit import workflow_common as wc
 
 DEFAULT_STUDIES = [
     "mirror_tilt_local_y_mrad=-1,0,0.1,0.25,1,15,60",
@@ -72,10 +68,7 @@ SYNTHETIC_LABEL = "SYNTHETIC: Engine chief-ray position + invented residual + in
 
 
 def _designs():
-    if __package__:
-        from . import optical_designs as D
-    else:
-        import optical_designs as D
+    from os_optics_kit import optical_designs as D
     return D
 
 
@@ -176,12 +169,8 @@ def _plane_id(distance):
 
 def synthetic_variant(out_dir, inputs, nominal_doc, options):
     """Engine positions on several planes + invented residuals -> labelled CSV -> analyze_measurements line fit."""
-    if __package__:
-        from . import analyze_measurements as am
-        from .edit_project import apply_edits
-    else:
-        import analyze_measurements as am
-        from edit_project import apply_edits
+    from os_optics_kit import analyze_measurements as am
+    from os_optics_kit.edit_project import apply_edits
 
     axis = options["axis"]
     near = next(o for o in nominal_doc["observations"] if o["observation_id"] == "near")
@@ -242,7 +231,7 @@ def synthetic_variant(out_dir, inputs, nominal_doc, options):
     lines = [f"Every row of [{result['paths']['csv']}](../{result['paths']['csv']}) is labelled `SYNTHETIC` "
              "(column data_origin): Engine chief-ray positions on "
              f"{len(rows)} planes plus invented residuals {options['residuals_mm']} mm and an invented camera zero "
-             f"{options['camera_zero_mm']} mm. The fit is examples/analyze_measurements.py "
+             f"{options['camera_zero_mm']} mm. The fit is os-optics-kit measurements "
              f"([summary](../{result['paths']['analysis_summary']}), [plot](../{result['paths']['plot']})).", "",
              "| quantity | value | unit |", "| --- | --- | --- |"]
     for key, unit in (("fitted_pointing_mrad", "mrad"), ("fitted_pointing_standard_error_mrad", "mrad"),

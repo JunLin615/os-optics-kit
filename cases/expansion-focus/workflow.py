@@ -2,10 +2,10 @@
 one parameter at a time.
 
 Usage:
-  python examples/beam_expansion_focus.py --out DIR [design inputs] [--study NAME=VALUES ...]
-  python examples/beam_expansion_focus.py --list-parameters
+  python cases/expansion-focus/workflow.py --out DIR [design inputs] [--study NAME=VALUES ...]
+  python cases/expansion-focus/workflow.py --list-parameters
 
-Design (examples/optical_designs.py ``expander_focus``, no catalog needed): Gaussian source (waist at the source)
+Design (os_optics_kit.optical_designs ``expander_focus``, no catalog needed): Gaussian source (waist at the source)
 -> ideal thin lens L1 (f1) -> L2 (f2) at f1 + f2 + gap_error -> L3 (f3), 100 mm after L2; plane ``collimated`` 50 mm
 after L2, plane ``focus`` at L3 + f3 + focus_plane_shift. Beam along design +X.
 
@@ -25,7 +25,7 @@ Independent check: complex-q Gaussian propagation through thin lenses (q -> q + 
 w = sqrt(-lambda / (pi Im(1/q)))) for expanded_radius, spot_radius (relative tolerance 1e-9) and waist_location
 (absolute 1e-9 mm). Model basis: paraxial Gaussian beam through ideal thin lenses (no aberration, no dispersion).
 
-Output: DIR as described in examples/design_workflow.py (nominal run, one sweep study per parameter with table.csv,
+Output: DIR as described in os_optics_kit.design_workflow (nominal run, one sweep study per parameter with table.csv,
 comparison with the nominal run, plots, closed-form check and report; DIR/report/report.md links everything). Stdout:
 one compact JSON document.
 Exit code from the nominal design: 0 PASS (WARNING included), 1 FAIL, 2 UNKNOWN, 3 OUT_OF_MODEL, 4 ERROR (the
@@ -36,10 +36,7 @@ output.
 
 from __future__ import annotations
 
-if __package__:
-    from . import design_workflow as dw
-else:
-    import design_workflow as dw
+from os_optics_kit import design_workflow as dw
 
 DEFAULT_STUDIES = [
     "gap_error_mm=-5,-2,-1,0,1,2,5",
@@ -53,10 +50,7 @@ REFERENCE = ("independent complex-q Gaussian propagation through thin lenses "
 
 def checks(params, record):
     """Engine target values vs the complex-q reference for one sample."""
-    if __package__:
-        from . import optical_designs as D
-    else:
-        import optical_designs as D
+    from os_optics_kit import optical_designs as D
 
     reference = D.gaussian_expander_focus_reference(**params)
     values = dw.target_values(record)
@@ -75,10 +69,7 @@ def checks(params, record):
 
 
 def config():
-    if __package__:
-        from . import optical_designs as D
-    else:
-        import optical_designs as D
+    from os_optics_kit import optical_designs as D
 
     return {"workflow": "beam_expansion_focus", "design": "expander_focus", "info": D.DESIGN_INFO["expander_focus"],
             "builder": D.expander_focus, "checks": checks, "reference_method": REFERENCE,

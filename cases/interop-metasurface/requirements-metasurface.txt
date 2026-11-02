@@ -1,8 +1,8 @@
-# Metasurface example; step4_engine_check.py requires os-optics 0.10.0 or newer (TABULATED_THIN_LENS).
-# Steps 1-3 do not import os-optics. Needs Python 3.12 or newer (numpy 2.5.4 and scipy 1.18.1 require it);
-# versions verified with Python 3.12.14 (see docs/interop-validation.md).
-# grcwa declares the GPLv3 license in its package metadata.
-os-optics>=0.10.0
+# Metasurface case; step4_engine_check.py (and the field-angle calibration of step 3) run the engine, steps 1-2 do
+# not. Needs Python 3.12 or newer (numpy 2.5.4 and scipy 1.18.1 require it); verified with Python 3.14.7 and
+# os-optics 0.12.0. grcwa declares the GPLv3 license in its package metadata.
+os-optics>=0.12,<0.13
+os-optics-kit>=0.1,<0.2
 numpy==2.5.4
 scipy==1.18.1
 grcwa==0.1.2

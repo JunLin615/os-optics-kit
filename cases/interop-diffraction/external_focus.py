@@ -17,7 +17,7 @@ It then compares the Engine's paraxial Gaussian focal values from the handoff wi
 the reference. Reads the documented diffraction handoff schema. Diffractio results
 use a ``_diffractio`` filename suffix so they preserve the primary comparison.
 
-Usage: python examples/interop/diffraction/external_focus.py run-interop-diffraction
+Usage: python cases/interop-diffraction/external_focus.py run-interop-diffraction
 """
 
 from __future__ import annotations
@@ -31,16 +31,10 @@ import warnings
 
 import numpy as np
 
-if __package__:
-    from ..common import ArgumentParser, emit, environment, write_json
-    from .hankel_reference import HankelFocus
-    from .tem00_field import sampled_field
-else:
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from common import ArgumentParser, emit, environment, write_json
-    from hankel_reference import HankelFocus
-    from tem00_field import sampled_field
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # this case's own modules
+from os_optics_kit.interop import ArgumentParser, emit, environment, write_json
+from hankel_reference import HankelFocus
+from tem00_field import sampled_field
 
 HANDOFF_SCHEMA = "opensci-interop-example/diffraction-handoff/1"
 # LightPipes grids: (samples per side, window side in mm). The last three settings define the convergence spread.
