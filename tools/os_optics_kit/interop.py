@@ -1,13 +1,11 @@
-"""Shared helpers for the external-tool (interop) examples.
+"""Shared helpers for the external-tool (interop) cases.
 
-The interop examples require os-optics 0.10.0 or newer. Each topic keeps its
-own third-party requirements file; nothing here imports a third-party solver.
+The engine requirement is the kit's (``_engine.ENGINE_REQUIREMENT``, os-optics >=0.12,<0.13). Each interop case
+keeps its own third-party requirements file; nothing here imports a third-party solver or the engine.
 """
 
 from __future__ import annotations
 
-import argparse
-from contextlib import redirect_stdout
 import hashlib
 import json
 import math
@@ -15,7 +13,12 @@ from pathlib import Path
 import platform
 import sys
 
-MINIMUM_ENGINE = (0, 10, 0)
+from . import _engine
+from ._engine import ENGINE_REQUIREMENT, engine_version, version_tuple  # noqa: F401 - part of this module's API
+from .result_summary import ArgumentParser, error_document, exit_status, json_cli_stdout  # noqa: F401
+
+#: lower bound of the kit's engine requirement, e.g. (0, 12); derived from ENGINE_REQUIREMENT
+MINIMUM_ENGINE = _engine.minimum_version()
 # Outcome words of these scripts. They describe a comparison with an external or independent reference (or a
 # completed production step), never an OpenSci run status.
 EXIT_CODES = {"WITHIN_TOLERANCE": 0, "COMPLETED": 0, "OUT_OF_TOLERANCE": 1, "UNEXPECTED_RESULT": 1,
@@ -27,49 +30,15 @@ def comparison_status(within):
     return "WITHIN_TOLERANCE" if within else "OUT_OF_TOLERANCE"
 
 
-class ArgumentParser(argparse.ArgumentParser):
-    """Report usage errors as JSON errors (exit 4) like the other repository scripts."""
-
-    def error(self, message):
-        raise ValueError(message)
-
-
-def version_tuple(text):
-    """Leading numeric release of a version string: '0.8.0', '0.8.0rc1', '0.8.0+abc' -> (0, 8, 0)."""
-    parts = []
-    for piece in str(text).split("+")[0].split("."):
-        digits = ""
-        for char in piece:
-            if not char.isdigit():
-                break
-            digits += char
-        if not digits:
-            break
-        parts.append(int(digits))
-        if digits != piece:
-            break
-    return tuple(parts)
-
-
-def engine_version():
-    from importlib.metadata import PackageNotFoundError, version
-
-    try:
-        return version("os-optics")
-    except PackageNotFoundError:
-        return None
+def engine_supported(installed):
+    """Whether an installed engine version meets the kit's requirement (``ENGINE_REQUIREMENT``)."""
+    return _engine.satisfies(installed)
 
 
 def require_engine():
-    """Return the installed engine version; refuse anything older than 0.10.0."""
-    installed = engine_version()
-    if installed is None or version_tuple(installed) < MINIMUM_ENGINE:
-        needed = ".".join(str(part) for part in MINIMUM_ENGINE)
-        raise RuntimeError(
-            f"this example requires os-optics {needed} or newer (installed: {installed or 'none'}); "
-            "install the topic's requirements file in a fresh virtual environment"
-        )
-    return installed
+    """Return the installed engine version; refuse (``DependencyError``, a RuntimeError with code
+    ENGINE_NOT_INSTALLED / ENGINE_UNSUPPORTED) one outside the kit's requirement."""
+    return _engine.require_engine()
 
 
 def package_versions(*names):
@@ -133,13 +102,14 @@ def emit(workflow):
     ``UNEXPECTED_RESULT`` -> exit 1; any error -> exit 4 (JSON error on stderr).
     """
     try:
-        with redirect_stdout(sys.stderr):
+        with json_cli_stdout():
             summary = workflow()
         code = EXIT_CODES[summary["outcome"]]
         output = json.dumps(json_safe(summary), ensure_ascii=True, allow_nan=False, separators=(",", ":"))
+    except SystemExit as exc:  # --help
+        return exit_status(exc)
     except Exception as exc:  # noqa: BLE001 - every failure becomes a JSON error
-        error = {"error": {"code": getattr(exc, "code", type(exc).__name__), "message": str(exc)}}
-        print(json.dumps(error, ensure_ascii=True), file=sys.stderr)
+        print(json.dumps({"error": json_safe(error_document(exc))}, ensure_ascii=True), file=sys.stderr)
         return ERROR_EXIT
     print(output)
     return code

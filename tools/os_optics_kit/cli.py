@@ -17,7 +17,7 @@ COMMANDS: dict[str, tuple[str, str]] = {
     "edit": ("edit_project", "describe a Project's objects and apply edits by ID, atomically"),
     "sweep": ("sweep_parameters", "run a parameter sweep from a JSON spec, one saved run per sample"),
     "compare": ("compare_runs", "compare saved runs by target and plane ID, with freshness"),
-    "plot": ("plot_results", "plot sweep targets, power distribution and run comparisons (needs the plot extra)"),
+    "plot": ("plot_results", "plot sweep targets, power distribution, bar charts and histograms (needs the plot extra)"),
     "report": ("build_report", "assemble a Markdown/JSON report from a study directory"),
     "sensitivity": ("sensitivity_analysis", "one-at-a-time sensitivity of selected targets"),
     "tolerance": ("tolerance_study", "seeded tolerance sampling under declared distributions"),
@@ -56,7 +56,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"os-optics-kit: unknown command {name!r}\n\n{_usage()}", file=sys.stderr)
         return 4
     module = importlib.import_module(f".{COMMANDS[name][0]}", __package__)
-    result = module.main(rest)
+    try:
+        result = module.main(rest)
+    except SystemExit as exc:  # a subcommand's argparse --help / usage exit
+        if exc.code is None:
+            return 0
+        return exc.code if isinstance(exc.code, int) else 4
     return int(result or 0)
 
 

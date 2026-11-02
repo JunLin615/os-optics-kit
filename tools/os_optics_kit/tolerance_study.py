@@ -1,14 +1,14 @@
 """Seeded tolerance sampling of a Project: sampled offsets saved before any run, every sample run and counted.
 
 Usage:
-  python examples/tolerance_study.py SPEC.json --out STUDY_DIR [--base BASE.json] [--seed N] [--samples N]
-                                     [--zero-tolerance] [--draw-only] [--overwrite] [--no-plots] [--no-report]
-  python examples/tolerance_study.py --verify-seed STUDY_DIR
+  os-optics-kit tolerance SPEC.json --out STUDY_DIR [--base BASE.json] [--seed N] [--samples N]
+                          [--zero-tolerance] [--draw-only] [--overwrite] [--no-plots] [--no-report]
+  os-optics-kit tolerance --verify-seed STUDY_DIR
 
 SPEC.json (keys; quantities are a bare number in the parameter's unit or {"value": x, "unit": "u"}):
   {
     "base_project": "base.json",                 # or "design": {"builder": ..., "arguments": {...}} as in
-                                                 # sensitivity_analysis.py; --base overrides
+                                                 # os-optics-kit sensitivity; --base overrides
     "targets": ["spot_radius"],                  # targets that must all PASS for a sample to PASS (default: all)
     "samples": 200,                              # number of sampled designs (the nominal run is extra)
     "seed": 20261018,                            # integer >= 0; --seed overrides
@@ -17,7 +17,7 @@ SPEC.json (keys; quantities are a bare number in the parameter's unit or {"value
       {"name": "L2_axial", "unit": "mm",
        "ops": [{"op": "transform", "selector": {"ids": ["L2"]}, "frame": {"component": "L2"},
                 "translation_mm": [0, 0, "$value"]}],
-       "nominal": 0,                             # as in sensitivity_analysis.py ("$value" = nominal + offset)
+       "nominal": 0,                             # as in os-optics-kit sensitivity ("$value" = nominal + offset)
        "distribution": {"kind": "uniform", "low": -0.5, "high": 0.5}},
       {"name": "hwp_angle", "unit": "deg", "ops": [...],
        "distribution": {"kind": "normal", "sigma": 2, "mean_offset": 0,
@@ -61,17 +61,12 @@ import math
 from pathlib import Path
 import time
 
-if __package__:
-    from . import workflow_common as wc
-    from . import sweep_parameters as sweep
-    from . import sensitivity_analysis as sa
-    from .edit_project import normalize_ops
-else:
-    import workflow_common as wc
-    import sweep_parameters as sweep
-    import sensitivity_analysis as sa
-    from edit_project import normalize_ops
+from . import workflow_common as wc
+from . import sweep_parameters as sweep
+from . import sensitivity_analysis as sa
+from .edit_project import normalize_ops
 
+PROG = "os-optics-kit tolerance"
 KIND = "opensci-example.tolerance-study"
 EXIT_CODES = {**wc.WORKFLOW_EXIT_CODES, "DRAWN": 0, "REPRODUCED": 0, "MISMATCH": 1}
 GENERATOR = "numpy.random.Generator(numpy.random.PCG64(seed))"
@@ -467,10 +462,7 @@ def _sampled_range(values):
 def plot_tolerance(study_dir, summary):
     """Histogram per selected target (values of in-model samples, target bounds) and per parameter (sampled
     offsets, distribution bounds)."""
-    if __package__:
-        from . import plot_results as pr
-    else:
-        import plot_results as pr
+    from . import plot_results as pr
 
     study_dir = Path(study_dir)
     out_dir = study_dir / "plots"
@@ -541,7 +533,7 @@ def report_lines(summary):
                      f"{check['same_result_hash']}; maximum absolute target difference: "
                      f"{wc.canonical_json(check['max_abs_difference'])} (tolerance 0).")
         lines.append("")
-    lines.append("Reproduce the sample set: `python examples/tolerance_study.py --verify-seed <study dir>`.")
+    lines.append("Reproduce the sample set: `os-optics-kit tolerance --verify-seed <study dir>`.")
     return lines
 
 
@@ -568,7 +560,8 @@ def compact(summary, limit=5):
 
 def main(argv=None):
     def workflow():
-        parser = wc.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+        parser = wc.ArgumentParser(prog=PROG, description=__doc__,
+                                    formatter_class=argparse.RawDescriptionHelpFormatter)
         parser.add_argument("spec", type=Path, nargs="?", help="Tolerance spec JSON")
         parser.add_argument("--out", type=Path, help="Study directory to create")
         parser.add_argument("--base", type=Path, help="Base Project JSON (overrides base_project / design)")
@@ -578,7 +571,7 @@ def main(argv=None):
         parser.add_argument("--draw-only", action="store_true", help="Write the sample set and stop")
         parser.add_argument("--verify-seed", type=Path, metavar="STUDY_DIR",
                             help="Redraw a study's samples from its spec and seed and compare with samples.csv")
-        parser.add_argument("--overwrite", action="store_true", help="Replace this script's files in --out")
+        parser.add_argument("--overwrite", action="store_true", help="Replace the files this command writes in --out")
         parser.add_argument("--no-plots", action="store_true", help="Do not write plots")
         parser.add_argument("--no-report", action="store_true", help="Do not write report/")
         args = parser.parse_args(argv)

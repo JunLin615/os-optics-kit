@@ -1,8 +1,20 @@
 """Subtract backgrounds, optionally normalize a reference, and fit a CSV response.
 
-Run from the repository root; see docs/en/measurements.md for runnable examples.
-Original inputs are never modified. Output directories must not already exist.
+Usage:
+  os-optics-kit measurements INPUT.csv --out NEW_DIR --x COL --signal COL --background COL --x-unit U
+                             --signal-unit U [--reference COL --reference-background COL --reference-unit U]
+                             [--minimum-reference V] [--maximum-rmse V]
+
+Original inputs are never modified. Output directories must not already exist. The engine is not needed; the plot
+needs matplotlib (python -m pip install "os-optics-kit[plot]"), checked before any output is written
+(PLOT_EXTRA_MISSING otherwise). Writes original-input.csv, processed.csv, measurements.png, provenance.json and
+summary.json. Stdout: the compact summary. Exit 0 PASS / WARNING (fit done; WARNING: rows excluded or constant
+response), 1 FAIL (RMSE above --maximum-rmse), 2 UNKNOWN (too few usable rows to fit), 4 invalid input.
 """
+
+from __future__ import annotations
+
+import argparse
 
 import csv
 from collections import Counter
@@ -15,10 +27,10 @@ import math
 from pathlib import Path
 import platform
 
-if __package__:
-    from .result_summary import ArgumentParser, emit_cli
-else:
-    from result_summary import ArgumentParser, emit_cli
+from ._engine import require_matplotlib
+from .result_summary import ArgumentParser, emit_cli
+
+PROG = "os-optics-kit measurements"
 
 
 PREFIX = "_analysis_"
@@ -286,6 +298,7 @@ def analyze_measurements(input_path, output_dir, config):
                "artifacts": artifacts}
     # Validate JSON and the optional dependency before creating any output files.
     json.dumps(summary, allow_nan=False)
+    require_matplotlib()
     import matplotlib
 
     output_dir.mkdir(parents=True, exist_ok=False)
@@ -326,7 +339,7 @@ def analyze_measurements(input_path, output_dir, config):
 
 def main(argv=None):
     def workflow():
-        parser = ArgumentParser(description=__doc__)
+        parser = ArgumentParser(prog=PROG, description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
         parser.add_argument("input", type=Path, help="UTF-8 CSV with a unique header row")
         parser.add_argument("--out", required=True, type=Path, help="New output directory (must not exist)")
         for name in ("x", "signal", "background"):

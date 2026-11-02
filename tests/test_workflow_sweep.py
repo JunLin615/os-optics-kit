@@ -1,19 +1,18 @@
-"""Offline checks of examples/sweep_parameters.py on catalog-free Projects.
+"""Offline checks of os_optics_kit.sweep_parameters on catalog-free Projects.
 
 Run from the repository root: python -m unittest discover -s tests -v
 """
 
 import csv
 import json
-from pathlib import Path
 import unittest
 
-from tests.workflow_fixtures import TempDir, by_id, expander, invoke, quiet_environment
+from tests.workflow_fixtures import TempDir, by_id, expander, invoke, quiet_environment, requires_engine
 
 quiet_environment()
 
-from examples import sweep_parameters as sp  # noqa: E402
-from examples import workflow_common as wc  # noqa: E402
+from os_optics_kit import sweep_parameters as sp  # noqa: E402
+from os_optics_kit import workflow_common as wc  # noqa: E402
 
 # L2 x position (0.5 mm puts it inside L1: refused at run) x wavelength (L3 is modelled for 700-900 nm only)
 MIXED_SPEC = {
@@ -29,6 +28,7 @@ MIXED_SPEC = {
 }
 
 
+@requires_engine
 class MixedOutcomeSweepTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -105,6 +105,7 @@ class MixedOutcomeSweepTests(unittest.TestCase):
                 self.assertEqual(first.get(key), second.get(key))
 
 
+@requires_engine
 class SweepSpecTests(unittest.TestCase):
     def setUp(self):
         self._tmp = TempDir()

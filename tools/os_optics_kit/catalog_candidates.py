@@ -1,7 +1,7 @@
 """Bounded table of catalog products that pass explicit filters, from the installed public catalog release.
 
 Usage:
-  python examples/catalog_candidates.py --category LENS --form PLANO_CONVEX_LENS --wavelength-nm 780 \\
+  os-optics-kit candidates --category LENS --form PLANO_CONVEX_LENS --wavelength-nm 780 \\
       --range focal_length_mm=90..110 --range outer_diameter_mm=12.7.. --near focal_length_mm=100 --limit 8 \\
       [--columns optical_sku,focal_length_mm,...] [--out candidates.csv]
 
@@ -34,11 +34,9 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 import re
 
-if __package__:
-    from . import workflow_common as wc
-else:
-    import workflow_common as wc
+from . import workflow_common as wc
 
+PROG = "os-optics-kit candidates"
 SCALAR_FIELDS = ("focal_length_mm", "outer_diameter_mm", "clear_aperture_diameter_mm", "thickness_mm",
                  "design_wavelength_nm", "center_wavelength_nm", "bandwidth_fwhm_nm", "edge_wavelength_nm",
                  "parent_focal_length_mm", "off_axis_angle_deg", "deviation_angle_deg", "wedge_angle_deg",
@@ -168,7 +166,8 @@ def candidates(*, category=None, form=None, wavelength_nm=None, readiness=None, 
 
 def main(argv=None):
     def workflow():
-        parser = wc.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+        parser = wc.ArgumentParser(prog=PROG, description=__doc__,
+                                    formatter_class=argparse.RawDescriptionHelpFormatter)
         parser.add_argument("--category", help="Catalog category, e.g. LENS, MIRROR, WAVEPLATE, POLARIZER")
         parser.add_argument("--form", help="Catalog form, e.g. PLANO_CONVEX_LENS")
         parser.add_argument("--wavelength-nm", help="Wavelength in nm at which a simulation model must be valid")

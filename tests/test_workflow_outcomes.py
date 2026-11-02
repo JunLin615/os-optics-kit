@@ -3,19 +3,22 @@ and an unknown target id is refused before anything runs."""
 
 import unittest
 
-from tests.workflow_fixtures import TempDir, invoke, quiet_environment
+from tests.workflow_fixtures import HAS_ENGINE, TempDir, invoke, quiet_environment, requires_engine
 
 quiet_environment()
 
-from examples import edit_project as ep  # noqa: E402
-from examples import optical_designs as D  # noqa: E402
-from examples import sweep_parameters as sp  # noqa: E402
-from examples import workflow_common as wc  # noqa: E402
+from os_optics_kit import edit_project as ep  # noqa: E402
+from os_optics_kit import sweep_parameters as sp  # noqa: E402
+from os_optics_kit import workflow_common as wc  # noqa: E402
+
+if HAS_ENGINE:
+    from os_optics_kit import optical_designs as D  # the designs import the engine
 
 WAVELENGTH = {"op": "set_source_model", "instance_id": "SRC", "changes": {"wavelength_nm": "$value"}}
 
 
 class EditAndRunExitTests(unittest.TestCase):
+    @requires_engine
     def test_out_of_band_run_exits_out_of_model(self):
         with TempDir() as tmp:
             base = wc.write_json(tmp / "base.json", D.expander_focus())
@@ -29,6 +32,7 @@ class EditAndRunExitTests(unittest.TestCase):
 
 
 class SweepFeasibilityTests(unittest.TestCase):
+    @requires_engine
     def test_unknown_target_id_is_refused_before_running(self):
         spec = {"parameters": [{"name": "wavelength", "unit": "nm", "values": [780.0], "ops": [WAVELENGTH]}],
                 "targets": ["no_such_target"], "max_evaluations": 1}

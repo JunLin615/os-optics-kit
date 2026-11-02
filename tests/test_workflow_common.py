@@ -1,8 +1,8 @@
-"""Outcome classes of examples/workflow_common.classify (no Engine run needed)."""
+"""Outcome classes of os_optics_kit.workflow_common.classify (no Engine run needed)."""
 
 import unittest
 
-from examples import workflow_common as wc
+from os_optics_kit import workflow_common as wc
 
 
 def row(target_id, status, value=1.0):

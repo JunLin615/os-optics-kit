@@ -2,14 +2,14 @@
 histograms with bounds, and the power distribution of one run. PNG and SVG.
 
 Usage:
-  python examples/plot_results.py sweep STUDY_DIR --y target:spot_radius [--out DIR]
-  python examples/plot_results.py power RUN_DIR [--out DIR]
-  python examples/plot_results.py bars DATA.json [--out DIR]   # {"labels", "values", "unit", "title", "ylabel"?}
-  python examples/plot_results.py histogram DATA.json [--out DIR]   # {"values", "unit", "title", "xlabel"?,
-                                                                     #  "bounds"?: {"minimum", "maximum"}, "bins"?}
+  os-optics-kit plot sweep STUDY_DIR --y target:spot_radius [--out DIR]
+  os-optics-kit plot power RUN_DIR [--out DIR]
+  os-optics-kit plot bars DATA.json [--out DIR]        # {"labels", "values", "unit", "title", "ylabel"?}
+  os-optics-kit plot histogram DATA.json [--out DIR]   # {"values", "unit", "title", "xlabel"?,
+                                                       #  "bounds"?: {"minimum", "maximum"}, "bins"?}
 
 sweep: one parameter gives a curve of the column against the parameter; two parameters give a heatmap (first
-parameter on x). Columns: "target:<id>", "derived:<name>" or "param:<name>" as in sweep_parameters.py. Every
+parameter on x). Columns: "target:<id>", "derived:<name>" or "param:<name>" as in os-optics-kit sweep. Every
 sample is marked by its outcome (PASS, FAIL, UNKNOWN, OUT_OF_MODEL, ERROR) with its own marker and label; samples
 without a value are never omitted: on a curve they are drawn as hollow markers on a dotted line below the lowest
 value, labelled "samples without an exact value" (that position carries no value), with their own legend entry per outcome;
@@ -21,6 +21,8 @@ Axis labels carry units; a caption names the data file (path relative to the out
 the Engine build and the catalog release. Output (default DIR: "plots" inside a study directory; for a run
 directory, "plots" next to it, so the run's own files stay as its manifest lists them): <name>.png and <name>.svg
 (text kept as text). Stdout: one JSON document with the written paths. Exit 0, 4 on error.
+Needs matplotlib (python -m pip install "os-optics-kit[plot]"); without it the command exits 4 with error code
+PLOT_EXTRA_MISSING.
 """
 
 from __future__ import annotations
@@ -28,10 +30,9 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-if __package__:
-    from . import workflow_common as wc
-else:
-    import workflow_common as wc
+from . import workflow_common as wc
+
+PROG = "os-optics-kit plot"
 
 #: outcome -> (marker, colour, label); colours follow a fixed status palette, markers keep them apart without colour
 STATUS_STYLE = {
@@ -326,7 +327,8 @@ def plot_power(run_dir, *, out_dir=None, name="power_distribution"):
 
 def main(argv=None):
     def workflow():
-        parser = wc.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+        parser = wc.ArgumentParser(prog=PROG, description=__doc__,
+                                    formatter_class=argparse.RawDescriptionHelpFormatter)
         parser.add_argument("kind", choices=["sweep", "power", "bars", "histogram"], help="Plot kind")
         parser.add_argument("path", type=Path, help="Study directory, run directory or data JSON")
         parser.add_argument("--y", help="sweep: column to plot (target:<id>, derived:<name>)")

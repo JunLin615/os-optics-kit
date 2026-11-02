@@ -1,17 +1,17 @@
 """Exercise public edit/check/result controls on synthetic, catalog-free optics."""
 
-import copy
 import json
 from pathlib import Path
 import subprocess
 import sys
 import unittest
 
-from examples import edit_project as ep, sweep_parameters as sweep, workflow_common as wc
-from tests.workflow_fixtures import TempDir, expander
+from os_optics_kit import edit_project as ep, sweep_parameters as sweep, workflow_common as wc
+from tests.workflow_fixtures import TempDir, expander, requires_engine
 
 
 class EngineControlsTests(unittest.TestCase):
+    @requires_engine
     def test_edit_record_cannot_replace_input_or_output(self):
         with TempDir() as directory:
             base = wc.write_json(directory / "base.json", expander())
@@ -45,6 +45,7 @@ class EngineControlsTests(unittest.TestCase):
                                 capture_output=True, text=True, timeout=60)
         return result.returncode, json.loads(result.stdout)
 
+    @requires_engine
     def test_atomic_refusal_hash_guard_and_interrupted_response_retry(self):
         with TempDir() as directory:
             project = wc.write_json(directory / "project.json", expander())
@@ -72,6 +73,7 @@ class EngineControlsTests(unittest.TestCase):
             self.assertEqual(retry["error"]["project_hash"], changed["project_hash"])
             self.assertEqual(project.read_bytes(), once)
 
+    @requires_engine
     def test_physical_target_and_budget_freshness(self):
         with TempDir() as directory:
             base = expander()
@@ -91,6 +93,7 @@ class EngineControlsTests(unittest.TestCase):
             # Reading freshness never changes a saved run's identity.
             self.assertEqual(wc.read_saved_run(run_dir)[1]["identity"], record["identity"])
 
+    @requires_engine
     def test_target_free_and_budget_partial_are_distinct(self):
         with TempDir() as directory:
             free = expander()
@@ -110,7 +113,7 @@ class EngineControlsTests(unittest.TestCase):
             record = wc.run_sample(limited, directory / "limited_free")
             self.assertEqual(record["execution"]["outcome"], "PARTIAL")
             self.assertEqual((record["status"], record["outcome"]), ("UNKNOWN", "NOT_APPLICABLE"))
-            from examples import result_summary
+            from os_optics_kit import result_summary
             from tests.workflow_fixtures import invoke
             code, summary, error = invoke(result_summary.main, [record["run_dir"]])
             self.assertEqual((code, error), (0, ""))

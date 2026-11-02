@@ -1,4 +1,4 @@
-"""Offline checks of examples/workflow_common.py units and examples/edit_project.py (catalog-free Projects).
+"""Offline checks of os_optics_kit.workflow_common units and os_optics_kit.edit_project (catalog-free Projects).
 
 Run from the repository root: python -m unittest discover -s tests -v
 """
@@ -6,15 +6,14 @@ Run from the repository root: python -m unittest discover -s tests -v
 import copy
 import json
 import math
-from pathlib import Path
 import unittest
 
-from tests.workflow_fixtures import TempDir, by_id, expander, invoke, quiet_environment
+from tests.workflow_fixtures import KIT, TempDir, by_id, expander, invoke, quiet_environment, requires_engine
 
 quiet_environment()
 
-from examples import edit_project as ep  # noqa: E402
-from examples import workflow_common as wc  # noqa: E402
+from os_optics_kit import edit_project as ep  # noqa: E402
+from os_optics_kit import workflow_common as wc  # noqa: E402
 
 
 def qmul(a, b):
@@ -68,6 +67,7 @@ class UnitTests(unittest.TestCase):
             wc.normalize_quantities({"m2": {"value": 1.1, "unit": "mm"}})
 
 
+@requires_engine
 class EditOpTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -230,6 +230,7 @@ class EditOpTests(unittest.TestCase):
         self.assertEqual(result["record"]["warnings"][0]["code"], "TARGET_UNIT_MISMATCH")
 
 
+@requires_engine
 class EditFileTests(unittest.TestCase):
     OPS = [{"op": "transform", "selector": {"ids": ["L2"]}, "translation_mm": [0, 0, 1], "frame": {"component": "L2"}}]
 
@@ -329,18 +330,15 @@ class EditFileTests(unittest.TestCase):
 
 
 class HelpTests(unittest.TestCase):
-    def test_every_script_prints_english_help_on_stdout(self):
+    def test_every_tool_prints_english_help_on_stdout(self):
         import subprocess
         import sys
 
-        from tests.workflow_fixtures import ROOT
-
-        for name in ("edit_project", "sweep_parameters", "compare_runs", "plot_results", "build_report",
-                     "catalog_candidates"):
-            done = subprocess.run([sys.executable, str(ROOT / "examples" / f"{name}.py"), "--help"],
+        for name in ("edit", "sweep", "compare", "plot", "report", "candidates"):
+            done = subprocess.run([sys.executable, *KIT, name, "--help"],
                                   capture_output=True, text=True, timeout=120)
             self.assertEqual(done.returncode, 0, name)
-            self.assertIn("usage:", done.stdout, name)
+            self.assertIn(f"usage: os-optics-kit {name}", done.stdout, name)
             self.assertIn("Exit", done.stdout, name)
 
 

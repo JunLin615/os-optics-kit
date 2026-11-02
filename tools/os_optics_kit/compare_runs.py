@@ -1,11 +1,11 @@
 """Compare saved runs, or the samples of a sweep study, without rerunning anything.
 
 Usage:
-  python examples/compare_runs.py RUN_DIR RUN_DIR ... [--project CURRENT.json] [--labels a,b,...]
-                                  [--reference LABEL] [--out DIR]
-  python examples/compare_runs.py STUDY_DIR [--project CURRENT.json] [--out DIR]
+  os-optics-kit compare RUN_DIR RUN_DIR ... [--project CURRENT.json] [--labels a,b,...] [--reference LABEL]
+                        [--targets a,b] [--out DIR]
+  os-optics-kit compare STUDY_DIR [--project CURRENT.json] [--out DIR]
 
-Each argument is a run directory (it holds manifest.json) or a study directory written by sweep_parameters.py (its
+Each argument is a run directory (it holds manifest.json) or a study directory written by os-optics-kit sweep (its
 samples become the compared runs, labelled by sample id; a sample that was refused or not run stays in the
 comparison as an ERROR entry with missing data). A run directory named "run" is labelled by its parent directory.
 
@@ -36,11 +36,9 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-if __package__:
-    from . import workflow_common as wc
-else:
-    import workflow_common as wc
+from . import workflow_common as wc
 
+PROG = "os-optics-kit compare"
 MAX_RUNS_SHOWN = 8
 MAX_DIFFERENCES_SHOWN = 10
 
@@ -340,7 +338,8 @@ def compact(document, paths=None):
 
 def main(argv=None):
     def workflow():
-        parser = wc.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+        parser = wc.ArgumentParser(prog=PROG, description=__doc__,
+                                    formatter_class=argparse.RawDescriptionHelpFormatter)
         parser.add_argument("paths", nargs="+", type=Path, help="Run directories or one/more study directories")
         parser.add_argument("--project", type=Path, help="Current Project JSON: report each run's freshness")
         parser.add_argument("--labels", help="Comma-separated run labels (default: directory / sample names)")

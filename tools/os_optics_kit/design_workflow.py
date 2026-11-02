@@ -1,7 +1,7 @@
-"""Shared steps of the parameterized design workflows (beam_expansion_focus.py, polarization_control.py,
-alignment_analysis.py).
+"""Shared steps of parameterized design workflows: a case's workflow script passes its config to ``main``.
 
-A workflow builds one design of optical_designs.py from the customer's inputs and then, without new physics code:
+A workflow builds one design of ``os_optics_kit.optical_designs`` from the user's inputs and then, without new
+physics code:
 
 1. runs the nominal design once (``workflow_common.run_sample``: saved Project and native run directory);
 2. runs bounded one-parameter studies with ``sweep_parameters.run_sweep`` (one saved Project and run per sample,
@@ -10,7 +10,7 @@ A workflow builds one design of optical_designs.py from the customer's inputs an
 4. plots the targets whose values change across the study (``plot_results.plot_sweep``) and the nominal power
    distribution (``plot_results.plot_power``);
 5. compares Engine values with the design's independent closed-form reference (plain Python formulas of
-   optical_designs.py, labelled "independent check");
+   ``optical_designs``, labelled "independent check");
 6. assembles reports with ``build_report.build_report``.
 
 Study syntax (``--study``, repeatable): ``NAME=V1,V2,...`` or ``NAME=START..STOP:COUNT`` (inclusive, evenly
@@ -43,16 +43,10 @@ import re
 import shutil
 import time
 
-if __package__:
-    from . import workflow_common as wc
-    from . import sweep_parameters as sp
-    from . import compare_runs as cr
-    from . import build_report as br
-else:
-    import workflow_common as wc
-    import sweep_parameters as sp
-    import compare_runs as cr
-    import build_report as br
+from . import workflow_common as wc
+from . import sweep_parameters as sp
+from . import compare_runs as cr
+from . import build_report as br
 
 #: exit code of a workflow = outcome class of its nominal run
 EXIT_CODES = {"PASS": 0, "FAIL": 1, "UNKNOWN": 2, "OUT_OF_MODEL": 3, "ERROR": 4, "NOT_APPLICABLE": 0, "DESCRIBED": 0}
@@ -334,10 +328,7 @@ def _changing_targets(rows, order, nominal):
 
 def _plot_power(run_dir, out_dir):
     try:
-        if __package__:
-            from . import plot_results as pr
-        else:
-            import plot_results as pr
+        from . import plot_results as pr
         return pr.plot_power(run_dir, out_dir=out_dir)["out"], None
     except ImportError as exc:
         return None, f"plots skipped: {exc}"
@@ -345,10 +336,7 @@ def _plot_power(run_dir, out_dir):
 
 def _plot_sweep(study_dir, target_ids, out_dir):
     try:
-        if __package__:
-            from . import plot_results as pr
-        else:
-            import plot_results as pr
+        from . import plot_results as pr
     except ImportError as exc:
         return [], f"plots skipped: {exc}"
     written = []
@@ -439,8 +427,8 @@ def run_workflow(config, inputs, studies, out_dir, *, max_evaluations, max_plots
                 *_closed_form_table(cf_rows), "", "Data: [closed_form.csv](../closed_form.csv), "
                 "[closed_form.json](../closed_form.json)."]},
                 {"title": "Comparison with the nominal run", "lines": [
-                    f"Targets and planes aligned by ID, deltas against the nominal run: "
-                    f"[compare.json](../compare/compare.json), [compare.csv](../compare/compare.csv)."]}],
+                    "Targets and planes aligned by ID, deltas against the nominal run: "
+                    "[compare.json](../compare/compare.json), [compare.csv](../compare/compare.csv)."]}],
             artifacts=[(study_dir / "closed_form.csv", "closed-form check"),
                        (study_dir / "closed_form.json", "closed-form check"),
                        (Path(compare_files["json"]), "comparison with nominal"),
@@ -509,7 +497,7 @@ def _top_sections(config, summary, out_dir):
         lines.append(f"| {name} | {shown} | {info['unit'] or '-'} | {info['role']} | "
                      f"{info['meaning'].replace('|', '&#124;')} |")
     sections = [{"title": "Design inputs", "lines": [
-        f"Design `{config['design']}` of examples/optical_designs.py: {config['info']['summary']} "
+        f"Design `{config['design']}` of os_optics_kit.optical_designs: {config['info']['summary']} "
         f"Model basis: {config['info']['model_basis']}. Frames: {config['info']['frames']}.", "", *lines]}]
     nominal_cf = wc.read_json(out_dir / "nominal" / "closed_form.json")
     sections.append({"title": "Independent closed-form check (nominal)", "lines": [

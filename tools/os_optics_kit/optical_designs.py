@@ -29,7 +29,7 @@ errors from the two planes of a run).
 
 Example::
 
-    from examples.optical_designs import expander_focus, run_design, design_outcome
+    from os_optics_kit.optical_designs import expander_focus, run_design, design_outcome
     outcome = design_outcome(run_design(expander_focus(f3_mm=150.0)))
     outcome["targets"]["spot_radius"]   # {"value": 0.0248..., "unit": "mm", "status": "FAIL", ...}
 """

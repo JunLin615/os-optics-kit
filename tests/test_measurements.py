@@ -11,12 +11,14 @@ import sys
 import tempfile
 import unittest
 
-from examples.analyze_measurements import MeasurementConfig, analyze_measurements, fit_linear, preprocess_csv
+from os_optics_kit.analyze_measurements import MeasurementConfig, analyze_measurements, fit_linear, preprocess_csv
+from tests.workflow_fixtures import KIT, requires_matplotlib
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA = ROOT / "examples" / "data" / "measurements"
-SCRIPT = ROOT / "examples" / "analyze_measurements.py"
+# synthetic data sets of the detector-measurements case (read only)
+DATA = ROOT / "cases" / "detector-measurements" / "data"
+CLI = [sys.executable, *KIT, "measurements"]
 DETECTOR = MeasurementConfig("input_power_mW", "signal_V", "dark_V", "mW", "V")
 DRIFT = MeasurementConfig("time_s", "signal_V", "dark_V", "s", "V", "reference_V", "reference_dark_V", "V")
 
@@ -131,6 +133,7 @@ class MeasurementMathTests(unittest.TestCase):
             preprocess_csv(b'input_power_mW,signal_V,dark_V\n0,"unterminated,0\n', DETECTOR)
 
 
+@requires_matplotlib
 class MeasurementArtifactTests(unittest.TestCase):
     def test_bundle_preserves_input_and_audits_every_record_and_artifact(self):
         source = DATA / "detector_response.csv"
@@ -173,9 +176,9 @@ class MeasurementArtifactTests(unittest.TestCase):
 
     def test_cli_success_failure_unknown_usage_and_independence_from_engine(self):
         with tempfile.TemporaryDirectory() as directory:
-            base = [sys.executable, str(SCRIPT), str(DATA / "detector_response.csv"),
-                    "--x", "input_power_mW", "--signal", "signal_V", "--background", "dark_V",
-                    "--x-unit", "mW", "--signal-unit", "V"]
+            options = ["--x", "input_power_mW", "--signal", "signal_V", "--background", "dark_V",
+                       "--x-unit", "mW", "--signal-unit", "V"]
+            base = [*CLI, str(DATA / "detector_response.csv"), *options]
             for index, bound, expected in ((0, "0.003", 0), (1, "0.001", 1), (2, "nan", 4)):
                 output = Path(directory) / str(index)
                 result = subprocess.run([*base, "--out", str(output), "--maximum-rmse", bound], capture_output=True, text=True, timeout=60)
@@ -188,7 +191,7 @@ class MeasurementArtifactTests(unittest.TestCase):
                     self.assertEqual(result.stderr, "")
                     self.assertEqual(json.loads(result.stdout)["targets"][0]["status"], "PASS" if expected == 0 else "FAIL")
                     self.assertLess(len(result.stdout), 5000)
-            result = subprocess.run([sys.executable, str(SCRIPT), "--unknown"], capture_output=True, text=True, timeout=60)
+            result = subprocess.run([*CLI, "--unknown"], capture_output=True, text=True, timeout=60)
             self.assertEqual((result.returncode, result.stdout), (4, ""))
             self.assertIn("error", json.loads(result.stderr))
             source = Path(directory) / "custom.csv"
@@ -197,7 +200,7 @@ class MeasurementArtifactTests(unittest.TestCase):
                 ("pass", "input_power_mW,signal_V,dark_V\n0,1,0\n1,4,0\n2,7,0\n3,10,0\n", 0, "PASS"),
             ):
                 source.write_text(content)
-                result = subprocess.run([*base[:2], str(source), *base[3:], "--out", str(Path(directory) / name)], capture_output=True, text=True, timeout=60)
+                result = subprocess.run([*CLI, str(source), *options, "--out", str(Path(directory) / name)], capture_output=True, text=True, timeout=60)
                 self.assertEqual(result.returncode, expected_code, result.stderr)
                 self.assertEqual(json.loads(result.stdout)["status"], expected_status)
                 self.assertEqual(result.stderr, "")
@@ -208,10 +211,10 @@ class BlockEngine:
         if fullname == 'os_optics' or fullname.startswith('os_optics.'):
             raise AssertionError('measurement analysis imported the engine')
 sys.meta_path.insert(0, BlockEngine())
-from examples.analyze_measurements import main
+from os_optics_kit.analyze_measurements import main
 raise SystemExit(main(sys.argv[1:]))
 """
-            result = subprocess.run([sys.executable, "-c", code, *base[2:], "--out", str(Path(directory) / "independent")], cwd=ROOT, capture_output=True, text=True, timeout=60)
+            result = subprocess.run([sys.executable, "-c", code, str(DATA / "detector_response.csv"), *options, "--out", str(Path(directory) / "independent")], cwd=ROOT, capture_output=True, text=True, timeout=60)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(json.loads(result.stdout)["rows"]["used"], 7)
 
