@@ -1,9 +1,9 @@
 """Run a bounded one- or two-parameter sweep of a Project; save every sample's Project and run.
 
 Usage:
-  python examples/sweep_parameters.py SPEC.json --out STUDY_DIR [--base BASE.json] [--overwrite]
+  os-optics-kit sweep SPEC.json --out STUDY_DIR [--base BASE.json] [--overwrite]
 
-SPEC.json (keys; units as in edit_project.py):
+SPEC.json (keys; units as in os-optics-kit edit):
   {
     "base_project": "base.json",                  # relative to SPEC.json; --base overrides
     "parameters": [                               # 1 or 2 parameters; 2 give the full grid (first one outermost)
@@ -47,7 +47,7 @@ sample optimizes the stated objective (ties: lowest sample id).
 Writes STUDY_DIR/study.json (spec as given and normalized, base project hash, engine / catalog identity,
 environment, budget, timestamps), samples/<id>/project.json, samples/<id>/run/ (run directory),
 samples/<id>/sample.json (full record), table.csv and summary.json. The study directory must be new or empty
-(--overwrite replaces the files this script writes there and removes the study's plots/ and report/ directories,
+(--overwrite replaces the files this command writes there and removes the study's plots/ and report/ directories,
 which describe the previous samples).
 
 Stdout: one compact JSON document (counts per outcome with denominators, best sample or no-feasible outcome, the
@@ -65,13 +65,10 @@ from pathlib import Path
 import shutil
 import time
 
-if __package__:
-    from . import workflow_common as wc
-    from .edit_project import EditError, apply_edits, normalize_ops
-else:
-    import workflow_common as wc
-    from edit_project import EditError, apply_edits, normalize_ops
+from . import workflow_common as wc
+from .edit_project import EditError, apply_edits, normalize_ops
 
+PROG = "os-optics-kit sweep"
 PLACEHOLDER = "$value"
 KNOWN_UNITS = ("nm", "um", "µm", "mm", "m", "deg", "rad", "mrad", "urad", "W", "mW", "uW")
 DERIVED_OPS = ("add", "sub", "mul", "div", "abs", "abs_diff")
@@ -537,11 +534,12 @@ def compact(summary, limit=TOP_ROWS):
 
 def main(argv=None):
     def workflow():
-        parser = wc.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+        parser = wc.ArgumentParser(prog=PROG, description=__doc__,
+                                    formatter_class=argparse.RawDescriptionHelpFormatter)
         parser.add_argument("spec", type=Path, help="Sweep spec JSON")
         parser.add_argument("--out", type=Path, required=True, help="Study directory to create")
         parser.add_argument("--base", type=Path, help="Base Project JSON (overrides spec base_project)")
-        parser.add_argument("--overwrite", action="store_true", help="Replace this script's files in --out")
+        parser.add_argument("--overwrite", action="store_true", help="Replace the files this command writes in --out")
         args = parser.parse_args(argv)
         spec = wc.read_json(args.spec)
         base_path = args.base or (args.spec.parent / spec["base_project"] if spec.get("base_project") else None)

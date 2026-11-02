@@ -1,13 +1,12 @@
 """Finite-difference sensitivity of selected targets to explicit design parameters; every sample is saved.
 
 Usage:
-  python examples/sensitivity_analysis.py SPEC.json --out STUDY_DIR [--base BASE.json] [--overwrite]
-                                          [--no-plots] [--no-report]
+  os-optics-kit sensitivity SPEC.json --out STUDY_DIR [--base BASE.json] [--overwrite] [--no-plots] [--no-report]
 
 SPEC.json (keys; quantities are a bare number in the stated unit or {"value": x, "unit": "u"}):
   {
     "base_project": "base.json",                 # relative to SPEC.json; --base overrides. Or, instead:
-    "design": {"builder": "expander_focus",      # a builder of optical_designs.py (catalog-free designs need no
+    "design": {"builder": "expander_focus",      # a builder of os_optics_kit.optical_designs (catalog-free: no
                "arguments": {"f3_mm": 100}},     # catalog); arguments in the units of their names
     "targets": ["spot_radius"],                  # target ids to differentiate (default: all targets)
     "parameters": [
@@ -24,7 +23,7 @@ SPEC.json (keys; quantities are a bare number in the stated unit or {"value": x,
     "max_evaluations": 20                        # required; refused before any run when 1 + 2 * steps exceeds it
   }
 
-Parameters use the edit vocabulary of edit_project.py and the placeholder syntax of sweep_parameters.py ("$value"
+Parameters use the edit vocabulary of os-optics-kit edit and the placeholder syntax of os-optics-kit sweep ("$value"
 or {"$value": {"scale", "offset"}}), substituted with nominal + perturbation. Position: op "transform" with
 "translation_mm" and an explicit "frame" (e.g. {"component": "L2"}: along the element's own axes). Angle: op
 "transform" with "rotation": {"axis": [...], "angle_deg": "$value"} and explicit "frame" and "pivot" (angle units
@@ -56,9 +55,9 @@ otherwise only parameters with a scale are ranked and the others are listed as n
 Writes STUDY_DIR/study.json (spec as given and normalized, base project hash, engine / catalog identity,
 environment, budget, timestamps), samples/<id>/{project.json, run/, sample.json} (s0000 = nominal), table.csv
 (one row per sample, param:<name> = perturbation from nominal), sensitivity.csv (one row per parameter, target and
-step), summary.json, plots/ (sensitivity bars and tornado per target, PNG + SVG; needs matplotlib, see
-requirements-examples.txt, otherwise summary.json records why no plot was written) and report/ (report.md,
-report.json via build_report.py).
+step), summary.json, plots/ (sensitivity bars and tornado per target, PNG + SVG; needs matplotlib, the
+os-optics-kit[plot] extra, otherwise summary.json records why no plot was written) and report/ (report.md,
+report.json as written by os-optics-kit report).
 
 Stdout: one compact JSON document (nominal values, per-target ranking with derivatives, units, methods, flags,
 outcome counts, unusable samples, paths). Exit 0 completed (every derivative has a value), 2 some derivative
@@ -74,15 +73,12 @@ from pathlib import Path
 import shutil
 import time
 
-if __package__:
-    from . import workflow_common as wc
-    from . import sweep_parameters as sweep
-    from .edit_project import EditError, apply_edits, normalize_ops
-else:
-    import workflow_common as wc
-    import sweep_parameters as sweep
-    from edit_project import EditError, apply_edits, normalize_ops
+from . import workflow_common as wc
+from . import sweep_parameters as sweep
+from ._engine import matplotlib_missing_message
+from .edit_project import EditError, apply_edits, normalize_ops
 
+PROG = "os-optics-kit sensitivity"
 KIND = "opensci-example.sensitivity"
 EXIT_CODES = {**wc.WORKFLOW_EXIT_CODES, "INCOMPLETE": 2}
 DEFAULT_THRESHOLD = 0.01
@@ -111,10 +107,7 @@ def resolve_base(spec, *, spec_dir=None, base=None, base_path=None, build=None):
                                      else Path(base_path).as_posix()}
     design = spec.get("design")
     if design is not None:
-        if __package__:
-            from . import optical_designs
-        else:
-            import optical_designs
+        from . import optical_designs
         name = design.get("builder") if isinstance(design, dict) else None
         if name not in optical_designs.DESIGN_INFO:
             raise wc.WorkflowError("SPEC_INVALID",
@@ -296,13 +289,10 @@ def target_value(record, target_id):
 
 
 def append_report(study_dir, *, plots, title, lines, extra, artifacts=()):
-    """build_report.py report of the study with a study-specific section, extra artifacts and a JSON key."""
+    """build_report report of the study with a study-specific section, extra artifacts and a JSON key."""
     import inspect
 
-    if __package__:
-        from .build_report import build_report
-    else:
-        from build_report import build_report
+    from .build_report import build_report
 
     out_dir = Path(study_dir) / "report"
     if "sections" in inspect.signature(build_report).parameters:
@@ -327,7 +317,7 @@ def matplotlib_missing():
     try:
         import matplotlib  # noqa: F401
     except ImportError:
-        return "matplotlib is not installed (python -m pip install -r requirements-examples.txt)"
+        return matplotlib_missing_message()
     return None
 
 
@@ -744,10 +734,7 @@ def _estimate_row(pair, estimate):
 def plot_sensitivity(study_dir, summary):
     """Per target: bars of the normalized sensitivity (plot_results.plot_bars) and a tornado of the measured target
     change at -h / +h of each parameter's largest usable step. PNG + SVG in STUDY_DIR/plots."""
-    if __package__:
-        from . import plot_results as pr
-    else:
-        import plot_results as pr
+    from . import plot_results as pr
 
     study_dir = Path(study_dir)
     out_dir = study_dir / "plots"
@@ -904,11 +891,12 @@ def compact(summary, limit=TOP_UNUSABLE):
 
 def main(argv=None):
     def workflow():
-        parser = wc.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+        parser = wc.ArgumentParser(prog=PROG, description=__doc__,
+                                    formatter_class=argparse.RawDescriptionHelpFormatter)
         parser.add_argument("spec", type=Path, help="Sensitivity spec JSON")
         parser.add_argument("--out", type=Path, required=True, help="Study directory to create")
         parser.add_argument("--base", type=Path, help="Base Project JSON (overrides base_project / design)")
-        parser.add_argument("--overwrite", action="store_true", help="Replace this script's files in --out")
+        parser.add_argument("--overwrite", action="store_true", help="Replace the files this command writes in --out")
         parser.add_argument("--no-plots", action="store_true", help="Do not write plots")
         parser.add_argument("--no-report", action="store_true", help="Do not write report/")
         args = parser.parse_args(argv)

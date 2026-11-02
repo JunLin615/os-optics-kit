@@ -1,8 +1,8 @@
 """Edit a Project by object ID with explicit units; validate with the Engine; save it as a new file.
 
 Usage:
-  python examples/edit_project.py BASE.json --edits EDITS.json --out NEW.json [--run RUN_DIR]
-  python examples/edit_project.py BASE.json --describe [--ids L2,focus]
+  os-optics-kit edit BASE.json --edits EDITS.json --out NEW.json [--run RUN_DIR]
+  os-optics-kit edit BASE.json --describe [--ids L2,focus]
 
 EDITS.json is a JSON list of operations (or {"ops": [...]}). The operations are the Designer's ``updateProject``
 vocabulary, applied in order to a copy of BASE; ``changes`` objects are merged and a ``null`` value removes a field:
@@ -61,11 +61,9 @@ import argparse
 import copy
 from pathlib import Path
 
-if __package__:
-    from . import workflow_common as wc
-else:
-    import workflow_common as wc
+from . import workflow_common as wc
 
+PROG = "os-optics-kit edit"
 TARGET_VALUE_KEYS = ("minimum", "maximum", "target_value", "tolerance_abs")
 RECORD_KIND = "opensci-example.project-edit"
 
@@ -418,7 +416,8 @@ def describe(document, ids=None):
 
 def main(argv=None):
     def workflow():
-        parser = wc.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+        parser = wc.ArgumentParser(prog=PROG, description=__doc__,
+                                    formatter_class=argparse.RawDescriptionHelpFormatter)
         parser.add_argument("base", type=Path, help="Base Project JSON (never modified)")
         parser.add_argument("--edits", type=Path, help="JSON list of operations, or {\"ops\": [...]}")
         parser.add_argument("--out", type=Path, help="New Project file to write")

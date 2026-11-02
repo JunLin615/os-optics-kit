@@ -1,10 +1,9 @@
 """Assemble a factual report (report.md + report.json) from a sweep study or saved runs, without rerunning.
 
 Usage:
-  python examples/build_report.py STUDY_DIR [--project CURRENT.json] [--plots PNG_OR_DIR ...]
-                                  [--changes NEW.changes.json] [--out DIR]
-  python examples/build_report.py RUN_DIR [RUN_DIR ...] [--project CURRENT.json] [--plots ...] [--changes ...]
-                                  [--out DIR]
+  os-optics-kit report STUDY_DIR [--project CURRENT.json] [--plots PNG_OR_DIR ...] [--changes NEW.changes.json]
+                       [--out DIR]
+  os-optics-kit report RUN_DIR [RUN_DIR ...] [--project CURRENT.json] [--plots ...] [--changes ...] [--out DIR]
 
 Contents: Engine and catalog identity; inputs (base project file and hash, sweep parameters with units, targets,
 constraints and objective, or the compared runs' input differences); the edit's change record (every operation with
@@ -25,13 +24,10 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-if __package__:
-    from . import workflow_common as wc
-    from .compare_runs import compare
-else:
-    import workflow_common as wc
-    from compare_runs import compare
+from . import workflow_common as wc
+from .compare_runs import compare
 
+PROG = "os-optics-kit report"
 MAX_SAMPLE_ROWS = 40
 
 
@@ -335,11 +331,12 @@ def render_markdown(report):
 
 def main(argv=None):
     def workflow():
-        parser = wc.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+        parser = wc.ArgumentParser(prog=PROG, description=__doc__,
+                                    formatter_class=argparse.RawDescriptionHelpFormatter)
         parser.add_argument("paths", nargs="+", type=Path, help="One study directory, or run directories")
         parser.add_argument("--project", type=Path, help="Current Project JSON for freshness")
         parser.add_argument("--plots", nargs="*", type=Path, help="Plot files or directories to link")
-        parser.add_argument("--changes", type=Path, help="Change record of an edit (edit_project.py)")
+        parser.add_argument("--changes", type=Path, help="Change record of an edit (os-optics-kit edit)")
         parser.add_argument("--out", type=Path, help="Report directory")
         args = parser.parse_args(argv)
         report = build_report(args.paths, out_dir=args.out, project=args.project, plots=args.plots,

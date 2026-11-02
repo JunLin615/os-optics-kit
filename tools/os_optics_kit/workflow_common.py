@@ -1,10 +1,10 @@
-"""Shared internals of the project-edit, sweep, comparison, plotting and report scripts.
+"""Shared internals of the edit, sweep, compare, plot, report, sensitivity and tolerance tools.
 
-Usage (Python only; the workflow scripts import it):
+Usage (Python; the tools and case scripts import it):
 
-    from workflow_common import run_sample, freshness, convert
-    record = run_sample(project_document, "study/samples/s0001")
-    record["outcome"]            # ERROR | OUT_OF_MODEL | UNKNOWN | FAIL | PASS
+    from os_optics_kit import workflow_common as wc
+    record = wc.run_sample(project_document, "study/samples/s0001")
+    record["outcome"]            # ERROR | OUT_OF_MODEL | UNKNOWN | FAIL | PASS | NOT_APPLICABLE
 
 What it provides:
 
@@ -21,13 +21,12 @@ What it provides:
 * ``freshness`` delegates to the Engine's CURRENT / HISTORICAL / UNDETERMINED decision with its reasons;
 * sha256 / JSON / CSV writers (LF line endings) and bounded-output helpers.
 
-The Engine is imported only inside the functions that need it, so ``--help`` of every script stays fast.
+The Engine is imported only inside the functions that need it, so ``--help`` of every tool works without it.
 """
 
 from __future__ import annotations
 
 import csv
-from contextlib import redirect_stdout
 from decimal import Decimal
 import hashlib
 import io
@@ -39,22 +38,12 @@ import platform
 import sys
 import time
 
-if __package__:
-    from .result_summary import ArgumentParser as _SummaryParser, EXIT_CODES, ERROR_EXIT, summarize_results
-else:
-    from result_summary import ArgumentParser as _SummaryParser, EXIT_CODES, ERROR_EXIT, summarize_results
+from .result_summary import ArgumentParser  # noqa: F401 - the tools' parser (usage errors exit 4)
+from .result_summary import EXIT_CODES, ERROR_EXIT, error_document, exit_status, json_cli_stdout, summarize_results
 
 OUTCOMES = ("ERROR", "OUT_OF_MODEL", "UNKNOWN", "FAIL", "PASS", "NOT_APPLICABLE")
-#: Exit codes of the workflow scripts: the run statuses of result_summary plus the study / edit outcomes.
+#: Exit codes of the workflow tools: the run statuses of result_summary plus the study / edit outcomes.
 WORKFLOW_EXIT_CODES = {**EXIT_CODES, "COMPLETED": 0, "EDITED": 0, "ALREADY_APPLIED": 0, "NO_FEASIBLE": 1}
-
-
-class ArgumentParser(_SummaryParser):
-    """result_summary's parser (usage errors exit 4); --help goes to the real stdout although ``emit`` sends the
-    workflow's own prints to stderr."""
-
-    def print_help(self, file=None):
-        super().print_help(file if file is not None else sys.__stdout__)
 
 
 class WorkflowError(Exception):
@@ -522,10 +511,7 @@ def sample_from_summary(summary, selected=None):
 
 def read_saved_run(run_dir, selected=None):
     """Summary + sample fields of a saved run directory (never reruns)."""
-    if __package__:
-        from .result_summary import summarize_run
-    else:
-        from result_summary import summarize_run
+    from .result_summary import summarize_run
 
     summary = summarize_run(run_dir)
     fields = sample_from_summary(summary, selected)
@@ -557,13 +543,14 @@ def emit(workflow, exit_codes=None):
     stderr; any exception -> ``{"error": {...}}`` on stderr, empty stdout, exit 4."""
     exit_codes = exit_codes or WORKFLOW_EXIT_CODES
     try:
-        with redirect_stdout(sys.stderr):
+        with json_cli_stdout():
             summary = workflow()
         code = exit_codes[summary["status"]]
         output = json.dumps(json_safe(summary), ensure_ascii=True, allow_nan=False, separators=(",", ":"))
+    except SystemExit as exc:  # --help
+        return exit_status(exc)
     except Exception as exc:  # noqa: BLE001 - every failure becomes a JSON error
-        error = exc.as_dict() if isinstance(exc, WorkflowError) else {
-            "code": getattr(exc, "code", type(exc).__name__), "message": str(exc)}
+        error = exc.as_dict() if isinstance(exc, WorkflowError) else error_document(exc)
         print(json.dumps({"error": json_safe(error)}, ensure_ascii=True), file=sys.stderr)
         return ERROR_EXIT
     print(output)

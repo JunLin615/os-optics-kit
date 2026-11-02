@@ -1,17 +1,24 @@
 """Summarize a saved local run without rerunning the simulation.
 
-Usage: python examples/result_summary.py run-example [--details]
+Usage: os-optics-kit summary RUN_DIR [--details]   (or: python -m os_optics_kit summary RUN_DIR)
 
 Exit codes follow requirement_outcome: 0 all selected targets met or none declared,
 1 an unmet target, 2 indeterminate, 3 selected target outside its model, 4 invalid
 input/artifact or failed computation. Raw aggregate status is preserved separately.
 """
 
+from __future__ import annotations
+
 import argparse
-from contextlib import redirect_stdout
+from contextlib import contextmanager, redirect_stdout
+import contextvars
 import json
 from pathlib import Path
 import sys
+
+from ._engine import dependency_error
+
+PROG = "os-optics-kit summary"
 
 EXIT_CODES = {
     "PASS": 0, "WARNING": 0, "NOT_APPLICABLE": 0,
@@ -20,11 +27,42 @@ EXIT_CODES = {
 ERROR_EXIT = 4
 
 
+#: where --help goes while a command's own prints are redirected to stderr (set by ``json_cli_stdout``)
+_HELP_STREAM = contextvars.ContextVar("os_optics_kit_help_stream", default=None)
+
+
 class ArgumentParser(argparse.ArgumentParser):
-    """Keep usage errors distinct from an UNKNOWN scientific result."""
+    """Keep usage errors distinct from an UNKNOWN scientific result (a usage error raises ValueError: exit 4);
+    --help goes to the command's real stdout."""
 
     def error(self, message):
         raise ValueError(message)
+
+    def print_help(self, file=None):
+        super().print_help(file if file is not None else (_HELP_STREAM.get() or sys.stdout))
+
+
+@contextmanager
+def json_cli_stdout():
+    """Send the workflow's own prints to stderr (stdout carries one JSON document); --help stays on stdout."""
+    token = _HELP_STREAM.set(sys.stdout)
+    try:
+        with redirect_stdout(sys.stderr):
+            yield
+    finally:
+        _HELP_STREAM.reset(token)
+
+
+def exit_status(exc):
+    """Exit code of a ``SystemExit`` raised inside a command (argparse --help: 0)."""
+    if exc.code is None:
+        return 0
+    return exc.code if isinstance(exc.code, int) else ERROR_EXIT
+
+
+def error_document(exc):
+    """``{"code", "message", ...}`` of a failed command; missing dependencies get their own stable codes."""
+    return dependency_error(exc) or {"code": getattr(exc, "code", None) or type(exc).__name__, "message": str(exc)}
 
 
 def summarize_results(results, *, artifacts=None, details=False):
@@ -57,10 +95,8 @@ def summarize_results(results, *, artifacts=None, details=False):
         if "power_upper_bound_W" in quantity:
             row["power_upper_bound_W"] = quantity["power_upper_bound_W"]
         targets.append(row)
-    if __package__:
-        from .workflow_common import classify
-    else:
-        from workflow_common import classify
+    from .workflow_common import classify
+
     requirement_outcome = classify(status, compact["model_scope_issues"], targets)
     execution = (compact.get("outcome") or {}).get("execution") or {}
     if execution.get("outcome") in ("FAILED", "CANCELLED"):
@@ -108,13 +144,14 @@ def summarize_run(directory, *, details=False):
 def emit_cli(workflow, *, exit_status_key="requirement_outcome"):
     """Emit JSON using the caller's declared outcome field for the exit code."""
     try:
-        with redirect_stdout(sys.stderr):
+        with json_cli_stdout():
             summary = workflow()
         code = EXIT_CODES[summary[exit_status_key]]
         output = json.dumps(summary, ensure_ascii=True, allow_nan=False, separators=(",", ":"))
-    except Exception as exc:
-        error = {"error": {"code": getattr(exc, "code", type(exc).__name__), "message": str(exc)}}
-        print(json.dumps(error, ensure_ascii=True), file=sys.stderr)
+    except SystemExit as exc:  # --help
+        return exit_status(exc)
+    except Exception as exc:  # noqa: BLE001 - every failure becomes a JSON error
+        print(json.dumps({"error": error_document(exc)}, ensure_ascii=True), file=sys.stderr)
         return ERROR_EXIT
     print(output)
     return code
@@ -122,7 +159,7 @@ def emit_cli(workflow, *, exit_status_key="requirement_outcome"):
 
 def main(argv=None):
     def workflow():
-        parser = ArgumentParser(description=__doc__)
+        parser = ArgumentParser(prog=PROG, description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
         parser.add_argument("directory", type=Path, help="Saved local run directory")
         parser.add_argument("--details", action="store_true", help="Include the complete power ledger")
         args = parser.parse_args(argv)
