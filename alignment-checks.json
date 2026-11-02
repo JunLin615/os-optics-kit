@@ -23,7 +23,7 @@
     {
       "name": "beam-summary",
       "description": "Catalog beam expander and saved-result summary comparison",
-      "argv": ["{python}", "-m", "tests.check_beam_summary", "--out", "{runs}/beam"],
+      "argv": ["{python}", "-m", "tests.check_beam_summary", "--project", "cases/beam-expander/project.json", "--out", "{runs}/beam"],
       "needs_catalog": true,
       "expected_status": "PASS"
     },
@@ -32,7 +32,7 @@
       "description": "Catalog-dependent tests, run after the catalog is prepared; a missing catalog fails them",
       "argv": ["{python}", "-m", "pytest", "-q", "-p", "no:cacheprovider", "tests/test_optical_designs.py::CatalogVariantTests", "tests/test_workflow_examples.py::CatalogBeamExpanderDemoTests", "tests/test_workflow_postprocess.py::CandidateTests"],
       "needs_catalog": true,
-      "env": {"OPENSCI_EXAMPLES_REQUIRE_CATALOG": "1"},
+      "env": {"OS_OPTICS_KIT_REQUIRE_CATALOG": "1"},
       "timeout": 600
     },
     {
@@ -166,14 +166,14 @@
     {
       "name": "tolerance-zero",
       "description": "Zero tolerance reproduces the nominal Project and result",
-      "argv": ["{python}", "-m", "os_optics_kit", "tolerance", "cases/beam-expander/studies/tolerance_expander.json", "--out", "{runs}/tolerance-zero", "--zero-tolerance", "--samples", "3", "--no-plots", "--no-report"],
+      "argv": ["{python}", "-m", "os_optics_kit", "tolerance", "cases/expansion-focus/studies/tolerance_expander.json", "--out", "{runs}/tolerance-zero", "--zero-tolerance", "--samples", "3", "--no-plots", "--no-report"],
       "optional": true,
       "expected_status": "COMPLETED"
     },
     {
       "name": "sensitivity-band-edge",
       "description": "Band-edge sensitivity: nominal FAIL kept, the out-of-model side gives a one-sided estimate",
-      "argv": ["{python}", "-m", "os_optics_kit", "sensitivity", "cases/beam-expander/studies/sensitivity_expander_band_edge.json", "--out", "{runs}/sensitivity-band-edge", "--no-plots", "--no-report"],
+      "argv": ["{python}", "-m", "os_optics_kit", "sensitivity", "cases/expansion-focus/studies/sensitivity_expander_band_edge.json", "--out", "{runs}/sensitivity-band-edge", "--no-plots", "--no-report"],
       "optional": true,
       "expected_status": "COMPLETED"
     },

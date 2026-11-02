@@ -189,12 +189,12 @@ class CheckDefinitionTests(unittest.TestCase):
 
     def test_catalog_tests_name_existing_classes_and_the_fixture_reads_their_switch(self):
         tests = {check["name"]: check for check in alignment.load_checks(ROOT)["checks"]}["catalog-tests"]
-        self.assertEqual(tests["env"], {"OPENSCI_EXAMPLES_REQUIRE_CATALOG": "1"})
+        self.assertEqual(tests["env"], {"OS_OPTICS_KIT_REQUIRE_CATALOG": "1"})
         for node in [arg for arg in tests["argv"] if "::" in arg]:
             path, cls = node.split("::")
             self.assertIn(f"class {cls}(", (ROOT / path).read_text(encoding="utf-8"))
         fixtures = (ROOT / "tests" / "workflow_fixtures.py").read_text(encoding="utf-8")
-        self.assertIn("OPENSCI_EXAMPLES_REQUIRE_CATALOG", fixtures)
+        self.assertIn("OS_OPTICS_KIT_REQUIRE_CATALOG", fixtures)
 
     def test_repository_paths_in_check_arguments_exist(self):
         for check in alignment.load_checks(ROOT)["checks"]:

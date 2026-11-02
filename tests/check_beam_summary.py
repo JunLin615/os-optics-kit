@@ -1,6 +1,6 @@
 """Catalog integration check and same-run output comparison for `os-optics-kit summary`.
 
-Run from the repository root: python -m tests.check_beam_summary [--out DIR] [--project PROJECT.json]
+Run from the repository root: python -m tests.check_beam_summary [--out DIR] [--project cases/beam-expander/project.json]
 Requires os-optics, os-optics-kit and an active optical catalog. Without --project it runs the engine's catalog beam
 expander example (the design of cases/beam-expander).
 """

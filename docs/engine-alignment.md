@@ -63,7 +63,7 @@ the kit works with that build, not that the release on PyPI does.
 - `kit-cli`, `summary-missing-run`: the installed command and its JSON error contract.
 - `offline-tests`: the whole test suite before the catalog is prepared (catalog tests skip themselves).
 - `beam-summary`, `saved-run-summary`: a catalog beam expander run and its saved-result summary.
-- `catalog-tests`: the catalog-dependent test classes with `OPENSCI_EXAMPLES_REQUIRE_CATALOG=1`, so a missing
+- `catalog-tests`: the catalog-dependent test classes with `OS_OPTICS_KIT_REQUIRE_CATALOG=1`, so a missing
   catalog fails them instead of skipping.
 - `cases-verify`: `os-optics-kit cases verify --all`.
 - The design workflows of the expansion-focus, polarization-control and mirror-alignment cases, one parameter
