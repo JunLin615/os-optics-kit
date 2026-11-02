@@ -9,7 +9,6 @@ from __future__ import annotations
 import ast
 import hashlib
 import json
-import math
 import os
 import re
 import shutil
@@ -22,10 +21,6 @@ from typing import Any, Callable, Iterable
 UPSTREAM = "JunLin615/os-optics-kit"
 UPSTREAM_BASE_BRANCH = "main"
 BUNDLE_SCHEMA = "os-optics-kit.contrib-bundle"
-CASES_SCHEMA = "os-optics-kit.cases"
-EXPECTED_SCHEMA = "os-optics-kit.case-expected"
-TOKEN_ESTIMATE = "ceil(characters/4)"
-BUDGETS = {"SKILL.md": 900, "CASE.md": 700}
 NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 MODULE_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 PLACEHOLDER_RE = re.compile(r"\{\{\s*([a-z_]+)\s*\}\}")
@@ -80,11 +75,6 @@ def write_text(path: Path, text: str) -> None:
     path.write_bytes(text.replace("\r\n", "\n").encode("utf-8"))
 
 
-def token_estimate(text: str) -> int:
-    """Deterministic token estimate used by the kit's budgets: ceil(characters / 4)."""
-    return math.ceil(len(text) / 4)
-
-
 def check_name(value: str, *, what: str = "name", max_length: int = 40) -> str:
     if not NAME_RE.match(value or "") or len(value) > max_length:
         raise ContribError("NAME_INVALID", f"{what} {value!r} must be kebab-case (a-z, 0-9, single hyphens), "
@@ -100,80 +90,51 @@ def split_list(value: str | None) -> list[str]:
     return [] if items == ["none"] else items
 
 
-# ---------------------------------------------------------------------------------------------- front matter
-# Internal implementation of the kit's flat front-matter format (KIT_SPEC "Skills - SKILL.md format"); the shared
-# parser of the skills lane replaces parse_front_matter / render_front_matter / body_sections at integration.
-
-def parse_front_matter(text: str) -> tuple[dict[str, str], str]:
-    """``(keys, body)`` of a document that starts with flat ``key: value`` lines between two ``---`` lines."""
-    lines = text.replace("\r\n", "\n").split("\n")
-    if not lines or lines[0].strip() != "---":
-        raise ValueError("front matter missing: the file must start with a '---' line")
-    try:
-        end = next(i for i in range(1, len(lines)) if lines[i].strip() == "---")
-    except StopIteration:
-        raise ValueError("front matter not closed: no second '---' line") from None
-    keys: dict[str, str] = {}
-    for number, line in enumerate(lines[1:end], start=2):
-        if not line.strip():
-            continue
-        key, sep, value = line.partition(":")
-        key = key.strip()
-        if not sep or not re.match(r"^[a-z_]+$", key):
-            raise ValueError(f"front matter line {number} is not 'key: value'")
-        if key in keys:
-            raise ValueError(f"front matter key {key!r} repeated")
-        keys[key] = value.strip()
-    return keys, "\n".join(lines[end + 1:])
-
-
-def render_front_matter(keys: dict[str, str]) -> str:
-    return "---\n" + "".join(f"{key}: {value}\n" for key, value in keys.items()) + "---\n"
-
-
-def body_sections(body: str) -> list[str]:
-    """``## `` headings of a Markdown body, in order (fenced code blocks skipped)."""
-    sections, fenced = [], False
-    for line in body.split("\n"):
-        if line.startswith("```"):
-            fenced = not fenced
-        elif not fenced and line.startswith("## "):
-            sections.append(line[3:].strip())
-    return sections
-
-
-def check_sections(found: list[str], required: list[str]) -> list[str]:
-    """Problems when ``required`` sections are missing or out of order (extra sections are allowed)."""
-    problems = [f"section '## {name}' missing" for name in required if name not in found]
-    present = [name for name in found if name in required]
-    if not problems and present != required:
-        problems.append("sections out of order: expected " + ", ".join(required))
-    return problems
-
-
 # ------------------------------------------------------------------------------------------------- templates
+# The contributor templates are the files templates/CASE.md, templates/README.case.md and templates/SKILL.md: of the
+# kit checkout being patched, else of the installed package (os_optics_kit/_data/templates). They are ``{{key}}``
+# templates; HTML comments in them are guidance for people filling them by hand and are dropped when filled.
+
+COMMENT_RE = re.compile(r"[ \t]*<!--.*?-->[ \t]*\n?", re.S)
+
 
 def fill_template(template: str, values: dict[str, str]) -> str:
-    unknown = sorted({m.group(1) for m in PLACEHOLDER_RE.finditer(template)} - set(values))
+    """``template`` without its HTML comments, every ``{{key}}`` replaced; KeyError names unknown keys."""
+    text = re.sub(r"\n{3,}", "\n\n", COMMENT_RE.sub("", template.replace("\r\n", "\n")))
+    unknown = sorted({m.group(1) for m in PLACEHOLDER_RE.finditer(text)} - set(values))
     if unknown:
         raise KeyError(", ".join(unknown))
-    return PLACEHOLDER_RE.sub(lambda m: values[m.group(1)], template)
+    filled = PLACEHOLDER_RE.sub(lambda m: values[m.group(1)], text)
+    return filled.rstrip("\n") + "\n"
 
 
-def choose_template(repo: Path | None, relative: str, builtin: str, values: dict[str, str],
-                    warnings: list[str]) -> str:
-    """Fill ``repo/relative`` when it is a ``{{key}}`` template this version can fill, else the built-in one."""
+def template_sources(repo: Path | None, name: str) -> list[tuple[str, Path]]:
+    """Candidate files of template ``name``: the checkout's, then the installed package's."""
+    sources = []
     if repo is not None:
-        path = repo / relative
-        if path.is_file():
-            text = path.read_text(encoding="utf-8")
-            if PLACEHOLDER_RE.search(text):
-                try:
-                    return fill_template(text, values)
-                except KeyError as exc:
-                    warnings.append(f"TEMPLATE_NOT_USED: {relative} has placeholders this command does not fill "
-                                    f"({exc.args[0]}); the built-in template was used")
-    return fill_template(builtin, values)
+        sources.append((f"templates/{name}", repo / "templates" / name))
+    try:
+        from .._resources import data_root
+        packaged = data_root() / "templates" / name
+    except FileNotFoundError:
+        packaged = None
+    if packaged is not None and all(packaged.resolve() != path.resolve() for _, path in sources):
+        sources.append((f"os_optics_kit templates/{name}", packaged))
+    return sources
+
+
+def render_template(repo: Path | None, name: str, values: dict[str, str], warnings: list[str]) -> str:
+    """Fill template ``name`` (see ``template_sources``); a template with keys this version does not fill is
+    skipped with a TEMPLATE_NOT_USED warning."""
+    for label, path in template_sources(repo, name):
+        if not path.is_file():
+            continue
+        try:
+            return fill_template(path.read_text(encoding="utf-8"), values)
+        except KeyError as exc:
+            warnings.append(f"TEMPLATE_NOT_USED: {label} has placeholders this command does not fill "
+                            f"({exc.args[0]})")
+    raise ContribError("TEMPLATE_MISSING", f"no usable templates/{name}", hint="reinstall os-optics-kit")
 
 
 # ------------------------------------------------------------------------------------------------ kit checkout
@@ -269,16 +230,23 @@ def kit_commands(root: Path | None) -> set[str]:
         tree = ast.parse((root / "tools" / "os_optics_kit" / "cli.py").read_text(encoding="utf-8"))
         node = _commands_node(tree)
         if node is not None:
-            return {key.value for key in node.keys if isinstance(key, ast.Constant)}
+            return {key.value for key in node.keys if isinstance(key, ast.Constant) and isinstance(key.value, str)}
     from ..cli import COMMANDS
     return set(COMMANDS)
 
 
 def _commands_node(tree: ast.Module) -> ast.Dict | None:
     for node in tree.body:
-        targets = node.targets if isinstance(node, ast.Assign) else [node.target] if isinstance(node, ast.AnnAssign) else []
-        if any(isinstance(t, ast.Name) and t.id == "COMMANDS" for t in targets) and isinstance(node.value, ast.Dict):
-            return node.value
+        targets: list[ast.expr]
+        value: ast.expr | None
+        if isinstance(node, ast.Assign):
+            targets, value = node.targets, node.value
+        elif isinstance(node, ast.AnnAssign):
+            targets, value = [node.target], node.value
+        else:
+            continue
+        if any(isinstance(t, ast.Name) and t.id == "COMMANDS" for t in targets) and isinstance(value, ast.Dict):
+            return value
     return None
 
 
@@ -294,7 +262,7 @@ def register_command(cli_text: str, command: str, module: str, summary: str) -> 
                            hint="choose another --command")
     lines = cli_text.split("\n")
     anchor = keys.get("cases")
-    index = (anchor.lineno - 1) if anchor is not None else (node.end_lineno - 1)
+    index = (anchor.lineno - 1) if anchor is not None else ((node.end_lineno or node.lineno) - 1)
     entry = f"    {json.dumps(command)}: ({json.dumps(module)}, {json.dumps(summary, ensure_ascii=False)}),"
     if len(entry) > 120:
         entry = (f"    {json.dumps(command)}: (\n        {json.dumps(module)},\n"
@@ -305,40 +273,6 @@ def register_command(cli_text: str, command: str, module: str, summary: str) -> 
     if check is None or command not in {k.value for k in check.keys if isinstance(k, ast.Constant)}:
         raise ContribError("CLI_LAYOUT_UNKNOWN", "could not register the command in COMMANDS")
     return updated
-
-
-# ------------------------------------------------------------------------------------------- cases.json (shim)
-# Internal implementation of the cases index (KIT_SPEC "Cases - format"). At integration the cases lane's indexer
-# (``os-optics-kit cases index --write``) is used whenever the checkout has it (see ``update_indexes``); these two
-# functions are the fallback for a checkout without it and should then be replaced by the shared ones.
-
-def case_index_entry(case_dir: Path, front: dict[str, str]) -> dict:
-    files = sorted(p.relative_to(case_dir).as_posix() for p in case_dir.rglob("*") if p.is_file())
-    catalog = front.get("catalog", "none")
-    return {
-        "name": front["name"],
-        "title": front["title"],
-        "summary": front["summary"],
-        "path": f"cases/{front['name']}",
-        "engine": front["engine"],
-        "catalog": None if catalog == "none" else catalog,
-        "tools": split_list(front.get("tools")),
-        "tags": split_list(front.get("tags")),
-        "files": files,
-        "project_sha256": sha256_file(case_dir / "project.json"),
-    }
-
-
-def update_cases_index(root: Path, entry: dict) -> None:
-    path = root / "cases.json"
-    if path.is_file():
-        index = json.loads(path.read_text(encoding="utf-8"))
-    else:
-        index = {"schema": CASES_SCHEMA, "schema_version": 1, "kit_version": kit_version_of(root), "cases": []}
-    cases = [case for case in index.get("cases", []) if case.get("name") != entry["name"]]
-    cases.append(entry)
-    index["cases"] = sorted(cases, key=lambda case: case["name"])
-    write_text(path, dump_json(index))
 
 
 # ------------------------------------------------------------------------------------------------ scratch clone

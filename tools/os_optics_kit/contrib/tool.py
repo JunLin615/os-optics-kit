@@ -21,13 +21,16 @@ import sys
 import tempfile
 from pathlib import Path
 
+from .. import _frontmatter as fm
+from .. import skills as kit_skills
 from . import _common as C
 from . import _templates as T
 
-REQUIRED_KEYS = ("name", "description", "version", "command", "requires")
-REQUIRED_SECTIONS = ["When to use", "When not to use", "Inputs", "Outputs", "Minimal example", "Limits", "Version"]
-RESERVED_MODULES = {"cli", "contrib", "skills", "cases", "_resources", "_version", "__init__", "__main__"}
-KINDS = {"tool", "contribution", "guide"}
+REQUIRED_KEYS = kit_skills.REQUIRED_KEYS
+REQUIRED_SECTIONS = list(kit_skills.SECTIONS)
+RESERVED_MODULES = {"cli", "contrib", "skills", "cases", "_resources", "_version", "_engine", "_frontmatter",
+                    "__init__", "__main__"}
+KINDS = set(kit_skills.KINDS)
 
 
 class _Parser(argparse.ArgumentParser):
@@ -140,6 +143,25 @@ def class_name(module: str) -> str:
     return "".join(part.capitalize() for part in module.split("_") if part) + "Tests"
 
 
+def inputs_text(help_text: str) -> str:
+    return f"```text\n{help_text.strip()}\n```"
+
+
+def skill_values(name: str, command: str, description: str, facts: dict, requires: str, requirement: str,
+                 kit_version: str) -> dict[str, str]:
+    """Values of the ``{{key}}`` placeholders of templates/SKILL.md (``inputs`` is added from ``--help``)."""
+    return {
+        "name": name, "description": description, "kind": "tool",
+        "command": f"os-optics-kit {command}", "requires": requires, "kit_version": kit_version,
+        "when_to_use": f"- {when_to_use(facts['docstring'], description)}",
+        "when_not_to_use": "- When an `os-optics` command answers the question directly (`os-optics --help`).",
+        "outputs": "- What the options above state; exit code 0 on success.",
+        "example": f"os-optics-kit {command} --help\npython -m os_optics_kit {command} --help",
+        "limits": (f"- Needs os-optics ({requirement}), imported when the command runs; `--help` works without it."
+                   if facts["engine"] else "- Python standard library and os-optics-kit only."),
+    }
+
+
 # -------------------------------------------------------------------------------------------------- checkout
 
 def virtual_checkout(workdir: Path) -> C.Clone:
@@ -163,7 +185,7 @@ def help_text(clone: C.Clone, command: str, *, without_engine: bool = False):
 def fit_help(text: str, render) -> str:
     """The full ``--help`` when the skill page stays within its budget, else its usage paragraph."""
     full = text.strip()
-    if C.token_estimate(render(full)) <= C.BUDGETS["SKILL.md"]:
+    if fm.token_estimate(render(full)) <= fm.BUDGETS["SKILL.md"]:
         return full
     return re.split(r"\n\s*\n", full, maxsplit=1)[0]
 
@@ -171,8 +193,8 @@ def fit_help(text: str, render) -> str:
 def validate_skill(path: Path, name: str, command: str) -> list[str]:
     text = path.read_text(encoding="utf-8")
     try:
-        front, body = C.parse_front_matter(text)
-    except ValueError as exc:
+        front, body = fm.split(text)
+    except fm.FrontMatterError as exc:
         return [f"SKILL.md: {exc}"]
     problems = [f"SKILL.md: front matter key '{key}' missing or empty" for key in REQUIRED_KEYS if not front.get(key)]
     if front.get("name") and front["name"] != name:
@@ -185,10 +207,10 @@ def validate_skill(path: Path, name: str, command: str) -> list[str]:
         problems.append(f"SKILL.md: kind {front['kind']!r} is not one of {', '.join(sorted(KINDS))}")
     if front.get("version") and not re.match(r"^\d+\.\d+\.\d+$", front["version"]):
         problems.append("SKILL.md: version is not semver (MAJOR.MINOR.PATCH)")
-    problems += [f"SKILL.md: {p}" for p in C.check_sections(C.body_sections(body), REQUIRED_SECTIONS)]
-    tokens = C.token_estimate(text)
-    if tokens > C.BUDGETS["SKILL.md"]:
-        problems.append(f"SKILL.md: about {tokens} tokens, budget {C.BUDGETS['SKILL.md']} ({C.TOKEN_ESTIMATE})")
+    problems += [f"SKILL.md: {p}" for p in fm.check_sections(body, REQUIRED_SECTIONS)]
+    tokens = fm.token_estimate(text)
+    if tokens > fm.BUDGETS["SKILL.md"]:
+        problems.append(f"SKILL.md: about {tokens} tokens, budget {fm.BUDGETS['SKILL.md']} ({fm.TOKEN_ESTIMATE})")
     if C.PLACEHOLDER_RE.search(text):
         problems.append("SKILL.md: unfilled {{...}} placeholder")
     return problems
@@ -252,7 +274,7 @@ def contribute_tool(args) -> dict:
     workdir = Path(tempfile.mkdtemp(prefix="os-optics-kit-contrib-"))
     try:
         branch = f"contrib/tool-{name}"
-        clone = C.make_clone(repo, base, branch, workdir) if repo else virtual_checkout(workdir)
+        clone = C.make_clone(repo, base, branch, workdir) if repo and base else virtual_checkout(workdir)
         if repo is None:
             warnings.append("NO_KIT_CHECKOUT: tested against the installed package; the bundle holds the files only")
         package = clone.path / "tools" / "os_optics_kit"
@@ -268,7 +290,7 @@ def contribute_tool(args) -> dict:
         requires = f"os-optics{requirement}" if facts["engine"] else "none"
 
         if args.refresh:
-            skill_front, _ = C.parse_front_matter((out / "tool" / "skills" / name / "SKILL.md").read_text("utf-8"))
+            skill_front, _ = fm.split((out / "tool" / "skills" / name / "SKILL.md").read_text("utf-8"))
             description = skill_front.get("description", "")
         else:
             description = re.sub(r"\s+", " ", args.description or first_sentence(facts["docstring"])).strip()
@@ -303,19 +325,14 @@ def contribute_tool(args) -> dict:
                     shutil.copyfile(item, target)
             C.write_text(test_path, (out / "tool" / "tests" / f"test_{module}.py").read_text(encoding="utf-8"))
         else:
-            kit_version = C.kit_version_of(clone.path)
-            values = {
-                "name": name, "description": description, "when_to_use": when_to_use(facts["docstring"], description),
-                "command": f"os-optics-kit {command}",
-                "command_name": command, "requires": requires, "module": module, "kit_version": kit_version,
-                "requires_line": (f"Needs os-optics ({requirement}), imported when the command runs; "
-                                  "`--help` works without it.") if facts["engine"] else
-                                 "Python standard library and os-optics-kit only.",
-            }
-            render = lambda text: C.choose_template(repo, "templates/SKILL.md", T.SKILL_MD,
-                                                    {**values, "help_text": text}, [])
-            values["help_text"] = fit_help(shown.stdout.decode("utf-8", "replace"), render)
-            C.write_text(skill_path, C.choose_template(repo, "templates/SKILL.md", T.SKILL_MD, values, warnings))
+            values = skill_values(name, command, description, facts, requires, requirement,
+                                  C.kit_version_of(clone.path))
+
+            def render(help_text: str) -> str:
+                return C.render_template(repo, "SKILL.md", {**values, "inputs": inputs_text(help_text)}, [])
+
+            values["inputs"] = inputs_text(fit_help(shown.stdout.decode("utf-8", "replace"), render))
+            C.write_text(skill_path, C.render_template(repo, "SKILL.md", values, warnings))
             C.write_text(test_path, T.TOOL_TEST_PY.format(command=command, module=module,
                                                           class_name=class_name(module)))
 
@@ -325,15 +342,14 @@ def contribute_tool(args) -> dict:
                                  hint="edit BUNDLE/tool/skills/NAME/SKILL.md and run --refresh")
         tests = run_tests(clone, module)
 
-        if (package / "skills.py").is_file():
+        if repo is not None:
             indexed = clone.kit("skills", "index", "--write")
             if indexed.returncode != 0:
                 raise C.ContribError("SKILLS_INDEX_FAILED", "os-optics-kit skills index --write refused the skill",
                                      problems=[C._tail(indexed.stdout or indexed.stderr)])
             skills_index = "regenerated by os-optics-kit skills index --write"
         else:
-            skills_index = "not regenerated: this checkout has no skills indexer"
-            warnings.append("SKILLS_INDEX_NOT_REGENERATED: run 'os-optics-kit skills index --write' once the kit has it")
+            skills_index = "not regenerated: no kit checkout (run 'os-optics-kit skills index --write' in one)"
 
         staged = [f"tools/os_optics_kit/{module}.py", f"skills/{name}", f"tests/test_{module}.py"]
         patch, committed = None, []
@@ -407,7 +423,7 @@ def contribute_tool(args) -> dict:
         shutil.rmtree(workdir, ignore_errors=True)
 
     opened = bool(pr_info and pr_info.get("opened"))
-    if opened:
+    if pr_info and opened:
         next_step = f"pull request opened: {pr_info.get('url')}; follow the review there"
     elif args.refresh:
         next_step = C.submission_hint(out, bundle_patch)

@@ -26,7 +26,6 @@ from __future__ import annotations
 import argparse
 from importlib.util import find_spec
 import json
-import math
 import os
 from pathlib import Path
 import re
@@ -35,6 +34,7 @@ import subprocess
 import sys
 import tempfile
 
+from . import _frontmatter as fm
 from ._resources import data_root
 
 INDEX_SCHEMA = "os-optics-kit.cases"
@@ -45,7 +45,7 @@ SECTIONS = ("What it shows", "Run", "Targets", "Baseline", "Files")
 REQUIRED_FILES = ("project.json", "CASE.md", "README.md", "expected.json")
 ASSESSMENTS = ("MET", "UNMET", "INDETERMINATE", "NOT_APPLICABLE")
 RUN_STATUSES = ("PASS", "WARNING", "FAIL", "UNKNOWN", "OUT_OF_MODEL_SCOPE", "NOT_APPLICABLE")
-CASE_TOKEN_BUDGET = 700
+CASE_TOKEN_BUDGET = fm.BUDGETS["CASE.md"]
 SUMMARY_MAX_CHARS = 300
 IMAGE_MAX_BYTES = 400 * 1024
 MAX_IMAGES = 4
@@ -89,11 +89,6 @@ def _emit(document):
     _write(json.dumps(document, separators=(",", ":"), ensure_ascii=False) + "\n")
 
 
-def token_estimate(text):
-    """The documented budget approximation: ceil(characters / 4)."""
-    return math.ceil(len(text) / 4)
-
-
 def normalized_json(document):
     """The normalized form of project.json / expected.json / cases.json bytes (LF line ends)."""
     return json.dumps(document, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
@@ -102,24 +97,8 @@ def normalized_json(document):
 # ----------------------------------------------------------------------------------------------- front matter
 
 def parse_front_matter(text):
-    """``---`` / flat ``key: value`` lines / ``---`` -> (dict, body). No nesting, no lists, no YAML library."""
-    lines = text.split("\n")
-    if not lines or lines[0].strip() != "---":
-        raise ValueError("the file must start with a '---' front-matter line")
-    meta = {}
-    for number, line in enumerate(lines[1:], start=2):
-        if line.strip() == "---":
-            return meta, "\n".join(lines[number:])
-        if not line.strip():
-            continue
-        key, sep, value = line.partition(":")
-        key = key.strip()
-        if not sep or not re.fullmatch(r"[a-z][a-z0-9_]*", key):
-            raise ValueError(f"front matter line {number}: expected 'key: value'")
-        if key in meta:
-            raise ValueError(f"front matter line {number}: duplicate key {key!r}")
-        meta[key] = value.strip()
-    raise ValueError("the front matter has no closing '---' line")
+    """``(fields, body)`` of CASE.md: the kit's flat front matter (``_frontmatter.split``); raises ValueError."""
+    return fm.split(text)
 
 
 def _items(value):
@@ -317,8 +296,8 @@ def check_case(path):
                     add("FRONT_MATTER_TAGS", f"tag {tag!r} is not kebab-case")
             if section_titles(body) != list(SECTIONS):
                 add("SECTIONS", "CASE.md sections must be, in order: " + ", ".join(SECTIONS))
-            if token_estimate(text) > CASE_TOKEN_BUDGET:
-                add("TOKEN_BUDGET", f"CASE.md is {token_estimate(text)} tokens (ceil(characters/4)); "
+            if fm.token_estimate(text) > CASE_TOKEN_BUDGET:
+                add("TOKEN_BUDGET", f"CASE.md is {fm.token_estimate(text)} tokens (ceil(characters/4)); "
                                     f"the budget is {CASE_TOKEN_BUDGET}")
     target_ids = None
     document = None

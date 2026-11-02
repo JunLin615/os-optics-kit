@@ -21,12 +21,15 @@ import shutil
 import sys
 import tempfile
 from pathlib import Path
+from typing import Any
 
+from .. import _frontmatter as fm
+from .. import cases as kit_cases
 from . import _common as C
 from . import _templates as T
 
-REQUIRED_KEYS = ("name", "title", "summary", "engine", "catalog", "project", "tools", "tags", "license")
-REQUIRED_SECTIONS = ["What it shows", "Run", "Targets", "Baseline", "Files"]
+REQUIRED_KEYS = kit_cases.FRONT_MATTER_KEYS
+REQUIRED_SECTIONS = list(kit_cases.SECTIONS)
 RUN_FILES = {"manifest.json", "engine_request.json", "simulation_result.json", "ray_data.json",
              "local_validation.json", "optical_scene.json", "optical_scene.glb"}
 IMAGE_LIMIT_BYTES = 400 * 1024
@@ -36,12 +39,6 @@ TEXT_SUFFIXES = {".md", ".json", ".py", ".txt", ".csv"}
 VIEWS = (("iso", "Isometric view"), ("top", "Top view"))
 IMAGE_SIZES = ("1280x720", "960x540")
 MAX_TABLE_ROWS = 12
-FILE_NOTES = {
-    "project.json": "the design (ProjectDocumentV2) with its targets",
-    "expected.json": "the verified run status and target assessments",
-    "README.md": "illustrated page",
-    "CASE.md": "this page",
-}
 
 
 class _Parser(argparse.ArgumentParser):
@@ -219,7 +216,7 @@ def render_images(run_dir: Path, workdir: Path, case_dir: Path, env: dict, warni
 
 def expected_document(verified: dict) -> dict:
     return {
-        "schema": C.EXPECTED_SCHEMA,
+        "schema": kit_cases.EXPECTED_SCHEMA,
         "schema_version": 1,
         "engine": verified["engine"],
         "catalog": verified["catalog"],
@@ -248,38 +245,51 @@ def _bounds(bounds: dict, unit: str) -> str:
     return "-"
 
 
-def targets_table(targets: list[dict]) -> str:
-    rows = ["| Target | Metric | Observation | Bounds | Value | Assessment |", "| --- | --- | --- | --- | --- | --- |"]
-    for target in targets[:MAX_TABLE_ROWS]:
-        unit = target.get("unit") or ""
-        value = target.get("value")
-        shown = f"{value:.4g}" if isinstance(value, (int, float)) else "-"
-        rows.append(f"| `{target['target_id']}` | `{target.get('metric')}` | `{target.get('observation_id')}` | "
-                    f"{_bounds(target.get('bounds') or {}, unit)} | {shown} | {target.get('assessment')} |")
+def _value(target: dict) -> str:
+    value, unit = target.get("value"), target.get("unit") or ""
+    if not isinstance(value, (int, float)):
+        return "-"
+    return f"{value:.6g} {unit}".strip()
+
+
+def _rows(targets: list[dict], row) -> str:
+    rows = [row(target) for target in targets[:MAX_TABLE_ROWS]]
     if len(targets) > MAX_TABLE_ROWS:
         rows.append(f"\n{len(targets) - MAX_TABLE_ROWS} more targets in `expected.json`.")
     return "\n".join(rows)
 
 
-def catalog_line(catalog: str | None) -> str:
-    if not catalog:
-        return "no catalog products (catalog-free)"
-    return f"catalog release {catalog} (`os-optics catalog sync --release {catalog}`)"
+def targets_rows(targets: list[dict]) -> str:
+    """Rows of the CASE.md targets table: Target | Metric | Plane | Bound | Verified."""
+    return _rows(targets, lambda t: f"| `{t['target_id']}` | `{t.get('metric')}` | `{t.get('observation_id')}` | "
+                                    f"{_bounds(t.get('bounds') or {}, t.get('unit') or '')} | "
+                                    f"{_value(t)}, {t.get('assessment')} |")
 
 
-def files_list(case_dir: Path) -> str:
-    lines, images = [], []
-    for rel in C.relative_listing(case_dir):
-        if rel.startswith("images/"):
-            images.append(f"`{rel}`")
-        else:
-            note = FILE_NOTES.get(rel)
-            lines.append(f"- `{rel}`" + (f": {note}" if note else ""))
-    present = C.relative_listing(case_dir)
-    lines += [f"- `{rel}`: {FILE_NOTES[rel]}" for rel in ("CASE.md", "README.md") if rel not in present]
-    if images:
-        lines.append(f"- {', '.join(images)}: rendered by `os-optics view --snapshot` from the verified run")
-    return "\n".join(sorted(lines, key=lambda line: (line.startswith("- `images"), line)))
+def results_rows(targets: list[dict]) -> str:
+    """Rows of the README.md results table: Target | Value | Bound | Assessment."""
+    return _rows(targets, lambda t: f"| `{t['target_id']}` | {_value(t)} | "
+                                    f"{_bounds(t.get('bounds') or {}, t.get('unit') or '')} | {t.get('assessment')} |")
+
+
+def targets_table(targets: list[dict]) -> str:
+    """The targets table of the pull-request description."""
+    return ("| Target | Metric | Plane | Bound | Verified |\n| --- | --- | --- | --- | --- |\n"
+            + targets_rows(targets))
+
+
+def catalog_text(catalog: str | None) -> str:
+    return f"catalog {catalog}" if catalog else "no catalog products"
+
+
+STANDARD_FILES = ("project.json", "expected.json", "CASE.md", "README.md")
+
+
+def extra_files(case_dir: Path) -> str:
+    """Bullets for the case files beyond the standard ones (project, expected outcome, pages, images)."""
+    extra = [rel for rel in C.relative_listing(case_dir) if rel not in STANDARD_FILES
+             and not rel.startswith("images/") and not re.fullmatch(r"README\..+\.md", rel)]
+    return "\n".join(f"- `{rel}`" for rel in extra)
 
 
 def default_summary(project, title: str, verified: dict) -> str:
@@ -297,24 +307,25 @@ def one_line(value: str) -> str:
 
 def prose_values(name: str, title: str, summary: str, tools: list[str], tags: list[str], verified: dict,
                  case_dir: Path, images: list[str]) -> dict[str, str]:
+    """Values of the ``{{key}}`` placeholders of templates/CASE.md and templates/README.case.md."""
     targets = verified["targets"].get("targets", [])
     alt = dict(VIEWS)
     return {
         "name": name,
         "title": title,
         "summary": summary,
+        "what_it_shows": summary,
         "engine": verified["engine"],
         "catalog": verified["catalog"] or "none",
+        "catalog_text": catalog_text(verified["catalog"]),
         "tools": ", ".join(tools) if tools else "none",
         "tags": ", ".join(tags) if tags else "none",
         "status": verified["status"],
-        "catalog_line": catalog_line(verified["catalog"]),
-        "targets_table": targets_table(targets),
-        "images_markdown": "\n\n".join(f"![{alt.get(Path(i).stem, Path(i).stem)}]({i})" for i in images)
-                           or "Render the views with `os-optics view run --no-browser --snapshot images`.",
-        "files_list": files_list(case_dir),
-        "run_commands": "os-optics project check project.json\nos-optics project run project.json --out-dir run\n"
-                        "os-optics results targets run",
+        "targets_rows": targets_rows(targets),
+        "results_rows": results_rows(targets),
+        "images": "\n\n".join(f"![{alt.get(Path(i).stem, Path(i).stem)}]({i})" for i in images)
+                  or "Render the views with `os-optics view run --no-browser --snapshot images`.",
+        "extra_files": extra_files(case_dir),
     }
 
 
@@ -341,8 +352,8 @@ def validate_case_dir(case_dir: Path, name: str, verified: dict, commands: set[s
         return problems
     case_md = (case_dir / "CASE.md").read_text(encoding="utf-8")
     try:
-        front, body = C.parse_front_matter(case_md)
-    except ValueError as exc:
+        front, body = fm.split(case_md)
+    except fm.FrontMatterError as exc:
         return problems + [f"CASE.md: {exc}"]
     for key in REQUIRED_KEYS:
         if not front.get(key):
@@ -360,10 +371,10 @@ def validate_case_dir(case_dir: Path, name: str, verified: dict, commands: set[s
     bad_tags = [tag for tag in C.split_list(front.get("tags")) if not C.NAME_RE.match(tag)]
     if bad_tags:
         problems.append(f"CASE.md: tags must be kebab-case ({', '.join(bad_tags)})")
-    problems += [f"CASE.md: {p}" for p in C.check_sections(C.body_sections(body), REQUIRED_SECTIONS)]
-    tokens = C.token_estimate(case_md)
-    if tokens > C.BUDGETS["CASE.md"]:
-        problems.append(f"CASE.md: about {tokens} tokens, budget {C.BUDGETS['CASE.md']} ({C.TOKEN_ESTIMATE})")
+    problems += [f"CASE.md: {p}" for p in fm.check_sections(body, REQUIRED_SECTIONS)]
+    tokens = fm.token_estimate(case_md)
+    if tokens > fm.BUDGETS["CASE.md"]:
+        problems.append(f"CASE.md: about {tokens} tokens, budget {fm.BUDGETS['CASE.md']} ({fm.TOKEN_ESTIMATE})")
     readme = (case_dir / "README.md").read_text(encoding="utf-8")
     for label, text in (("CASE.md", case_md), ("README.md", readme)):
         if C.PLACEHOLDER_RE.search(text):
@@ -375,9 +386,9 @@ def validate_case_dir(case_dir: Path, name: str, verified: dict, commands: set[s
 
 
 def rewrite_front_matter(case_md: str, updates: dict[str, str]) -> str:
-    front, body = C.parse_front_matter(case_md)
+    front, body = fm.split(case_md)
     front.update({k: v for k, v in updates.items() if k in front})
-    return C.render_front_matter(front) + body
+    return fm.render(front) + body
 
 
 # ------------------------------------------------------------------------------------------------------- flow
@@ -449,7 +460,7 @@ def contribute_case(args) -> dict:
             try:
                 case_md = rewrite_front_matter(case_md, {"engine": verified["engine"],
                                                          "catalog": verified["catalog"] or "none"})
-            except ValueError as exc:
+            except fm.FrontMatterError as exc:
                 raise C.ContribError("CASE_FILES_INVALID", "CASE.md front matter unreadable", problems=[str(exc)])
             C.write_text(case_dir / "CASE.md", case_md)
             images = [rel for rel in C.relative_listing(case_dir) if rel.startswith("images/")]
@@ -460,27 +471,26 @@ def contribute_case(args) -> dict:
             if len(summary) > 300:
                 raise C.ContribError("SUMMARY_TOO_LONG", f"--summary has {len(summary)} characters; at most 300")
             values = prose_values(name, title, summary, tools, tags, verified, case_dir, images)
-            C.write_text(case_dir / "CASE.md", C.choose_template(repo, "templates/CASE.md", T.CASE_MD, values, warnings))
-            C.write_text(case_dir / "README.md",
-                         C.choose_template(repo, "templates/README.case.md", T.README_CASE_MD, values, warnings))
+            C.write_text(case_dir / "CASE.md", C.render_template(repo, "CASE.md", values, warnings))
+            C.write_text(case_dir / "README.md", C.render_template(repo, "README.case.md", values, warnings))
 
         problems = validate_case_dir(case_dir, name, verified, commands)
         if problems:
             raise C.ContribError("CASE_FILES_INVALID", "the case files do not meet the case format", problems=problems,
                                  hint="edit BUNDLE/case and run 'os-optics-kit contrib case --refresh BUNDLE'")
-        front, _ = C.parse_front_matter((case_dir / "CASE.md").read_text(encoding="utf-8"))
-        entry = C.case_index_entry(case_dir, front)
+        front, _ = fm.split((case_dir / "CASE.md").read_text(encoding="utf-8"))
+        entry = {**kit_cases.index_entry(case_dir), "path": f"cases/{name}"}
 
         patch_dir = workdir / "patch"
         patch_dir.mkdir()
         patch, clone, committed, index_note = None, None, [], None
         branch = f"contrib/case-{name}"
         subject = f"feat(cases): add {name}"
-        if repo is not None:
+        if repo is not None and base is not None:
             clone = C.make_clone(repo, base, branch, workdir)
             target = clone.path / "cases" / name
             shutil.copytree(case_dir, target)
-            index_note = update_case_indexes(clone, entry)
+            index_note = update_case_indexes(clone)
             catalog_text = f"catalog release {verified['catalog']}" if verified["catalog"] else "no catalog products"
             message = (f"{subject}\n\n{front['summary']}\n\nVerified with os-optics {verified['engine']} and "
                        f"{catalog_text}: run {verified['status']}, {_counts(verified)}.")
@@ -505,7 +515,7 @@ def contribute_case(args) -> dict:
             bundle_patch = out / patch.name
             shutil.copyfile(patch, bundle_patch)
 
-        summary_doc = {
+        summary_doc: dict[str, Any] = {
             "baseline": {"engine": verified["engine"], "engine_build_id": verified["engine_build_id"],
                          "catalog": verified["catalog"]},
             "kit_baseline": _kit_baseline(baseline),
@@ -557,16 +567,13 @@ def contribute_case(args) -> dict:
     }
 
 
-def update_case_indexes(clone: C.Clone, entry: dict) -> str:
-    """cases.json through the checkout's own indexer when it has one, else the internal implementation."""
-    if (clone.path / "tools" / "os_optics_kit" / "cases.py").is_file():
-        result = clone.kit("cases", "index", "--write")
-        if result.returncode != 0:
-            raise C.ContribError("CASES_INDEX_FAILED", "os-optics-kit cases index --write refused the case",
-                                 problems=[C._tail(result.stdout or result.stderr)])
-        return "regenerated by os-optics-kit cases index --write"
-    C.update_cases_index(clone.path, entry)
-    return "updated by os-optics-kit contrib"
+def update_case_indexes(clone: C.Clone) -> str:
+    """cases.json regenerated by the checkout's own ``os-optics-kit cases index --write``."""
+    result = clone.kit("cases", "index", "--write")
+    if result.returncode != 0:
+        raise C.ContribError("CASES_INDEX_FAILED", "os-optics-kit cases index --write refused the case",
+                             problems=[C._tail(result.stdout or result.stderr)])
+    return "regenerated by os-optics-kit cases index --write"
 
 
 def _counts(verified: dict) -> str:
@@ -585,7 +592,7 @@ def _kit_baseline(baseline: dict | None) -> dict | None:
             "catalog": catalog.get("version")}
 
 
-def _baseline_warnings(actual: dict, baseline: dict | None) -> list[str]:
+def _baseline_warnings(actual: dict[str, Any], baseline: dict | None) -> list[str]:
     kit = _kit_baseline(baseline)
     if not kit:
         return []
@@ -631,7 +638,7 @@ def case_pr_body(front: dict, verified: dict, baseline: dict | None, entry: dict
 
 
 def _next_step(out: Path, patch: Path | None, args, opened: bool, pr_info: dict | None) -> str:
-    if opened:
+    if pr_info and opened:
         return f"pull request opened: {pr_info.get('url')}; follow the review there"
     if pr_info and pr_info.get("reason") in ("GH_NOT_AUTHENTICATED", "GH_NOT_INSTALLED"):
         return ("gh is not logged in ('gh auth login'); " + C.submission_hint(out, patch))

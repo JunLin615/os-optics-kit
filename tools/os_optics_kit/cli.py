@@ -17,7 +17,7 @@ COMMANDS: dict[str, tuple[str, str]] = {
     "edit": ("edit_project", "describe a Project's objects and apply edits by ID, atomically"),
     "sweep": ("sweep_parameters", "run a parameter sweep from a JSON spec, one saved run per sample"),
     "compare": ("compare_runs", "compare saved runs by target and plane ID, with freshness"),
-    "plot": ("plot_results", "plot sweep targets, power distribution, bar charts and histograms (needs the plot extra)"),
+    "plot": ("plot_results", "plot sweep targets, power distribution, bars and histograms (needs the plot extra)"),
     "report": ("build_report", "assemble a Markdown/JSON report from a study directory"),
     "sensitivity": ("sensitivity_analysis", "one-at-a-time sensitivity of selected targets"),
     "tolerance": ("tolerance_study", "seeded tolerance sampling under declared distributions"),

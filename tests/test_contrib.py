@@ -23,11 +23,12 @@ try:
 except ImportError:  # a plain checkout without an install
     sys.path.insert(0, str(ROOT / "tools"))
 
-from os_optics_kit import contrib
-from os_optics_kit.contrib import _common as C
-from os_optics_kit.contrib import _templates as T
-from os_optics_kit.contrib import case as case_mod
-from os_optics_kit.contrib import tool as tool_mod
+from os_optics_kit import _frontmatter as fm  # noqa: E402
+from os_optics_kit import cases as kit_cases  # noqa: E402
+from os_optics_kit import contrib  # noqa: E402
+from os_optics_kit.contrib import _common as C  # noqa: E402
+from os_optics_kit.contrib import case as case_mod  # noqa: E402
+from os_optics_kit.contrib import tool as tool_mod  # noqa: E402
 
 HAS_GIT = shutil.which("git") is not None
 
@@ -75,13 +76,17 @@ def git(*args: str, cwd: Path) -> str:
 
 
 def make_kit_repo(where: Path) -> Path:
-    """A minimal os-optics-kit checkout: the package's top-level modules, pyproject, one commit."""
+    """A small os-optics-kit checkout: the package's top-level modules, the skills and their index, the templates,
+    pyproject and baseline, no cases yet; one commit."""
     repo = where / "kit"
     package = repo / "tools" / "os_optics_kit"
     package.mkdir(parents=True)
     for module in (ROOT / "tools" / "os_optics_kit").glob("*.py"):
         shutil.copyfile(module, package / module.name)
-    shutil.copyfile(ROOT / "pyproject.toml", repo / "pyproject.toml")
+    for folder in ("skills", "templates"):
+        shutil.copytree(ROOT / folder, repo / folder, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    for name in ("pyproject.toml", "baseline.json", "skills.json"):
+        shutil.copyfile(ROOT / name, repo / name)
     (repo / ".gitattributes").write_bytes(b"* text=auto eol=lf\n*.png binary\n")
     git("init", "--quiet", "-b", "main", cwd=repo)
     git("config", "user.name", "Kit Contributor", cwd=repo)
@@ -99,6 +104,15 @@ def fresh_clone(repo: Path, where: Path) -> Path:
     return target
 
 
+def demo_case(target: Path) -> None:
+    """A valid case named after ``target``: a copy of cases/ideal-lens-focus (checkable without the engine)."""
+    shutil.copytree(ROOT / "cases" / "ideal-lens-focus", target,
+                    ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "run*", "out"))
+    text = (target / "CASE.md").read_text(encoding="utf-8")
+    (target / "CASE.md").write_text(text.replace("name: ideal-lens-focus", f"name: {target.name}", 1),
+                                    encoding="utf-8", newline="\n")
+
+
 def case_files(case_dir: Path, *, summary: str = "A short summary.", body_extra: str = "") -> None:
     case_dir.mkdir(parents=True, exist_ok=True)
     C.write_text(case_dir / "project.json", "{}\n")
@@ -109,34 +123,24 @@ def case_files(case_dir: Path, *, summary: str = "A short summary.", body_extra:
     front = {"name": "demo-case", "title": "Demo", "summary": summary, "engine": "0.12.0", "catalog": "none",
              "project": "project.json", "tools": "summary", "tags": "demo", "license": "MIT"}
     body = "\n".join(f"## {s}\n\ntext\n" for s in case_mod.REQUIRED_SECTIONS) + body_extra
-    C.write_text(case_dir / "CASE.md", C.render_front_matter(front) + "\n# Demo\n\n" + body)
+    C.write_text(case_dir / "CASE.md", fm.render(front) + "\n# Demo\n\n" + body)
 
 
 VERIFIED = {"engine": "0.12.0", "catalog": None}
 
 
 class FrontMatterTests(unittest.TestCase):
-    def test_round_trip(self):
-        keys = {"name": "a-b", "description": "Does x: and y.", "version": "0.1.0"}
-        parsed, body = C.parse_front_matter(C.render_front_matter(keys) + "\nbody\n")
-        self.assertEqual(parsed, keys)
-        self.assertEqual(body, "\nbody\n")
+    """The parser itself (os_optics_kit._frontmatter) is tested in test_skills; contrib only uses it."""
 
-    def test_refusals(self):
-        for text in ("name: x\n", "---\nname: x\n", "---\nname x\n---\n", "---\nname: a\nname: b\n---\n",
-                     "---\nName: x\n---\n"):
-            with self.subTest(text=text), self.assertRaises(ValueError):
-                C.parse_front_matter(text)
+    def test_rewrite_front_matter_keeps_order_and_body(self):
+        text = fm.render({"name": "a", "engine": "0.11.0", "catalog": "none"}) + "\n## What it shows\n"
+        updated = case_mod.rewrite_front_matter(text, {"engine": "0.12.0", "unknown": "x"})
+        self.assertEqual(fm.split(updated), ({"name": "a", "engine": "0.12.0", "catalog": "none"},
+                                             "\n## What it shows\n"))
+        with self.assertRaises(fm.FrontMatterError):
+            case_mod.rewrite_front_matter("no front matter\n", {})
 
-    def test_sections_skip_code_and_check_order(self):
-        body = "## A\n```sh\n## not a heading\n```\n## B\n## Extra\n"
-        self.assertEqual(C.body_sections(body), ["A", "B", "Extra"])
-        self.assertEqual(C.check_sections(["A", "B"], ["A", "B"]), [])
-        self.assertIn("section '## C' missing", C.check_sections(["A", "B"], ["A", "B", "C"]))
-        self.assertEqual(len(C.check_sections(["B", "A"], ["A", "B"])), 1)
-
-    def test_token_estimate_and_names(self):
-        self.assertEqual(C.token_estimate("a" * 9), 3)
+    def test_names(self):
         self.assertEqual(C.check_name("beam-expander-2x"), "beam-expander-2x")
         for bad in ("Beam", "a--b", "-a", "a_b", "x" * 41, ""):
             with self.subTest(bad=bad), self.assertRaises(C.ContribError):
@@ -145,42 +149,66 @@ class FrontMatterTests(unittest.TestCase):
         self.assertEqual(C.split_list("none"), [])
 
 
+SKILL_VALUES = {"name": "hello", "description": "Print a greeting.", "kind": "tool", "command": "os-optics-kit hello",
+                "requires": "none", "kit_version": "0.1.0", "when_to_use": "- w", "when_not_to_use": "- n",
+                "inputs": "- i", "outputs": "- o", "example": "os-optics-kit hello --help", "limits": "- l"}
+
+
+def case_values(case_dir: Path) -> dict:
+    verified = {"engine": "0.12.0", "catalog": None, "status": "PASS",
+                "targets": {"targets": [{"target_id": "w", "metric": "beam_radius_mm", "observation_id": "out",
+                                         "unit": "mm", "bounds": {"maximum": 2.0}, "value": 1.5,
+                                         "assessment": "MET"}]}}
+    return case_mod.prose_values("demo-case", "Demo", "A short summary.", ["summary"], ["demo"], verified,
+                                 case_dir, ["images/iso.png"])
+
+
 class TemplateTests(unittest.TestCase):
-    def test_fill_and_unknown_placeholders(self):
-        self.assertEqual(C.fill_template("x {{ a }} {{b}}", {"a": "1", "b": "2"}), "x 1 2")
+    def test_fill_drops_comments_and_refuses_unknown_placeholders(self):
+        self.assertEqual(C.fill_template("x {{ a }} {{b}}", {"a": "1", "b": "2"}), "x 1 2\n")
+        self.assertEqual(C.fill_template("# T\n\n<!-- how to\nfill -->\n\n{{a}}\n\n\n", {"a": "1"}), "# T\n\n1\n")
         with self.assertRaises(KeyError):
             C.fill_template("{{zzz}}", {})
 
-    def test_repo_template_used_only_when_fillable(self):
+    def test_checkout_template_preferred_and_an_unfillable_one_skipped(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
             (repo / "templates").mkdir()
             warnings: list[str] = []
-            self.assertEqual(C.choose_template(repo, "templates/X.md", "builtin {{a}}", {"a": "1"}, warnings),
-                             "builtin 1")
-            (repo / "templates" / "X.md").write_text("repo {{a}}", encoding="utf-8")
-            self.assertEqual(C.choose_template(repo, "templates/X.md", "builtin {{a}}", {"a": "1"}, warnings),
-                             "repo 1")
-            (repo / "templates" / "X.md").write_text("repo {{unknown_key}}", encoding="utf-8")
-            self.assertEqual(C.choose_template(repo, "templates/X.md", "builtin {{a}}", {"a": "1"}, warnings),
-                             "builtin 1")
-            self.assertTrue(warnings and warnings[0].startswith("TEMPLATE_NOT_USED"))
+            packaged = C.render_template(None, "SKILL.md", SKILL_VALUES, warnings)
+            self.assertEqual(C.render_template(repo, "SKILL.md", SKILL_VALUES, warnings), packaged)
+            (repo / "templates" / "SKILL.md").write_text("<!-- guide -->\nrepo {{name}}\n", encoding="utf-8")
+            self.assertEqual(C.render_template(repo, "SKILL.md", SKILL_VALUES, warnings), "repo hello\n")
+            (repo / "templates" / "SKILL.md").write_text("repo {{unknown_key}}", encoding="utf-8")
+            self.assertEqual(C.render_template(repo, "SKILL.md", SKILL_VALUES, warnings), packaged)
+            self.assertEqual(len(warnings), 1)
+            self.assertTrue(warnings[0].startswith("TEMPLATE_NOT_USED: templates/SKILL.md"))
+            with self.assertRaises(C.ContribError) as ctx:
+                C.render_template(repo, "NOPE.md", SKILL_VALUES, warnings)
+            self.assertEqual(ctx.exception.code, "TEMPLATE_MISSING")
 
-    def test_builtin_templates_fill_completely(self):
-        values = {key: "v" for key in ("name", "title", "summary", "engine", "catalog", "tools", "tags", "status",
-                                       "catalog_line", "targets_table", "images_markdown", "files_list",
-                                       "run_commands")}
-        for template in (T.CASE_MD, T.README_CASE_MD):
-            self.assertNotIn("{{", C.fill_template(template, values))
-        skill = {key: "v" for key in ("name", "description", "when_to_use", "command", "command_name", "requires",
-                                      "module", "help_text", "requires_line", "kit_version")}
-        text = C.fill_template(T.SKILL_MD, skill)
-        front, body = C.parse_front_matter(text)
-        self.assertEqual(C.check_sections(C.body_sections(body), tool_mod.REQUIRED_SECTIONS), [])
+    def test_repository_templates_fill_completely_into_valid_pages(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            values = case_values(Path(tmp))
+        for name in ("CASE.md", "README.case.md"):
+            with self.subTest(template=name):
+                text = C.render_template(None, name, values, [])
+                self.assertNotIn("{{", text)
+                self.assertNotIn("<!--", text)
+                self.assertNotIn("\n\n\n", text)
+        case = C.render_template(None, "CASE.md", values, [])
+        front, body = fm.split(case)
+        self.assertEqual(fm.check_keys(front, kit_cases.FRONT_MATTER_KEYS), [])
+        self.assertEqual(fm.headings(body), list(kit_cases.SECTIONS))
+        self.assertIn("| `w` | `beam_radius_mm` | `out` | <= 2 mm | 1.5 mm, MET |", case)
+        readme = C.render_template(None, "README.case.md", values, [])
+        self.assertIn("![Isometric view](images/iso.png)", readme)
+        self.assertIn("| `w` | 1.5 mm | <= 2 mm | MET |", readme)
+        skill = C.render_template(None, "SKILL.md", SKILL_VALUES, [])
+        front, body = fm.split(skill)
         self.assertEqual(front["kind"], "tool")
-        case = C.fill_template(T.CASE_MD, values)
-        self.assertEqual(C.check_sections(C.body_sections(C.parse_front_matter(case)[1]),
-                                          case_mod.REQUIRED_SECTIONS), [])
+        self.assertEqual(fm.check_sections(body, tool_mod.REQUIRED_SECTIONS), [])
+        self.assertNotIn("<!--", skill)
 
     def test_targets_table(self):
         rows = [{"target_id": "w", "metric": "waist_radius_x_mm", "observation_id": "out", "unit": "mm",
@@ -188,8 +216,9 @@ class TemplateTests(unittest.TestCase):
                 {"target_id": "r", "metric": "beam_radius_mm", "observation_id": "out", "unit": "mm",
                  "bounds": {"maximum": 0.05}, "value": None, "assessment": "INDETERMINATE"}]
         table = case_mod.targets_table(rows)
-        self.assertIn("| `w` | `waist_radius_x_mm` | `out` | 2 ± 0.02 mm | 1.996 | MET |", table)
-        self.assertIn("<= 0.05 mm | - | INDETERMINATE", table)
+        self.assertIn("| `w` | `waist_radius_x_mm` | `out` | 2 ± 0.02 mm | 1.9961 mm, MET |", table)
+        self.assertIn("<= 0.05 mm | -, INDETERMINATE", table)
+        self.assertIn("| `r` | - | <= 0.05 mm | INDETERMINATE |", case_mod.results_rows(rows))
         many = case_mod.targets_table(rows * 10)
         self.assertIn("8 more targets in `expected.json`", many)
 
@@ -279,11 +308,7 @@ class ValidationTests(unittest.TestCase):
     def test_skill_validation(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "SKILL.md"
-            values = {key: "v" for key in ("when_to_use", "command_name", "module", "help_text", "requires_line",
-                                           "kit_version")}
-            values.update(name="hello", description="Print a greeting.", command="os-optics-kit hello",
-                          requires="none")
-            path.write_text(C.fill_template(T.SKILL_MD, values), encoding="utf-8")
+            path.write_text(C.render_template(None, "SKILL.md", SKILL_VALUES, []), encoding="utf-8")
             self.assertEqual(tool_mod.validate_skill(path, "hello", "hello"), [])
             problems = "\n".join(tool_mod.validate_skill(path, "other", "other"))
             self.assertIn("directory is 'other'", problems)
@@ -291,7 +316,7 @@ class ValidationTests(unittest.TestCase):
             path.write_text(path.read_text(encoding="utf-8").replace("## Limits", "## Notes") + "x" * 4000,
                             encoding="utf-8")
             problems = "\n".join(tool_mod.validate_skill(path, "hello", "hello"))
-            self.assertIn("'## Limits' missing", problems)
+            self.assertIn("missing section '## Limits'", problems)
             self.assertIn("budget 900", problems)
 
     def test_bundle_target(self):
@@ -317,7 +342,7 @@ class OwnSkillTests(unittest.TestCase):
             with self.subTest(name=name):
                 path = ROOT / "skills" / name / "SKILL.md"
                 self.assertEqual(tool_mod.validate_skill(path, name, command), [])
-                front, _ = C.parse_front_matter(path.read_text(encoding="utf-8"))
+                front, _ = fm.split(path.read_text(encoding="utf-8"))
                 self.assertEqual(front["kind"], "contribution")
                 self.assertLessEqual(len(front["description"]), 300)
 
@@ -437,12 +462,8 @@ class PatchTests(unittest.TestCase):
             work.mkdir()
             clone = C.make_clone(repo, base, "contrib/case-demo-case", work)
             case_dir = clone.path / "cases" / "demo-case"
-            case_files(case_dir)
-            front, _ = C.parse_front_matter((case_dir / "CASE.md").read_text(encoding="utf-8"))
-            entry = C.case_index_entry(case_dir, front)
-            self.assertEqual(entry["files"], ["CASE.md", "README.md", "expected.json", "images/top.png",
-                                              "project.json"])
-            C.update_cases_index(clone.path, entry)
+            demo_case(case_dir)
+            self.assertEqual(case_mod.update_case_indexes(clone), "regenerated by os-optics-kit cases index --write")
             patches = tmp / "patches"
             patches.mkdir()
             patch = C.commit_and_format_patch(clone, ["cases/demo-case", "cases.json"], "feat(cases): add demo-case",
@@ -454,22 +475,27 @@ class PatchTests(unittest.TestCase):
             applied = fresh_clone(repo, tmp)
             git("am", str(patch), cwd=applied)
             index = json.loads((applied / "cases.json").read_text(encoding="utf-8"))
+            self.assertEqual([c["name"] for c in index["cases"]], ["demo-case"])
             self.assertEqual(index["cases"][0]["project_sha256"],
                              C.sha256_file(applied / "cases" / "demo-case" / "project.json"))
-            self.assertEqual((applied / "cases" / "demo-case" / "images" / "top.png").read_bytes(),
-                             (case_dir / "images" / "top.png").read_bytes())
+            images = sorted(p.name for p in (case_dir / "images").iterdir())
+            for image in images:
+                self.assertEqual((applied / "cases" / "demo-case" / "images" / image).read_bytes(),
+                                 (case_dir / "images" / image).read_bytes())
+            env = dict(os.environ, PYTHONPATH=str(applied / "tools"))
+            checked = subprocess.run([sys.executable, "-m", "os_optics_kit", "cases", "index", "--check"],
+                                     cwd=applied, env=env, capture_output=True, text=True)
+            self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
 
-    def test_cases_index_replaces_and_sorts(self):
+    def test_case_index_refuses_an_invalid_case(self):
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / "tools" / "os_optics_kit").mkdir(parents=True)
-            shutil.copyfile(ROOT / "tools" / "os_optics_kit" / "_version.py",
-                            root / "tools" / "os_optics_kit" / "_version.py")
-            for name in ("b", "a", "b"):
-                C.update_cases_index(root, {"name": name, "title": name})
-            index = json.loads((root / "cases.json").read_text(encoding="utf-8"))
-            self.assertEqual([c["name"] for c in index["cases"]], ["a", "b"])
-            self.assertEqual(index["schema"], "os-optics-kit.cases")
+            tmp = Path(tmp)
+            repo = make_kit_repo(tmp)
+            clone = C.make_clone(repo, C.resolve_base(repo, None), "contrib/case-demo-case", tmp / "work")
+            case_files(clone.path / "cases" / "demo-case")  # project.json and expected.json are not valid
+            with self.assertRaises(C.ContribError) as ctx:
+                case_mod.update_case_indexes(clone)
+            self.assertEqual(ctx.exception.code, "CASES_INDEX_FAILED")
 
     def test_tool_end_to_end_dry_run(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -485,8 +511,10 @@ class PatchTests(unittest.TestCase):
             self.assertEqual(doc["pr"]["reason"], "DRY_RUN")
             self.assertEqual(doc["verification"]["tests"]["result"], "OK")
             self.assertEqual(doc["requires"], "none")
-            self.assertEqual(sorted(doc["files"]), ["skills/hello-kit/SKILL.md", "tests/test_hello_kit.py",
+            self.assertEqual(sorted(doc["files"]), ["skills.json", "skills/hello-kit/SKILL.md", "tests/test_hello_kit.py",
                                                     "tools/os_optics_kit/cli.py", "tools/os_optics_kit/hello_kit.py"])
+            self.assertEqual(doc["verification"]["skills_index"], "regenerated by os-optics-kit skills index --write")
+            self.assertEqual(doc["warnings"], [])
             manifest = json.loads((out / "bundle.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["commands_entry"], {"hello-kit": ["hello_kit", "print a greeting for a name"]})
             self.assertNotIn(str(tmp), json.dumps(manifest))  # no machine-local paths in the bundle manifest
@@ -504,11 +532,15 @@ class PatchTests(unittest.TestCase):
             ran = subprocess.run([sys.executable, "-m", "os_optics_kit", "hello-kit", "world"], cwd=applied, env=env,
                                  capture_output=True, text=True)
             self.assertEqual(ran.stdout.strip(), "hello world")
+            indexed = subprocess.run([sys.executable, "-m", "os_optics_kit", "skills", "index", "--check"],
+                                     cwd=applied, env=env, capture_output=True, text=True)
+            self.assertEqual(indexed.returncode, 0, indexed.stdout + indexed.stderr)
+            self.assertIn("hello-kit", (applied / "skills.json").read_text(encoding="utf-8"))
 
             # an edited skill page is kept by --refresh and lands in the new patch
             skill_path = out / "tool" / "skills" / "hello-kit" / "SKILL.md"
-            skill_path.write_text(skill.replace("What the options above state; exit code 0 on success.",
-                                                "One line on standard output."), encoding="utf-8")
+            skill_path.write_text(skill.replace("- What the options above state; exit code 0 on success.",
+                                                "- One line on standard output."), encoding="utf-8")
             code, doc = call(["tool", "--refresh", str(out), "--repo", str(repo), "--dry-run"])
             self.assertEqual(code, 0, doc)
             self.assertIn("One line on standard output.",
@@ -525,6 +557,9 @@ class PatchTests(unittest.TestCase):
             helper = tmp / "summary_like.py"
             helper.write_text(HELPER, encoding="utf-8")
             code, doc = call(["tool", str(helper), "--name", "summary", "--repo", str(repo), "--out", str(tmp / "o")])
+            self.assertEqual((code, doc["error"]["code"]), (4, "TOOL_EXISTS"))  # skills/summary exists
+            code, doc = call(["tool", str(helper), "--name", "my-summary", "--command", "summary", "--repo", str(repo),
+                              "--out", str(tmp / "o")])
             self.assertEqual((code, doc["error"]["code"]), (4, "COMMAND_EXISTS"))
             engine_at_import = tmp / "eager.py"
             engine_at_import.write_text(HELPER.replace("import argparse", "import argparse\nimport not_installed_pkg"),

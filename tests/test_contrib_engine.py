@@ -17,6 +17,7 @@ from unittest import mock
 
 from test_contrib import HAS_GIT, call, fresh_clone, git, make_kit_repo
 
+from os_optics_kit import _frontmatter as fm
 from os_optics_kit.contrib import _common as C
 from os_optics_kit.contrib import case as case_mod
 
@@ -124,9 +125,10 @@ class CaseFlowTests(unittest.TestCase):
         expected = json.loads((case_dir / "expected.json").read_text(encoding="utf-8"))
         self.assertEqual(expected["schema"], "os-optics-kit.case-expected")
         self.assertEqual((expected["catalog"], expected["status"]), (None, "PASS"))
-        front, _ = C.parse_front_matter((case_dir / "CASE.md").read_text(encoding="utf-8"))
+        front, _ = fm.split((case_dir / "CASE.md").read_text(encoding="utf-8"))
         self.assertEqual((front["catalog"], front["tools"], front["license"]), ("none", "summary", "MIT"))
-        self.assertLessEqual(C.token_estimate((case_dir / "CASE.md").read_text(encoding="utf-8")), 700)
+        self.assertLessEqual(fm.token_estimate((case_dir / "CASE.md").read_text(encoding="utf-8")), 700)
+        self.assertEqual(doc["warnings"], [])
         listing = C.relative_listing(out)
         self.assertFalse([p for p in listing if p.endswith(".glb") or p.endswith("manifest.json")])
 
@@ -157,7 +159,7 @@ class CaseFlowTests(unittest.TestCase):
         case_md.write_text(edited.replace("## Targets", "## Results"), encoding="utf-8")
         code, doc = call(["case", "--refresh", str(out), "--repo", str(self.repo), "--dry-run"])
         self.assertEqual((code, doc["error"]["code"]), (4, "CASE_FILES_INVALID"))
-        self.assertIn("CASE.md: section '## Targets' missing", doc["error"]["problems"])
+        self.assertIn("CASE.md: missing section '## Targets'", doc["error"]["problems"])
 
     def test_bundle_without_checkout_and_catalog_file_refusal(self):
         outside = self.tmp / "elsewhere"
