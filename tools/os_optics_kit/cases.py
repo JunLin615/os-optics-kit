@@ -14,6 +14,8 @@ Subcommands (compact JSON on stdout, except ``show``):
                                    project check -> project run -> results targets -> compare with expected.json
   index --write | --check          generate or validate cases.json and every case's format
 
+Every subcommand takes --root DIR (or OS_OPTICS_KIT_ROOT): a kit checkout to use instead of the installed cases.
+
 Exit codes: 0 success / every case matches / index valid; 1 a case differs from expected.json or the index or a case
 fails its format checks; 4 usage error, unknown case or no engine for ``verify``.
 
@@ -35,7 +37,7 @@ import sys
 import tempfile
 
 from . import _frontmatter as fm
-from ._resources import data_root
+from ._resources import ROOT_ENV, data_root
 
 INDEX_SCHEMA = "os-optics-kit.cases"
 EXPECTED_SCHEMA = "os-optics-kit.case-expected"
@@ -535,15 +537,18 @@ def _parser():
     parser = ArgumentParser(prog="os-optics-kit cases", description=__doc__,
                             formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
-    listing = sub.add_parser("list", help="print the case index (compact JSON)")
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--root", type=Path, help="a kit checkout to use instead of the installed cases "
+                                                  "(also OS_OPTICS_KIT_ROOT)")
+    listing = sub.add_parser("list", parents=[common], help="print the case index (compact JSON)")
     listing.add_argument("--tag", help="only cases with this tag")
-    show = sub.add_parser("show", help="print a case's CASE.md")
+    show = sub.add_parser("show", parents=[common], help="print a case's CASE.md")
     show.add_argument("name")
-    copy = sub.add_parser("copy", help="copy a case directory to DEST/NAME")
+    copy = sub.add_parser("copy", parents=[common], help="copy a case directory to DEST/NAME")
     copy.add_argument("name")
     copy.add_argument("--dest", type=Path, required=True, help="destination directory")
     copy.add_argument("--force", action="store_true", help="overwrite different existing files")
-    check = sub.add_parser("verify", help="run cases with the installed engine and compare with expected.json")
+    check = sub.add_parser("verify", parents=[common], help="run cases with the installed engine and compare with expected.json")
     check.add_argument("names", nargs="*", metavar="NAME")
     check.add_argument("--all", action="store_true", help="every case")
     check.add_argument("--out", type=Path, help="keep the runs in OUT/NAME/run (default: a temporary directory)")
@@ -551,7 +556,7 @@ def _parser():
                                                     "OUT first (no download)")
     check.add_argument("--update-expected", action="store_true",
                        help="write the runs' outcomes to expected.json and CASE.md (kit checkout only)")
-    index = sub.add_parser("index", help="generate (--write) or validate (--check) cases.json and every case")
+    index = sub.add_parser("index", parents=[common], help="generate (--write) or validate (--check) cases.json and every case")
     mode = index.add_mutually_exclusive_group(required=True)
     mode.add_argument("--write", action="store_true")
     mode.add_argument("--check", action="store_true")
@@ -560,6 +565,10 @@ def _parser():
 
 def run(argv):
     args = _parser().parse_args(argv)
+    if args.root is not None:
+        if not (args.root / "cases").is_dir():
+            raise CaseError("BAD_ARGUMENT", f"--root {args.root.as_posix()} has no cases/ directory")
+        os.environ[ROOT_ENV] = str(args.root.resolve())
     if args.command == "list":
         document = load_index()
         if args.tag:
@@ -602,7 +611,8 @@ def run(argv):
     if generated is not None and current != generated:
         problems.append({"case": None, "code": "INDEX_STALE",
                          "message": "cases.json differs from the cases; run 'os-optics-kit cases index --write'"})
-    _emit({"status": "OK" if not problems else "PROBLEMS", "cases": len(case_names()), "problems": problems})
+    _emit({"status": "OK" if not problems else "PROBLEMS", "cases": len(case_names()), "root": data_root().as_posix(),
+           "problems": problems})
     return EXIT_OK if not problems else EXIT_DIFFERENT
 
 

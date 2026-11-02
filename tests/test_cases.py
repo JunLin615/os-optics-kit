@@ -212,6 +212,29 @@ class CopyTests(unittest.TestCase):
 
 
 @unittest.skipUnless(HAS_ENGINE, "verify runs the engine: os_optics is not importable")
+class RootTests(unittest.TestCase):
+    def test_root_selects_a_checkout(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            checkout = Path(tmp) / "kit"
+            (checkout / "cases").mkdir(parents=True)
+            shutil.copytree(CASES / CATALOG_FREE, checkout / "cases" / CATALOG_FREE)
+            shutil.copyfile(ROOT / "cases.json", checkout / "cases.json")
+            with patch.dict("os.environ", {}, clear=False):
+                code, out, _ = call(["index", "--check", "--root", str(checkout)])
+                document = json.loads(out)
+                self.assertEqual(Path(document["root"]).resolve(), checkout.resolve())
+                self.assertEqual(document["cases"], 1)
+                # the copied index still lists every case: the checkout's own index is stale
+                self.assertEqual(code, 1)
+                self.assertIn("INDEX_STALE", {problem["code"] for problem in document["problems"]})
+
+    def test_root_without_cases_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict("os.environ", {}, clear=False):
+            code, _, err = call(["list", "--root", tmp])
+        self.assertEqual(code, 4)
+        self.assertIn("BAD_ARGUMENT", err)
+
+
 class VerifyTests(unittest.TestCase):
     def test_catalog_free_case_matches_expected(self):
         with tempfile.TemporaryDirectory() as tmp:
