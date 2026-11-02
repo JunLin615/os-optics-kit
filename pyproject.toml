@@ -43,9 +43,9 @@ Issues = "https://github.com/JunLin615/os-optics-kit/issues"
 path = "tools/os_optics_kit/_version.py"
 
 [tool.hatch.build.targets.wheel]
-# The package plus its data (skills, cases, templates, indexes, baseline) under os_optics_kit/_data. Path rewriting
-# (not force-include) keeps the exclude patterns and .gitignore in effect for the data directories.
-only-include = ["tools/os_optics_kit", "skills", "cases", "templates", "skills.json", "cases.json", "baseline.json"]
+# The package plus its data (skills, cases, templates, indexes, baseline) under os_optics_kit/_data. The directories
+# are mapped by path rewriting (not force-include), so the exclude patterns and .gitignore apply to them.
+only-include = ["tools/os_optics_kit", "skills", "cases", "templates"]
 exclude = ["__pycache__", "*.pyc", "*.pyo", ".DS_Store", "cases/*/run*/", "cases/*/out/"]
 # Editable installs put tools/ on sys.path; the package then reads its data from the checkout (_resources.data_root).
 dev-mode-dirs = ["tools"]
@@ -55,6 +55,8 @@ dev-mode-dirs = ["tools"]
 "skills" = "os_optics_kit/_data/skills"
 "cases" = "os_optics_kit/_data/cases"
 "templates" = "os_optics_kit/_data/templates"
+
+[tool.hatch.build.targets.wheel.force-include]
 "skills.json" = "os_optics_kit/_data/skills.json"
 "cases.json" = "os_optics_kit/_data/cases.json"
 "baseline.json" = "os_optics_kit/_data/baseline.json"
