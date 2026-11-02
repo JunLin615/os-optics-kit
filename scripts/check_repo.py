@@ -52,14 +52,17 @@ MACHINE_PATHS = (
     re.compile(r"(?<![\w.~-])/(?:home|Users)/[A-Za-z0-9_][\w.-]*/"),
     re.compile(r"(?<![\w.~-])/[c-z]/(?:Users|working|cache|apps|data)/", re.I),
 )
+# Credential patterns, reported by rule id only (the match itself is never printed). S1 private key block, S2 PyPI
+# upload credential, S3 GitHub credential, S4 AWS access key id, S5 Slack credential, S6 vendor API credential,
+# S7 OpenSci account credential.
 SECRETS = (
-    ("private key", re.compile(r"-----BEGIN (?:[A-Z]+ )*PRIVATE KEY-----")),
-    ("PyPI token", re.compile(r"pypi-AgE[A-Za-z0-9_-]{50,}")),
-    ("GitHub token", re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{50,})")),
-    ("AWS access key", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
-    ("Slack token", re.compile(r"\bxox[abposr]-[A-Za-z0-9-]{10,}")),
-    ("API key", re.compile(r"\b(?:sk-ant-[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9]{32,}|AIza[0-9A-Za-z_-]{35})")),
-    ("OpenSci account token", re.compile(r"\boat_[A-Za-z0-9_-]{32,}")),
+    ("S1", re.compile(r"-----BEGIN (?:[A-Z]+ )*PRIVATE KEY-----")),
+    ("S2", re.compile(r"pypi-AgE[A-Za-z0-9_-]{50,}")),
+    ("S3", re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{50,})")),
+    ("S4", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
+    ("S5", re.compile(r"\bxox[abposr]-[A-Za-z0-9-]{10,}")),
+    ("S6", re.compile(r"\b(?:sk-ant-[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9]{32,}|AIza[0-9A-Za-z_-]{35})")),
+    ("S7", re.compile(r"\boat_[A-Za-z0-9_-]{32,}")),
 )
 # The website's former host and the engine's former distribution name.
 RETIRED_HOSTS = ("opensci-" + "optic.com",)
@@ -179,9 +182,9 @@ def check_text(name: str, text: str, problems: Problems) -> None:
         for match in pattern.finditer(text):
             problems.add("paths", name, f"absolute machine path {match.group(0)!r}; use a relative or "
                                         "placeholder path", line_of(text, match.start()))
-    for label, pattern in SECRETS:
+    for rule, pattern in SECRETS:
         for match in pattern.finditer(text):
-            problems.add("secrets", name, f"looks like a {label}; remove it and revoke it",
+            problems.add("secrets", name, f"matches credential rule {rule} (see SECRETS); remove it and revoke it",
                          line_of(text, match.start()))
     for host in RETIRED_HOSTS:
         escaped = re.escape(host).replace(r"\-", "-+")  # shields.io badges write "-" as "--"
