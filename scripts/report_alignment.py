@@ -1,4 +1,4 @@
-"""Render alignment results and optionally report a new scheduled observation.
+"""Render kit/engine alignment results and optionally report a new scheduled observation.
 
 Reading and rendering are offline. GitHub is contacted only with --publish;
 the workflow grants that capability exclusively to its scheduled reporter job.
@@ -37,12 +37,12 @@ def read_report(path):
     # A malformed/missing baseline itself produces a useful setup failure report.
     if "baseline_version" not in report:
         raise ValueError("Expected alignment report baseline_version")
-    for field in ("baseline_version", "installed_version", "candidate_version"):
+    for field in ("baseline_version", "installed_version", "candidate_version", "kit_version"):
         if report.get(field) is not None and not isinstance(report[field], str):
             raise ValueError("Expected optional version string: " + field)
     if not isinstance(report.get("requested_version", "baseline"), str):
         raise ValueError("Expected requested_version string")
-    for field in ("catalog_source", "optional_checks", "engine_source"):
+    for field in ("catalog_source", "optional_checks", "engine_source", "kit_source", "selection"):
         if report.get(field) is not None and not isinstance(report[field], dict):
             raise ValueError("Expected optional object: " + field)
     return report
@@ -69,7 +69,7 @@ def observation_marker(report):
     digest = hashlib.sha256(json.dumps(
         observation, sort_keys=True, separators=(",", ":")
     ).encode("utf-8")).hexdigest()
-    return "<!-- opensci-engine-alignment:" + digest + " -->"
+    return "<!-- os-optics-kit-alignment:" + digest + " -->"
 
 
 def needs_issue(report):
@@ -94,19 +94,31 @@ def cell(value):
 
 
 def catalog_text(source):
-    """Name the catalog source: an imported file is not a fresh download."""
+    """Name the catalog source: an imported file is not a download from the service."""
     if not source:
         return None
-    release = source.get("catalog_version") or source.get("file_catalog_version")
+    release = source.get("catalog_version")
     if source.get("mode") == "file":
         text = "imported file " + str(source.get("file"))
         if source.get("sha256"):
             text += " (sha256 " + source["sha256"] + ")"
     else:
-        text = "fresh sync"
+        text = "pinned sync of " + str(source.get("release") or "the baseline release")
         if source.get("service_url"):
             text += " from " + source["service_url"]
-    return text + (", release " + release if release else ", no active release")
+    return text + (", active release " + release if release else ", no active release")
+
+
+def kit_text(source, version):
+    if not source:
+        return version
+    if source.get("mode") == "wheel":
+        text = "wheel " + str(source.get("filename") or source.get("file"))
+        if source.get("sha256"):
+            text += " (sha256 " + source["sha256"] + ")"
+    else:
+        text = "source checkout"
+    return (str(version) + " from " if version else "") + text
 
 
 def render_summary(report, run_url="", artifact_url=""):
@@ -122,12 +134,13 @@ def render_summary(report, run_url="", artifact_url=""):
         "| Python | " + cell(report.get("python_version")) + " |",
         "| Engine source | " + cell((report.get("engine_source") or {}).get("mode", "pypi")) + " |",
         "| Engine artifact SHA-256 | " + cell((report.get("engine_source") or {}).get("sha256")) + " |",
+        "| Kit | " + cell(kit_text(report.get("kit_source"), report.get("kit_version"))) + " |",
         "| Catalog | " + cell(catalog_text(report.get("catalog_source"))) + " |",
         "",
     ]
     if (report.get("engine_source") or {}).get("mode") == "local-wheel":
-        lines += ["Local-wheel preparation result. Published-package alignment requires a fresh "
-                  "PyPI installation and a new check report.", ""]
+        lines += ["Local-wheel result. Alignment with the published engine needs a fresh PyPI installation "
+                  "and a new check report.", ""]
     if run_url:
         lines += ["[Actions run](" + run_url + ")", ""]
     if artifact_url:
@@ -136,8 +149,8 @@ def render_summary(report, run_url="", artifact_url=""):
         lines += ["Artifacts are available in the Actions run when upload succeeds.", ""]
     if observed_version(report) != report["baseline_version"]:
         lines += [
-            "The verified baseline has not changed. A passing candidate still needs "
-            "review before becoming the baseline.", "",
+            "baseline.json is unchanged. A passing candidate becomes the verified baseline only through a "
+            "reviewed pull request.", "",
         ]
     lines += [
         "| Check | Category | Status | Exit code |",
@@ -155,6 +168,9 @@ def render_summary(report, run_url="", artifact_url=""):
     if optional:
         lines += ["", "Optional checks not selected (`--optional NAME` or `--optional all`): "
                   + cell(", ".join(optional))]
+    left_out = (report.get("selection") or {}).get("left_out") or []
+    if left_out:
+        lines += ["", "Default checks left out by --only/--skip: " + cell(", ".join(left_out))]
 
     for check in failed_checks(report):
         lines += ["", "### Failed check: " + cell(check["name"]), ""]
@@ -169,20 +185,32 @@ def render_summary(report, run_url="", artifact_url=""):
                 lines.append(stream + " log in artifact: " + cell(check[stream]))
 
     reproduction = ["python", "scripts/check_alignment.py", "--out", "run-alignment"]
-    version = observed_version(report) or report.get("requested_version", "baseline")
-    if version != "baseline":
-        reproduction += ["--candidate", version]
     engine = report.get("engine_source") or {}
     if engine.get("mode") == "local-wheel":
-        reproduction += ["--candidate-wheel", engine.get("filename", "CANDIDATE.whl"),
-                         "--candidate-sha256", engine.get("sha256", "SHA256")]
+        reproduction += ["--engine-wheel", engine.get("filename") or "os_optics-VERSION-py3-none-any.whl"]
+        if engine.get("sha256"):
+            reproduction += ["--engine-sha256", engine["sha256"]]
+    else:
+        version = observed_version(report) or report.get("requested_version", "baseline")
+        if version not in ("baseline", report.get("baseline_version")):
+            reproduction += ["--engine", version]
+    kit = report.get("kit_source") or {}
+    if kit.get("mode") == "wheel":
+        reproduction += ["--kit-wheel", kit.get("filename") or "os_optics_kit-VERSION-py3-none-any.whl"]
     source = report.get("catalog_source") or {}
     if source.get("mode") == "file" and source.get("file"):
         reproduction += ["--catalog-file", source["file"]]
         if source.get("expected_sha256"):
             reproduction += ["--catalog-sha256", source["expected_sha256"]]
+    elif source.get("release_requested"):
+        reproduction += ["--catalog-release", source["release_requested"]]
+        if source.get("expected_sha256"):
+            reproduction += ["--catalog-sha256", source["expected_sha256"]]
     for name in (report.get("optional_checks") or {}).get("requested") or []:
         reproduction += ["--optional", name]
+    for option in ("only", "skip"):
+        for name in (report.get("selection") or {}).get(option) or []:
+            reproduction += ["--" + option, name]
     lines += ["", "### Reproduce", "", code_block(shlex.join(reproduction)), ""]
     return "\n".join(lines)
 
@@ -203,7 +231,7 @@ class GitHubIssues:
             "Accept": "application/vnd.github+json",
             "Authorization": "Bearer " + self.token,
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "os-optics-alignment",
+            "User-Agent": "os-optics-kit-alignment",
         }
         if data is not None:
             headers["Content-Type"] = "application/json"
@@ -236,11 +264,11 @@ def publish_report(report, github, run_url="", artifact_url=""):
     version = observed_version(report) or "unresolved " + report.get(
         "requested_version", "baseline")
     finding = "checks failed" if report["status"] == "FAIL" else "new unverified version"
-    title = "[engine alignment] " + version + ": " + finding
+    title = "[engine alignment] os-optics " + version + ": " + finding
     body = "\n\n".join([
         marker,
-        "Scheduled compatibility observation. Baseline updates require a reviewed "
-        "pull request; this report does not gate engine releases.",
+        "Scheduled compatibility observation of the kit with a released os-optics. baseline.json changes "
+        "only through a reviewed pull request.",
         render_summary(report, run_url, artifact_url),
     ])
     created = github.create(title, body)
@@ -275,7 +303,7 @@ def main(argv=None):
         print(summary)
     if args.publish:
         if (report.get("engine_source") or {}).get("mode") == "local-wheel":
-            print("Local-wheel reports are preliminary; publish observations from a PyPI check.", file=sys.stderr)
+            print("Local-wheel reports are not release observations; publish from a PyPI check.", file=sys.stderr)
             return 1
         token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
         if not token:

@@ -1,4 +1,4 @@
-"""Offline checks of the release runner; no package installation or network use."""
+"""Offline checks of the alignment runner; no package installation or network use."""
 
 import hashlib
 import io
@@ -15,10 +15,11 @@ from scripts import check_alignment as alignment
 ROOT = Path(__file__).resolve().parents[1]
 RETIRED = "opensci-" + "optic.com"  # assembled so this file never matches the repository scan
 CATALOG_URL = "https://opensci-optics.com/api/v1/catalog"
+CATALOG_VERSION = "2026-10-15.1"
 
 
 def default_checks():
-    """The repository's default (non-optional) checks, as other repositories would declare them."""
+    """The repository's default (non-optional) checks."""
     document = json.loads((ROOT / "alignment-checks.json").read_text(encoding="utf-8"))
     return [check for check in document["checks"] if not check.get("optional")]
 
@@ -52,15 +53,44 @@ class ReleaseSelectionTests(unittest.TestCase):
 
     def test_latest_resolves_from_pypi_and_revalidates_the_response(self):
         with patch.object(alignment.urllib.request, "urlopen", return_value=io.StringIO(
-            json.dumps({"info": {"version": "0.7.0"}})
+            json.dumps({"info": {"version": "0.13.0"}})
         )) as request:
-            self.assertEqual(alignment.latest_version(), "0.7.0")
+            self.assertEqual(alignment.latest_version(), "0.13.0")
         self.assertEqual(request.call_args.args[0].full_url, "https://pypi.org/pypi/os-optics/json")
         self.assertEqual(request.call_args.kwargs["timeout"], 30)
         with patch.object(alignment.urllib.request, "urlopen", return_value=io.StringIO(
             json.dumps({"info": {"version": "https://example.com/engine.whl"}})
         )), self.assertRaises(ValueError):
             alignment.latest_version()
+
+    def test_wheel_versions_come_from_the_expected_distribution(self):
+        self.assertEqual(alignment.wheel_version("dist/os_optics-0.12.0-py3-none-any.whl", "os-optics"), "0.12.0")
+        self.assertEqual(alignment.wheel_version("os_optics_kit-0.1.0-py3-none-any.whl", "os-optics-kit"), "0.1.0")
+        for name, distribution in (("os_optics_kit-0.1.0-py3-none-any.whl", "os-optics"),
+                                   ("os_optics-0.12.0.tar.gz", "os-optics"),
+                                   ("os_optics-0.12.0+local-py3-none-any.whl", "os-optics")):
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                alignment.wheel_version(name, distribution)
+
+
+class BaselineTests(unittest.TestCase):
+    def test_repository_baseline_is_readable(self):
+        baseline = alignment.read_baseline(ROOT)
+        self.assertEqual(baseline["kit_version"], alignment.source_kit_version(ROOT))
+        self.assertRegex(baseline["catalog_sha256"], "^[0-9a-f]{64}$")
+        self.assertEqual(baseline["python"][0], "3.11")
+
+    def test_malformed_baselines_are_rejected(self):
+        valid = json.loads((ROOT / "baseline.json").read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for change in ({"schema": "other"}, {"engine": {"verified_version": "latest"}},
+                           {"catalog": dict(valid["catalog"], sha256="F" * 64)},
+                           {"catalog": dict(valid["catalog"], version="current")}, {"kit_version": None}):
+                with self.subTest(change=change):
+                    (root / "baseline.json").write_text(json.dumps(dict(valid, **change)), encoding="utf-8")
+                    with self.assertRaises((ValueError, KeyError, TypeError)):
+                        alignment.read_baseline(root)
 
 
 class ClassificationTests(unittest.TestCase):
@@ -123,98 +153,6 @@ class ClassificationTests(unittest.TestCase):
                 self.assertEqual(alignment.catalog_failure_category(text, transport=transport), expected)
 
 
-class DocumentationTests(unittest.TestCase):
-    def setUp(self):
-        self.temporary = tempfile.TemporaryDirectory()
-        self.addCleanup(self.temporary.cleanup)
-        self.root = Path(self.temporary.name)
-        self.baseline = {
-            "version": "0.8.0", "website": "https://opensci-optics.com", "retired_hosts": [RETIRED],
-            "verified_environment": {"catalog_version": "2026-10-15.1"},
-            "documentation": ["README.md", {"path": "docs/en/README.md", "baseline_reference": False},
-                              {"path": ".github/ISSUE_TEMPLATE/bug_report.yml", "baseline_reference": False}],
-            "documentation_scan": {"include": ["*.md", "docs/**/*.md", ".github/**/*.yml", "examples/**/*.py"],
-                                   "historical": ["docs/old-validation.md"]},
-        }
-        self.write("README.md", 'Install "os-optics[protected]==0.8.0"; the **0.8.0** baseline is in '
-                                "engine-baseline.json. Website https://opensci-optics.com/.\n")
-        self.write("docs/en/README.md", "Guides target **os-optics 0.8.0**.\n")
-        self.write(".github/ISSUE_TEMPLATE/bug_report.yml", 'placeholder: "0.8.0"\n')
-        self.write("docs/en/interop.md", "Requires **os-optics 0.8.0** or newer; `os-optics>=0.8.0`.\n")
-        self.write("docs/zh-CN/interop.md", "需要 **os-optics 0.8.0** 或更高版本。\n")
-        self.write("docs/old-validation.md", f"Recorded with os-optics==0.6.1 at https://{RETIRED}/.\n")
-        self.write("examples/tool.py", '"""Requires os-optics 0.8.0."""\n')
-
-    def write(self, name, text):
-        path = self.root / name
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
-
-    def problems(self, **changes):
-        return alignment.documentation_problems(self.root, dict(self.baseline, **changes))
-
-    def test_consistent_tree_has_no_problems_and_minimums_are_not_pins(self):
-        self.assertEqual(self.problems(), [])
-        # A newer baseline flags every current statement but no minimum requirement or history.
-        flagged = {(problem["path"], problem["kind"]) for problem in self.problems(version="0.9.0")}
-        self.assertEqual(flagged, {("README.md", "version_pin"), ("docs/en/README.md", "version_pin"),
-                                   (".github/ISSUE_TEMPLATE/bug_report.yml", "version_pin")})
-
-    def test_prose_pins_exclude_minimum_versions_and_build_ids(self):
-        def pins(text):
-            return [pin for pattern in alignment.PROSE_PINS for _, pin in alignment._lines(text, pattern)]
-        for text in ("requires **os-optics 0.8.0** or newer", "(os-optics 0.8.0 or later)",
-                     "（os-optics 0.8.0 或更高版本）", "**0.8.0** or newer", "build `os-optics 0.8.0+94f6dc70`",
-                     "`os-optics>=0.8.0`", "older than 0.8.0"):
-            with self.subTest(text=text):
-                self.assertEqual(pins(text), [])
-        for text, expected in (("Guides target **os-optics 0.8.0**.", ["0.8.0"]),
-                               ("The verified engine baseline is **0.8.0**, recorded", ["0.8.0"]),
-                               ("对应已发布的 **0.8.0** 版本", ["0.8.0"]), ("os-optics 0.10.2rc1 is", ["0.10.2rc1"]),
-                               ("OS Optics 0.10.2 adds", ["0.10.2"]), ("opensci-engine 0.9.0 was", ["0.9.0"])):
-            with self.subTest(text=text):
-                self.assertEqual(pins(text), expected)
-
-    def test_retired_host_is_flagged_in_any_scanned_file_including_badges(self):
-        self.write("docs/en/hardware.md", f"See https://www.{RETIRED}/hardware.\n")
-        self.write(".github/ISSUE_TEMPLATE/config.yml", f"url: https://{RETIRED}/\n")
-        self.write("examples/tool.py", f'URL = "https://{RETIRED}"\n')
-        self.write("README.md", self.root.joinpath("README.md").read_text(encoding="utf-8")
-                   + "[![Website](https://img.shields.io/badge/website-opensci--optic.com-167D8D)](x)\n")
-        problems = [problem for problem in self.problems() if problem["kind"] == "retired_host"]
-        self.assertEqual({(problem["path"], problem["line"]) for problem in problems}, {
-            ("docs/en/hardware.md", 1), (".github/ISSUE_TEMPLATE/config.yml", 1), ("examples/tool.py", 1),
-            ("README.md", 2)})
-        self.assertTrue(all("https://opensci-optics.com" in problem["message"] for problem in problems))
-
-    def test_unlisted_files_are_checked_for_exact_pins_and_history_is_exempt(self):
-        self.write("docs/en/catalog.md", 'pip install "os-optics==0.6.1"\n')
-        self.write("run-alignment/.venv/README.md", 'pip install "os-optics==0.1.0"\n')
-        problems = self.problems()
-        self.assertEqual([(problem["path"], problem["found"]) for problem in problems],
-                         [("docs/en/catalog.md", "0.6.1")])
-        self.assertIn("docs/en/catalog.md:1: version pin 0.6.1 differs from baseline 0.8.0", problems[0]["message"])
-
-    def test_pins_of_the_earlier_distribution_name_are_reported(self):
-        self.write("docs/en/catalog.md", 'pip install "opensci-engine[protected]==0.8.0"\n')
-        self.write("examples/tool.py", 'pip install "opensci-engine==0.6.1"\n')
-        self.assertEqual([(problem["path"], problem["found"]) for problem in self.problems()],
-                         [("examples/tool.py", "0.6.1")])
-
-    def test_listed_documents_need_pin_reference_current_catalog_and_existence(self):
-        self.write("README.md", "Results on catalog `2026-10-06.3`.\n")
-        self.write("docs/en/README.md", "No version here.\n")
-        self.baseline["documentation"].append("docs/en/missing.md")
-        kinds = {(problem["path"], problem["kind"]) for problem in self.problems()}
-        self.assertEqual(kinds, {("README.md", "missing_pin"), ("README.md", "missing_reference"),
-                                 ("README.md", "catalog_version"), ("docs/en/README.md", "missing_pin"),
-                                 ("docs/en/missing.md", "missing_file")})
-
-    def test_repository_documentation_matches_its_baseline(self):
-        baseline = json.loads((ROOT / "engine-baseline.json").read_text(encoding="utf-8"))
-        self.assertEqual([problem["message"] for problem in alignment.documentation_problems(ROOT, baseline)], [])
-
-
 class CheckDefinitionTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
@@ -235,39 +173,42 @@ class CheckDefinitionTests(unittest.TestCase):
         self.assertTrue(all(check["optional"] for check in definitions["checks"] if check["requirements"]))
         self.assertEqual(alignment.select_checks(definitions["checks"], ["all"]), set(names))
 
-    def test_catalog_helper_flow_and_catalog_tests_run_by_default(self):
+    def test_tools_cases_and_catalog_tests_run_by_default(self):
         definitions = alignment.load_checks(ROOT)
         by_name = {check["name"]: check for check in definitions["checks"]}
         default = alignment.select_checks(definitions["checks"], [])
-        flow = ("catalog-candidates", "spec-be-base", "spec-be-swap", "spec-be-sweep", "spec-be-move",
-                "spec-be-compare", "spec-be-plot", "spec-be-report", "catalog-tests")
+        flow = ("beam-summary", "catalog-candidates", "spec-be-swap", "spec-be-sweep", "spec-be-move",
+                "spec-be-compare", "spec-be-plot", "spec-be-report", "catalog-tests", "cases-verify")
         for name in flow:
             with self.subTest(name=name):
                 self.assertIn(name, default)
                 self.assertTrue(by_name[name]["needs_catalog"])
-        tests = by_name["catalog-tests"]
+        self.assertEqual(by_name["cases-verify"]["argv"][1:6], ["-m", "os_optics_kit", "cases", "verify", "--all"])
+        self.assertIn("offline-tests", default)
+        self.assertFalse(by_name["offline-tests"]["needs_catalog"])
+
+    def test_catalog_tests_name_existing_classes_and_the_fixture_reads_their_switch(self):
+        tests = {check["name"]: check for check in alignment.load_checks(ROOT)["checks"]}["catalog-tests"]
         self.assertEqual(tests["env"], {"OPENSCI_EXAMPLES_REQUIRE_CATALOG": "1"})
-        for module in tests["argv"][4:]:  # each named test class exists
-            path, cls = module.rsplit(".", 1)
-            self.assertIn(f"class {cls}(", (ROOT / (path.replace(".", "/") + ".py")).read_text(encoding="utf-8"))
+        for node in [arg for arg in tests["argv"] if "::" in arg]:
+            path, cls = node.split("::")
+            self.assertIn(f"class {cls}(", (ROOT / path).read_text(encoding="utf-8"))
+        fixtures = (ROOT / "tests" / "workflow_fixtures.py").read_text(encoding="utf-8")
+        self.assertIn("OPENSCI_EXAMPLES_REQUIRE_CATALOG", fixtures)
 
-    def test_required_catalog_fails_instead_of_skipping(self):
-        from tests import workflow_fixtures
-
-        with patch.dict(alignment.os.environ, {"OPENSCI_EXAMPLES_REQUIRE_CATALOG": "1"}), \
-                patch("os_optics.local.json_api.catalog_status", return_value={"available": False}):
-            with self.assertRaises(RuntimeError):
-                workflow_fixtures.catalog_available()
-        with patch.dict(alignment.os.environ, {"OPENSCI_EXAMPLES_REQUIRE_CATALOG": ""}), \
-                patch("os_optics.local.json_api.catalog_status", return_value={"available": False}):
-            self.assertFalse(workflow_fixtures.catalog_available())
+    def test_repository_paths_in_check_arguments_exist(self):
+        for check in alignment.load_checks(ROOT)["checks"]:
+            for arg in check["argv"][1:]:
+                if arg.startswith(("cases/", "tests/", "scripts/")):
+                    with self.subTest(check=check["name"], path=arg):
+                        self.assertTrue((ROOT / arg.split("::")[0]).exists())
 
     def test_defaults_and_normalization(self):
-        definitions = self.load([{"name": "workflow", "argv": ["{python}", "examples/w.py", "--out", "{runs}/w"],
+        definitions = self.load([{"name": "workflow", "argv": ["{python}", "cases/w.py", "--out", "{runs}/w"],
                                   "expected_status": "PASS"}], default_requirements=["requirements-topic.txt"])
         self.assertEqual(definitions["default_requirements"], ["requirements-topic.txt"])
         self.assertEqual(definitions["checks"][0], {
-            "name": "workflow", "description": None, "argv": ["{python}", "examples/w.py", "--out", "{runs}/w"],
+            "name": "workflow", "description": None, "argv": ["{python}", "cases/w.py", "--out", "{runs}/w"],
             "expected_exit": 0, "expected_status": ["PASS"], "status_field": "status", "needs": [],
             "requirements": None, "requires_python": None, "env": {}, "timeout": 180, "json_error": False,
             "needs_catalog": False, "optional": False})
@@ -276,7 +217,8 @@ class CheckDefinitionTests(unittest.TestCase):
         valid = {"name": "workflow", "argv": ["{python}", "w.py"]}
         for change in (
             {"argv": ["python", "w.py"]}, {"argv": "{python} w.py"}, {"argv": ["{python}", "{home}/w.py"]},
-            {"name": "catalog-sync"}, {"name": "install-env-topic"}, {"name": "Upper"}, {"unknown": 1},
+            {"name": "catalog-sync"}, {"name": "install-env-topic"}, {"name": "install-kit"},
+            {"name": "kit-artifact"}, {"name": "Upper"}, {"unknown": 1},
             {"needs": ["later"]}, {"requirements": "../outside.txt"}, {"requirements": "missing.txt"},
             {"timeout": "60"}, {"expected_exit": True}, {"optional": "yes"}, {"expected_status": []},
             {"env": {"lower": "x"}}, {"requires_python": "3"}, {"requires_python": 3.12},
@@ -291,14 +233,30 @@ class CheckDefinitionTests(unittest.TestCase):
     def test_selection_adds_needed_checks_and_rejects_unknown_names(self):
         checks = self.load([
             {"name": "base", "argv": ["{python}", "a.py"]},
+            {"name": "next", "argv": ["{python}", "a.py"], "needs": ["base"]},
             {"name": "topic-a", "argv": ["{python}", "b.py"], "optional": True},
             {"name": "topic-b", "argv": ["{python}", "c.py"], "optional": True, "needs": ["topic-a"]},
         ])["checks"]
-        self.assertEqual(alignment.select_checks(checks, []), {"base"})
-        self.assertEqual(alignment.select_checks(checks, ["topic-b"]), {"base", "topic-a", "topic-b"})
-        self.assertEqual(alignment.select_checks(checks, ["topic-a,topic-b"]), {"base", "topic-a", "topic-b"})
+        self.assertEqual(alignment.select_checks(checks, []), {"base", "next"})
+        self.assertEqual(alignment.select_checks(checks, ["topic-b"]), {"base", "next", "topic-a", "topic-b"})
+        self.assertEqual(alignment.select_checks(checks, ["topic-a,topic-b"]),
+                         {"base", "next", "topic-a", "topic-b"})
         with self.assertRaisesRegex(ValueError, "Unknown optional checks"):
             alignment.select_checks(checks, ["topic-c"])
+
+    def test_only_and_skip_narrow_the_selection(self):
+        checks = self.load([
+            {"name": "base", "argv": ["{python}", "a.py"]},
+            {"name": "next", "argv": ["{python}", "a.py"], "needs": ["base"]},
+            {"name": "other", "argv": ["{python}", "a.py"]},
+            {"name": "topic", "argv": ["{python}", "b.py"], "optional": True, "needs": ["next"]},
+        ])["checks"]
+        self.assertEqual(alignment.select_checks(checks, [], only=["next"]), {"base", "next"})
+        self.assertEqual(alignment.select_checks(checks, [], only=["topic"]), {"base", "next", "topic"})
+        self.assertEqual(alignment.select_checks(checks, ["all"], skip=["base"]), {"other"})
+        self.assertEqual(alignment.select_checks(checks, [], skip=["other,next"]), {"base"})
+        with self.assertRaisesRegex(ValueError, "Unknown checks"):
+            alignment.select_checks(checks, [], skip=["missing"])
 
 
 class AlignmentRunnerTests(unittest.TestCase):
@@ -306,49 +264,50 @@ class AlignmentRunnerTests(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name) / "repository"
-        self.root.mkdir()
+        (self.root / "scripts").mkdir(parents=True)
+        (self.root / "tools" / "os_optics_kit").mkdir(parents=True)
+        (self.root / "tools" / "os_optics_kit" / "_version.py").write_text('__version__ = "0.1.0"\n',
+                                                                           encoding="utf-8")
         self.out = Path(self.temporary.name) / "evidence"
-        self.baseline = {"version": "0.6.1", "documentation": ["README.md", "installation.md"],
-                         "retired_hosts": [RETIRED],
-                         "verified_environment": {"catalog_version": "2026-10-15.1"}}
-        (self.root / "engine-baseline.json").write_text(json.dumps(self.baseline), encoding="utf-8")
-        (self.root / "README.md").write_text(
-            'Baseline **0.6.1**; see engine-baseline.json.\n', encoding="utf-8")
-        (self.root / "installation.md").write_text(
-            'pip install "os-optics[protected]==0.6.1"\nSee engine-baseline.json.\n', encoding="utf-8")
-        (self.root / "requirements-examples.txt").write_text("matplotlib\n", encoding="utf-8")
+        (self.root / "scripts" / "requirements-alignment.txt").write_text("pytest\n", encoding="utf-8")
         (self.root / "requirements-topic.txt").write_text("scipy\n", encoding="utf-8")
         self.catalog = Path(self.temporary.name) / "release.json"
-        self.catalog.write_text(json.dumps({"catalog_version": "2026-10-15.1", "products": []}), encoding="utf-8")
+        self.catalog.write_text(json.dumps({"catalog_version": CATALOG_VERSION, "products": []}), encoding="utf-8")
         self.catalog_sha256 = hashlib.sha256(self.catalog.read_bytes()).hexdigest()
-        self.baseline["verified_environment"]["catalog_sha256"] = self.catalog_sha256
-        (self.root / "engine-baseline.json").write_text(json.dumps(self.baseline), encoding="utf-8")
+        self.baseline = {"schema": "os-optics-kit.baseline", "schema_version": 1, "kit_version": "0.1.0",
+                         "engine": {"distribution": "os-optics", "requirement": ">=0.6,<0.7",
+                                    "verified_version": "0.6.1"},
+                         "catalog": {"version": CATALOG_VERSION, "schema_version": "3.2",
+                                     "sha256": self.catalog_sha256},
+                         "python": ["3.11", "3.14"]}
+        (self.root / "baseline.json").write_text(json.dumps(self.baseline), encoding="utf-8")
         self.write_checks(default_checks())
 
     def write_checks(self, checks):
         (self.root / "alignment-checks.json").write_text(json.dumps({
-            "schema_version": 1, "default_requirements": ["requirements-examples.txt"], "checks": checks,
+            "schema_version": 1, "default_requirements": ["scripts/requirements-alignment.txt"], "checks": checks,
         }), encoding="utf-8")
 
-    def fake_processes(self, *, version="0.6.1", sync_error=None, beam_error=None, status=None,
-                       topic_install_error=None):
+    def fake_processes(self, *, version="0.6.1", kit_version="0.1.0", sync_error=None, beam_error=None,
+                       status=None, topic_install_error=None, outside=None):
         def run(command, **kwargs):
             code, stdout, stderr = 0, "", ""
             if "--report" in command:
                 install_report = Path(command[command.index("--report") + 1])
                 wheel = next((arg.split(" @ ", 1)[1] for arg in command
                               if arg.startswith("os-optics[protected] @ file:")), None)
-                digest = hashlib.sha256(b"candidate wheel").hexdigest() if wheel else "a" * 64
+                digest = hashlib.sha256(b"engine wheel").hexdigest() if wheel else "a" * 64
                 install_report.write_text(json.dumps({"version": "1", "install": [{"metadata": {"name": "os-optics"},
                     "download_info": {"url": wheel if wheel else
                     "https://files.pythonhosted.org/packages/os_optics.whl",
                     "archive_info": {"hashes": {"sha256": digest}}}}]}), encoding="utf-8")
             if "-c" in command and "engine_version" in command[-1]:
-                stdout = json.dumps({"engine_version": version, "python": "test", "python_version": "3.11.9",
-                                     "platform": "test", "executable": command[0], "module_path": str(
-                                         Path(command[0]).parent.parent / "Lib" / "site-packages" /
-                                         "os_optics" / "__init__.py")})
-            elif command[-2:] == ["catalog", "sync"] and sync_error:
+                site = Path(command[0]).parent.parent / "Lib" / "site-packages"
+                stdout = json.dumps({"engine_version": version, "kit_version": kit_version, "python": "test",
+                                     "python_version": "3.11.9", "platform": "test", "executable": command[0],
+                                     "module_path": str(site / "os_optics" / "__init__.py"),
+                                     "kit_module_path": outside or str(site / "os_optics_kit" / "__init__.py")})
+            elif command[-4:-2] == ["catalog", "sync"] and sync_error:
                 if sync_error.startswith("{") or sync_error.startswith("Traceback"):
                     code, stderr = 1, sync_error
                 else:
@@ -356,23 +315,14 @@ class AlignmentRunnerTests(unittest.TestCase):
                         "code": sync_error, "message": "Catalog unavailable", "details": {"url": CATALOG_URL}}},
                         indent=2)
             elif command[-2:] == ["catalog", "status"]:
-                stdout = json.dumps(status or {"active": {"catalog_version": "2026-10-15.1",
+                stdout = json.dumps(status or {"active": {"catalog_version": CATALOG_VERSION,
                                                           "sha256": self.catalog_sha256},
                                                "service": {"manifest_url": CATALOG_URL}})
             elif "install" in command and "requirements-topic.txt" in " ".join(command) and topic_install_error:
                 code, stderr = 1, topic_install_error
-            elif "examples/ideal_lens_focus.py" in command:
-                if "nan" in command:
-                    code, stderr = 4, json.dumps({"error": {"code": "ValueError", "message": "Invalid bound"}})
-                elif "0.001" in command:
-                    code, stdout = 1, json.dumps({"status": "FAIL"})
-                else:
-                    stdout = json.dumps({"status": "PASS"})
             elif "tests.check_beam_summary" in command and beam_error:
                 code, stderr = 1, beam_error
-            elif "tests.check_beam_summary" in command or "examples/result_summary.py" in command:
-                stdout = json.dumps({"status": "PASS"})
-            elif "examples/topic.py" in command:
+            elif "cases/topic.py" in command:
                 stdout = json.dumps({"outcome": "WITHIN_TOLERANCE"})
             elif declared_result(command):
                 code, stdout, stderr = declared_result(command)
@@ -385,63 +335,67 @@ class AlignmentRunnerTests(unittest.TestCase):
     def calls(self, commands, text):
         return [call for call in commands.call_args_list if text in " ".join(call.args[0])]
 
-    def test_documentation_drift_is_a_failure_even_if_commands_succeed(self):
-        (self.root / "README.md").write_text("Baseline **0.5.0**\n", encoding="utf-8")
-        runner = alignment.AlignmentCheck(self.root, self.out)
-        with patch.object(alignment.subprocess, "run", side_effect=self.fake_processes()):
+    def test_baseline_engine_and_source_kit_install_isolated_without_changing_tracked_files(self):
+        originals = {path: path.read_bytes() for path in self.root.rglob("*") if path.is_file()}
+        with patch.dict(alignment.os.environ, {"PYTHONPATH": "private-engine", "PYTHONHOME": "private-runtime"}):
+            runner = alignment.AlignmentCheck(self.root, self.out)
+        with patch.object(alignment.subprocess, "run", side_effect=self.fake_processes()) as commands:
             report = runner.run()
-        check = next(row for row in report["checks"] if row["name"] == "baseline-documentation")
-        self.assertEqual((report["status"], check["status"]), ("FAIL", "FAIL"))
-        self.assertIn("0.5.0", check["error"])
-        self.assertIn("missing reference", check["error"])
-        self.assertEqual({problem["kind"] for problem in check["problems"]}, {"version_pin", "missing_reference"})
-        self.assertTrue((self.out / "report.json").is_file())
+        self.assertEqual(report["status"], "PASS", [row for row in report["checks"] if row["status"] == "FAIL"])
+        self.assertEqual((report["baseline_version"], report["candidate_version"], report["installed_version"],
+                          report["kit_version"]), ("0.6.1", "0.6.1", "0.6.1", "0.1.0"))
+        self.assertEqual(originals, {path: path.read_bytes() for path in self.root.rglob("*") if path.is_file()})
+        installs = [call.args[0] for call in commands.call_args_list if "install" in call.args[0]]
+        self.assertEqual(installs[0][1:], ["-m", "pip", "--isolated", "install", "--no-compile",
+                                           "--index-url", "https://pypi.org/simple", "os-optics[protected]==0.6.1",
+                                           "--report", str(self.out / "logs" / "install-engine.json")])
+        # The kit never pulls its own engine: the engine under test stays installed.
+        self.assertEqual(installs[1][-2:], ["--no-deps", str(self.root.resolve())])
+        self.assertIn(str(self.root.resolve() / "scripts" / "requirements-alignment.txt"), installs[2])
+        self.assertTrue(report["engine_source"]["publication_verified"])
+        self.assertEqual(report["kit_source"]["mode"], "source")
+        for call in commands.call_args_list:
+            env = call.kwargs["env"]
+            # Compare key sets only, so a failure never writes the environment into logs.
+            self.assertEqual(set(env) & {"PYTHONPATH", "PYTHONHOME"}, set())
+            self.assertEqual((env["PYTHONNOUSERSITE"], env["OPENSCI_CATALOG_CHECK_INTERVAL"]), ("1", "0"))
+            self.assertEqual(env["OPENSCI_CATALOG_DIR"], str(self.out.resolve() / ".catalog"))
+        sync = self.calls(commands, "catalog sync")
+        self.assertEqual(len(sync), 1)
+        self.assertEqual(sync[0].args[0][-4:], ["catalog", "sync", "--release", CATALOG_VERSION])
+        self.assertEqual(report["catalog_source"]["mode"], "sync")
+        self.assertEqual(report["catalog_source"]["catalog_version"], CATALOG_VERSION)
+        self.assertEqual(report["catalog_source"]["expected_sha256"], self.catalog_sha256)
+        self.assertEqual(report["catalog_source"]["service_url"], CATALOG_URL)
+        rows = self.rows(report)
+        self.assertEqual((rows["summary-missing-run"]["status"], rows["summary-missing-run"]["exit_code"]),
+                         ("PASS", 4))
+        self.assertEqual(rows["cases-verify"]["status"], "PASS")
 
-    def test_candidate_uses_isolated_public_install_without_mutating_baseline(self):
-        originals = {path.name: path.read_bytes() for path in self.root.iterdir()}
-        with patch.dict(alignment.os.environ, {"PYTHONPATH": "private-engine", "PYTHONHOME": "private-runtime",
-                                               "OPENSCI_CATALOG_CHECK_INTERVAL": "0"}):
-            runner = alignment.AlignmentCheck(self.root, self.out, "latest")
+    def test_latest_candidate_is_resolved_and_kept_even_outside_the_declared_range(self):
+        runner = alignment.AlignmentCheck(self.root, self.out, "latest")
         with patch.object(alignment, "latest_version", return_value="0.7.0") as latest, \
              patch.object(alignment.subprocess, "run", side_effect=self.fake_processes(version="0.7.0")) as commands:
             report = runner.run()
         latest.assert_called_once_with()
         self.assertEqual(report["status"], "PASS")
-        self.assertEqual((report["baseline_version"], report["candidate_version"], report["installed_version"]),
-                         ("0.6.1", "0.7.0", "0.7.0"))
-        self.assertEqual(report["python_version"], "3.11.9")
-        self.assertEqual(originals, {path.name: path.read_bytes() for path in self.root.iterdir()})
-        install = next(call for call in commands.call_args_list if "install" in call.args[0])
-        self.assertEqual(install.args[0][1:], ["-m", "pip", "--isolated", "install", "--no-compile",
-                                             "--index-url", "https://pypi.org/simple", "os-optics[protected]==0.7.0",
-                                             "--report", str(self.out / "logs" / "install-engine.json")])
-        self.assertTrue(report["engine_source"]["publication_verified"])
-        self.assertEqual(report["engine_source"]["sha256"], "a" * 64)
-        self.assertTrue(Path(install.args[0][0]).is_relative_to(self.out / ".venv"))
-        for call in commands.call_args_list:
-            # Compare key sets only, so a failure never writes the environment into logs.
-            keys = set(call.kwargs["env"])
-            self.assertEqual(keys & {"PYTHONPATH", "PYTHONHOME", "OPENSCI_CATALOG_CHECK_INTERVAL"}, set())
-            self.assertEqual(call.kwargs["env"]["PYTHONNOUSERSITE"], "1")
-            self.assertNotIn("import os_optics._", " ".join(call.args[0]))
-            self.assertNotIn("from os_optics._", " ".join(call.args[0]))
-        scientific_failure = next(row for row in report["checks"] if row["name"] == "ideal-unmet-target")
-        self.assertEqual((scientific_failure["status"], scientific_failure["exit_code"]), ("PASS", 1))
-        self.assertEqual(json.loads(Path(scientific_failure["stdout"]).read_text())["status"], "FAIL")
-        self.assertEqual(report["catalog_source"]["mode"], "sync")
-        self.assertEqual(report["catalog_source"]["catalog_version"], "2026-10-15.1")
-        self.assertEqual(report["catalog_source"]["service_url"], CATALOG_URL)
+        self.assertEqual((report["requested_version"], report["candidate_version"], report["installed_version"]),
+                         ("latest", "0.7.0", "0.7.0"))
+        self.assertIn("os-optics[protected]==0.7.0", self.calls(commands, "--report")[0].args[0])
+        kit = [call.args[0] for call in commands.call_args_list if call.args[0][-1] == str(self.root.resolve())]
+        self.assertEqual([command[-2] for command in kit], ["--no-deps"])
 
     def test_catalog_failures_retain_evidence_and_skip_dependent_checks(self):
         for code, category in (("CATALOG_SERVICE_UNREACHABLE", "catalog_network"),
-                               ("CATALOG_SERVICE_ERROR", "catalog_network"),
+                               ("CATALOG_RELEASE_NOT_FOUND", "catalog_network"),
                                ("CATALOG_STORE_BUSY", "catalog_network"),
                                ("CATALOG_INTEGRITY_FAILED", "catalog_data"),
                                ("CATALOG_HASH_MISMATCH", "catalog_data"),
                                ("INVALID_INPUT", "package_api")):
             with self.subTest(code=code):
                 runner = alignment.AlignmentCheck(self.root, self.out / code)
-                with patch.object(alignment.subprocess, "run", side_effect=self.fake_processes(sync_error=code)) as commands:
+                with patch.object(alignment.subprocess, "run",
+                                  side_effect=self.fake_processes(sync_error=code)) as commands:
                     report = runner.run()
                 self.assertEqual(report["status"], "FAIL")
                 checks = self.rows(report)
@@ -453,15 +407,16 @@ class AlignmentRunnerTests(unittest.TestCase):
                                   checks["beam-summary"]["blocked_by"]), ("SKIPPED", category, "catalog-sync"))
                 self.assertEqual((checks["saved-run-summary"]["status"], checks["saved-run-summary"]["category"],
                                   checks["saved-run-summary"]["blocked_by"]), ("SKIPPED", category, "beam-summary"))
+                self.assertEqual(checks["cases-verify"]["blocked_by"], "catalog-sync")
                 self.assertFalse(self.calls(commands, "tests.check_beam_summary"))
-                self.assertFalse(self.calls(commands, "examples/result_summary.py"))
                 self.assertEqual(checks["offline-tests"]["status"], "PASS")
-                self.assertEqual(report["catalog_source"], {"mode": "sync", "file": None, "service_url": CATALOG_URL})
+                self.assertEqual(report["catalog_source"]["service_url"], CATALOG_URL)
                 self.assertEqual(json.loads((runner.out / "report.json").read_text())["status"], "FAIL")
 
     def test_non_json_sync_failures_are_classified_by_explicit_signals(self):
         for index, (stderr, category) in enumerate((
-            ("Traceback (most recent call last):\nurllib.error.URLError: <urlopen error [Errno 104]>", "catalog_network"),
+            ("Traceback (most recent call last):\nurllib.error.URLError: <urlopen error [Errno 104]>",
+             "catalog_network"),
             ("Traceback (most recent call last):\nos_optics.catalog.errors.CatalogError: "
              "CATALOG_SERVICE_ERROR: not a manifest", "catalog_network"),
             ("Traceback (most recent call last):\nImportError: cannot import name 'sync'", "package_api"),
@@ -476,13 +431,15 @@ class AlignmentRunnerTests(unittest.TestCase):
     def test_beam_failure_after_successful_sync_preserves_catalog_or_api_category(self):
         for index, (diagnostic, category) in enumerate((
             (json.dumps({"code": "EXAMPLE_UNAVAILABLE", "message": "No compatible lens"}), "catalog_data"),
-            (json.dumps({"problems": [{"code": "EXAMPLE_UNAVAILABLE", "message": "No compatible lens"}]}), "catalog_data"),
+            (json.dumps({"problems": [{"code": "EXAMPLE_UNAVAILABLE", "message": "No compatible lens"}]}),
+             "catalog_data"),
             (json.dumps({"code": "CATALOG_SERVICE_ERROR", "message": "Release download failed"}), "catalog_network"),
             ("Traceback (most recent call last):\nAssertionError: result fields changed", "package_api"),
         )):
             with self.subTest(category=category, diagnostic=diagnostic):
                 runner = alignment.AlignmentCheck(self.root, self.out / f"beam-{index}")
-                with patch.object(alignment.subprocess, "run", side_effect=self.fake_processes(beam_error=diagnostic)) as commands:
+                with patch.object(alignment.subprocess, "run",
+                                  side_effect=self.fake_processes(beam_error=diagnostic)) as commands:
                     report = runner.run()
                 checks = self.rows(report)
                 self.assertEqual(report["status"], "FAIL")
@@ -492,7 +449,7 @@ class AlignmentRunnerTests(unittest.TestCase):
                 self.assertEqual(Path(checks["beam-summary"]["stderr"]).read_text(), diagnostic)
                 self.assertEqual((checks["saved-run-summary"]["status"], checks["saved-run-summary"]["category"]),
                                  ("SKIPPED", category))
-                self.assertFalse(self.calls(commands, "examples/result_summary.py"))
+                self.assertFalse(self.calls(commands, "os_optics_kit summary " + str(runner.out / "runs" / "beam")))
 
     def test_timeout_retains_partial_output_and_failure_report(self):
         runner = alignment.AlignmentCheck(self.root, self.out)
@@ -520,19 +477,29 @@ class AlignmentRunnerTests(unittest.TestCase):
         self.assertEqual(report["checks"][-1]["name"], "release-selection")
         self.assertEqual(json.loads((self.out / "report.json").read_text()), report)
 
-    def test_wrong_installed_version_stops_before_running_examples(self):
-        runner = alignment.AlignmentCheck(self.root, self.out, "0.7.0")
-        with patch.object(alignment.subprocess, "run", side_effect=self.fake_processes(version="0.6.1")) as commands:
-            report = runner.run()
-        self.assertEqual(report["status"], "FAIL")
-        names = [row["name"] for row in report["checks"]]
-        blocked = report["checks"][names.index("installed-version-match") + 1:]
-        self.assertEqual([row["name"] for row in blocked], [check["name"] for check in default_checks()])
-        self.assertEqual({(row["status"], row["category"]) for row in blocked}, {("SKIPPED", "package_api")})
-        self.assertEqual({row["blocked_by"] for row in blocked if not dict(
-            (check["name"], check.get("needs")) for check in default_checks())[row["name"]]},
-            {"installed-version-match"})
-        self.assertFalse(self.calls(commands, "unittest"))
+    def test_wrong_installed_versions_stop_before_running_checks(self):
+        for index, (engine, kit, expected) in enumerate((("0.6.0", "0.1.0", "os-optics: expected 0.6.1"),
+                                                         ("0.6.1", "0.0.9", "os-optics-kit: expected 0.1.0"))):
+            with self.subTest(engine=engine, kit=kit):
+                runner = alignment.AlignmentCheck(self.root, self.out / str(index))
+                with patch.object(alignment.subprocess, "run", side_effect=self.fake_processes(
+                        version=engine, kit_version=kit)) as commands:
+                    report = runner.run()
+                self.assertEqual(report["status"], "FAIL")
+                names = [row["name"] for row in report["checks"]]
+                self.assertIn(expected, report["checks"][names.index("installed-version-match")]["error"])
+                blocked = report["checks"][names.index("installed-version-match") + 1:]
+                self.assertEqual([row["name"] for row in blocked], [check["name"] for check in default_checks()])
+                self.assertEqual({(row["status"], row["category"]) for row in blocked}, {("SKIPPED", "package_api")})
+                self.assertFalse(self.calls(commands, "pytest"))
+
+    def test_kit_loaded_outside_the_environment_blocks_checks(self):
+        runner = alignment.AlignmentCheck(self.root, self.out)
+        with patch.object(alignment.subprocess, "run", side_effect=self.fake_processes(
+                outside=str(self.root / "tools" / "os_optics_kit" / "__init__.py"))):
+            rows = self.rows(runner.run())
+        self.assertEqual(rows["installed-package-location"]["status"], "FAIL")
+        self.assertEqual(rows["kit-cli"]["blocked_by"], "installed-package-location")
 
     def test_existing_output_is_rejected_without_touching_prior_evidence(self):
         self.out.mkdir()
@@ -544,32 +511,62 @@ class AlignmentRunnerTests(unittest.TestCase):
         self.assertEqual(previous.read_bytes(), original)
         self.assertEqual(list(self.out.iterdir()), [previous])
 
-    def test_invalid_check_list_is_a_setup_failure_without_commands(self):
+    def test_invalid_check_list_or_baseline_is_a_setup_failure_without_commands(self):
         (self.root / "alignment-checks.json").write_text('{"schema_version": 1, "checks": [{"name": "x"}]}',
                                                          encoding="utf-8")
         with patch.object(alignment.subprocess, "run") as command:
-            report = alignment.AlignmentCheck(self.root, self.out).run()
+            report = alignment.AlignmentCheck(self.root, self.out / "checks").run()
         command.assert_not_called()
         self.assertEqual((report["checks"][-1]["name"], report["checks"][-1]["category"]),
                          ("check-definitions", "setup"))
+        (self.root / "baseline.json").write_text('{"schema_version": 1}', encoding="utf-8")
+        with patch.object(alignment.subprocess, "run") as command:
+            report = alignment.AlignmentCheck(self.root, self.out / "baseline").run()
+        command.assert_not_called()
+        self.assertEqual(report["checks"][-1]["name"], "baseline-record")
 
-    def test_added_workflow_check_runs_without_code_changes(self):
+    def test_only_and_skip_are_recorded_and_left_out_checks_never_run(self):
+        with patch.object(alignment.subprocess, "run", side_effect=self.fake_processes()) as commands:
+            report = alignment.AlignmentCheck(self.root, self.out, skip=["cases-verify"]).run()
+        self.assertEqual(report["status"], "PASS")
+        self.assertNotIn("cases-verify", self.rows(report))
+        self.assertFalse(self.calls(commands, "cases verify"))
+        self.assertEqual(report["selection"], {"only": [], "skip": ["cases-verify"], "left_out": ["cases-verify"]})
+        with patch.object(alignment.subprocess, "run", side_effect=self.fake_processes()) as commands:
+            report = alignment.AlignmentCheck(self.root, self.out / "only", only=["kit-cli"]).run()
+        self.assertEqual([row["name"] for row in report["checks"] if row["name"] in
+                          {check["name"] for check in default_checks()}], ["kit-cli"])
+        self.assertFalse(self.calls(commands, "catalog sync"))
+        with patch.object(alignment.subprocess, "run") as command:
+            report = alignment.AlignmentCheck(self.root, self.out / "unknown", only=["missing"]).run()
+        command.assert_not_called()
+        self.assertEqual(report["checks"][-1]["name"], "check-selection")
+
+    def test_added_check_runs_without_code_changes(self):
         checks = default_checks() + [{
-            "name": "workflow-sweep", "argv": ["{python}", "examples/result_summary.py", "{runs}/beam", "--details"],
+            "name": "summary-details", "argv": ["{python}", "-m", "os_optics_kit", "summary", "{runs}/beam",
+                                                "--details"],
             "needs": ["beam-summary"], "expected_status": ["PASS", "WARNING"], "env": {"STUDY_DIR": "{out}/study"},
         }]
         self.write_checks(checks)
-        with patch.object(alignment.subprocess, "run", side_effect=self.fake_processes()) as commands:
+
+        def run(command, **kwargs):
+            if "--details" in command:
+                return subprocess.CompletedProcess(command, 0, json.dumps({"status": "WARNING"}), "")
+            return self.fake_processes()(command, **kwargs)
+
+        with patch.object(alignment.subprocess, "run", side_effect=run) as commands:
             report = alignment.AlignmentCheck(self.root, self.out).run()
         self.assertEqual(report["status"], "PASS")
         call = self.calls(commands, "--details")[0]
-        self.assertEqual(call.args[0][1:], ["examples/result_summary.py", str(self.out / "runs" / "beam"), "--details"])
+        self.assertEqual(call.args[0][1:], ["-m", "os_optics_kit", "summary", str(self.out / "runs" / "beam"),
+                                            "--details"])
         self.assertTrue(Path(call.args[0][0]).is_relative_to(self.out / ".venv"))
         self.assertEqual(call.kwargs["env"]["STUDY_DIR"], str(self.out / "study"))
-        self.assertEqual(self.rows(report)["workflow-sweep"]["result_status"], ["PASS", "WARNING"])
+        self.assertEqual(self.rows(report)["summary-details"]["result_status"], ["PASS", "WARNING"])
 
     def test_optional_check_runs_only_when_selected_in_its_own_environment(self):
-        topic = {"name": "topic", "argv": ["{python}", "examples/topic.py", "--out", "{runs}/topic"],
+        topic = {"name": "topic", "argv": ["{python}", "cases/topic.py", "--out", "{runs}/topic"],
                  "requirements": "requirements-topic.txt", "optional": True, "status_field": "outcome",
                  "expected_status": "WITHIN_TOLERANCE"}
         self.write_checks(default_checks() + [topic])
@@ -586,12 +583,13 @@ class AlignmentRunnerTests(unittest.TestCase):
         install = self.calls(commands, "requirements-topic.txt")[0].args[0]
         self.assertTrue(Path(install[0]).is_relative_to(self.out / "topic" / ".venv-topic"))
         self.assertIn("os-optics[protected]==0.6.1", install)
+        self.assertEqual(rows["install-kit-env-topic"]["status"], "PASS")
         self.assertTrue(Path(rows["topic"]["command"][0]).is_relative_to(self.out / "topic" / ".venv-topic"))
         self.assertEqual(rows["installed-environment-env-topic"]["status"], "PASS")
         self.assertEqual(report["optional_checks"]["selected"], ["topic"])
 
     def test_optional_environment_failure_skips_its_checks_with_that_category(self):
-        topic = {"name": "topic", "argv": ["{python}", "examples/topic.py"], "requirements": "requirements-topic.txt",
+        topic = {"name": "topic", "argv": ["{python}", "cases/topic.py"], "requirements": "requirements-topic.txt",
                  "optional": True}
         self.write_checks(default_checks() + [topic, dict(topic, name="topic-next", needs=["topic"])])
         with patch.object(alignment.subprocess, "run", side_effect=self.fake_processes(
@@ -605,7 +603,7 @@ class AlignmentRunnerTests(unittest.TestCase):
         self.assertEqual(rows["beam-summary"]["status"], "PASS")
 
     def test_check_needing_a_newer_python_is_skipped_without_building_its_environment(self):
-        topic = {"name": "topic", "argv": ["{python}", "examples/topic.py"], "requirements": "requirements-topic.txt",
+        topic = {"name": "topic", "argv": ["{python}", "cases/topic.py"], "requirements": "requirements-topic.txt",
                  "optional": True, "requires_python": "3.99"}
         self.write_checks(default_checks() + [topic, dict(topic, name="topic-next", needs=["topic"],
                                                           requires_python="3.11")])
@@ -618,7 +616,7 @@ class AlignmentRunnerTests(unittest.TestCase):
         self.assertEqual((rows["topic-next"]["status"], rows["topic-next"]["blocked_by"]), ("SKIPPED", "topic"))
         self.assertFalse(self.calls(commands, "requirements-topic.txt"))
 
-    def test_pinned_catalog_file_is_verified_imported_and_reported_distinctly(self):
+    def test_catalog_file_is_verified_imported_and_reported_distinctly(self):
         runner = alignment.AlignmentCheck(self.root, self.out, catalog_file=self.catalog)
         with patch.object(alignment.subprocess, "run", side_effect=self.fake_processes(
                 sync_error="CATALOG_SERVICE_UNREACHABLE")) as commands:
@@ -630,15 +628,13 @@ class AlignmentRunnerTests(unittest.TestCase):
         self.assertEqual(rows["catalog-import"]["command"][-3:], ["catalog", "import", str(self.catalog.resolve())])
         self.assertEqual(rows["catalog-file"]["sha256"], self.catalog_sha256)
         self.assertEqual(report["catalog_source"], {
-            "mode": "file", "file": str(self.catalog.resolve()), "sha256": self.catalog_sha256,
-            "expected_sha256": self.catalog_sha256, "file_catalog_version": "2026-10-15.1",
-            "automatic_check_interval": "0", "catalog_version": "2026-10-15.1",
-            "active_sha256": self.catalog_sha256, "service_url": CATALOG_URL})
-        self.assertTrue(all(call.kwargs["env"]["OPENSCI_CATALOG_CHECK_INTERVAL"] == "0"
-                            for call in commands.call_args_list))
+            "mode": "file", "file": str(self.catalog.resolve()), "release_requested": None,
+            "sha256": self.catalog_sha256, "expected_sha256": self.catalog_sha256, "release": CATALOG_VERSION,
+            "catalog_version": CATALOG_VERSION, "active_sha256": self.catalog_sha256, "service_url": CATALOG_URL})
 
     def test_catalog_file_digest_mismatch_blocks_catalog_checks_as_data_failure(self):
-        for index, (sha256, error) in enumerate((("0" * 64, "differs from published"), (None, "No published SHA-256"))):
+        for index, (sha256, error) in enumerate((("0" * 64, "differs from published"),
+                                                 (None, "No published SHA-256"))):
             with self.subTest(error=error):
                 if sha256 is None:
                     self.catalog.write_text(json.dumps({"catalog_version": "2026-11-01.1"}), encoding="utf-8")
@@ -661,14 +657,32 @@ class AlignmentRunnerTests(unittest.TestCase):
         with patch.object(alignment.subprocess, "run", side_effect=self.fake_processes(status=status)):
             self.assertEqual(runner.run()["status"], "PASS")
 
+    def test_other_catalog_release_needs_its_digest(self):
+        runner = alignment.AlignmentCheck(self.root, self.out / "missing", catalog_release="2026-11-01.1")
+        with patch.object(alignment.subprocess, "run", side_effect=self.fake_processes()) as commands:
+            rows = self.rows(runner.run())
+        self.assertIn("No published SHA-256", rows["catalog-sync"]["error"])
+        self.assertFalse(self.calls(commands, "catalog sync"))
+        status = {"active": {"catalog_version": "2026-11-01.1", "sha256": "b" * 64}, "service": {}}
+        runner = alignment.AlignmentCheck(self.root, self.out / "given", catalog_release="2026-11-01.1",
+                                          catalog_sha256="b" * 64)
+        with patch.object(alignment.subprocess, "run", side_effect=self.fake_processes(status=status)) as commands:
+            report = runner.run()
+        self.assertEqual(report["status"], "PASS")
+        self.assertEqual(self.calls(commands, "catalog sync")[0].args[0][-1], "2026-11-01.1")
+        self.assertEqual(report["catalog_source"]["release_requested"], "2026-11-01.1")
+
     def test_catalog_identity_rejects_unexpected_active_release_or_retired_service_host(self):
         for index, status in enumerate((
-            {"active": {"catalog_version": "2026-10-15.1", "sha256": "f" * 64}, "service": {}},
+            {"active": {"catalog_version": CATALOG_VERSION, "sha256": "f" * 64}, "service": {}},
+            {"active": {"catalog_version": "2026-10-16.1", "sha256": None}, "service": {}},
             {"active": None, "service": {}},
-            {"active": {"catalog_version": "2026-10-15.1", "sha256": "f" * 64},
+            {"active": {"catalog_version": CATALOG_VERSION, "sha256": None},
              "service": {"manifest_url": f"https://{RETIRED}/api/v1/catalog"}},
         )):
             with self.subTest(status=status):
+                if status["active"] and status["active"]["sha256"] is None:
+                    status["active"]["sha256"] = self.catalog_sha256
                 catalog_file = self.catalog if index == 0 else None
                 runner = alignment.AlignmentCheck(self.root, self.out / str(index), catalog_file=catalog_file)
                 with patch.object(alignment.subprocess, "run", side_effect=self.fake_processes(status=status)):
@@ -676,54 +690,70 @@ class AlignmentRunnerTests(unittest.TestCase):
                 self.assertEqual(rows["catalog-identity"]["status"], "FAIL")
                 self.assertEqual(rows["beam-summary"]["blocked_by"], "catalog-identity")
 
-    def test_catalog_sha256_option_needs_a_catalog_file(self):
-        with patch("sys.stderr", io.StringIO()), self.assertRaises(SystemExit) as raised:
-            alignment.main(["--catalog-sha256", "0" * 64, "--out", str(self.out)])
-        self.assertEqual(raised.exception.code, 2)
-        self.assertFalse(self.out.exists())
-
-    def test_local_wheel_is_explicit_hashed_and_never_publication_evidence(self):
-        wheel = self.root / "os_optics-0.7.0-py3-none-any.whl"
-        wheel.write_bytes(b"candidate wheel")
-        digest = alignment.sha256_file(wheel)
-        baseline = (self.root / "engine-baseline.json").read_bytes()
-        runner = alignment.AlignmentCheck(self.root, self.out, "0.7.0", candidate_wheel=wheel,
-                                          candidate_sha256=digest)
-        with patch.object(alignment.subprocess, "run", side_effect=self.fake_processes(version="0.7.0")) as calls:
-            report = runner.run()
-        self.assertEqual(report["status"], "PASS")
-        self.assertEqual(report["engine_source"]["mode"], "local-wheel")
-        self.assertFalse(report["engine_source"]["publication_verified"])
-        self.assertEqual(report["engine_source"]["sha256"], digest)
-        self.assertEqual(baseline, (self.root / "engine-baseline.json").read_bytes())
-        self.assertIn("os-optics[protected] @ " + wheel.as_uri(), self.calls(calls, "install")[0].args[0])
-
-    def test_bad_candidate_digest_stops_before_installing(self):
-        wheel = self.root / "os_optics-0.7.0-py3-none-any.whl"
-        wheel.write_bytes(b"candidate wheel")
-        for i, (version, digest) in enumerate((("0.7.0", "0" * 64), (None, alignment.sha256_file(wheel)))):
-            with self.subTest(version=version):
-                runner = alignment.AlignmentCheck(self.root, self.out / str(i), version,
-                    candidate_wheel=wheel, candidate_sha256=digest)
-                with patch.object(alignment.subprocess, "run") as commands:
-                    report = runner.run()
-                commands.assert_not_called()
-                self.assertEqual(report["status"], "FAIL")
-                self.assertEqual(report["checks"][-1]["name"], "candidate-artifact")
-
-    def test_local_wheel_cli_requires_all_identity_arguments(self):
-        for extra in (["--candidate-wheel", "test.whl"], ["--candidate-sha256", "0" * 64],
-                      ["--candidate", "latest", "--candidate-wheel", "test.whl", "--candidate-sha256", "0" * 64]):
-            with self.subTest(extra=extra), patch("sys.stderr", io.StringIO()), self.assertRaises(SystemExit) as raised:
+    def test_cli_option_combinations(self):
+        for extra in (["--catalog-sha256", "0" * 64], ["--engine-sha256", "0" * 64],
+                      ["--engine", "latest", "--engine-wheel", "os_optics-0.6.1-py3-none-any.whl"],
+                      ["--engine", ">=0.6"], ["--catalog-release", "current"],
+                      ["--catalog-file", "a.json", "--catalog-release", "2026-10-15.1"]):
+            with self.subTest(extra=extra), patch("sys.stderr", io.StringIO()), \
+                    self.assertRaises(SystemExit) as raised:
                 alignment.main(["--out", str(self.out)] + extra)
             self.assertEqual(raised.exception.code, 2)
         self.assertFalse(self.out.exists())
 
-    def test_missing_or_untrusted_pip_artifact_blocks_examples(self):
-        for i, url in enumerate(("https://example.org/engine.whl", None)):
-            runner = alignment.AlignmentCheck(self.root, self.out / str(i))
+    def test_local_engine_wheel_is_hashed_and_never_publication_evidence(self):
+        wheel = self.root / "os_optics-0.7.0-py3-none-any.whl"
+        wheel.write_bytes(b"engine wheel")
+        digest = alignment.sha256_file(wheel)
+        baseline = (self.root / "baseline.json").read_bytes()
+        runner = alignment.AlignmentCheck(self.root, self.out, engine_wheel=wheel)
+        with patch.object(alignment.subprocess, "run", side_effect=self.fake_processes(version="0.7.0")) as calls:
+            report = runner.run()
+        self.assertEqual(report["status"], "PASS")
+        self.assertEqual(report["candidate_version"], "0.7.0")
+        self.assertEqual(report["engine_source"]["mode"], "local-wheel")
+        self.assertFalse(report["engine_source"]["publication_verified"])
+        self.assertEqual(report["engine_source"]["sha256"], digest)
+        self.assertEqual(baseline, (self.root / "baseline.json").read_bytes())
+        self.assertIn("os-optics[protected] @ " + wheel.as_uri(), self.calls(calls, "--report")[0].args[0])
+
+    def test_bad_engine_wheel_stops_before_installing(self):
+        wheel = self.root / "os_optics-0.7.0-py3-none-any.whl"
+        wheel.write_bytes(b"engine wheel")
+        for index, (engine, digest, path) in enumerate((
+                (None, "0" * 64, wheel), ("0.7.1", None, wheel), (None, None, self.root / "os_optics-0.7.0.whl"),
+                (None, None, self.root / "os_optics-0.7.0-py3-none-any.whl.missing"))):
+            with self.subTest(index=index):
+                runner = alignment.AlignmentCheck(self.root, self.out / str(index), engine, engine_wheel=path,
+                                                  engine_sha256=digest)
+                with patch.object(alignment.subprocess, "run") as commands:
+                    report = runner.run()
+                commands.assert_not_called()
+                self.assertEqual(report["status"], "FAIL")
+                self.assertEqual(report["checks"][-1]["name"], "engine-artifact")
+
+    def test_kit_wheel_is_installed_without_dependencies_and_its_version_checked(self):
+        wheel = self.root / "os_optics_kit-0.2.0-py3-none-any.whl"
+        wheel.write_bytes(b"kit wheel")
+        runner = alignment.AlignmentCheck(self.root, self.out, kit_wheel=wheel)
+        with patch.object(alignment.subprocess, "run", side_effect=self.fake_processes(kit_version="0.2.0")) as calls:
+            report = runner.run()
+        self.assertEqual(report["status"], "PASS")
+        self.assertEqual(report["kit_source"]["sha256"], alignment.sha256_file(wheel))
+        self.assertEqual(report["kit_version"], "0.2.0")
+        install = self.calls(calls, "os-optics-kit @ ")[0].args[0]
+        self.assertEqual(install[-2:], ["--no-deps", "os-optics-kit @ " + wheel.resolve().as_uri()])
+        runner = alignment.AlignmentCheck(self.root, self.out / "mismatch", kit_wheel=wheel)
+        with patch.object(alignment.subprocess, "run", side_effect=self.fake_processes(kit_version="0.1.0")):
+            rows = self.rows(runner.run())
+        self.assertEqual(rows["installed-version-match"]["status"], "FAIL")
+
+    def test_missing_or_untrusted_pip_artifact_blocks_checks(self):
+        for index, url in enumerate(("https://example.org/engine.whl", None)):
+            runner = alignment.AlignmentCheck(self.root, self.out / str(index))
             normal = self.fake_processes()
-            def run(command, **kwargs):
+
+            def run(command, url=url, normal=normal, **kwargs):
                 result = normal(command, **kwargs)
                 if "--report" in command:
                     path = Path(command[command.index("--report") + 1])
@@ -734,23 +764,13 @@ class AlignmentRunnerTests(unittest.TestCase):
                         data["install"][0]["download_info"]["url"] = url
                         path.write_text(json.dumps(data))
                 return result
+
             with patch.object(alignment.subprocess, "run", side_effect=run):
                 report = runner.run()
             rows = self.rows(report)
             self.assertEqual(rows["installed-artifact"]["status"], "FAIL")
             self.assertEqual(rows["offline-tests"]["blocked_by"], "installed-artifact")
             self.assertFalse(report["engine_source"]["publication_verified"])
-
-
-class WorkflowTests(unittest.TestCase):
-    def test_workflow_avoids_duplicate_runs_and_limits_issue_permission(self):
-        text = (ROOT / ".github" / "workflows" / "engine-alignment.yml").read_text(encoding="utf-8")
-        self.assertIn("push:\n    branches: [main]", text)
-        self.assertEqual(text.count("issues: write"), 1)
-        self.assertIn("if: ${{ always() && github.event_name == 'schedule' }}", text)
-        self.assertIn("fromJSON(needs.baseline.outputs.python)", text)
-        baseline = json.loads((ROOT / "engine-baseline.json").read_text(encoding="utf-8"))
-        self.assertEqual(baseline["ci_python"][0], "3.11")
 
 
 if __name__ == "__main__":

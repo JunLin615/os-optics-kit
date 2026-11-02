@@ -32,7 +32,7 @@ def report(version="0.6.1", failed=False):
             "name": "example_focus",
             "category": "package_api",
             "status": "FAIL" if failed else "PASS",
-            "command": ["/tmp/build-123/.venv/bin/python", "examples/ideal_lens_focus.py"],
+            "command": ["/tmp/build-123/.venv/bin/python", "-m", "os_optics_kit", "summary", "runs/beam"],
             "exit_code": 1 if failed else 0,
             "stdout": "run-alignment/logs/example.stdout.log",
             "stderr": "run-alignment/logs/example.stderr.log",
@@ -81,9 +81,9 @@ class AlignmentReportingTests(unittest.TestCase):
         self.assertEqual(publish_report(candidate, http.client()), {"action": "none", "url": None})
         self.assertEqual(http.calls, [])
         summary = render_summary(candidate)
-        self.assertIn("Local-wheel preparation result", summary)
-        self.assertIn("--candidate-wheel os_optics-0.9.0-py3-none-any.whl", summary)
-        self.assertIn("--candidate-sha256 " + "b" * 64, summary)
+        self.assertIn("Local-wheel result", summary)
+        self.assertIn("--engine-wheel os_optics-0.9.0-py3-none-any.whl --engine-sha256 " + "b" * 64, summary)
+        self.assertNotIn("--engine 0.9.0", summary)
 
     def test_verified_pass_is_quiet_without_http(self):
         http = FakeHTTP()
@@ -99,7 +99,7 @@ class AlignmentReportingTests(unittest.TestCase):
         issue = http.issues[0]
         self.assertIn("0.7.0: new unverified version", issue["title"])
         for expected in ("0.6.1", "0.7.0", RUN_URL, ARTIFACT_URL, "PASS",
-                         "does not gate engine releases", "--candidate 0.7.0"):
+                         "changes only through a reviewed pull request", "--engine 0.7.0"):
             self.assertIn(expected, issue["body"])
 
     def test_repeated_observation_does_not_post_comment_or_reopen_closed_issue(self):
@@ -202,7 +202,7 @@ class AlignmentReportingTests(unittest.TestCase):
         failed = report("0.7.0", failed=True)
         failed["checks"][0]["category"] = "catalog_network"
         summary = render_summary(failed, RUN_URL, ARTIFACT_URL)
-        for expected in ("FAIL", "catalog_network", "examples/ideal_lens_focus.py",
+        for expected in ("FAIL", "catalog_network", "os_optics_kit summary runs/beam",
                          "Result API changed", "example.stderr.log", RUN_URL, ARTIFACT_URL):
             self.assertIn(expected, summary)
 
@@ -227,7 +227,8 @@ class AlignmentReportingTests(unittest.TestCase):
             with patch("scripts.report_alignment.request.urlopen") as urlopen:
                 self.assertEqual(main([str(source), "--summary", str(summary)]), 0)
                 urlopen.assert_not_called()
-            self.assertTrue(summary.read_text(encoding="utf-8").startswith("Existing step summary\n## Engine alignment"))
+            self.assertTrue(summary.read_text(encoding="utf-8").startswith(
+                "Existing step summary\n## Engine alignment"))
 
     def test_missing_report_still_writes_actionable_job_summary(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -274,12 +275,15 @@ class AlignmentReportingTests(unittest.TestCase):
         failed["checks"].append({"name": "beam-summary", "category": "catalog_network", "status": "SKIPPED",
                                  "blocked_by": "catalog-sync"})
         failed.update(python_version="3.11.16", catalog_source={
-            "mode": "sync", "file": None, "service_url": "https://opensci-optics.com/api/v1/catalog"})
+            "mode": "sync", "file": None, "release": "2026-10-15.1",
+            "service_url": "https://opensci-optics.com/api/v1/catalog"})
         failed["optional_checks"] = {"requested": [], "selected": [], "not_selected": ["interop-optimization"]}
         failed["checks"].append({"name": "interop-quantum", "category": "setup", "status": "SKIPPED",
                                  "requires_python": "3.12"})
         summary = render_summary(read_back(failed))
-        for expected in ("| Python | 3.11.16 |", "fresh sync from https://opensci-optics.com/api/v1/catalog, no active release",
+        for expected in ("| Python | 3.11.16 |",
+                         "pinned sync of 2026-10-15.1 from https://opensci-optics.com/api/v1/catalog, "
+                         "no active release",
                          "SKIPPED (blocked by catalog-sync)", "interop-optimization",
                          "SKIPPED (requires Python &gt;= 3.12)"):
             self.assertIn(expected, summary)
@@ -289,9 +293,29 @@ class AlignmentReportingTests(unittest.TestCase):
                                         "expected_sha256": "ce97" * 16, "catalog_version": "2026-10-15.1"},
                         optional_checks={"requested": ["interop-optimization"], "selected": [], "not_selected": []})
         summary = render_summary(read_back(imported))
-        self.assertIn("imported file /data/2026-10-15.1.json (sha256 " + "ce97" * 16 + "), release 2026-10-15.1", summary)
+        self.assertIn("imported file /data/2026-10-15.1.json (sha256 " + "ce97" * 16 + "), active release 2026-10-15.1",
+                      summary)
         self.assertIn("--catalog-file /data/2026-10-15.1.json --catalog-sha256 " + "ce97" * 16
                       + " --optional interop-optimization", summary)
+
+    def test_kit_source_selection_and_catalog_release_are_rendered_and_reproducible(self):
+        observed = report("0.8.0")
+        observed.update(kit_version="0.2.0", kit_source={
+            "mode": "wheel", "file": "/dist/os_optics_kit-0.2.0-py3-none-any.whl",
+            "filename": "os_optics_kit-0.2.0-py3-none-any.whl", "sha256": "d" * 64},
+            catalog_source={"mode": "sync", "file": None, "release": "2026-11-01.1",
+                            "release_requested": "2026-11-01.1", "expected_sha256": "e" * 64,
+                            "catalog_version": "2026-11-01.1"},
+            selection={"only": [], "skip": ["cases-verify"], "left_out": ["cases-verify"]})
+        summary = render_summary(read_back(observed))
+        self.assertIn("| Kit | 0.2.0 from wheel os_optics_kit-0.2.0-py3-none-any.whl (sha256 " + "d" * 64, summary)
+        self.assertIn("Default checks left out by --only/--skip: cases-verify", summary)
+        self.assertIn("--engine 0.8.0 --kit-wheel os_optics_kit-0.2.0-py3-none-any.whl --catalog-release 2026-11-01.1 "
+                      "--catalog-sha256 " + "e" * 64 + " --skip cases-verify", summary)
+        source = report()
+        source.update(kit_version="0.1.0", kit_source={"mode": "source", "file": None})
+        self.assertIn("| Kit | 0.1.0 from source checkout |", render_summary(read_back(source)))
+        self.assertIn("--out run-alignment\n```", render_summary(read_back(source)))
 
     def test_new_report_fields_do_not_change_the_fingerprint(self):
         original = report("0.8.0", failed=True)
@@ -303,7 +327,7 @@ class AlignmentReportingTests(unittest.TestCase):
         self.assertEqual(observation_marker(original), observation_marker(extended))
 
     def test_schema_rejects_malformed_optional_objects(self):
-        for field in ("catalog_source", "optional_checks"):
+        for field in ("catalog_source", "optional_checks", "kit_source", "selection"):
             invalid = report()
             invalid[field] = "file"
             with self.subTest(field=field), self.assertRaises(ValueError):

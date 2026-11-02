@@ -1,12 +1,16 @@
-"""Check examples against an isolated installation of a released PyPI engine.
+"""Check the kit against a fresh, isolated installation of os-optics and os-optics-kit.
 
 python scripts/check_alignment.py --out run-alignment
-python scripts/check_alignment.py --candidate latest --out run-candidate
-python scripts/check_alignment.py --candidate 0.10.1 --catalog-file RELEASE.json --out run-candidate-file
+python scripts/check_alignment.py --engine latest --out run-latest
+python scripts/check_alignment.py --engine-wheel os_optics-0.12.0-py3-none-any.whl --catalog-file RELEASE.json \
+    --out run-local
+python scripts/check_alignment.py --kit-wheel dist/os_optics_kit-0.1.0-py3-none-any.whl --out run-kit-wheel
 python scripts/check_alignment.py --optional all --out run-alignment-full
 
-engine-baseline.json records the verified release; alignment-checks.json lists the
-checks. Candidate checks never change either file.
+The engine comes from PyPI (the verified version in baseline.json, an exact version, or latest) or from a local wheel;
+the kit comes from this checkout or from a built wheel. The catalog snapshot is synchronized by release from the
+catalog service, or imported from a file; either way its SHA-256 must match. alignment-checks.json lists the checks.
+A check never changes baseline.json, alignment-checks.json or any other tracked file.
 """
 
 import argparse
@@ -18,15 +22,21 @@ import re
 import subprocess
 import sys
 import urllib.request
+from urllib.parse import urlparse
 
 
 ROOT = Path(__file__).resolve().parents[1]
+BASELINE_FILE = "baseline.json"
 CHECKS_FILE = "alignment-checks.json"
+PYPI_INDEX = "https://pypi.org/simple"
 VERSION = re.compile(r"\d+(?:\.\d+)+(?:a\d+|b\d+|rc\d+|\.post\d+|\.dev\d+)?")
+CATALOG_RELEASE = re.compile(r"20\d\d-\d\d-\d\d\.\d+")
 SHA256 = re.compile(r"[0-9a-f]{64}")
 CHECK_NAME = re.compile(r"[a-z0-9][a-z0-9-]*")
 PLACEHOLDER = re.compile(r"\{([a-z_]+)\}")
 PLACEHOLDERS = {"python", "runs", "out"}
+# The website's former host; a catalog service URL on it is a configuration error.
+RETIRED_HOSTS = ("opensci-" + "optic.com",)
 
 # The catalog service or its transport could not deliver a usable release.
 NETWORK_CODES = {
@@ -54,23 +64,6 @@ TRANSPORT_ERROR = re.compile(
     re.M,
 )
 
-V = r"(\d+\.\d+(?:\.\d+)*(?:(?:a|b|rc)\d+|\.post\d+|\.dev\d+)?)(?![\w+]|\.\d)"
-MINIMUM = r"(?!\**\s*(?:or (?:newer|later)|或更高|及以上))"
-# Distribution names in version statements: the current one and the earlier name (up to 0.9.0),
-# so a leftover pin of the earlier name is reported as well.
-NAMES = r"(?:os-optics|opensci-engine)"
-# Exact install pins and issue-template placeholders: checked in every scanned file.
-STRICT_PINS = (
-    re.compile(NAMES + r"(?:\[[\w,\s-]+\])?==" + V),
-    re.compile(r"placeholder:\s*[\"']" + V + r"[\"']"),
-)
-# Prose statements of the documented version: checked in listed current documents.
-PROSE_PINS = (
-    re.compile(r"(?:" + NAMES + r"|OS Optics)\**\s+\**" + V + MINIMUM),
-    re.compile(r"\*\*" + V + r"\*\*" + MINIMUM),
-)
-CATALOG_RELEASE = re.compile(r"(?<![\w.-])(20\d\d-\d\d-\d\d\.\d+)(?![\w.]*\d)")
-
 
 def release_version(value):
     """Accept an exact public release number, never a URL or pip option."""
@@ -81,7 +74,7 @@ def release_version(value):
 
 def latest_version():
     request = urllib.request.Request(
-        "https://pypi.org/pypi/os-optics/json", headers={"User-Agent": "os-optics-alignment"}
+        "https://pypi.org/pypi/os-optics/json", headers={"User-Agent": "os-optics-kit-alignment"}
     )
     with urllib.request.urlopen(request, timeout=30) as response:
         return release_version(json.load(response)["info"]["version"])
@@ -95,8 +88,13 @@ def sha256_file(path):
     return digest.hexdigest()
 
 
-# --------------------------------------------------------------------------------------------------
-# Documentation consistency
+def wheel_version(path, distribution):
+    """Version from a wheel filename (``os_optics-0.12.0-py3-none-any.whl``) of the expected distribution."""
+    path = Path(path)
+    parts = path.name.split("-")
+    if path.suffix != ".whl" or len(parts) < 5 or parts[0] != distribution.replace("-", "_"):
+        raise ValueError(f"{path.name}: not a {distribution} wheel")
+    return release_version(parts[1])
 
 
 def host_pattern(host):
@@ -105,79 +103,31 @@ def host_pattern(host):
     return re.compile(r"(?<!\w)" + escaped + r"(?!\w)", re.I)
 
 
-def _lines(text, pattern):
-    for match in pattern.finditer(text):
-        yield text.count("\n", 0, match.start()) + 1, match.group(match.lastindex or 0)
+def read_baseline(root):
+    """The fields of baseline.json this runner uses, validated."""
+    document = json.loads((Path(root) / BASELINE_FILE).read_text(encoding="utf-8"))
+    if not isinstance(document, dict) or document.get("schema") != "os-optics-kit.baseline" \
+            or document.get("schema_version") != 1:
+        raise ValueError("expected schema os-optics-kit.baseline, schema_version 1")
+    engine, catalog = document.get("engine"), document.get("catalog")
+    if not isinstance(engine, dict) or not isinstance(catalog, dict):
+        raise ValueError("engine and catalog must be objects")
+    if not isinstance(catalog.get("version"), str) or not CATALOG_RELEASE.fullmatch(catalog["version"]):
+        raise ValueError(f"catalog.version: expected a release such as 2026-10-28.1, got {catalog.get('version')!r}")
+    if not isinstance(catalog.get("sha256"), str) or not SHA256.fullmatch(catalog["sha256"]):
+        raise ValueError("catalog.sha256: expected 64 lower-case hexadecimal characters")
+    return {"engine_version": release_version(engine.get("verified_version")),
+            "requirement": engine.get("requirement"), "kit_version": release_version(document.get("kit_version")),
+            "catalog_version": catalog["version"], "catalog_sha256": catalog["sha256"],
+            "python": document.get("python")}
 
 
-def _scanned_files(root, scan):
-    historical = set(scan.get("historical", []))
-    seen = set()
-    for pattern in scan.get("include", []):
-        for path in sorted(root.glob(pattern)):
-            relative = path.relative_to(root).as_posix()
-            folders = relative.split("/")[:-1]
-            if (not path.is_file() or relative in seen or relative in historical
-                    or any((part.startswith(".") and part != ".github") or part.startswith("run")
-                           or part in {"__pycache__", "node_modules"} for part in folders)):
-                continue
-            seen.add(relative)
-            yield relative
-
-
-def documentation_problems(root, baseline):
-    """Current pins, catalog release and website host must match the baseline.
-
-    Listed current documents must state the baseline version (exact pins and prose such as
-    **0.8.0** or "os-optics 0.8.0"); minimum statements ("0.8.0 or newer", ">=0.8.0") are
-    not pins. Every other scanned file is checked for exact install pins and retired hosts.
-    Historical validation records keep their original versions and are not scanned.
-    """
-    problems = []
-    expected = baseline["version"]
-    catalog = (baseline.get("verified_environment") or {}).get("catalog_version")
-    retired = [(host, host_pattern(host)) for host in baseline.get("retired_hosts", [])]
-
-    def add(path, line, kind, found, message):
-        problem = {"path": path, "line": line, "kind": kind, "found": found, "message": message}
-        if problem not in problems:
-            problems.append(problem)
-
-    def common(name, text, prose):
-        pins = []
-        for pattern in STRICT_PINS + (PROSE_PINS if prose else ()):
-            pins += list(_lines(text, pattern))
-        for line, pin in sorted(pins):
-            if pin != expected:
-                add(name, line, "version_pin", pin, f"{name}:{line}: version pin {pin} differs from baseline {expected}")
-        for host, pattern in retired:
-            for line, found in _lines(text, pattern):
-                add(name, line, "retired_host", found,
-                    f"{name}:{line}: retired host {found}; use {baseline.get('website') or 'the current website'}")
-        return pins
-
-    current = set()
-    for entry in baseline["documentation"]:
-        name, reference = (entry, True) if isinstance(entry, str) else (entry["path"], entry.get("baseline_reference", True))
-        current.add(name)
-        try:
-            text = (root / name).read_text(encoding="utf-8")
-        except OSError as exc:
-            add(name, None, "missing_file", None, f"{name}: cannot read listed document ({exc.strerror or exc})")
-            continue
-        if not common(name, text, prose=True):
-            add(name, None, "missing_pin", None, f"{name}: no version pin for baseline {expected}")
-        if reference and "engine-baseline.json" not in text:
-            add(name, None, "missing_reference", None, f"{name}: missing reference to engine-baseline.json")
-        if catalog:
-            for line, release in _lines(text, CATALOG_RELEASE):
-                if release != catalog:
-                    add(name, line, "catalog_version", release,
-                        f"{name}:{line}: catalog release {release} differs from verified catalog {catalog}")
-    for name in _scanned_files(root, baseline.get("documentation_scan") or {}):
-        if name not in current:
-            common(name, (root / name).read_text(encoding="utf-8", errors="replace"), prose=False)
-    return problems
+def source_kit_version(root):
+    text = (Path(root) / "tools" / "os_optics_kit" / "_version.py").read_text(encoding="utf-8")
+    match = re.search(r"^__version__ = \"([^\"]+)\"", text, re.M)
+    if not match:
+        raise ValueError("tools/os_optics_kit/_version.py: no __version__")
+    return release_version(match.group(1))
 
 
 # --------------------------------------------------------------------------------------------------
@@ -240,10 +190,11 @@ CHECK_FIELDS = {
     "needs_catalog", "needs", "requirements", "requires_python", "optional", "timeout", "env",
 }
 RESERVED = re.compile(
-    r"(?:baseline-documentation|check-definitions|release-selection|create-environment|install-engine|"
-    r"install-example-dependencies|installed-environment|installed-version-match|installed-package-location|"
-    r"installed-packages|dependency-consistency|catalog-file|catalog-import|catalog-sync|catalog-identity|"
-    r"alignment-runner|candidate-artifact|installed-artifact)(?:-.*)?|(?:create-environment|install|installed-environment|installed-packages)-env-.*"
+    r"(?:baseline-record|check-definitions|check-selection|release-selection|engine-artifact|kit-artifact|"
+    r"create-environment|install-engine|install-kit|install-default-requirements|installed-environment|"
+    r"installed-version-match|installed-package-location|installed-packages|installed-artifact|"
+    r"dependency-consistency|catalog-file|catalog-import|catalog-sync|catalog-identity|alignment-runner)(?:-.*)?"
+    r"|(?:create-environment|install|install-kit|installed-environment|installed-packages)-env-.*"
 )
 
 
@@ -267,6 +218,7 @@ def _placeholders(value, label):
 
 def load_checks(root):
     """Read and validate alignment-checks.json; every check runs in an isolated interpreter."""
+    root = Path(root)
     document = json.loads((root / CHECKS_FILE).read_text(encoding="utf-8"))
     if not isinstance(document, dict) or document.get("schema_version") != 1:
         raise ValueError(f"{CHECKS_FILE}: expected an object with schema_version 1")
@@ -342,23 +294,41 @@ def load_checks(root):
     return {"default_requirements": requirements, "checks": checks}
 
 
-def select_checks(checks, optional):
-    """Default checks plus requested optional ones and everything they need."""
-    optional = [item for value in optional or () for item in value.split(",") if item]
+def _names(values):
+    return [item for value in values or () for item in value.split(",") if item]
+
+
+def select_checks(checks, optional, only=(), skip=()):
+    """Default checks plus requested optional ones and everything they need.
+
+    ``only`` restricts the run to the named checks and what they need; ``skip`` leaves out the named checks and
+    every check that needs them.
+    """
+    optional, only, skip = _names(optional), _names(only), _names(skip)
     by_name = {check["name"]: check for check in checks}
     available = sorted(name for name, check in by_name.items() if check["optional"])
     unknown = [name for name in optional if name != "all" and name not in by_name]
     if unknown:
         raise ValueError(f"Unknown optional checks {unknown}; available: {available}")
-    selected = {name for name, check in by_name.items() if not check["optional"]}
-    selected |= set(available) if "all" in optional else set(optional)
+    unknown = [name for name in only + skip if name not in by_name]
+    if unknown:
+        raise ValueError(f"Unknown checks {unknown}; available: {sorted(by_name)}")
+    if only:
+        selected = set(only)
+    else:
+        selected = {name for name, check in by_name.items() if not check["optional"]}
+        selected |= set(available) if "all" in optional else set(optional)
     pending = list(selected)
     while pending:
         for need in by_name[pending.pop()]["needs"]:
             if need not in selected:
                 selected.add(need)
                 pending.append(need)
-    return selected
+    removed = set(skip)
+    for check in checks:  # declaration order: needs always come first
+        if check["name"] in removed or removed.intersection(check["needs"]):
+            removed.add(check["name"])
+    return selected - removed
 
 
 def environment_slug(requirements):
@@ -372,52 +342,53 @@ def environment_slug(requirements):
 
 
 IDENTITY = (
-    "import json,platform,sys,os_optics; from importlib.metadata import version; "
-    "print(json.dumps({'engine_version':version('os-optics'),'python':sys.version,"
-    "'python_version':platform.python_version(),'platform':platform.platform(),"
-    "'executable':sys.executable,'module_path':os_optics.__file__}))"
+    "import json,platform,sys,os_optics,os_optics_kit; from importlib.metadata import version; "
+    "print(json.dumps({'engine_version':version('os-optics'),'kit_version':version('os-optics-kit'),"
+    "'python':sys.version,'python_version':platform.python_version(),'platform':platform.platform(),"
+    "'executable':sys.executable,'module_path':os_optics.__file__,'kit_module_path':os_optics_kit.__file__}))"
 )
 
 
 class AlignmentCheck:
-    def __init__(self, root, out, candidate=None, *, catalog_file=None, catalog_sha256=None,
-                 candidate_wheel=None, candidate_sha256=None, optional=()):
+    def __init__(self, root, out, engine=None, *, engine_wheel=None, engine_sha256=None, kit_wheel=None,
+                 catalog_file=None, catalog_release=None, catalog_sha256=None, optional=(), only=(), skip=()):
         self.root = Path(root).resolve()
         self.out = Path(out).resolve()
-        # Never overwrite a prior candidate's evidence or environment.
+        # Never overwrite earlier evidence or environments.
         self.out.mkdir(parents=True, exist_ok=False)
         (self.out / "logs").mkdir()
         self.env = dict(os.environ)
         for key in ("PYTHONPATH", "PYTHONHOME"):
             self.env.pop(key, None)
-        self.env.update(PYTHONNOUSERSITE="1", PYTHONIOENCODING="utf-8",
-                        PIP_DISABLE_PIP_VERSION_CHECK="1", MPLBACKEND="Agg",
-                        OPENSCI_CATALOG_DIR=str(self.out / ".catalog"))
+        # The snapshot is prepared explicitly (pinned sync or import); runs never switch releases on their own.
+        self.env.update(PYTHONNOUSERSITE="1", PYTHONIOENCODING="utf-8", PIP_DISABLE_PIP_VERSION_CHECK="1",
+                        MPLBACKEND="Agg", OPENSCI_CATALOG_DIR=str(self.out / ".catalog"),
+                        OPENSCI_CATALOG_CHECK_INTERVAL="0")
+        self.engine_wheel = Path(engine_wheel).resolve() if engine_wheel else None
+        self.engine_sha256 = engine_sha256
+        self.kit_wheel = Path(kit_wheel).resolve() if kit_wheel else None
         self.catalog_file = Path(catalog_file).resolve() if catalog_file else None
+        self.catalog_release = catalog_release
         self.catalog_sha256 = catalog_sha256
-        self.optional = list(optional or ())
-        self.candidate_wheel = Path(candidate_wheel).resolve() if candidate_wheel else None
-        self.candidate_sha256 = candidate_sha256
-        if self.catalog_file:
-            # An imported release is used as is; runs never contact the catalog service.
-            self.env["OPENSCI_CATALOG_CHECK_INTERVAL"] = "0"
-        else:
-            # A fresh sync uses the engine's default service checks, whatever the caller's shell sets.
-            self.env.pop("OPENSCI_CATALOG_CHECK_INTERVAL", None)
+        self.optional, self.only, self.skip_names = list(optional or ()), list(only or ()), list(skip or ())
         self.report = {
             "schema_version": 1, "baseline_version": None,
-            "requested_version": candidate or "baseline", "candidate_version": None,
-            "installed_version": None, "python_version": None, "status": "FAIL", "checks": [],
-            "engine_source": {"mode": "local-wheel" if self.candidate_wheel else "pypi",
-                              "publication_verified": False,
-                              "index_url": "https://pypi.org/simple"},
+            "requested_version": engine or "baseline", "candidate_version": None,
+            "installed_version": None, "kit_version": None, "python_version": None, "status": "FAIL", "checks": [],
+            "engine_source": {"mode": "local-wheel" if self.engine_wheel else "pypi",
+                              "publication_verified": False, "index_url": PYPI_INDEX},
+            "kit_source": {"mode": "wheel" if self.kit_wheel else "source",
+                           "file": str(self.kit_wheel) if self.kit_wheel else None},
             "catalog_source": {"mode": "file" if self.catalog_file else "sync",
-                               "file": str(self.catalog_file) if self.catalog_file else None},
+                               "file": str(self.catalog_file) if self.catalog_file else None,
+                               "release_requested": catalog_release},
             "optional_checks": {"requested": self.optional, "selected": [], "not_selected": []},
+            "selection": {"only": self.only, "skip": self.skip_names, "left_out": []},
             "artifact_directory": str(self.out),
         }
         self.rows = {}
         self.target = None
+        self.kit_expected = None
         self.environments = {}
         self.catalog_row = None
 
@@ -467,8 +438,10 @@ class AlignmentCheck:
                     error = "Expected JSON error on stderr and empty stdout"
         except subprocess.TimeoutExpired as exc:
             timed_out = True
-            output = (exc.stdout or b"").decode("utf-8", errors="replace") if isinstance(exc.stdout, bytes) else (exc.stdout or "")
-            diagnostic = (exc.stderr or b"").decode("utf-8", errors="replace") if isinstance(exc.stderr, bytes) else (exc.stderr or "")
+            output = exc.stdout.decode("utf-8", errors="replace") if isinstance(exc.stdout, bytes) \
+                else (exc.stdout or "")
+            diagnostic = exc.stderr.decode("utf-8", errors="replace") if isinstance(exc.stderr, bytes) \
+                else (exc.stderr or "")
             error = f"Command exceeded {timeout}s timeout"
         except (OSError, ValueError) as exc:
             error = f"{type(exc).__name__}: {exc}"
@@ -508,20 +481,31 @@ class AlignmentCheck:
         return str(venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python"))
 
     def _pip_install(self, python, *arguments):
-        return [python, "-m", "pip", "--isolated", "install", "--no-compile", "--index-url",
-                "https://pypi.org/simple", *arguments]
+        return [python, "-m", "pip", "--isolated", "install", "--no-compile", "--index-url", PYPI_INDEX, *arguments]
 
     def _engine_requirement(self):
-        if self.candidate_wheel:
-            # Recheck for each environment; a changed file cannot silently become
-            # a different artifact in one of the external-tool environments.
-            if sha256_file(self.candidate_wheel) != self.candidate_sha256:
-                raise ValueError("Candidate wheel changed after its identity check")
-            return "os-optics[protected] @ " + self.candidate_wheel.as_uri()
+        if self.engine_wheel:
+            # Rechecked for every environment, so a replaced file cannot become a different artifact.
+            if sha256_file(self.engine_wheel) != self.report["engine_source"]["sha256"]:
+                raise ValueError("Engine wheel changed after its identity check")
+            return "os-optics[protected] @ " + self.engine_wheel.as_uri()
         return f"os-optics[protected]=={self.target}"
 
+    def _kit_requirement(self):
+        if self.kit_wheel:
+            if sha256_file(self.kit_wheel) != self.report["kit_source"]["sha256"]:
+                raise ValueError("Kit wheel changed after its identity check")
+            return "os-optics-kit @ " + self.kit_wheel.as_uri()
+        return str(self.root)
+
+    def _install_kit(self, name, python):
+        # --no-deps: the engine under test stays installed even when it is outside the kit's declared range;
+        # dependency-consistency then reports the mismatch.
+        return self.command(name, "package_api", self._pip_install(python, "--no-deps", self._kit_requirement()),
+                            timeout=600)
+
     def _package_artifact(self, install_report):
-        """Keep the artifact URL and hash pip actually installed, not a latest-page guess."""
+        """Keep the artifact URL and hash pip actually installed, not a guess from the index page."""
         try:
             document = json.loads(install_report.read_text(encoding="utf-8"))
             if document.get("version") != "1":
@@ -534,14 +518,12 @@ class AlignmentCheck:
             if not SHA256.fullmatch(digest):
                 raise ValueError("Invalid installed artifact SHA-256")
             source = self.report["engine_source"]
+            if self.engine_wheel and digest != source.get("sha256"):
+                raise ValueError("Installed wheel differs from the checked engine wheel")
             source.update(url=download["url"], sha256=digest,
                           filename=Path(urllib.request.url2pathname(download["url"].split("/")[-1])).name)
-            if self.candidate_wheel and digest != self.candidate_sha256:
-                raise ValueError("Installed wheel differs from the requested SHA-256")
-            if not self.candidate_wheel:
-                # The default runner uses the public index; a direct artifact URL
-                # from an unexpected origin is not accepted as PyPI evidence.
-                from urllib.parse import urlparse
+            if not self.engine_wheel:
+                # The default runner uses the public index; an artifact from another origin is not PyPI evidence.
                 if urlparse(download["url"]).hostname != "files.pythonhosted.org":
                     raise ValueError("Installed artifact did not come from PyPI files.pythonhosted.org")
                 source["publication_verified"] = True
@@ -560,18 +542,24 @@ class AlignmentCheck:
         except ValueError as exc:
             identity.update(status="FAIL", error=f"Unreadable installed identity: {exc}")
             return None
-        if info["engine_version"] != self.target:
+        mismatch = [f"{label}: expected {expected}, installed {info[key]}"
+                    for label, key, expected in (("os-optics", "engine_version", self.target),
+                                                 ("os-optics-kit", "kit_version", self.kit_expected))
+                    if info[key] != expected]
+        if mismatch:
             self.record(name.replace("installed-environment", "installed-version-match"), "package_api", "FAIL", [],
-                        error=f"Expected {self.target}, installed {info['engine_version']}")
+                        error="; ".join(mismatch))
             return None
-        if not Path(info["module_path"]).resolve().is_relative_to(venv.resolve()):
-            self.record(name.replace("installed-environment", "installed-package-location"), "package_api", "FAIL", [],
-                        error=f"Engine loaded outside isolated environment: {info['module_path']}")
+        outside = [info[key] for key in ("module_path", "kit_module_path")
+                   if not Path(info[key]).resolve().is_relative_to(venv.resolve())]
+        if outside:
+            self.record(name.replace("installed-environment", "installed-package-location"), "package_api", "FAIL",
+                        [], error=f"Loaded outside the isolated environment: {', '.join(outside)}")
             return None
         return info
 
     def environment(self, requirements):
-        """Python of a separate environment with the engine and one requirements file, or a blocker row."""
+        """Python of a separate environment with the engine, the kit and one requirements file, or a blocker row."""
         if requirements in self.environments:
             return self.environments[requirements]
         slug = environment_slug(requirements)
@@ -581,6 +569,8 @@ class AlignmentCheck:
         if result["status"] == "PASS":
             result = self.command(f"install-env-{slug}", "package_api", self._pip_install(
                 python, self._engine_requirement(), "-r", str(self.root / requirements)), timeout=1200)
+        if result["status"] == "PASS":
+            result = self._install_kit(f"install-kit-env-{slug}", python)
         if result["status"] == "PASS":
             info = self._identity(f"installed-environment-env-{slug}", python, venv)
             if info is None:
@@ -594,16 +584,25 @@ class AlignmentCheck:
     # Catalog ------------------------------------------------------------------------------------
 
     def catalog(self, python, baseline):
-        """Prepare the catalog once (pinned file import or fresh sync); return the row that decides."""
+        """Prepare the catalog once (pinned import or pinned sync); return the row that decides."""
         if self.catalog_row is not None:
             return self.catalog_row
         source = self.report["catalog_source"]
         if self.catalog_file:
             self.catalog_row = self._catalog_file(python, baseline, source)
         else:
+            release = self.catalog_release or baseline["catalog_version"]
+            expected = self.catalog_sha256 or (baseline["catalog_sha256"]
+                                               if release == baseline["catalog_version"] else None)
+            source.update(release=release, expected_sha256=expected)
+            if expected is None:
+                self.catalog_row = self.record("catalog-sync", "catalog_data", "FAIL", [], error=(
+                    f"No published SHA-256 for catalog release {release!r}; pass --catalog-sha256 "
+                    "with the digest from the catalog manifest"))
+                return self.catalog_row
             self.catalog_row = self.command("catalog-sync", "catalog_network",
-                                            [python, "-m", "os_optics", "catalog", "sync"],
-                                            catalog=True, timeout=180)
+                                            [python, "-m", "os_optics", "catalog", "sync", "--release", release],
+                                            catalog=True, timeout=300)
             if self.catalog_row["status"] == "FAIL":
                 # Name the service the failed sync tried, from its error document.
                 for document in _documents(Path(self.catalog_row["stdout"]).read_text(encoding="utf-8")):
@@ -613,21 +612,19 @@ class AlignmentCheck:
                         source["service_url"] = details["url"]
                         break
         if self.catalog_row["status"] == "PASS":
-            self.catalog_row = self._catalog_identity(python, baseline, source)
+            self.catalog_row = self._catalog_identity(python, source)
         return self.catalog_row
 
     def _catalog_file(self, python, baseline, source):
-        verified = baseline.get("verified_environment") or {}
         try:
             actual = sha256_file(self.catalog_file)
             release = json.loads(self.catalog_file.read_text(encoding="utf-8")).get("catalog_version")
         except (OSError, ValueError, AttributeError) as exc:
             return self.record("catalog-file", "catalog_data", "FAIL", [], error=f"{type(exc).__name__}: {exc}")
         expected = self.catalog_sha256
-        if expected is None and release == verified.get("catalog_version"):
-            expected = verified.get("catalog_sha256")
-        source.update(sha256=actual, expected_sha256=expected, file_catalog_version=release,
-                      automatic_check_interval="0")
+        if expected is None and release == baseline["catalog_version"]:
+            expected = baseline["catalog_sha256"]
+        source.update(sha256=actual, expected_sha256=expected, release=release)
         if expected is None:
             return self.record("catalog-file", "catalog_data", "FAIL", [], error=(
                 f"No published SHA-256 for catalog release {release!r}; pass --catalog-sha256 "
@@ -640,7 +637,7 @@ class AlignmentCheck:
                             [python, "-m", "os_optics", "catalog", "import", str(self.catalog_file)],
                             catalog=True)
 
-    def _catalog_identity(self, python, baseline, source):
+    def _catalog_identity(self, python, source):
         row = self.command("catalog-identity", "catalog_data", [python, "-m", "os_optics", "catalog", "status"],
                            catalog=True)
         if row["status"] == "FAIL":
@@ -657,9 +654,12 @@ class AlignmentCheck:
         problems = []
         if not active.get("catalog_version"):
             problems.append("No active catalog release")
-        if self.catalog_file and active.get("sha256") != source.get("sha256"):
-            problems.append(f"Active release SHA-256 {active.get('sha256')} differs from the imported file")
-        for host in baseline.get("retired_hosts", []):
+        elif active.get("catalog_version") != source.get("release"):
+            problems.append(f"Active release {active.get('catalog_version')} differs from {source.get('release')}")
+        if active.get("sha256") != source.get("expected_sha256"):
+            problems.append(f"Active release SHA-256 {active.get('sha256')} differs from the expected "
+                            f"{source.get('expected_sha256')}")
+        for host in RETIRED_HOSTS:
             if service.get("manifest_url") and host_pattern(host).search(service["manifest_url"]):
                 problems.append(f"Catalog service URL {service['manifest_url']} uses retired host {host}")
         if problems:
@@ -668,53 +668,76 @@ class AlignmentCheck:
 
     # Sequence -----------------------------------------------------------------------------------
 
+    def _artifacts(self, requested):
+        """Resolve the engine version and check local wheels; return False after recording a failure."""
+        try:
+            if self.engine_wheel:
+                if not self.engine_wheel.is_file():
+                    raise ValueError(f"{self.engine_wheel.name}: engine wheel not found")
+                version = wheel_version(self.engine_wheel, "os-optics")
+                if requested not in {"baseline", version}:
+                    raise ValueError(f"--engine {requested} differs from the wheel version {version}")
+                actual = sha256_file(self.engine_wheel)
+                if self.engine_sha256 and actual != self.engine_sha256:
+                    raise ValueError("Engine wheel SHA-256 differs from --engine-sha256")
+                self.report["engine_source"].update(filename=self.engine_wheel.name, sha256=actual)
+                self.record("engine-artifact", "setup", "PASS", [], sha256=actual)
+                self.target = version
+            elif requested == "latest":
+                self.target = latest_version()
+            else:
+                self.target = release_version(self.report["baseline_version"] if requested == "baseline"
+                                              else requested)
+            self.report["candidate_version"] = self.target
+            self.record("release-selection", "setup", "PASS", [], resolved_version=self.target)
+        except Exception as exc:
+            self.record("engine-artifact" if self.engine_wheel else "release-selection", "setup", "FAIL", [],
+                        error=f"{type(exc).__name__}: {exc}")
+            return False
+        try:
+            source = self.report["kit_source"]
+            if self.kit_wheel:
+                if not self.kit_wheel.is_file():
+                    raise ValueError(f"{self.kit_wheel.name}: kit wheel not found")
+                self.kit_expected = wheel_version(self.kit_wheel, "os-optics-kit")
+                source.update(filename=self.kit_wheel.name, sha256=sha256_file(self.kit_wheel))
+            else:
+                self.kit_expected = source_kit_version(self.root)
+                source.update(path=str(self.root))
+            source["version"] = self.kit_expected
+            self.record("kit-artifact", "setup", "PASS", [], version=self.kit_expected, sha256=source.get("sha256"))
+        except (OSError, ValueError) as exc:
+            self.record("kit-artifact", "setup", "FAIL", [], error=f"{type(exc).__name__}: {exc}")
+            return False
+        return True
+
     def _run(self):
         try:
-            baseline = json.loads((self.root / "engine-baseline.json").read_text(encoding="utf-8"))
-            baseline_version = release_version(baseline["version"])
+            baseline = read_baseline(self.root)
         except (OSError, ValueError, KeyError, TypeError) as exc:
-            self.record("baseline-record", "setup", "FAIL", [], error=f"engine-baseline.json: {type(exc).__name__}: {exc}")
+            self.record("baseline-record", "setup", "FAIL", [], error=f"{BASELINE_FILE}: {type(exc).__name__}: {exc}")
             return
-        self.report["baseline_version"] = baseline_version
-        problems = documentation_problems(self.root, baseline)
-        self.record("baseline-documentation", "documentation", "FAIL" if problems else "PASS", [],
-                    error="; ".join(problem["message"] for problem in problems) or None, problems=problems)
+        self.report["baseline_version"] = baseline["engine_version"]
         try:
             definitions = load_checks(self.root)
-            selected = select_checks(definitions["checks"], self.optional)
         except (OSError, ValueError, KeyError, TypeError) as exc:
             self.record("check-definitions", "setup", "FAIL", [], error=f"{type(exc).__name__}: {exc}")
+            return
+        try:
+            selected = select_checks(definitions["checks"], self.optional, self.only, self.skip_names)
+        except ValueError as exc:
+            self.record("check-selection", "setup", "FAIL", [], error=str(exc))
             return
         checks = [check for check in definitions["checks"] if check["name"] in selected]
         self.report["optional_checks"].update(
             selected=[check["name"] for check in checks if check["optional"]],
             not_selected=[check["name"] for check in definitions["checks"]
                           if check["optional"] and check["name"] not in selected])
-        requested = self.report["requested_version"]
-        try:
-            self.target = latest_version() if requested == "latest" else release_version(
-                baseline_version if requested == "baseline" else requested)
-            self.report["candidate_version"] = self.target
-            self.record("release-selection", "setup", "PASS", [], resolved_version=self.target)
-        except Exception as exc:
-            self.record("release-selection", "setup", "FAIL", [], error=f"{type(exc).__name__}: {exc}")
+        if self.only or self.skip_names:
+            self.report["selection"]["left_out"] = [check["name"] for check in definitions["checks"]
+                                                    if not check["optional"] and check["name"] not in selected]
+        if not self._artifacts(self.report["requested_version"]):
             return
-        if self.candidate_wheel:
-            try:
-                if requested in {"baseline", "latest"}:
-                    raise ValueError("A local candidate wheel requires an exact --candidate version")
-                if self.candidate_wheel.suffix != ".whl" or not self.candidate_wheel.is_file():
-                    raise ValueError("Candidate must be an existing .whl file")
-                if not self.candidate_sha256 or not SHA256.fullmatch(self.candidate_sha256):
-                    raise ValueError("Candidate wheel requires its expected SHA-256")
-                actual = sha256_file(self.candidate_wheel)
-                if actual != self.candidate_sha256:
-                    raise ValueError("Candidate wheel SHA-256 differs from the expected digest")
-                self.report["engine_source"].update(filename=self.candidate_wheel.name, sha256=actual)
-                self.record("candidate-artifact", "setup", "PASS", [], sha256=actual)
-            except (OSError, ValueError) as exc:
-                self.record("candidate-artifact", "setup", "FAIL", [], error=str(exc))
-                return
         blocker = self._default_environment(definitions["default_requirements"])
         default = None if blocker else self.environments[None]
         runs = self.out / "runs"
@@ -758,7 +781,7 @@ class AlignmentCheck:
                          env={key: substitute(value) for key, value in check["env"].items()})
 
     def _default_environment(self, requirements):
-        """Create the baseline environment; return the failed row that blocks every check, if any."""
+        """Create the main environment; return the failed row that blocks every check, if any."""
         venv = self.out / ".venv"
         python = self._python(venv)
         row = self.command("create-environment", "setup", [sys.executable, "-m", "venv", str(venv)], timeout=180)
@@ -772,9 +795,12 @@ class AlignmentCheck:
         row = self._package_artifact(install_report)
         if row["status"] == "FAIL":
             return row
+        row = self._install_kit("install-kit", python)
+        if row["status"] == "FAIL":
+            return row
         if requirements:
             arguments = [item for name in requirements for item in ("-r", str(self.root / name))]
-            row = self.command("install-example-dependencies", "package_api",
+            row = self.command("install-default-requirements", "package_api",
                                self._pip_install(python, *arguments), timeout=600)
             if row["status"] == "FAIL":
                 return row
@@ -782,6 +808,7 @@ class AlignmentCheck:
         if info is None:
             return self.report["checks"][-1]
         self.report["installed_version"] = info["engine_version"]
+        self.report["kit_version"] = info["kit_version"]
         self.report["python_version"] = info.get("python_version")
         (self.out / "environment.json").write_text(json.dumps(info, indent=2), encoding="utf-8")
         self.command("installed-packages", "package_api", [python, "-m", "pip", "freeze", "--all"])
@@ -792,32 +819,49 @@ class AlignmentCheck:
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--candidate", help="Exact PyPI version or latest; never updates the verified baseline")
-    parser.add_argument("--candidate-wheel", type=Path,
-                        help="Local wheel for preliminary checks; requires an exact --candidate and SHA-256")
-    parser.add_argument("--candidate-sha256", help="Expected SHA-256 of --candidate-wheel")
-    parser.add_argument("--out", type=Path, default=Path("run-alignment"), help="New directory for reports, logs and runs")
+    parser.add_argument("--engine", "--candidate", dest="engine", metavar="VERSION|latest",
+                        help="os-optics from PyPI: an exact version or latest (default: the verified baseline)")
+    parser.add_argument("--engine-wheel", type=Path, help="Install os-optics from this local wheel instead of PyPI")
+    parser.add_argument("--engine-sha256", help="Expected SHA-256 of --engine-wheel")
+    parser.add_argument("--kit-wheel", type=Path, help="Install os-optics-kit from this wheel (default: this checkout)")
     parser.add_argument("--catalog-file", type=Path,
-                        help="Import this published catalog release instead of a fresh sync; its SHA-256 is verified")
-    parser.add_argument("--catalog-sha256",
-                        help="Published SHA-256 of --catalog-file (default: the baseline's, for the baseline release)")
+                        help="Import this catalog release file instead of a sync; its SHA-256 is verified")
+    parser.add_argument("--catalog-release", help="Sync this catalog release instead of the baseline's")
+    parser.add_argument("--catalog-sha256", help="Published SHA-256 of --catalog-file or --catalog-release "
+                                                 "(default: the baseline's, for the baseline release)")
     parser.add_argument("--optional", action="append", default=[], metavar="NAME[,NAME]|all",
                         help="Also run these optional checks from alignment-checks.json (repeatable)")
+    parser.add_argument("--only", action="append", default=[], metavar="NAME[,NAME]",
+                        help="Run only these checks and the checks they need (repeatable)")
+    parser.add_argument("--skip", action="append", default=[], metavar="NAME[,NAME]",
+                        help="Leave out these checks and the checks that need them (repeatable)")
+    parser.add_argument("--out", type=Path, default=Path("run-alignment"),
+                        help="New directory for reports, logs and runs")
     args = parser.parse_args(argv)
-    if args.candidate_wheel or args.candidate_sha256:
-        if (not args.candidate_wheel or not args.candidate or args.candidate == "latest"
-                or not args.candidate_sha256 or not SHA256.fullmatch(args.candidate_sha256)):
-            parser.error("Local wheel checks need --candidate VERSION --candidate-wheel FILE --candidate-sha256 DIGEST")
-    if args.catalog_sha256 is not None and (args.catalog_file is None or not SHA256.fullmatch(args.catalog_sha256)):
-        parser.error("--catalog-sha256 needs --catalog-file and 64 lower-case hexadecimal characters")
+    if args.engine is not None and args.engine != "latest" and not VERSION.fullmatch(args.engine):
+        parser.error("--engine takes an exact version or latest")
+    if args.engine_wheel and args.engine == "latest":
+        parser.error("--engine-wheel cannot be combined with --engine latest")
+    if args.engine_sha256 is not None and (not args.engine_wheel or not SHA256.fullmatch(args.engine_sha256)):
+        parser.error("--engine-sha256 needs --engine-wheel and 64 lower-case hexadecimal characters")
+    if args.catalog_file and args.catalog_release:
+        parser.error("--catalog-file and --catalog-release are alternatives")
+    if args.catalog_release is not None and not CATALOG_RELEASE.fullmatch(args.catalog_release):
+        parser.error("--catalog-release takes a release such as 2026-10-28.1")
+    if args.catalog_sha256 is not None and (not (args.catalog_file or args.catalog_release)
+                                            or not SHA256.fullmatch(args.catalog_sha256)):
+        parser.error("--catalog-sha256 needs --catalog-file or --catalog-release and 64 lower-case hexadecimal "
+                     "characters")
     try:
-        report = AlignmentCheck(ROOT, args.out, args.candidate, catalog_file=args.catalog_file,
-                                catalog_sha256=args.catalog_sha256, candidate_wheel=args.candidate_wheel,
-                                candidate_sha256=args.candidate_sha256, optional=args.optional).run()
+        report = AlignmentCheck(ROOT, args.out, args.engine, engine_wheel=args.engine_wheel,
+                                engine_sha256=args.engine_sha256, kit_wheel=args.kit_wheel,
+                                catalog_file=args.catalog_file, catalog_release=args.catalog_release,
+                                catalog_sha256=args.catalog_sha256, optional=args.optional, only=args.only,
+                                skip=args.skip).run()
     except OSError as exc:
         parser.exit(1, f"Cannot create a fresh output directory: {exc}\n")
     print(json.dumps({"status": report["status"], "baseline_version": report["baseline_version"],
-                      "installed_version": report["installed_version"],
+                      "installed_version": report["installed_version"], "kit_version": report["kit_version"],
                       "catalog_source": report["catalog_source"]["mode"],
                       "report": str(args.out / "report.json")}, separators=(",", ":")))
     return 0 if report["status"] == "PASS" else 1
