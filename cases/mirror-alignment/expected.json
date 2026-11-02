@@ -1,0 +1,15 @@
+{
+  "catalog": null,
+  "engine": "0.12.0",
+  "schema": "os-optics-kit.case-expected",
+  "schema_version": 1,
+  "status": "PASS",
+  "targets": {
+    "far_pointing_u": "MET",
+    "far_pointing_v": "MET",
+    "far_position_u": "MET",
+    "far_position_v": "MET",
+    "near_position_u": "MET",
+    "near_position_v": "MET"
+  }
+}

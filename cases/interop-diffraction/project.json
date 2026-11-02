@@ -1,0 +1,215 @@
+{
+  "components": [
+    {
+      "custom_part": {
+        "custom_part_key": "user-laser",
+        "description": "532 nm laser"
+      },
+      "instance_id": "SRC",
+      "nominal_pose": {
+        "position_mm": [
+          0.0,
+          0.0,
+          50.0
+        ],
+        "quaternion_wxyz": [
+          0.7071067811865476,
+          0.0,
+          0.7071067811865476,
+          0.0
+        ]
+      },
+      "optical_role": "source",
+      "retained_dofs": [],
+      "selected_parameters": [],
+      "source_model": {
+        "m2": 1.0,
+        "model_kind": "GAUSSIAN_BEAM",
+        "polarization": {
+          "angle_deg": 0.0,
+          "kind": "LINEAR"
+        },
+        "power_w": 0.001,
+        "waist_position_mm": 0.0,
+        "waist_radius_mm": 1.0,
+        "wavelength_nm": 532.0
+      }
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "own-stop",
+        "description": "customer optic"
+      },
+      "instance_id": "STOP",
+      "nominal_pose": {
+        "position_mm": [
+          100.0,
+          0.0,
+          50.0
+        ],
+        "quaternion_wxyz": [
+          0.7071067811865476,
+          0.0,
+          0.7071067811865476,
+          0.0
+        ]
+      },
+      "optical_model_id": "stop",
+      "optical_role": "aperture",
+      "retained_dofs": [],
+      "selected_parameters": []
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "own-l",
+        "description": "customer optic"
+      },
+      "instance_id": "L",
+      "nominal_pose": {
+        "position_mm": [
+          101.0,
+          0.0,
+          50.0
+        ],
+        "quaternion_wxyz": [
+          0.7071067811865476,
+          0.0,
+          0.7071067811865476,
+          0.0
+        ]
+      },
+      "optical_model_id": "lens",
+      "optical_role": "lens",
+      "retained_dofs": [],
+      "selected_parameters": []
+    }
+  ],
+  "design_intent": "OPTICAL_SYSTEM",
+  "materials": [],
+  "observations": [
+    {
+      "absorbing": false,
+      "aperture": {
+        "center_offset_mm": [
+          0.0,
+          0.0
+        ],
+        "obstruction_radius_mm": 0.0,
+        "radius_mm": 10.0,
+        "shape": "circle"
+      },
+      "medium": "air",
+      "observation_id": "pupil",
+      "pose": {
+        "position_mm": [
+          99.0,
+          0.0,
+          50.0
+        ],
+        "quaternion_wxyz": [
+          0.7071067811865476,
+          0.0,
+          0.7071067811865476,
+          0.0
+        ]
+      }
+    },
+    {
+      "absorbing": false,
+      "aperture": {
+        "center_offset_mm": [
+          0.0,
+          0.0
+        ],
+        "obstruction_radius_mm": 0.0,
+        "radius_mm": 10.0,
+        "shape": "circle"
+      },
+      "medium": "air",
+      "observation_id": "stop_plane",
+      "pose": {
+        "position_mm": [
+          100.0,
+          0.0,
+          50.0
+        ],
+        "quaternion_wxyz": [
+          0.7071067811865476,
+          0.0,
+          0.7071067811865476,
+          0.0
+        ]
+      }
+    },
+    {
+      "absorbing": false,
+      "aperture": {
+        "center_offset_mm": [
+          0.0,
+          0.0
+        ],
+        "obstruction_radius_mm": 0.0,
+        "radius_mm": 10.0,
+        "shape": "circle"
+      },
+      "medium": "air",
+      "observation_id": "focus",
+      "pose": {
+        "position_mm": [
+          301.0,
+          0.0,
+          50.0
+        ],
+        "quaternion_wxyz": [
+          0.7071067811865476,
+          0.0,
+          0.7071067811865476,
+          0.0
+        ]
+      }
+    }
+  ],
+  "optical_models": [
+    {
+      "model": {
+        "edge_radius_mm": "12.7",
+        "model_kind": "APERTURE_STOP",
+        "model_version": "1",
+        "opening_radius_mm": "1.2",
+        "plane_z_mm": "0",
+        "status": "SPECIFIED"
+      },
+      "model_id": "stop"
+    },
+    {
+      "model": {
+        "clear_radius_mm": "12.7",
+        "edge_radius_mm": "12.7",
+        "focal_length_mm": "200",
+        "model_kind": "IDEAL_THIN_LENS",
+        "model_version": "1",
+        "plane_z_mm": "0",
+        "status": "SPECIFIED",
+        "transmittance": "1",
+        "valid_band_nm": {
+          "max_nm": "600",
+          "min_nm": "500",
+          "status": "SPECIFIED"
+        }
+      },
+      "model_id": "lens"
+    }
+  ],
+  "project_schema_version": "2.0",
+  "schema": "opensci.project",
+  "targets": [
+    {
+      "maximum": 0.1,
+      "metric": "beam_radius_mm",
+      "observation_id": "focus",
+      "parameters": [],
+      "target_id": "spot",
+      "unit": "mm"
+    }
+  ]
+}

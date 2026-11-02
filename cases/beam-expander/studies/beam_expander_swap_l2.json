@@ -1,0 +1,22 @@
+{
+ "description": "Edit of the catalog beam_expander example (os-optics project example --kind beam_expander). Op 0 adds target output_beam_radius: beam_radius_mm (1/e^2 radius at the output plane) with the same target value and 1 % tolerance as the example's expanded_waist target (waist_radius_x_mm: radius of the waist the output beam has or had, a collimation measure). Op 1 replaces L2 (N-BK7, focal length 100 mm) by the fused-silica plano-convex lens with focal length 100.3 mm listed by os-optics-kit candidates for 780 nm (catalog 2026-10-28.1); L2 keeps its pose, so the pair is no longer afocal.",
+ "ops": [
+  {
+   "op": "add_target",
+   "target": {
+    "target_id": "output_beam_radius",
+    "metric": "beam_radius_mm",
+    "observation_id": "output",
+    "unit": "mm",
+    "target_value": 1.9961240310077522,
+    "tolerance_rel": 0.01,
+    "parameters": []
+   }
+  },
+  {
+   "op": "set_component_product",
+   "instance_id": "L2",
+   "optical_sku": "OS-OPT-LENS-PCX-D12P7-F100P3-T2P2-R46-UVFS-AR400-1100-W587P6"
+  }
+ ]
+}

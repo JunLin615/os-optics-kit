@@ -1,0 +1,205 @@
+name: Scheduled checks
+
+on:
+  schedule:
+    - cron: "23 5 * * 1"
+  workflow_dispatch:
+    inputs:
+      candidate:
+        description: "os-optics release to check as a candidate: an exact version or latest (blank: latest)"
+        required: false
+        type: string
+      optional:
+        description: "Optional checks from alignment-checks.json: comma-separated names or all (blank: defaults only)"
+        required: false
+        type: string
+
+# Only the scheduled reporter job below may write issues.
+permissions:
+  contents: read
+
+concurrency:
+  group: scheduled-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  setup:
+    name: Baseline and engine releases
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      python: ${{ steps.baseline.outputs.python }}
+      verified_run: ${{ steps.verified.outputs.run }}
+      candidate_run: ${{ steps.candidate.outputs.run }}
+      candidate_version: ${{ steps.candidate.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            baseline.json
+            scripts/engine_release.py
+          sparse-checkout-cone-mode: false
+      - name: Python versions from baseline.json
+        id: baseline
+        run: |
+          python3 - <<'PY'
+          import json, os
+          with open("baseline.json", encoding="utf-8") as source:
+              versions = json.load(source)["python"]
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write("python=" + json.dumps(versions) + "\n")
+          PY
+      - name: Is the verified engine on PyPI?
+        id: verified
+        run: python3 scripts/engine_release.py
+      - name: Is there a newer (or the requested) engine release?
+        id: candidate
+        env:
+          CANDIDATE: ${{ inputs.candidate || 'latest' }}
+        run: python3 scripts/engine_release.py --candidate "$CANDIDATE"
+
+  baseline:
+    name: Baseline (${{ matrix.os }}, Python ${{ matrix.python }})
+    needs: setup
+    if: needs.setup.outputs.verified_run == 'true'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ${{ fromJSON(needs.setup.outputs.python) }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Tests, tools and every case against the verified engine and the pinned catalog
+        env:
+          OPTIONAL: ${{ inputs.optional || '' }}
+        run: |
+          args=(--out run-alignment)
+          if [[ -n "$OPTIONAL" ]]; then
+            args+=(--optional "$OPTIONAL")
+          fi
+          python scripts/check_alignment.py "${args[@]}"
+      - name: Preserve reports, logs and runs
+        id: artifact
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: alignment-baseline-${{ matrix.os }}-py${{ matrix.python }}
+          path: |
+            run-alignment/
+            !run-alignment/.venv*/**
+            !run-alignment/.catalog/**
+          if-no-files-found: error
+          retention-days: 30
+      - name: Write job summary
+        if: ${{ !cancelled() }}
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ARTIFACT_URL: ${{ steps.artifact.outputs.artifact-url }}
+        run: |
+          python scripts/report_alignment.py run-alignment/report.json \
+            --summary "$GITHUB_STEP_SUMMARY" --run-url "$RUN_URL" --artifact-url "$ARTIFACT_URL"
+
+  candidate:
+    name: Candidate os-optics ${{ needs.setup.outputs.candidate_version }} (Python ${{ matrix.python }})
+    needs: setup
+    if: needs.setup.outputs.candidate_run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ${{ fromJSON(needs.setup.outputs.python) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Tests, tools and every case against the candidate engine
+        env:
+          VERSION: ${{ needs.setup.outputs.candidate_version }}
+          OPTIONAL: ${{ inputs.optional || '' }}
+        run: |
+          args=(--engine "$VERSION" --out run-alignment)
+          if [[ -n "$OPTIONAL" ]]; then
+            args+=(--optional "$OPTIONAL")
+          fi
+          python scripts/check_alignment.py "${args[@]}"
+      - name: Preserve reports, logs and runs
+        id: artifact
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: alignment-candidate-py${{ matrix.python }}
+          path: |
+            run-alignment/
+            !run-alignment/.venv*/**
+            !run-alignment/.catalog/**
+          if-no-files-found: error
+          retention-days: 30
+      - name: Write job summary
+        if: ${{ !cancelled() }}
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ARTIFACT_URL: ${{ steps.artifact.outputs.artifact-url }}
+        run: |
+          python scripts/report_alignment.py run-alignment/report.json \
+            --summary "$GITHUB_STEP_SUMMARY" --run-url "$RUN_URL" --artifact-url "$ARTIFACT_URL"
+
+  report-observation:
+    name: Report new observations
+    # Only the scheduled default-branch run creates issues; manual runs never do.
+    if: >-
+      ${{ always() && github.event_name == 'schedule'
+      && (needs.baseline.result != 'skipped' || needs.candidate.result != 'skipped') }}
+    needs: [baseline, candidate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+    concurrency:
+      group: alignment-issue-reporting
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # A schedule's SHA is a trusted default-branch commit: use its reporter, never code from an artifact.
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          sparse-checkout: scripts/report_alignment.py
+          sparse-checkout-cone-mode: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: alignment-*
+          path: reports
+      - name: Report a new version or failure once
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # One report per job; identical observations share one marker and one issue.
+          shopt -s nullglob
+          status=0
+          reports=(reports/alignment-*/report.json)
+          if [[ ${#reports[@]} -eq 0 ]]; then
+            echo "No alignment reports in this run." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          for report in "${reports[@]}"; do
+            python3 scripts/report_alignment.py "$report" \
+              --summary "$GITHUB_STEP_SUMMARY" --publish --run-url "$RUN_URL" || status=1
+          done
+          exit "$status"

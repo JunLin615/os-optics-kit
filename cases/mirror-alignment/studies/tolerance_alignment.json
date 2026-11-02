@@ -1,0 +1,138 @@
+{
+ "description": "Tolerance sampling of the fold-mirror alignment design with a fixed seed: mirror tilts about local Y and X (normal, sigma 0.1 mrad, truncated at 3 sigma) and source offsets in y (uniform +-0.05 mm) and z (uniform +-50 um), all independent; reports how many samples keep the beam positions within their targets.",
+ "design": {
+  "builder": "alignment",
+  "arguments": {}
+ },
+ "targets": [
+  "near_position_u",
+  "near_position_v",
+  "far_position_u",
+  "far_position_v",
+  "far_pointing_u",
+  "far_pointing_v"
+ ],
+ "samples": 100,
+ "seed": 20261018,
+ "max_evaluations": 101,
+ "parameters": [
+  {
+   "name": "mirror_tilt_y",
+   "unit": "mrad",
+   "ops": [
+    {
+     "op": "transform",
+     "selector": {
+      "ids": [
+       "M1"
+      ]
+     },
+     "frame": {
+      "component": "M1"
+     },
+     "pivot": {
+      "component": "M1"
+     },
+     "rotation": {
+      "axis": [
+       0,
+       1,
+       0
+      ],
+      "angle_deg": "$value"
+     }
+    }
+   ],
+   "distribution": {
+    "kind": "normal",
+    "sigma": 0.1,
+    "mean_offset": 0,
+    "truncate_sigma": 3
+   }
+  },
+  {
+   "name": "mirror_tilt_x",
+   "unit": "mrad",
+   "ops": [
+    {
+     "op": "transform",
+     "selector": {
+      "ids": [
+       "M1"
+      ]
+     },
+     "frame": {
+      "component": "M1"
+     },
+     "pivot": {
+      "component": "M1"
+     },
+     "rotation": {
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle_deg": "$value"
+     }
+    }
+   ],
+   "distribution": {
+    "kind": "normal",
+    "sigma": 0.1,
+    "mean_offset": 0,
+    "truncate_sigma": 3
+   }
+  },
+  {
+   "name": "source_offset_y",
+   "unit": "mm",
+   "ops": [
+    {
+     "op": "transform",
+     "selector": {
+      "ids": [
+       "SRC"
+      ]
+     },
+     "frame": "design",
+     "translation_mm": [
+      0,
+      "$value",
+      0
+     ]
+    }
+   ],
+   "distribution": {
+    "kind": "uniform",
+    "low": -0.05,
+    "high": 0.05
+   }
+  },
+  {
+   "name": "source_offset_z",
+   "unit": "um",
+   "ops": [
+    {
+     "op": "transform",
+     "selector": {
+      "ids": [
+       "SRC"
+      ]
+     },
+     "frame": "design",
+     "translation_mm": [
+      0,
+      0,
+      "$value"
+     ]
+    }
+   ],
+   "distribution": {
+    "kind": "uniform",
+    "low": -50,
+    "high": 50
+   }
+  }
+ ]
+}

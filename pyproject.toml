@@ -1,0 +1,120 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "os-optics-kit"
+dynamic = ["version"]
+description = "Tools, engine-reproducible cases and vendor-neutral agent skills for OS Optics (os-optics)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "OpenSci" }]
+keywords = ["optics", "optical design", "os-optics", "agent skills", "parameter sweep", "tolerance analysis"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Scientific/Engineering :: Physics",
+]
+# The kit follows the engine's minor releases: each kit release declares the engine minor it was verified with.
+dependencies = ["os-optics>=0.12,<0.13"]
+
+[project.optional-dependencies]
+plot = ["matplotlib>=3.10,<4"]
+
+[project.scripts]
+os-optics-kit = "os_optics_kit.cli:main"
+
+[project.urls]
+Homepage = "https://opensci-optics.com/"
+Documentation = "https://github.com/JunLin615/os-optics-kit#readme"
+Source = "https://github.com/JunLin615/os-optics-kit"
+Issues = "https://github.com/JunLin615/os-optics-kit/issues"
+
+[tool.hatch.version]
+path = "tools/os_optics_kit/_version.py"
+
+[tool.hatch.build.targets.wheel]
+# The package plus its data (skills, cases, templates, indexes, baseline) under os_optics_kit/_data. The directories
+# are mapped by path rewriting (not force-include), so the exclude patterns and .gitignore apply to them.
+only-include = ["tools/os_optics_kit", "skills", "cases", "templates"]
+exclude = ["__pycache__", "*.pyc", "*.pyo", ".DS_Store", "cases/*/run*/", "cases/*/out/"]
+# Editable installs put tools/ on sys.path; the package then reads its data from the checkout (_resources.data_root).
+dev-mode-dirs = ["tools"]
+
+[tool.hatch.build.targets.wheel.sources]
+"tools/os_optics_kit" = "os_optics_kit"
+"skills" = "os_optics_kit/_data/skills"
+"cases" = "os_optics_kit/_data/cases"
+"templates" = "os_optics_kit/_data/templates"
+
+[tool.hatch.build.targets.wheel.force-include]
+"skills.json" = "os_optics_kit/_data/skills.json"
+"cases.json" = "os_optics_kit/_data/cases.json"
+"baseline.json" = "os_optics_kit/_data/baseline.json"
+
+[tool.hatch.build.targets.sdist]
+# Everything the tests need besides the package: the data, the templates and docs they read, the repository scripts
+# they import and the alignment check list.
+include = [
+  "tools/os_optics_kit",
+  "skills",
+  "cases",
+  "templates",
+  "tests",
+  "scripts",
+  "docs",
+  "skills.json",
+  "cases.json",
+  "baseline.json",
+  "alignment-checks.json",
+  "README.md",
+  "README.zh-CN.md",
+  "AGENT_GUIDE.md",
+  "CONTRIBUTING.md",
+  "LICENSE",
+]
+exclude = ["__pycache__", "*.pyc", "*.pyo", ".DS_Store", "cases/*/run*/", "cases/*/out/"]
+
+[dependency-groups]
+# Repository checks (CI and local): `python -m pip install --group dev`.
+dev = [
+  "pytest>=8.4",
+  "ruff==0.17.3",
+  "mypy==2.4.1",
+  "build>=1.3",
+  "twine>=6.2",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+# Pyflakes and the pycodestyle error/warning rules ruff enables by default; long lines are left to review.
+select = ["E4", "E7", "E9", "F", "W"]
+# Short names such as `l` are idiomatic in the numerical code of the cases.
+ignore = ["E741"]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["tools/os_optics_kit"]
+mypy_path = "tools"
+explicit_package_bases = true
+# The engine and plotting libraries are optional at type-check time.
+ignore_missing_imports = true
+warn_unused_configs = true
+warn_redundant_casts = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"

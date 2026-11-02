@@ -1,0 +1,16 @@
+{
+  "schema": "os-optics-kit.baseline",
+  "schema_version": 1,
+  "kit_version": "0.1.0",
+  "engine": {
+    "distribution": "os-optics",
+    "requirement": ">=0.12,<0.13",
+    "verified_version": "0.12.0"
+  },
+  "catalog": {
+    "version": "2026-10-28.1",
+    "schema_version": "3.2",
+    "sha256": "7d7f5f0a6fa1db7ce32503a6a1d86c5bdcd167035782b47b73c2ac00fc1acf30"
+  },
+  "python": ["3.11", "3.14"]
+}

@@ -1,0 +1,3 @@
+# Installed next to os-optics and os-optics-kit in the alignment environment (scripts/check_alignment.py).
+pytest>=8.4
+matplotlib>=3.10,<4

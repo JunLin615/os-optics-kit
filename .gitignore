@@ -1,0 +1,20 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+# Local runs and outputs (cases keep their project.json; generated runs stay out of Git)
+/run*/
+/run*-arrivals.csv
+/shots/
+/view.html
+/project.json
+/arrivals.csv
+/rays.jsonl
+cases/*/run*/
+cases/*/out/
+.DS_Store

@@ -1,0 +1,265 @@
+{
+  "components": [
+    {
+      "custom_part": {
+        "custom_part_key": "user-laser",
+        "description": "Gaussian laser source"
+      },
+      "instance_id": "SRC",
+      "nominal_pose": {
+        "position_mm": [
+          -100.0,
+          0.0,
+          0.0
+        ],
+        "quaternion_wxyz": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ]
+      },
+      "optical_role": "source",
+      "retained_dofs": [],
+      "selected_parameters": [],
+      "source_model": {
+        "m2": 1.0,
+        "model_kind": "GAUSSIAN_BEAM",
+        "polarization": {
+          "angle_deg": 0.0,
+          "kind": "LINEAR"
+        },
+        "power_w": 0.001,
+        "waist_position_mm": 0.0,
+        "waist_radius_mm": 1.0,
+        "wavelength_nm": 1030.0
+      }
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "retarder-hwp",
+        "description": "Retarder 0.5 waves at 1030 nm (native component waveplate.retarder)"
+      },
+      "instance_id": "HWP",
+      "nominal_pose": {
+        "position_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "quaternion_wxyz": [
+          0.3928474791935511,
+          0.5879378012096793,
+          0.3928474791935511,
+          0.5879378012096793
+        ]
+      },
+      "optical_model_id": "retarder-hwp",
+      "optical_role": "waveplate",
+      "retained_dofs": [],
+      "selected_parameters": []
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "linear-polarizer",
+        "description": "Linear polarizer ER = 1000 (native component polarizer.linear)"
+      },
+      "instance_id": "POL",
+      "nominal_pose": {
+        "position_mm": [
+          50.0,
+          0.0,
+          0.0
+        ],
+        "quaternion_wxyz": [
+          0.27059805007309845,
+          0.6532814824381883,
+          0.27059805007309845,
+          0.6532814824381883
+        ]
+      },
+      "optical_model_id": "linear-polarizer",
+      "optical_role": "polarizer",
+      "retained_dofs": [],
+      "selected_parameters": []
+    }
+  ],
+  "materials": [],
+  "observations": [
+    {
+      "absorbing": false,
+      "aperture": {
+        "center_offset_mm": [
+          0.0,
+          0.0
+        ],
+        "obstruction_radius_mm": 0.0,
+        "radius_mm": 12.5,
+        "shape": "circle"
+      },
+      "medium": "air",
+      "observation_id": "after_hwp",
+      "pose": {
+        "position_mm": [
+          25.0,
+          0.0,
+          0.0
+        ],
+        "quaternion_wxyz": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ]
+      }
+    },
+    {
+      "absorbing": false,
+      "aperture": {
+        "center_offset_mm": [
+          0.0,
+          0.0
+        ],
+        "obstruction_radius_mm": 0.0,
+        "radius_mm": 12.5,
+        "shape": "circle"
+      },
+      "medium": "air",
+      "observation_id": "detector",
+      "pose": {
+        "position_mm": [
+          100.0,
+          0.0,
+          0.0
+        ],
+        "quaternion_wxyz": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ]
+      }
+    }
+  ],
+  "optical_models": [
+    {
+      "design_geometry": {
+        "diameter_mm": "25.4",
+        "kind": "CYLINDER",
+        "status": "NOMINAL",
+        "z_max_mm": "1",
+        "z_min_mm": "0"
+      },
+      "display_name": "Retarder 0.5 waves at 1030 nm",
+      "frame": {
+        "nominal_propagation": "+Z",
+        "optical_axis": "+Z",
+        "origin": "FIRST_SURFACE_VERTEX",
+        "symmetry": "NONE"
+      },
+      "model": {
+        "approximations": [
+          "RETARDANCE_INVERSE_WAVELENGTH",
+          "THIN_ELEMENT"
+        ],
+        "axis": "+X",
+        "clear_radius_mm": "11.43",
+        "design_wavelength_nm": "1030",
+        "edge_radius_mm": "12.7",
+        "element": "RETARDER",
+        "fidelity": "IDEAL_THIN_ELEMENT",
+        "model_kind": "POLARIZATION_ELEMENT",
+        "model_version": "1",
+        "plane_z_mm": "0",
+        "retardance_dispersion": "INVERSE_WAVELENGTH",
+        "retardance_waves": "0.5",
+        "status": "DESIGN_BASIS",
+        "transmittance": {
+          "status": "DESIGN_BASIS",
+          "value": "0.99"
+        },
+        "valid_aoi_deg": {
+          "max_deg": "90",
+          "min_deg": "0",
+          "status": "DESIGN_BASIS"
+        },
+        "valid_band_nm": {
+          "max_nm": "1060",
+          "min_nm": "1000",
+          "status": "DESIGN_BASIS"
+        }
+      },
+      "model_id": "retarder-hwp"
+    },
+    {
+      "design_geometry": {
+        "diameter_mm": "25.4",
+        "kind": "CYLINDER",
+        "status": "NOMINAL",
+        "z_max_mm": "1",
+        "z_min_mm": "0"
+      },
+      "display_name": "Linear polarizer ER = 1000",
+      "frame": {
+        "nominal_propagation": "+Z",
+        "optical_axis": "+Z",
+        "origin": "FIRST_SURFACE_VERTEX",
+        "symmetry": "NONE"
+      },
+      "model": {
+        "approximations": [
+          "THIN_ELEMENT"
+        ],
+        "axis": "+X",
+        "clear_radius_mm": "11.43",
+        "edge_radius_mm": "12.7",
+        "element": "LINEAR_POLARIZER",
+        "extinction_ratio": {
+          "status": "DESIGN_BASIS",
+          "value": "1000"
+        },
+        "fidelity": "IDEAL_THIN_ELEMENT",
+        "model_kind": "POLARIZATION_ELEMENT",
+        "model_version": "1",
+        "plane_z_mm": "0",
+        "status": "DESIGN_BASIS",
+        "transmittance": {
+          "status": "DESIGN_BASIS",
+          "value": "0.9"
+        },
+        "valid_aoi_deg": {
+          "max_deg": "90",
+          "min_deg": "0",
+          "status": "DESIGN_BASIS"
+        },
+        "valid_band_nm": {
+          "max_nm": "1200",
+          "min_nm": "600",
+          "status": "DESIGN_BASIS"
+        }
+      },
+      "model_id": "linear-polarizer"
+    }
+  ],
+  "project_schema_version": "2.0",
+  "schema": "opensci.project",
+  "targets": [
+    {
+      "metric": "power_W",
+      "minimum": 0.0008,
+      "observation_id": "detector",
+      "parameters": [],
+      "target_id": "transmitted_power",
+      "unit": "W"
+    },
+    {
+      "maximum": 45.5,
+      "metric": "polarization_azimuth_deg",
+      "minimum": 44.5,
+      "observation_id": "after_hwp",
+      "parameters": [],
+      "target_id": "output_azimuth",
+      "unit": "deg"
+    }
+  ]
+}

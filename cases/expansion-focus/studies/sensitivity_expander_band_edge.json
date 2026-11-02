@@ -1,0 +1,65 @@
+{
+ "description": "Sensitivity of the expander/focus radii to wavelength near the lenses' 1100 nm band edge (nominal 1099.8 nm): the +0.5 nm step leaves the model band, so that side is out of model and a one-sided difference is reported.",
+ "design": {
+  "builder": "expander_focus",
+  "arguments": {
+   "wavelength_nm": 1099.8
+  }
+ },
+ "targets": [
+  "spot_radius",
+  "expanded_radius"
+ ],
+ "parameters": [
+  {
+   "name": "wavelength",
+   "unit": "nm",
+   "nominal": 1099.8,
+   "steps": [
+    0.05,
+    0.5
+   ],
+   "scale": 1,
+   "ops": [
+    {
+     "op": "set_source_model",
+     "instance_id": "SRC",
+     "changes": {
+      "wavelength_nm": "$value"
+     }
+    }
+   ]
+  },
+  {
+   "name": "L2_axial",
+   "unit": "mm",
+   "steps": [
+    0.01,
+    0.1
+   ],
+   "scale": {
+    "value": 50,
+    "unit": "um"
+   },
+   "ops": [
+    {
+     "op": "transform",
+     "selector": {
+      "ids": [
+       "L2"
+      ]
+     },
+     "frame": {
+      "component": "L2"
+     },
+     "translation_mm": [
+      0,
+      0,
+      "$value"
+     ]
+    }
+   ]
+  }
+ ],
+ "max_evaluations": 9
+}

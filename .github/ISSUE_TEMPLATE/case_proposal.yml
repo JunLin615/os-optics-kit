@@ -1,0 +1,40 @@
+name: Case proposal
+description: Propose an engine-reproducible design case for the collection.
+labels: [case]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A case is a Project that runs on the verified engine and catalog in `baseline.json`, with its expected target
+        outcomes. If you already have the finished design, `os-optics-kit contrib case` prepares the pull request for
+        you (see [CONTRIBUTING.md](https://github.com/JunLin615/os-optics-kit/blob/main/CONTRIBUTING.md)); this form
+        is for discussing a case first. Cases are public: include only designs and data you can publish.
+  - type: textarea
+    id: shows
+    attributes:
+      label: What the case shows
+      description: The optical task, the design, and what a reader learns from it.
+    validations:
+      required: true
+  - type: textarea
+    id: targets
+    attributes:
+      label: Targets
+      description: The targets the Project declares and the outcomes you expect (met, unmet, indeterminate).
+    validations:
+      required: true
+  - type: textarea
+    id: parts
+    attributes:
+      label: Catalog products and tools
+      description: Catalog products the design uses (or "catalog-free"), and the os-optics-kit tools it needs.
+  - type: dropdown
+    id: contribution
+    attributes:
+      label: Will you open the pull request?
+      options:
+        - Yes, I or my agent will open it
+        - I can provide the Project file; someone else would prepare the case
+        - Not yet, this is an idea
+    validations:
+      required: true

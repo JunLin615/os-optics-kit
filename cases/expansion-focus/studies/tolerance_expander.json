@@ -1,0 +1,89 @@
+{
+ "description": "Tolerance sampling of the expander/focus design with a fixed seed: L2 axial position (uniform +-0.5 mm), focus-plane position (uniform +-0.3 mm) and source waist radius (normal, sigma 5 um, truncated at 3 sigma), all independent; reports outcome counts and target-value distributions.",
+ "design": {
+  "builder": "expander_focus",
+  "arguments": {}
+ },
+ "targets": [
+  "expanded_radius",
+  "spot_radius",
+  "waist_location"
+ ],
+ "samples": 100,
+ "seed": 20261018,
+ "max_evaluations": 101,
+ "parameters": [
+  {
+   "name": "L2_axial",
+   "unit": "mm",
+   "ops": [
+    {
+     "op": "transform",
+     "selector": {
+      "ids": [
+       "L2"
+      ]
+     },
+     "frame": {
+      "component": "L2"
+     },
+     "translation_mm": [
+      0,
+      0,
+      "$value"
+     ]
+    }
+   ],
+   "distribution": {
+    "kind": "uniform",
+    "low": -0.5,
+    "high": 0.5
+   }
+  },
+  {
+   "name": "focus_plane_axial",
+   "unit": "mm",
+   "ops": [
+    {
+     "op": "transform",
+     "selector": {
+      "ids": [
+       "focus"
+      ]
+     },
+     "frame": "design",
+     "translation_mm": [
+      "$value",
+      0,
+      0
+     ]
+    }
+   ],
+   "distribution": {
+    "kind": "uniform",
+    "low": -0.3,
+    "high": 0.3
+   }
+  },
+  {
+   "name": "source_waist_radius",
+   "unit": "um",
+   "nominal": 500,
+   "ops": [
+    {
+     "op": "set_source_model",
+     "instance_id": "SRC",
+     "changes": {
+      "waist_radius_mm": "$value"
+     }
+    }
+   ],
+   "distribution": {
+    "kind": "normal",
+    "sigma": 5,
+    "mean_offset": 0,
+    "truncate_sigma": 3
+   }
+  }
+ ]
+}

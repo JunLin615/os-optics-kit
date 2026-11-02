@@ -1,0 +1,10 @@
+{
+  "catalog": "2026-10-28.1",
+  "engine": "0.12.0",
+  "schema": "os-optics-kit.case-expected",
+  "schema_version": 1,
+  "status": "PASS",
+  "targets": {
+    "expanded_waist": "MET"
+  }
+}

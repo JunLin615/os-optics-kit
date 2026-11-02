@@ -1,0 +1,13 @@
+# Diffraction case, OpenSci side and external side in one environment. Needs Python 3.12 or newer (numpy 2.5.4 and
+# scipy 1.18.1 require it); verified with Python 3.14.7 and os-optics 0.12.0.
+os-optics>=0.12,<0.13
+os-optics-kit>=0.1,<0.2
+numpy==2.5.4
+scipy==1.18.1
+LightPipes==2.1.5
+prysm==0.21.1
+poppy==1.2.0
+astropy==8.0.1
+# prysm 0.21.1 imports pkg_resources, which setuptools 81 and newer no longer provide.
+setuptools==80.10.2
+matplotlib==3.11.2
