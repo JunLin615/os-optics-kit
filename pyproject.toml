@@ -43,29 +43,44 @@ Issues = "https://github.com/JunLin615/os-optics-kit/issues"
 path = "tools/os_optics_kit/_version.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["tools/os_optics_kit"]
+# The package plus its data (skills, cases, templates, indexes, baseline) under os_optics_kit/_data. Path rewriting
+# (not force-include) keeps the exclude patterns and .gitignore in effect for the data directories.
+only-include = ["tools/os_optics_kit", "skills", "cases", "templates", "skills.json", "cases.json", "baseline.json"]
+exclude = ["__pycache__", "*.pyc", "*.pyo", ".DS_Store", "cases/*/run*/", "cases/*/out/"]
+# Editable installs put tools/ on sys.path; the package then reads its data from the checkout (_resources.data_root).
+dev-mode-dirs = ["tools"]
 
-[tool.hatch.build.targets.wheel.force-include]
+[tool.hatch.build.targets.wheel.sources]
+"tools/os_optics_kit" = "os_optics_kit"
 "skills" = "os_optics_kit/_data/skills"
 "cases" = "os_optics_kit/_data/cases"
+"templates" = "os_optics_kit/_data/templates"
 "skills.json" = "os_optics_kit/_data/skills.json"
 "cases.json" = "os_optics_kit/_data/cases.json"
 "baseline.json" = "os_optics_kit/_data/baseline.json"
 
 [tool.hatch.build.targets.sdist]
+# Everything the tests need besides the package: the data, the templates and docs they read, the repository scripts
+# they import and the alignment check list.
 include = [
   "tools/os_optics_kit",
   "skills",
   "cases",
+  "templates",
   "tests",
+  "scripts",
+  "docs",
   "skills.json",
   "cases.json",
   "baseline.json",
+  "alignment-checks.json",
   "README.md",
   "README.zh-CN.md",
+  "AGENT_GUIDE.md",
+  "CONTRIBUTING.md",
   "LICENSE",
 ]
-exclude = ["cases/*/run*", "cases/*/out"]
+exclude = ["__pycache__", "*.pyc", "*.pyo", ".DS_Store", "cases/*/run*/", "cases/*/out/"]
 
 [dependency-groups]
 # Repository checks (CI and local): `python -m pip install --group dev`.

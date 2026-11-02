@@ -132,6 +132,16 @@ class RepositoryCheckTests(RepositoryTree):
                             if item["check"] == "baseline"]
                 self.assertTrue(any(fragment in message for message in messages), messages)
 
+    def test_engine_module_states_the_baseline_requirement(self):
+        engine = 'ENGINE_DISTRIBUTION = "os-optics"\nENGINE_REQUIREMENT = ">=0.12,<0.13"\n'
+        self.write("tools/os_optics_kit/_engine.py", engine)
+        self.assertEqual(self.problems("baseline"), [])
+        self.write("tools/os_optics_kit/_engine.py", engine.replace("<0.13", "<0.14"))
+        messages = [item["message"] for item in check_repo.run_checks(self.root)["problems"]
+                    if item["check"] == "baseline"]
+        self.assertEqual(len(messages), 1, messages)
+        self.assertIn("ENGINE_REQUIREMENT", messages[0])
+
     def test_specifier_fallback_without_packaging(self):
         with patch.dict("sys.modules", {"packaging": None, "packaging.specifiers": None, "packaging.version": None}):
             self.assertTrue(check_repo.satisfies("0.12.0", ">=0.12,<0.13"))

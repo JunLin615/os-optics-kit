@@ -9,7 +9,8 @@ Checks every tracked or new (not ignored) file:
   paths       no absolute paths of a particular machine (home directories, drive-letter work folders)
   secrets     no access tokens or private keys
   json        every JSON file parses
-  baseline    baseline.json matches pyproject.toml and tools/os_optics_kit/_version.py
+  baseline    baseline.json matches pyproject.toml, tools/os_optics_kit/_version.py and the engine requirement
+              of tools/os_optics_kit/_engine.py
   pins        exact os-optics / os-optics-kit pins in documents equal the baseline; no retired host or name
   pairs       English and Simplified Chinese documents come in pairs (README.md / README.zh-CN.md, docs/en / docs/zh-CN)
 
@@ -287,6 +288,15 @@ def check_baseline(root: Path, problems: Problems) -> dict:
     if baseline.get("kit_version") != source_version:
         problems.add("baseline", name, f"kit_version {baseline.get('kit_version')!r} differs from "
                                        f"tools/os_optics_kit/_version.py {source_version!r}")
+    engine_file = root / "tools" / "os_optics_kit" / "_engine.py"
+    if engine_file.is_file():
+        source = engine_file.read_text(encoding="utf-8")
+        for key, constant in (("distribution", "ENGINE_DISTRIBUTION"), ("requirement", "ENGINE_REQUIREMENT")):
+            found = re.search(rf"^{constant} = \"([^\"]*)\"", source, re.M)
+            stated = found.group(1) if found else None
+            if stated is None or specifier_clauses(stated) != specifier_clauses(str(engine.get(key))):
+                problems.add("baseline", name, f"engine.{key} {engine.get(key)!r} differs from "
+                                               f"tools/os_optics_kit/_engine.py {constant} {stated!r}")
 
     if tomllib is None:
         return baseline
