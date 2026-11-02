@@ -1,4 +1,4 @@
-"""Checks of examples/optical_designs.py on the published os-optics (0.10.0).
+"""Checks of os_optics_kit.optical_designs with the installed os-optics (the kit requires >=0.12,<0.13).
 
 The native designs need no catalog. The catalog variants are skipped when no catalog release is installed.
 Run from the repository root: python -m unittest discover -s tests -v
@@ -8,11 +8,13 @@ import inspect
 import math
 import unittest
 
-from os_optics.local import LocalRunError
-from os_optics.results import load_run
+from tests.workflow_fixtures import HAS_ENGINE, catalog_available, requires_engine
 
-from examples import optical_designs as D
-from tests.workflow_fixtures import catalog_available
+if HAS_ENGINE:
+    from os_optics.local import LocalRunError
+    from os_optics.results import load_run
+
+    from os_optics_kit import optical_designs as D
 
 
 def outcome(document):
@@ -29,6 +31,7 @@ def rel(a, b):
     return abs(a - b) / abs(b)
 
 
+@requires_engine
 class MetadataTests(unittest.TestCase):
     def test_design_info_lists_every_builder_keyword(self):
         for name, info in D.DESIGN_INFO.items():
@@ -54,6 +57,7 @@ class MetadataTests(unittest.TestCase):
                 self.assertIn(case["case_id"], case["attribution"])
 
 
+@requires_engine
 class ExpanderFocusTests(unittest.TestCase):
     def test_check_project_is_catalog_free(self):
         checked = D.check_design(D.expander_focus())
@@ -136,6 +140,7 @@ class ExpanderFocusTests(unittest.TestCase):
         self.assertEqual(load_run(first).identity()["result_hash"], load_run(second).identity()["result_hash"])
 
 
+@requires_engine
 class PolarizationControlTests(unittest.TestCase):
     def test_check_project_is_catalog_free(self):
         checked = D.check_design(D.polarization_control(azimuth_target_deg=45.0))
@@ -229,6 +234,7 @@ class PolarizationControlTests(unittest.TestCase):
         self.assertEqual(load_run(first).identity()["result_hash"], load_run(second).identity()["result_hash"])
 
 
+@requires_engine
 class AlignmentTests(unittest.TestCase):
     KEYS = ("near_u_mm", "near_v_mm", "far_u_mm", "far_v_mm", "pointing_u_mrad", "pointing_v_mrad")
 
@@ -348,6 +354,7 @@ class AlignmentTests(unittest.TestCase):
 
 
 @unittest.skipUnless(catalog_available(), "no catalog release is installed")
+@requires_engine
 class CatalogVariantTests(unittest.TestCase):
     def test_beam_expander_spacing_moves_the_waist_not_the_radius(self):
         nominal = outcome(D.catalog_beam_expander())

@@ -4,32 +4,61 @@ Covers: report diagnostics of saved runs, complete input comparison, sweep colum
 classification in comparisons, candidate exclusion counts, study overwrite, op argument checks, unit-equivalent edit
 retries, valueless plot markers, impossible truncation, derived-column units, warning flags in compact output and
 distinct out-of-model issue entries.
-Catalog-free; run from the repository root: python -m unittest discover -s tests -v
+Catalog-free; run from the repository root: python -m pytest tests
 """
 
 import copy
-from importlib.util import find_spec
 import json
 from pathlib import Path
 import unittest
 from unittest.mock import patch
 
-from tests.workflow_fixtures import TempDir, by_id, expander, invoke, quiet_environment
+from tests.workflow_fixtures import (
+    HAS_ENGINE, HAS_MATPLOTLIB, PLOT_EXTRA_MISSING, TempDir, by_id, expander, invoke, quiet_environment,
+    requires_engine, requires_numpy,
+)
 
 quiet_environment()
 
-from examples import build_report as br  # noqa: E402
-from examples import catalog_candidates as cc  # noqa: E402
-from examples import compare_runs as cr  # noqa: E402
-from examples import edit_project as ep  # noqa: E402
-from examples import optical_designs as designs  # noqa: E402
-from examples import sweep_parameters as sp  # noqa: E402
-from examples import tolerance_study as ts  # noqa: E402
-from examples import workflow_common as wc  # noqa: E402
+from os_optics_kit import build_report as br  # noqa: E402
+from os_optics_kit import catalog_candidates as cc  # noqa: E402
+from os_optics_kit import compare_runs as cr  # noqa: E402
+from os_optics_kit import edit_project as ep  # noqa: E402
+from os_optics_kit import sweep_parameters as sp  # noqa: E402
+from os_optics_kit import tolerance_study as ts  # noqa: E402
+from os_optics_kit import workflow_common as wc  # noqa: E402
 
-HAS_MATPLOTLIB = find_spec("matplotlib") is not None
+if HAS_ENGINE:
+    from os_optics_kit import optical_designs as designs  # the designs import the engine
+
 SHIFT_FOCUS = [{"op": "transform", "selector": {"ids": ["focus"]}, "frame": "design",
                 "translation_mm": ["$value", 0, 0]}]
+
+
+def expander_workflow_main(argv):
+    """A design_workflow CLI on the expander_focus design with its complex-q reference (as a case script builds
+    one)."""
+    from os_optics_kit import design_workflow as dw
+
+    def checks(params, record):
+        reference = designs.gaussian_expander_focus_reference(**params)
+        values = dw.target_values(record)
+        method = "complex-q propagation"
+        rows = [
+            dw.compare_value("expanded_radius", "mm", values.get("expanded_radius"), reference["expanded_radius_mm"],
+                             method=method, rel=1e-9),
+            dw.compare_value("spot_radius", "mm", values.get("spot_radius"), reference["spot_radius_mm"],
+                             method=method, rel=1e-9),
+            dw.compare_value("waist_location", "mm", values.get("waist_location"), reference["waist_distance_mm"],
+                             method=method, abs_tol=1e-9),
+        ]
+        return {"rows": rows, "analysis": {"reference_focus_waist_radius_mm": reference["focus_waist_radius_mm"]}}
+
+    config = {"workflow": "expander_focus_test", "design": "expander_focus",
+              "info": designs.DESIGN_INFO["expander_focus"], "builder": designs.expander_focus, "checks": checks,
+              "reference_method": "independent complex-q Gaussian propagation through thin lenses",
+              "default_studies": ["gap_error_mm=-1,0,1"], "max_evaluations": 40}
+    return dw.main(config, {}, argv, description="expander_focus design workflow (test)")
 
 
 def _diagnostic_lines(report_dir):
@@ -37,6 +66,7 @@ def _diagnostic_lines(report_dir):
             if line.startswith("- ")]
 
 
+@requires_engine
 class RunReportDiagnosticsTests(unittest.TestCase):
     """build_report on run directories lists the runs' warnings, target issue codes and model-scope issues."""
 
@@ -84,9 +114,8 @@ class RunReportDiagnosticsTests(unittest.TestCase):
         self.assertTrue(runs["fail"]["target_issue_codes"])
 
     def test_workflow_report_names_the_nominal_warning(self):
-        from examples import beam_expansion_focus as bef
-
-        code, out, err = invoke(bef.main, ["--out", str(self.dir / "wf"), "--waist-radius-mm", "3", "--no-studies"])
+        code, out, err = invoke(expander_workflow_main,
+                                ["--out", str(self.dir / "wf"), "--waist-radius-mm", "3", "--no-studies"])
         self.assertIn(code, (0, 1, 2, 3), err)
         self.assertIn("GAUSSIAN_TRUNCATION", out["nominal"]["warnings"])
         text = (self.dir / "wf" / "report" / "report.md").read_text(encoding="utf-8")
@@ -94,6 +123,7 @@ class RunReportDiagnosticsTests(unittest.TestCase):
         self.assertNotIn("- Warnings: none", text.splitlines())
 
 
+@requires_engine
 class CompleteInputComparisonTests(unittest.TestCase):
     """compare_runs lists every differing input of the run Projects and states when the Projects are identical."""
 
@@ -172,6 +202,7 @@ class CompleteInputComparisonTests(unittest.TestCase):
         self.assertIn("project hashes differ", text)
 
 
+@requires_engine
 class SweepColumnValidationTests(unittest.TestCase):
     """A typo in an objective, constraint or derived column is a refused spec (exit 4), not NO_FEASIBLE."""
 
@@ -230,6 +261,7 @@ class SweepColumnValidationTests(unittest.TestCase):
                      "UNIT_UNKNOWN")
 
 
+@requires_engine
 class StudyComparisonTargetsTests(unittest.TestCase):
     """compare_runs on a study classifies samples with the study's selected targets and refuses unknown ids."""
 
@@ -262,6 +294,7 @@ class StudyComparisonTargetsTests(unittest.TestCase):
         self.assertEqual((code, out), (4, None))
 
 
+@requires_engine
 class CandidateExclusionTests(unittest.TestCase):
     """--near / --sort count the products without the field instead of dropping them silently."""
 
@@ -286,6 +319,7 @@ class CandidateExclusionTests(unittest.TestCase):
         self.assertEqual((plain["matched"], plain["excluded_missing_field"]), (4, {}))
 
 
+@requires_engine
 class StudyOverwriteTests(unittest.TestCase):
     def test_overwrite_removes_previous_plots_and_report(self):
         spec = {"parameters": [{"name": "shift", "unit": "mm", "values": [-1, 1], "ops": SHIFT_FOCUS}],
@@ -303,6 +337,7 @@ class StudyOverwriteTests(unittest.TestCase):
             self.assertTrue((tmp / "study" / "notes.txt").is_file(), "files of other tools stay")
 
 
+@requires_engine
 class OpArgumentTests(unittest.TestCase):
     """An absent argument is refused like the Designer does; an explicit null removes."""
 
@@ -339,6 +374,7 @@ class OpArgumentTests(unittest.TestCase):
         self.assertIn("FRAME_INVALID", ep.__doc__)
 
 
+@requires_engine
 class UnitEquivalentRetryTests(unittest.TestCase):
     def test_same_edit_in_other_units_is_already_applied_and_other_edit_refused(self):
         with TempDir() as tmp:
@@ -368,10 +404,11 @@ class UnitEquivalentRetryTests(unittest.TestCase):
             self.assertEqual((error["code"], error["mismatch"]), ("OUTPUT_EXISTS", ["OPS_CHANGED"]))
 
 
-@unittest.skipUnless(HAS_MATPLOTLIB, "matplotlib is needed for plots (requirements-examples.txt)")
+@unittest.skipUnless(HAS_MATPLOTLIB, PLOT_EXTRA_MISSING)
+@requires_engine
 class ValuelessPlotMarkerTests(unittest.TestCase):
     def test_valueless_samples_have_their_own_position_and_legend(self):
-        from examples import plot_results as pr
+        from os_optics_kit import plot_results as pr
 
         spec = {"parameters": [{"name": "l2_x", "unit": "mm", "values": [0.5, 200.0, 202.0], "ops": [
             {"op": "set_component_pose", "instance_id": "L2", "position_mm": ["$value", 0, 0]}]}],
@@ -388,7 +425,7 @@ class ValuelessPlotMarkerTests(unittest.TestCase):
             self.assertIn("samples without an exact value", svg)
 
     def test_heatmap_draws_target_bounds(self):
-        from examples import plot_results as pr
+        from os_optics_kit import plot_results as pr
 
         spec = {"parameters": [{"name": "shift", "unit": "mm", "values": [-1, 1], "ops": SHIFT_FOCUS},
                                {"name": "wl", "unit": "nm", "values": [780, 790], "ops": [
@@ -401,6 +438,7 @@ class ValuelessPlotMarkerTests(unittest.TestCase):
             self.assertIn("target maximum 0.02", Path(result["out"]["svg"]).read_text(encoding="utf-8"))
 
 
+@requires_numpy
 class ImpossibleTruncationTests(unittest.TestCase):
     def test_bounds_far_in_one_tail_are_refused(self):
         spec = {"samples": 10, "seed": 1, "max_evaluations": 11, "parameters": [
@@ -417,6 +455,7 @@ class ImpossibleTruncationTests(unittest.TestCase):
         self.assertTrue(all(2 <= v <= 4 for v in drawn))
 
 
+@requires_engine
 class CompactWarningFlagTests(unittest.TestCase):
     def test_sweep_and_tolerance_flag_pass_samples_with_warnings(self):
         spec = {"parameters": [{"name": "w", "unit": "mm", "values": [0.5, 3.0]}], "max_evaluations": 5}
@@ -443,6 +482,7 @@ class CompactWarningFlagTests(unittest.TestCase):
             self.assertEqual(ts.compact(fake)["samples_with_warnings"], flagged)
 
 
+@requires_engine
 class HistoricalBestSampleTests(unittest.TestCase):
     def test_best_sample_line_carries_the_historical_label(self):
         spec = {"parameters": [{"name": "shift", "unit": "mm", "values": [-1, 1], "ops": SHIFT_FOCUS}],
@@ -472,15 +512,37 @@ TABULATED_LENS = {"model_id": "metalens", "model": {
 
 
 def tabulated_lens_project(wavelengths_nm):
-    """Catalog-free tabulated thin lens (rows 500-560 nm) with one failing target at 530 nm."""
-    from examples.interop.metasurface import step4_engine_check
+    """Catalog-free tabulated thin lens (rows 500-560 nm) with one failing target at 530 nm: Gaussian source (20 um
+    waist at the lens) -> lens at x = 0 -> observation plane 0.3 mm behind, 50 mm above the design origin."""
+    from os_optics_kit.interop import pose
 
-    document = step4_engine_check.project(TABULATED_LENS, "tabulated", wavelengths_nm=wavelengths_nm, waist_um=20.0)
+    height_mm, source_distance_mm = 50.0, 1.0
+    source = {"model_kind": "GAUSSIAN_BEAM", "waist_radius_mm": 0.02, "waist_position_mm": source_distance_mm,
+              "m2": 1.0, "polarization": {"kind": "LINEAR", "angle_deg": 0.0}}
+    if len(wavelengths_nm) == 1:
+        source.update(wavelength_nm=float(wavelengths_nm[0]), power_w=0.001)
+    else:
+        source["spectral_lines"] = [{"wavelength_nm": float(w), "power_w": 0.001} for w in wavelengths_nm]
+    document = {
+        "schema": "opensci.project", "project_schema_version": "2.0", "design_intent": "OPTICAL_SYSTEM",
+        "optical_models": [copy.deepcopy(TABULATED_LENS)],
+        "components": [
+            {"instance_id": "SRC", "optical_role": "source",
+             "nominal_pose": pose((-source_distance_mm, 0.0, height_mm), (1, 0, 0)),
+             "custom_part": {"custom_part_key": "user-laser", "description": "tunable laser"}, "source_model": source},
+            {"instance_id": "META", "optical_role": "lens", "optical_model_id": TABULATED_LENS["model_id"],
+             "custom_part": {"custom_part_key": "own-metalens", "description": "metalens"},
+             "nominal_pose": pose((0.0, 0.0, height_mm), (1, 0, 0))},
+        ],
+        "observations": [{"observation_id": "after", "aperture": {"shape": "circle", "radius_mm": 1},
+                          "pose": pose((0.3, 0.0, height_mm), (1, 0, 0))}],
+    }
     document["targets"] = [{"target_id": "spot_530nm", "metric": "waist_radius_x_mm", "observation_id": "after",
                             "wavelength_nm": "530", "maximum": 1e-6, "unit": "mm"}]
     return document
 
 
+@requires_engine
 class EngineOutOfModelIssueTests(unittest.TestCase):
     """A tabulated thin lens outside its rows is a model-scope issue (MODEL_WAVELENGTH_OUTSIDE_BAND). The target that
     depends on the lens keeps its value and bounds but is assessed INDETERMINATE with the scope code in

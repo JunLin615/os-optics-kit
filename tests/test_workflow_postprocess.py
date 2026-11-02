@@ -1,11 +1,10 @@
-"""Offline checks of compare_runs.py, plot_results.py, build_report.py and catalog_candidates.py.
+"""Offline checks of the compare, plot, report and candidates tools (os_optics_kit modules).
 
 Catalog-free by default; the catalog query test is skipped when no catalog release is installed.
 Run from the repository root: python -m unittest discover -s tests -v
 """
 
 import copy
-from importlib.util import find_spec
 import json
 import os
 from pathlib import Path
@@ -14,20 +13,22 @@ import subprocess
 import sys
 import unittest
 
-from tests.workflow_fixtures import ROOT, TempDir, by_id, catalog_available, expander, invoke, quiet_environment
+from tests.workflow_fixtures import (
+    HAS_MATPLOTLIB, KIT, PLOT_EXTRA_MISSING, TempDir, by_id, catalog_available, expander, invoke,
+    quiet_environment, requires_engine,
+)
 
 quiet_environment()
 
-from examples import build_report as br  # noqa: E402
-from examples import catalog_candidates as cc  # noqa: E402
-from examples import compare_runs as cr  # noqa: E402
-from examples import edit_project as ep  # noqa: E402
-from examples import sweep_parameters as sp  # noqa: E402
-from examples import workflow_common as wc  # noqa: E402
-
-HAS_MATPLOTLIB = find_spec("matplotlib") is not None
+from os_optics_kit import build_report as br  # noqa: E402
+from os_optics_kit import catalog_candidates as cc  # noqa: E402
+from os_optics_kit import compare_runs as cr  # noqa: E402
+from os_optics_kit import edit_project as ep  # noqa: E402
+from os_optics_kit import sweep_parameters as sp  # noqa: E402
+from os_optics_kit import workflow_common as wc  # noqa: E402
 
 
+@requires_engine
 class CompareTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -114,11 +115,12 @@ def _sweep(directory, two=False):
         f3=p["f3"], wavelength_nm=p.get("wavelength", 780.0), l3_band_nm=(600, 900)))
 
 
-@unittest.skipUnless(HAS_MATPLOTLIB, "matplotlib is needed for plots (requirements-examples.txt)")
+@unittest.skipUnless(HAS_MATPLOTLIB, PLOT_EXTRA_MISSING)
+@requires_engine
 class PlotAndReportTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        from examples import plot_results as pr
+        from os_optics_kit import plot_results as pr
 
         cls.pr = pr
         cls._tmp = TempDir()
@@ -255,15 +257,17 @@ class CandidateTests(unittest.TestCase):
             cc._field("outer_dimensions_mm")
         self.assertEqual(caught.exception.code, "FIELD_UNKNOWN")
 
+    @requires_engine
     def test_missing_catalog_is_a_clear_error(self):
         with TempDir() as empty:
             env = {**os.environ, "OPENSCI_CATALOG_DIR": str(empty), "OPENSCI_CATALOG_CHECK_INTERVAL": "0"}
-            done = subprocess.run([sys.executable, str(ROOT / "examples" / "catalog_candidates.py"), "--category",
-                                   "LENS"], capture_output=True, text=True, env=env, timeout=120)
+            done = subprocess.run([sys.executable, *KIT, "candidates", "--category", "LENS"],
+                                  capture_output=True, text=True, env=env, timeout=120)
         self.assertEqual((done.returncode, done.stdout), (4, ""))
         self.assertEqual(json.loads(done.stderr)["error"]["code"], "CATALOG_NOT_AVAILABLE")
 
     @unittest.skipUnless(catalog_available(), "no public catalog release installed (os-optics catalog sync)")
+    @requires_engine
     def test_catalog_query_is_filtered_sorted_and_bounded(self):
         result = cc.candidates(category="LENS", form="PLANO_CONVEX_LENS", wavelength_nm="780",
                                ranges={"focal_length_mm": {"min": 90, "max": 110}}, near=("focal_length_mm", 100),

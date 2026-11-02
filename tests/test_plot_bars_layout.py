@@ -2,13 +2,14 @@
 
 import unittest
 
-from tests.workflow_fixtures import TempDir, quiet_environment
+from tests.workflow_fixtures import TempDir, quiet_environment, requires_matplotlib
 
 quiet_environment()
 
-from examples import plot_results as pr  # noqa: E402
+from os_optics_kit import plot_results as pr  # noqa: E402
 
 
+@requires_matplotlib
 class PlotBarsLayoutTests(unittest.TestCase):
     def test_long_labels_stay_inside_the_figure(self):
         captured = []

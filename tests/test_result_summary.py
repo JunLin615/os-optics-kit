@@ -1,4 +1,4 @@
-"""Offline regression checks against the published os-optics results API.
+"""Offline regression checks of os_optics_kit.result_summary against the os-optics results API.
 
 Run from the repository root: python -m unittest discover -s tests -v
 """
@@ -14,16 +14,19 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from os_optics.contracts import (
-    PowerBudget, TargetResult, ValidationIssue, ValidationResult, ValidationSummary,
-)
-from os_optics.results import ResultsError, RunResults, results_from_engine
+from os_optics_kit.result_summary import emit_cli, summarize_results
+from tests.workflow_fixtures import HAS_ENGINE, requires_engine
 
-from examples.result_summary import emit_cli, summarize_results
+if HAS_ENGINE:
+    from os_optics.contracts import (
+        PowerBudget, TargetResult, ValidationIssue, ValidationResult, ValidationSummary,
+    )
+    from os_optics.results import ResultsError, RunResults, results_from_engine
 
 
 ROOT = Path(__file__).resolve().parents[1]
-IDEAL = ROOT / "examples" / "ideal_lens_focus.py"
+# the ideal-lens-focus case script, whose summary output is result_summary's
+IDEAL = ROOT / "cases" / "ideal-lens-focus" / "ideal_lens_focus.py"
 
 
 def engine_result(status="PASS", **kwargs):
@@ -38,8 +41,9 @@ def invoke(workflow):
 
 
 class ResultSummaryTests(unittest.TestCase):
+    @requires_engine
     def test_failed_and_cancelled_execution_override_unassessed_requirements(self):
-        from examples import workflow_common as wc
+        from os_optics_kit import workflow_common as wc
         results = results_from_engine(engine_result())
         for state in ("FAILED", "CANCELLED"):
             with self.subTest(state=state):
@@ -53,6 +57,7 @@ class ResultSummaryTests(unittest.TestCase):
                 self.assertEqual((code, stderr), (4, ""))
                 self.assertEqual(json.loads(stdout)["outcome"]["execution"]["outcome"], state)
 
+    @requires_engine
     def test_all_scientific_statuses_produce_json_and_matching_exit_codes(self):
         for status, expected in (
             ("PASS", 0), ("WARNING", 0), ("NOT_APPLICABLE", 0),
@@ -68,6 +73,7 @@ class ResultSummaryTests(unittest.TestCase):
                 self.assertEqual(summary["engine_status"], status)
                 self.assertIsNone(summary["validation_status"])
 
+    @requires_engine
     def test_missing_power_and_empty_targets_are_explicit(self):
         summary = summarize_results(results_from_engine(engine_result()))
         self.assertEqual(summary["targets"], [])
@@ -75,6 +81,7 @@ class ResultSummaryTests(unittest.TestCase):
         self.assertNotIn("power_budget_details", summary)
         self.assertEqual(summary["integrity"]["checked"], False)
 
+    @requires_engine
     def test_targets_preserve_units_bounds_zero_values_and_diagnostics(self):
         targets = (
             TargetResult(target_id="upper", metric="beam_radius_mm", value=0,
@@ -103,6 +110,7 @@ class ResultSummaryTests(unittest.TestCase):
         self.assertEqual(rows["exact"]["issue_codes"], ["MONITOR_MISSED"])
         json.dumps(summary, allow_nan=False)
 
+    @requires_engine
     def test_actionable_issue_context_is_not_truncated(self):
         issue = ValidationIssue(
             code="MONITOR_MISSED", status="WARNING", message="Beam missed the detector",
@@ -112,6 +120,7 @@ class ResultSummaryTests(unittest.TestCase):
         summary = summarize_results(results_from_engine(engine_result("WARNING", issues=(issue,))))
         self.assertEqual(summary["issues"], [issue.model_dump(mode="json")])
 
+    @requires_engine
     def test_full_power_ledger_is_only_in_explicit_details(self):
         budget = PowerBudget(
             total_input_W=1, total_sinks={"ESCAPED": 1},
@@ -131,6 +140,7 @@ class ResultSummaryTests(unittest.TestCase):
         detail.pop("power_budget_details")
         self.assertEqual(compact, detail)
 
+    @requires_engine
     def test_local_validation_scope_and_element_models_survive(self):
         scope = [{"instance_id": "Lens", "code": "CATALOG_SCOPE", "message": "Select a supported model"}]
         models = [{"instance_id": "Lens", "fidelity": "IDEAL_THIN_ELEMENT",
@@ -148,12 +158,14 @@ class ResultSummaryTests(unittest.TestCase):
         self.assertEqual(summary["model_scope_issues"], scope)
         self.assertEqual(summary["element_models"], models)
 
+    @requires_engine
     def test_null_validation_status_falls_back_to_engine(self):
         results = RunResults(engine_result(), manifest={"status": {"validation_status": None}})
         summary = summarize_results(results)
         self.assertEqual(summary["status"], "PASS")
         self.assertIsNone(summary["validation_status"])
 
+    @requires_engine
     def test_integrity_failure_never_emits_a_scientific_summary(self):
         results = RunResults(engine_result(), integrity_problems=("simulation_result hash mismatch",))
         with self.assertRaises(ResultsError):
@@ -162,12 +174,14 @@ class ResultSummaryTests(unittest.TestCase):
         self.assertEqual((code, stdout), (4, ""))
         self.assertEqual(json.loads(stderr)["error"]["code"], "RUN_INTEGRITY_FAILED")
 
+    @requires_engine
     def test_unknown_future_status_fails_closed(self):
         results = RunResults(engine_result(), manifest={"status": {"validation_status": "FUTURE_STATUS"}})
         code, stdout, stderr = invoke(lambda: summarize_results(results))
         self.assertEqual((code, stdout), (4, ""))
         self.assertIn("FUTURE_STATUS", json.loads(stderr)["error"]["message"])
 
+    @requires_engine
     def test_in_memory_summary_never_calls_the_simulator(self):
         results = results_from_engine(engine_result())
         with patch("os_optics.validate", side_effect=AssertionError("simulation called")), \
@@ -197,6 +211,7 @@ class ResultSummaryTests(unittest.TestCase):
                 self.assertIn("message", json.loads(stderr)["error"])
 
 
+@requires_engine
 class IdealLensCliTests(unittest.TestCase):
     def run_example(self, *args):
         return subprocess.run([sys.executable, str(IDEAL), *map(str, args)],

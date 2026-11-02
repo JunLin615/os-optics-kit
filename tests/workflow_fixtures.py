@@ -1,16 +1,44 @@
-"""Catalog-free Projects and helpers shared by the workflow tests (native ideal thin lenses, no network)."""
+"""Catalog-free Projects and helpers shared by the tool tests (native ideal thin lenses, no network).
+
+Tests that run the engine are marked ``@requires_engine``: they are skipped, with that reason, only when
+``os_optics`` cannot be imported. Plot tests are marked ``@requires_matplotlib`` (the ``os-optics-kit[plot]``
+extra) and the tolerance sampling tests ``@requires_numpy`` (numpy is installed with the engine).
+"""
 
 from __future__ import annotations
 
 from contextlib import redirect_stderr, redirect_stdout
+from importlib.util import find_spec
 import io
 import json
 import os
 from pathlib import Path
 import shutil
 import tempfile
+import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _importable(name):
+    try:
+        __import__(name)
+    except ImportError:
+        return False
+    return True
+
+
+HAS_ENGINE = _importable("os_optics")
+HAS_MATPLOTLIB = find_spec("matplotlib") is not None
+HAS_NUMPY = find_spec("numpy") is not None
+ENGINE_MISSING = "os-optics (the engine) is not installed: python -m pip install \"os-optics>=0.12,<0.13\""
+PLOT_EXTRA_MISSING = "matplotlib is not installed: python -m pip install \"os-optics-kit[plot]\""
+NUMPY_MISSING = "numpy is not installed (it is installed with os-optics)"
+requires_engine = unittest.skipUnless(HAS_ENGINE, ENGINE_MISSING)
+requires_matplotlib = unittest.skipUnless(HAS_MATPLOTLIB, PLOT_EXTRA_MISSING)
+requires_numpy = unittest.skipUnless(HAS_NUMPY, NUMPY_MISSING)
+#: run a tool as ``python -m os_optics_kit <command>`` in a subprocess
+KIT = ("-m", "os_optics_kit")
 BEAM_ALONG_X = (0.5, 0.5, 0.5, 0.5)  # local +Z -> design +X, local +Y -> design +Z
 
 
@@ -81,7 +109,7 @@ class TempDir:
 
 
 def invoke(main, argv):
-    """Run a script's ``main(argv)``; return (exit code, parsed stdout or None, stderr text)."""
+    """Run a tool's ``main(argv)``; return (exit code, parsed stdout or None, stderr text)."""
     out, err = io.StringIO(), io.StringIO()
     with redirect_stdout(out), redirect_stderr(err):
         code = main(argv)
@@ -92,7 +120,7 @@ def invoke(main, argv):
 def catalog_available():
     """True when a public catalog release is installed for this environment (catalog tests skip otherwise).
 
-    With OPENSCI_EXAMPLES_REQUIRE_CATALOG=1 (set by the alignment runner's catalog-tests check) a missing catalog
+    With OS_OPTICS_KIT_REQUIRE_CATALOG=1 (set by the alignment runner's catalog-tests check) a missing catalog
     raises instead, so the catalog tests fail rather than skip."""
     try:
         from os_optics.local import json_api
@@ -100,8 +128,8 @@ def catalog_available():
         available = bool(json_api.catalog_status().get("available"))
     except Exception:  # noqa: BLE001
         available = False
-    if not available and os.environ.get("OPENSCI_EXAMPLES_REQUIRE_CATALOG") == "1":
-        raise RuntimeError("OPENSCI_EXAMPLES_REQUIRE_CATALOG=1 but no catalog release is installed "
+    if not available and os.environ.get("OS_OPTICS_KIT_REQUIRE_CATALOG") == "1":
+        raise RuntimeError("OS_OPTICS_KIT_REQUIRE_CATALOG=1 but no catalog release is installed "
                            f"(OPENSCI_CATALOG_DIR={os.environ.get('OPENSCI_CATALOG_DIR')!r})")
     return available
 

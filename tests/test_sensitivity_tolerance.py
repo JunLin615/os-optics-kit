@@ -1,4 +1,4 @@
-"""Offline checks of examples/sensitivity_analysis.py and examples/tolerance_study.py on catalog-free designs.
+"""Offline checks of os_optics_kit.sensitivity_analysis and os_optics_kit.tolerance_study on catalog-free designs.
 
 Run from the repository root: python -m unittest discover -s tests -v
 """
@@ -6,20 +6,20 @@ Run from the repository root: python -m unittest discover -s tests -v
 import csv
 import json
 import math
-from pathlib import Path
 import unittest
 
-from tests.workflow_fixtures import TempDir, invoke, quiet_environment
+from tests.workflow_fixtures import (
+    HAS_ENGINE, KIT, TempDir, invoke, quiet_environment, requires_engine, requires_numpy,
+)
 
 quiet_environment()
 
-from examples import optical_designs as D  # noqa: E402
-from examples import sensitivity_analysis as sa  # noqa: E402
-from examples import tolerance_study as ts  # noqa: E402
-from examples import workflow_common as wc  # noqa: E402
+from os_optics_kit import sensitivity_analysis as sa  # noqa: E402
+from os_optics_kit import tolerance_study as ts  # noqa: E402
+from os_optics_kit import workflow_common as wc  # noqa: E402
 
-ROOT = Path(__file__).resolve().parents[1]
-SPECS = ROOT / "examples" / "specs"
+if HAS_ENGINE:
+    from os_optics_kit import optical_designs as D  # the designs import the engine
 
 
 def rotate(instance_id, axis):
@@ -121,6 +121,7 @@ class FiniteDifferenceNumericsTests(unittest.TestCase):
         self.assertEqual(not_ranked, [{"parameter": "a", "reason": "no scale and the parameter units differ"}])
 
 
+@requires_engine
 class SensitivityAgainstClosedFormTests(unittest.TestCase):
     """Engine derivatives against Malus law and the 2 theta mirror law (independent closed forms)."""
 
@@ -188,6 +189,7 @@ class SensitivityAgainstClosedFormTests(unittest.TestCase):
         self.assertEqual(self.mirror["counts"]["by_outcome"]["PASS"] + self.mirror["counts"]["by_outcome"]["FAIL"], 9)
 
 
+@requires_engine
 class SensitivityVisibilityTests(unittest.TestCase):
     """Unmet nominal target, out-of-model and refused samples stay in every output."""
 
@@ -261,6 +263,7 @@ class SensitivityVisibilityTests(unittest.TestCase):
         self.assertIn("installed_catalog", study_json)
 
 
+@requires_engine
 class SensitivityRefusalTests(unittest.TestCase):
     def setUp(self):
         self._tmp = TempDir()
@@ -306,18 +309,21 @@ class SensitivityRefusalTests(unittest.TestCase):
         self.assertAlmostEqual(steps["tilt"][0][0], math.radians(0.01) * 1000.0, places=12)
         self.assertEqual(steps["wl"], ([0.78, 7.8], "default relative"))
 
+
+class HelpTests(unittest.TestCase):
     def test_help_on_stdout(self):
         import subprocess
         import sys
 
-        for name in ("sensitivity_analysis", "tolerance_study"):
-            done = subprocess.run([sys.executable, str(ROOT / "examples" / f"{name}.py"), "--help"],
+        for name in ("sensitivity", "tolerance"):
+            done = subprocess.run([sys.executable, *KIT, name, "--help"],
                                   capture_output=True, text=True, timeout=120)
             self.assertEqual(done.returncode, 0, name)
-            self.assertIn("usage:", done.stdout, name)
+            self.assertIn(f"usage: os-optics-kit {name}", done.stdout, name)
             self.assertIn("Exit 0", done.stdout, name)
 
 
+@requires_numpy
 class ToleranceSamplingTests(unittest.TestCase):
     PARAMETERS = [{"name": "a", "unit": "mm", "nominal": 0.0,
                    "distribution": {"kind": "uniform", "low": -2.0, "high": 1.0, "bounds": [-2.0, 1.0]}},
@@ -366,6 +372,7 @@ class ToleranceSamplingTests(unittest.TestCase):
         refused({"distribution": {"kind": "uniform", "low": -1, "high": 1}}, "BUDGET_EXCEEDED", max_evaluations=10)
         refused({"distribution": {"kind": "uniform", "low": -1, "high": 1}}, "SPEC_INVALID", seed=-1)
 
+    @requires_engine
     def test_draw_only_and_verify_seed(self):
         spec = {"design": {"builder": "polarization_control"}, "samples": 30, "seed": 11, "max_evaluations": 31,
                 "parameters": [{"name": "hwp", "unit": "deg", "ops": rotate("HWP", [0, 0, 1]),
@@ -388,6 +395,7 @@ class ToleranceSamplingTests(unittest.TestCase):
             self.assertEqual((code, out["status"]), (1, "MISMATCH"))
 
 
+@requires_engine
 class ToleranceStudyTests(unittest.TestCase):
     """Polarization tolerance study whose wavelength range leaves the retarder band (out-of-model samples)."""
 
