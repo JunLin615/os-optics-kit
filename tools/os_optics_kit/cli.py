@@ -56,12 +56,17 @@ def main(argv: list[str] | None = None) -> int:
         print(f"os-optics-kit: unknown command {name!r}\n\n{_usage()}", file=sys.stderr)
         return 4
     module = importlib.import_module(f".{COMMANDS[name][0]}", __package__)
+    program = sys.argv[0] if sys.argv else None
+    # argparse's default prog: a parser without an explicit prog shows "os-optics-kit NAME" in its usage
+    sys.argv[:1] = [f"os-optics-kit {name}"]
     try:
         result = module.main(rest)
     except SystemExit as exc:  # a subcommand's argparse --help / usage exit
         if exc.code is None:
             return 0
         return exc.code if isinstance(exc.code, int) else 4
+    finally:
+        sys.argv[:1] = [program] if program is not None else []
     return int(result or 0)
 
 
