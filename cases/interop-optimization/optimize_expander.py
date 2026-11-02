@@ -1,4 +1,4 @@
-"""External optimization and tolerance loop over an OpenSci Project (requires os-optics 0.10.0).
+"""External optimization and tolerance loop over an OpenSci Project.
 
 A catalog-free Keplerian beam expander (two declared ideal thin lenses, f = 50 mm
 and 150 mm, 532 nm, 0.5 mm source waist) is collimated by moving lens L2. SciPy
@@ -26,10 +26,9 @@ import copy
 import json
 import math
 from pathlib import Path
-import sys
 import time
 
-from os_optics_kit.interop import ArgumentParser, comparison_status, decimal_text, emit, environment, require_engine, run_identity, write_json
+from os_optics_kit.interop import ENGINE_SPEC, ArgumentParser, comparison_status, decimal_text, emit, environment, require_engine, run_identity, write_json
 
 WAVELENGTH_NM = 532.0
 WAIST_MM = 0.5
@@ -266,7 +265,7 @@ def run_example(out_dir, *, optuna_trials=60, seed=1, sobol_n=128,
     status = comparison_status(all(c["value"] is not None and c["value"] <= c["tolerance"] for c in checks.values()))
     identities = {r["identity"]["engine_build_id"] for r in log if r["identity"]}
     report = {
-        "example": "interop/optimization", "outcome": status, "requires": "os-optics>=0.10.0",
+        "example": "interop/optimization", "outcome": status, "requires": ENGINE_SPEC,
         "best_feasible_evaluation": best["evaluation"], "max_divergence_rad": max_divergence_rad,
         "compute_budget": compute_budget, "max_evaluations": max_evaluations,
         "environment": environment("scipy", "optuna", "SALib", "numpy"),
@@ -306,7 +305,7 @@ def run_example(out_dir, *, optuna_trials=60, seed=1, sobol_n=128,
 
 def main(argv=None):
     def workflow():
-        parser = ArgumentParser(description=__doc__.split("\n\n")[0])
+        parser = ArgumentParser(description=__doc__.split("\n\n")[0] + f" Requires {ENGINE_SPEC}.")
         parser.add_argument("--out", type=Path, default=Path("run-interop-optimization"), help="output directory")
         parser.add_argument("--optuna-trials", type=int, default=60, help="Optuna trials (default 60)")
         parser.add_argument("--sobol-n", type=int, default=128, help="SALib base sample size (power of 2, default 128)")

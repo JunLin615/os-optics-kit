@@ -21,7 +21,6 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-import sys
 import time
 
 # Each RCWA solve works on small matrices: one BLAS thread per process is fastest, and many threads per process
@@ -31,7 +30,7 @@ for _name in ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS"):
 
 import numpy as np  # noqa: E402
 
-from os_optics_kit.interop import ArgumentParser, emit, environment, package_versions, write_json
+from os_optics_kit.interop import ArgumentParser, emit, environment, package_versions, write_json  # noqa: E402
 
 PERIOD_UM, HEIGHT_UM = 0.325, 0.60
 N_TIO2, N_SIO2 = 2.43, 1.46

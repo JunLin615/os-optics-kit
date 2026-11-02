@@ -4,8 +4,8 @@ Run from the repository root: python -m unittest tests.test_interop -v
 
 The reference formulas, input parsing and network handling need only numpy (and
 scipy for the diffraction reference); third-party solvers are never imported here.
-Checks that run the Engine need os-optics 0.10.0 or newer and are skipped
-otherwise, as is any check whose optional dependency is missing.
+Checks that run the Engine need the kit's engine requirement (os-optics>=0.12,<0.13) and are
+skipped otherwise, as is any check whose optional dependency is missing.
 """
 
 from importlib import import_module
@@ -23,6 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 HAS_NUMPY = find_spec("numpy") is not None
 HAS_SCIPY = HAS_NUMPY and find_spec("scipy") is not None
 
+from os_optics_kit import _engine  # noqa: E402  (stdlib only)
 from os_optics_kit import interop as common  # noqa: E402  (stdlib only)
 
 
@@ -35,8 +36,7 @@ def case_module(case, name):
 
 
 def engine_supported():
-    installed = common.engine_version()
-    return installed is not None and common.version_tuple(installed) >= common.MINIMUM_ENGINE
+    return common.engine_supported(common.engine_version())
 
 
 class CommonTests(unittest.TestCase):
@@ -46,13 +46,20 @@ class CommonTests(unittest.TestCase):
         self.assertEqual(common.version_tuple("0.10.2+abc"), (0, 10, 2))
         self.assertLess(common.version_tuple("0.6.1"), common.MINIMUM_ENGINE)
 
-    def test_require_engine_refuses_older_or_missing_engines(self):
-        for installed in ("0.6.1", "0.8.0", "0.9.0", None):
-            with self.subTest(installed=installed), patch.object(common, "engine_version", return_value=installed):
-                with self.assertRaisesRegex(RuntimeError, "requires os-optics 0.10.0"):
+    def test_require_engine_refuses_engines_outside_the_kit_requirement(self):
+        self.assertEqual(common.ENGINE_REQUIREMENT, ">=0.12,<0.13")
+        self.assertEqual(common.MINIMUM_ENGINE, (0, 12))
+        for installed, code in (("0.6.1", "ENGINE_UNSUPPORTED"), ("0.10.0", "ENGINE_UNSUPPORTED"),
+                                ("0.11.0", "ENGINE_UNSUPPORTED"), ("0.13.0", "ENGINE_UNSUPPORTED"),
+                                (None, "ENGINE_NOT_INSTALLED")):
+            with self.subTest(installed=installed), patch.object(_engine, "engine_version", return_value=installed):
+                with self.assertRaisesRegex(RuntimeError, "os-optics>=0.12,<0.13") as caught:
                     common.require_engine()
-        with patch.object(common, "engine_version", return_value="0.10.0"):
-            self.assertEqual(common.require_engine(), "0.10.0")
+                self.assertEqual(caught.exception.code, code)
+        for installed in ("0.12.0", "0.12.3"):
+            with patch.object(_engine, "engine_version", return_value=installed):
+                self.assertEqual(common.require_engine(), installed)
+                self.assertTrue(common.engine_supported(installed))
 
 
     def test_decimal_text_is_a_plain_canonical_decimal(self):
@@ -79,7 +86,7 @@ class CommonTests(unittest.TestCase):
                 self.assertAlmostEqual(got, want, places=12)
 
 
-@unittest.skipUnless(engine_supported(), "os-optics 0.10.0 or newer is required")
+@unittest.skipUnless(engine_supported(), "needs os-optics>=0.12,<0.13")
 class OptimizationOutcomeTests(unittest.TestCase):
     def test_refused_sample_is_logged_and_counts_toward_budget(self):
         oe = case_module("interop-optimization", "optimize_expander")
@@ -422,7 +429,7 @@ class MetasurfaceFitTests(unittest.TestCase):
         self.assertAlmostEqual(self.fit.aperture_fraction(30.0, 50.0), 1 - math.exp(-2 * 2500 / 900), places=15)
 
 
-@unittest.skipUnless(HAS_NUMPY and engine_supported(), "needs os-optics 0.10.0 or newer")
+@unittest.skipUnless(HAS_NUMPY and engine_supported(), "needs numpy and os-optics>=0.12,<0.13")
 class EngineInteropTests(unittest.TestCase):
     def test_hom_layout_exports_a_four_mode_lossless_network(self):
         from os_optics.local import json_api

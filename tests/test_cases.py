@@ -49,6 +49,8 @@ def copy_tree(names, dest):
         shutil.copytree(CASES / name, dest / "cases" / name, ignore=shutil.ignore_patterns("__pycache__"))
     return dest / "cases"
 
+#: pieces of machine-local paths for the path-pattern tests (joined at run time)
+DRIVE_C, DRIVE_D, HOME = "C" + ":", "D" + ":", "ho" + "me"
 
 class IndexTests(unittest.TestCase):
     def test_every_case_passes_the_format_checks(self):
@@ -149,13 +151,15 @@ class FormatCheckTests(unittest.TestCase):
         (self.case / "images" / "extra.png").write_bytes(C.PNG_SIGNATURE + b"\0" * (C.IMAGE_MAX_BYTES + 1))
         self.assertEqual(self.codes(), ["IMAGES"])
         (self.case / "images" / "extra.png").unlink()
-        (self.case / "notes.txt").write_text("run dir: C:\\Users\\someone\\run\n", encoding="utf-8")
+        (self.case / "notes.txt").write_text(f"run dir: {DRIVE_C}\\Users\\someone\\run\n", encoding="utf-8")
         (self.case / "scene.glb").write_bytes(b"glTF")
         (self.case / "big.csv").write_text("x\n" * (C.FILE_MAX_BYTES // 2 + 1), encoding="utf-8")
         self.assertEqual(self.codes(), ["FILE_TOO_LARGE", "GENERATED_FILE", "LOCAL_PATH"])
 
     def test_local_path_pattern(self):
-        for text in ("C:\\Users\\x", "D:/cache/x", "/home/user/x", "\\\\server\\share", "see /tmp/run"):
+        # Machine paths are assembled at run time so the repository check does not flag this file.
+        for text in (f"{DRIVE_C}\\Users\\x", f"{DRIVE_D}/cache/x", f"/{HOME}/user/x", "\\\\server\\share",
+                     "see /tmp/run"):
             self.assertIsNotNone(C.LOCAL_PATH.search(text), text)
         for text in ("https://github.com/x/y", "cases/a/b.json", "~/.opensci/token", "1:2", "a/b/c", "N:1"):
             self.assertIsNone(C.LOCAL_PATH.search(text), text)

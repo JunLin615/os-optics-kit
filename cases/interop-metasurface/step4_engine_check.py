@@ -1,4 +1,4 @@
-"""Step 4: use the fitted metalens model in OpenSci and check it (requires os-optics 0.10.0).
+"""Step 4: use the fitted metalens model in OpenSci and check it.
 
 The step-3 ``TABULATED_THIN_LENS`` model is declared in a catalog-free Project and
 traced with the same Gaussian input as the external calculation (waist at the
@@ -36,7 +36,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # this case's own modules
-from os_optics_kit.interop import ArgumentParser, comparison_status, decimal_text, emit, environment, pose, require_engine, run_identity, write_json
+from os_optics_kit.interop import ENGINE_SPEC, ArgumentParser, comparison_status, decimal_text, emit, environment, pose, require_engine, run_identity, write_json
 from step1_unit_cells import CALIBRATION_NM, TABLE_NM, TEST_NM
 from step3_fit_model import aperture_fraction, interpolate, thin_lens_focus
 
@@ -305,7 +305,7 @@ def within_field(entry, bounds):
 
 def main(argv=None):
     def workflow():
-        parser = ArgumentParser(description=__doc__.split("\n\n")[0])
+        parser = ArgumentParser(description=__doc__.split("\n\n")[0] + f" Requires {ENGINE_SPEC}.")
         parser.add_argument("directory", type=Path, help="directory with metalens_model.json and step3_report.json")
         parser.add_argument("--model", choices=("tabulated", "per-wavelength-ideal"), default="tabulated",
                             help="model kind to declare (default: the TABULATED_THIN_LENS model itself)")

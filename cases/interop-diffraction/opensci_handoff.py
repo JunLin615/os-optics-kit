@@ -1,4 +1,4 @@
-"""OpenSci side of the diffraction example (requires os-optics 0.10.0).
+"""OpenSci side of the diffraction example.
 
 A 532 nm TEM00 beam (1 mm waist radius at the source, 1 mW) passes a declared
 circular APERTURE_STOP 100 mm downstream and a declared IDEAL_THIN_LENS
@@ -31,7 +31,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # this case's own modules
-from os_optics_kit.interop import ArgumentParser, decimal_text, emit, require_engine, run_identity, write_json
+from os_optics_kit.interop import ENGINE_SPEC, ArgumentParser, decimal_text, emit, require_engine, run_identity, write_json
 from tem00_field import propagate_state
 
 PLUS_X = [0.7071067811865476, 0.0, 0.7071067811865476, 0.0]  # local +Z along design +X
@@ -152,7 +152,7 @@ def run_case(stop_radius_mm, out_dir):
     results = load_run(run_dir)
     beam, surface, engine_handoff = gaussian_at_stop(results, document)
     handoff = {
-        "schema": HANDOFF_SCHEMA, "requires": "os-optics>=0.10.0",
+        "schema": HANDOFF_SCHEMA, "requires": ENGINE_SPEC,
         "identity": run_identity(results), "run_directory": str(run_dir),
         "field_convention": engine_handoff["conventions"]["tem00_field"],
         "beam_at_stop": beam,
@@ -185,7 +185,7 @@ def run_example(out_dir, stop_radii_mm):
 
 def main(argv=None):
     def workflow():
-        parser = ArgumentParser(description=__doc__.split("\n\n")[0])
+        parser = ArgumentParser(description=__doc__.split("\n\n")[0] + f" Requires {ENGINE_SPEC}.")
         parser.add_argument("--out", type=Path, default=Path("run-interop-diffraction"), help="output directory")
         parser.add_argument("--stop-radius-mm", type=float, nargs="+", default=[3.0, 1.2, 0.5],
                             help="stop radii in mm (default: 3 1.2 0.5)")

@@ -1,4 +1,4 @@
-"""OpenSci side of the quantum example (requires os-optics 0.10.0).
+"""OpenSci side of the quantum example.
 
 Builds small catalog-free Projects from native components (a thin 50:50 plate
 splitter, flat mirrors, uncoated windows of a declared N-BK7 Sellmeier glass) and
@@ -33,7 +33,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # this case's own modules
-from os_optics_kit.interop import ArgumentParser, decimal_text, emit, pose, require_engine, write_json
+from os_optics_kit.interop import ENGINE_SPEC, ArgumentParser, decimal_text, emit, pose, require_engine, write_json
 from reference import N_BK7_SELLMEIER, group_index, sellmeier_index
 
 INV = 1.0 / math.sqrt(2.0)
@@ -154,7 +154,7 @@ def run_example(out_dir):
     out_dir = Path(out_dir)
     layouts = out_dir / "layouts"
     layouts.mkdir(parents=True, exist_ok=True)
-    manifest = {"requires": "os-optics>=0.10.0", "engine_version": installed, "cases": {}}
+    manifest = {"requires": ENGINE_SPEC, "engine_version": installed, "cases": {}}
     for name, (layout, meta) in cases().items():
         project_path = write_json(layouts / f"{name}.project.json", layout.document)
         network_path = layouts / f"{name}.network.json"
@@ -176,7 +176,7 @@ def run_example(out_dir):
 
 def main(argv=None):
     def workflow():
-        parser = ArgumentParser(description=__doc__.split("\n\n")[0])
+        parser = ArgumentParser(description=__doc__.split("\n\n")[0] + f" Requires {ENGINE_SPEC}.")
         parser.add_argument("--out", type=Path, default=Path("run-interop-quantum"), help="output directory")
         args = parser.parse_args(argv)
         return run_example(args.out)

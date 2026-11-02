@@ -25,7 +25,7 @@ them.
 
 A single external focus does not define a general component: the model holds only
 inside the stated wavelength span, field angle, beam size and polarization, for the
-listed metrics. The field-angle calibration requires os-optics 0.10.0.
+listed metrics.
 
 Usage: python cases/interop-metasurface/step3_fit_model.py run-interop-metasurface
 """
@@ -41,7 +41,7 @@ import re
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # this case's own modules
-from os_optics_kit.interop import ArgumentParser, decimal_text, emit, require_engine, sha256_file, write_json
+from os_optics_kit.interop import ENGINE_SPEC, ArgumentParser, decimal_text, emit, require_engine, sha256_file, write_json
 from step1_unit_cells import CALIBRATION_NM, TABLE_NM
 
 MODEL_ID = "metalens_tio2_f200um"
@@ -362,7 +362,7 @@ def run_example(directory, n_g, samples, transmittance_interpolation):
 
 def main(argv=None):
     def workflow():
-        parser = ArgumentParser(description=__doc__.split("\n\n")[0])
+        parser = ArgumentParser(description=__doc__.split("\n\n")[0] + f" Requires {ENGINE_SPEC}.")
         parser.add_argument("directory", type=Path, help="directory with the step-1 library and step-2 focus tables")
         parser.add_argument("--nG", type=int, default=101, help="library of the model (default 101)")
         parser.add_argument("--samples", type=int, default=1024, help="focus table of the model (default 1024 samples)")

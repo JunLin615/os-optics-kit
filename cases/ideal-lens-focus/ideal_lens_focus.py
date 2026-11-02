@@ -1,6 +1,6 @@
 """Focus a Gaussian beam with an ideal thin lens, without a catalog download.
 
-Usage: python examples/ideal_lens_focus.py --out run-ideal-focus
+Usage: python cases/ideal-lens-focus/ideal_lens_focus.py --out run-ideal-focus
 """
 
 import json
