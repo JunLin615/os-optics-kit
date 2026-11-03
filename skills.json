@@ -87,6 +87,17 @@
       "sha256": "0ee9af6a75a6a091c4394003ed2610768f03572ecd8b811d99a5d255b13cad87"
     },
     {
+      "name": "render",
+      "kind": "tool",
+      "description": "Render the Optical Simulation View at an arbitrary camera pose (angle to the axis, elevation, roll), framed on the optics or one element, with a manifest. The frames are the engine's shading; only the camera is this tool's.",
+      "version": "0.1.0",
+      "command": "os-optics-kit render",
+      "requires": "os-optics>=0.12,<0.13",
+      "path": "skills/render/SKILL.md",
+      "tokens": 725,
+      "sha256": "cab457541a0604c2a8969cd650e142d418d921c92238c1455be31874c3f11e95"
+    },
+    {
       "name": "report",
       "kind": "tool",
       "description": "Assemble a factual Markdown and JSON report from a sweep study or saved runs without rerunning - identity, inputs, edits, target outcomes, counts with denominators, diagnostics, freshness, plots and an artifact list with sha256. Use it to hand results to a person.",
