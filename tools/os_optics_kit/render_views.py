@@ -193,12 +193,12 @@ def parse_camera(text):
 
 
 def collect_shots(args, default_axis=None):
-    if args.name and (len(args.camera or []) != 1 or args.shots):
+    if args.name is not None and (len(args.camera or []) != 1 or args.shots):
         raise RenderError("SHOTS_INVALID", "--name needs exactly one --camera and no --shots file")
     shots = []
     for index, text in enumerate(args.camera or []):
         azimuth, elevation, roll = parse_camera(text)
-        shots.append({"name": args.name if (args.name and len(args.camera) == 1) else f"shot{index + 1}",
+        shots.append({"name": args.name if args.name is not None else f"shot{index + 1}",
                       "azimuth_deg": azimuth, "elevation_deg": elevation, "roll_deg": roll})
     if args.shots:
         with open(args.shots, encoding="utf-8") as handle:

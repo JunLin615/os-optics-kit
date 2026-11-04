@@ -46,7 +46,7 @@ def refusal(capsys, code):
     return result
 
 
-@pytest.mark.parametrize("name", ["../outside", r"..\outside", "bad/name", "CON"])
+@pytest.mark.parametrize("name", ["", "../outside", r"..\outside", "bad/name", "CON"])
 def test_invalid_name_cannot_escape_output(viewer, tmp_path, capsys, name):
     out = tmp_path / "shots"
     assert invoke(out, "--name", name) == 4
