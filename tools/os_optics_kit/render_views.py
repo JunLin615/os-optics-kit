@@ -361,22 +361,26 @@ def playwright_api():
 
 def capture(browser, page_path, png_path, width, height, timeout_s, transparent):
     api = playwright_api()
+    stage = "browser launch"
     try:
         with api.sync_playwright() as playwright:
             with playwright.chromium.launch(executable_path=browser, headless=True, timeout=timeout_s * 1000) as chrome:
                 page = chrome.new_page(viewport={"width": width, "height": height}, device_scale_factor=1)
                 page.set_default_timeout(timeout_s * 1000)
+                stage = "page loading"
                 page.goto(Path(page_path).resolve().as_uri())
+                stage = "camera readiness"
                 page.wait_for_function("window.__osOpticsShotState && ['ready', 'error'].includes("
                                        "window.__osOpticsShotState.status)", timeout=timeout_s * 1000 + 500)
                 state = page.evaluate("window.__osOpticsShotState")
                 if state["status"] != "ready":
                     raise RenderError(state["error"]["code"], state["error"]["message"])
+                stage = "PNG capture"
                 png = page.screenshot(omit_background=transparent, animations="disabled")
                 Path(png_path).write_bytes(png)
                 return state["camera"]
     except api.TimeoutError:
-        raise RenderError("CAPTURE_TIMEOUT", f"the viewer was not ready within {timeout_s}s; inspect the HTML page "
+        raise RenderError("CAPTURE_TIMEOUT", f"{stage} timed out after {timeout_s}s; inspect the HTML page "
                           "or increase --timeout-s") from None
     except api.Error as error:
         raise RenderError("CAPTURE_FAILED", f"Chrome/Chromium could not capture the page: {error}") from None

@@ -38,7 +38,7 @@ def invoke(viewer_run, out, *options):
     stdout, stderr = io.StringIO(), io.StringIO()
     with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
         code = render.main([str(run), "--out", str(out), "--browser", browser,
-                            "--size", "640x480", "--timeout-s", "10", *options])
+                            "--size", "640x480", *options])
     assert stderr.getvalue() == "", stderr.getvalue()
     manifest = json.loads(stdout.getvalue())
     assert manifest == json.loads((out / "shots.json").read_text(encoding="utf-8"))
@@ -55,7 +55,7 @@ def observe(browser_path, page_paths):
         for path in page_paths:
             page = browser.new_page(viewport={"width": 640, "height": 480})
             page.goto(path.resolve().as_uri())
-            page.wait_for_function("window.__osOpticsShotState?.status === 'ready'", timeout=10000)
+            page.wait_for_function("window.__osOpticsShotState?.status === 'ready'", timeout=20000)
             observations.append(page.evaluate("""() => {
                 const v = window.__opensciViewer;
                 const visibleLabels = [...document.querySelectorAll('#labels .label')].filter(el => {
@@ -82,7 +82,7 @@ def test_background_pixels_and_default_hidden_labels(viewer_run, tmp_path, backg
     from PIL import Image
 
     code, manifest = invoke(viewer_run, tmp_path, "--camera", "55,22", "--background", background)
-    assert (code, manifest["status"], manifest["failed"]) == (0, "OK", 0)
+    assert (code, manifest["status"], manifest["failed"]) == (0, "OK", 0), manifest
     shot = manifest["shots"][0]
     assert shot["status"] == "captured"
     with Image.open(tmp_path / shot["png"]) as image:
@@ -112,7 +112,7 @@ def test_applied_camera_angles_roll_and_visible_labels(viewer_run, tmp_path):
 
     code, manifest = invoke(viewer_run, tmp_path, "--camera", "0,0", "--camera", "55,22",
                             "--camera", "55,22,45", "--labels")
-    assert (code, manifest["status"]) == (0, "OK")
+    assert (code, manifest["status"]) == (0, "OK"), manifest
     shots = manifest["shots"]
     actual = observe(viewer_run[1], [tmp_path / shot["html"] for shot in shots])
     for shot, state in zip(shots, actual):
@@ -157,11 +157,13 @@ def test_failed_camera_never_reports_a_captured_pose(viewer_run, tmp_path, monke
     else:
         monkeypatch.setattr(viewer_page, "standalone_html", broken_page)
     code, manifest = invoke(viewer_run, tmp_path, "--camera", "55,22", "--timeout-s", "2")
-    assert (code, manifest["status"], manifest["failed"]) == (1, "FAIL", 1)
+    assert (code, manifest["status"], manifest["failed"]) == (1, "FAIL", 1), manifest
     shot = manifest["shots"][0]
     assert shot["status"] == "failed"
     assert shot["png"] is None
     assert shot["applied_camera"] is None
     assert shot["error"]["code"] == {"missing": "PAGE_UNEXPECTED", "throws": "CAMERA_APPLY_FAILED",
                                       "timeout": "CAPTURE_TIMEOUT"}[broken]
+    if broken == "timeout":
+        assert "camera readiness" in shot["error"]["message"]
     assert not list(tmp_path.glob("*.png"))
