@@ -89,13 +89,13 @@
     {
       "name": "render",
       "kind": "tool",
-      "description": "Render the Optical Simulation View at an arbitrary camera pose (angle to the axis, elevation, roll), framed on the optics or one element, with a manifest. The frames are the engine's shading; only the camera is this tool's.",
+      "description": "Render reproducible 3D figures with camera angles, roll, element framing and a manifest.",
       "version": "0.1.0",
       "command": "os-optics-kit render",
       "requires": "os-optics>=0.12,<0.13",
       "path": "skills/render/SKILL.md",
-      "tokens": 725,
-      "sha256": "cab457541a0604c2a8969cd650e142d418d921c92238c1455be31874c3f11e95"
+      "tokens": 881,
+      "sha256": "97f1d5c2f4939d15e543279ed2af233758410615c5be211eb79fbc99eb1abb9f"
     },
     {
       "name": "report",

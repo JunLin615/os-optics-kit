@@ -1,8 +1,7 @@
 """Tests of ``os-optics-kit render`` (tools/os_optics_kit/render_views.py).
 
-The camera arithmetic, the shot specs, the framing box and the page injection are tested without an
-engine, a run directory or a browser; the command's registration and ``--help`` are checked as the
-kit requires. A capture is not part of CI (it needs a Chrome/Chromium on the machine).
+The camera arithmetic, shot specs, framing and injection need no engine or browser.
+Real capture and camera-state checks live in test_render_browser.py.
 """
 
 import contextlib
@@ -52,7 +51,7 @@ class CameraTests(unittest.TestCase):
     def test_azimuth_zero_looks_down_the_axis(self):
         direction, up = helper.camera_direction(self.AXIS, 0.0, 0.0)
         self.assertAlmostEqual(direction[0], 1.0, places=9)
-        self.assertAlmostEqual(abs(up[2]), 1.0, places=9)
+        self.assertEqual(up, [0.0, 0.0, 1.0])
 
     def test_azimuth_ninety_is_side_on(self):
         direction, _up = helper.camera_direction(self.AXIS, 90.0, 0.0)
@@ -60,19 +59,48 @@ class CameraTests(unittest.TestCase):
         self.assertAlmostEqual(math.sqrt(sum(c * c for c in direction)), 1.0, places=9)
 
     def test_elevation_lifts_towards_the_up_axis(self):
-        direction, _up = helper.camera_direction(self.AXIS, 90.0, 90.0)
-        self.assertAlmostEqual(direction[2], 1.0, places=9)
+        direction, _up = helper.camera_direction(self.AXIS, 55.0, 22.0)
+        self.assertAlmostEqual(math.degrees(math.asin(direction[2])), 22.0, places=9)
 
-    def test_each_pose_is_a_frame(self):
-        for azimuth in (0.0, 35.0, 55.0, 86.0, 90.0):
-            direction, up = helper.camera_direction(self.AXIS, azimuth, 12.0)
-            self.assertAlmostEqual(helper.dot(direction, up), 0.0, places=9)
-            self.assertAlmostEqual(math.sqrt(sum(c * c for c in up)), 1.0, places=9)
+    def test_measured_angle_and_screen_up(self):
+        for azimuth, elevation in ((0, 0), (35, 35), (55, 22), (86, 8), (90, -22), (125, 22), (180, 0)):
+            with self.subTest(azimuth=azimuth, elevation=elevation):
+                direction, up = helper.camera_direction(self.AXIS, azimuth, elevation)
+                self.assertAlmostEqual(math.degrees(math.acos(helper.dot(direction, self.AXIS))), azimuth, places=9)
+                self.assertAlmostEqual(helper.dot(direction, up), 0.0, places=9)
+                self.assertAlmostEqual(math.hypot(*direction), 1.0, places=9)
+                self.assertAlmostEqual(math.hypot(*up), 1.0, places=9)
+                self.assertGreater(up[2], 0)
 
-    def test_vertical_axis_falls_back_to_another_up(self):
-        direction, up = helper.camera_direction([0.0, 0.0, 1.0], 90.0, 0.0)
+    def test_tilted_axis_uses_an_orthogonal_basis(self):
+        axis = helper.unit([1.0, 0.0, 1.0])
+        direction, up = helper.camera_direction(axis, 55.0, 22.0)
+        self.assertAlmostEqual(math.degrees(math.acos(helper.dot(direction, axis))), 55.0, places=9)
         self.assertAlmostEqual(helper.dot(direction, up), 0.0, places=9)
-        self.assertGreater(abs(direction[0]) + abs(direction[1]) + abs(direction[2]), 0.5)
+        self.assertGreater(up[2], 0)
+
+    def test_parallel_axis_requires_an_explicit_up(self):
+        with self.assertRaisesRegex(helper.RenderError, "--up-axis"):
+            helper.camera_direction([0.0, 0.0, 1.0], 55.0, 22.0)
+        direction, up = helper.camera_direction([0.0, 0.0, 1.0], 0.0, 0.0, [0.0, 1.0, 0.0])
+        self.assertEqual(direction, [0.0, 0.0, 1.0])
+        self.assertEqual(up, [0.0, 1.0, 0.0])
+
+    def test_impossible_angles_and_poles_are_refused(self):
+        for azimuth, elevation in ((0, 12), (20, 30), (170, -20), (-55, 22), (181, 0), (90, 90), (90, -90)):
+            with self.subTest(azimuth=azimuth, elevation=elevation):
+                with self.assertRaises(helper.RenderError) as caught:
+                    helper.camera_direction(self.AXIS, azimuth, elevation)
+                self.assertEqual(caught.exception.code, "CAMERA_INVALID")
+
+    def test_camera_vectors_and_angles_are_finite(self):
+        for vector in ([1, 0], [0, 0, 0], [math.nan, 0, 0], [math.inf, 0, 0]):
+            with self.assertRaises(helper.RenderError):
+                helper.camera_direction(vector, 55, 22)
+        for pose in ("nan,0", "55,inf", "55,22,nan"):
+            with self.assertRaises(helper.RenderError) as caught:
+                helper.parse_camera(pose)
+            self.assertEqual(caught.exception.code, "CAMERA_INVALID")
 
     def test_optical_axis_prefers_an_override(self):
         axis = helper.optical_axis({"main_axis": [1.0, 0.0, 0.0]}, "0,1,0")
@@ -115,10 +143,10 @@ class ShotSpecTests(unittest.TestCase):
             setattr(base, key, value)
         return base
 
-    def test_duplicate_shot_names_are_refused(self):
+    def test_name_requires_one_camera(self):
         args = self._args(camera=["86,8", "55,22"], name="same")
-        shots = helper.collect_shots(args, [1.0, 0.0, 0.0])
-        self.assertEqual(len(shots), 2)
+        with self.assertRaises(helper.RenderError):
+            helper.collect_shots(args)
         args.camera = ["86,8"]
         args.name = None
         self.assertEqual(helper.collect_shots(args, [1.0, 0.0, 0.0])[0]["name"], "shot1")

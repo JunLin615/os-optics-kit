@@ -1,23 +1,21 @@
-"""Render the Optical Simulation View from camera poses the CLI does not expose.
+"""Render the engine's Optical Simulation View at a reproducible camera pose.
 
-``os-optics view`` offers nine named presets (iso / top / front / side / beam axis / ...) and no
-camera parameters. Reviewing a lens design -- and writing about it -- needs arbitrary angles: a
-near side-on view to see the element thickness, a three-quarter view to read the stack, a
-close-up on one element. Today that is done by clicking preset buttons and dragging the mouse in
-a real browser, which is neither reproducible nor scriptable.
+AZ is the angle from the optical axis to the target-to-eye direction (0 axial, 90 side-on).
+EL is elevation towards world up, projected perpendicular to the optical axis. The positive
+side is up cross axis. Use 0 <= AZ <= 180, |EL| <= min(AZ, 180-AZ), and |EL| < 90.
+ROLL rotates screen up about the target-to-eye direction by the right-hand rule.
+World up defaults to +Z; use --up-axis X,Y,Z if the optical axis is parallel to +Z.
 
-This command writes the engine's own self-contained viewer page and injects one small script that
-places the camera before the first frame: the page already exposes ``window.__opensciViewer`` with
-``frame(direction, up, box)``. Geometry, materials and shading stay the engine's; only the camera
-is ours. A headless browser then captures the frame.
+PNG capture needs Chrome/Chromium and: python -m pip install "os-optics-kit[render]"
+--html-only needs neither. Existing outputs require --overwrite.
 
 Usage:
   os-optics-kit render RUN_DIR --out DIR --camera 86,8 --camera 55,22 --size 1920x1080
   os-optics-kit render RUN_DIR --out DIR --shots shots.json --focus element:M2 --background transparent
   os-optics-kit render RUN_DIR --out DIR --camera 86,8 --html-only
 
-Exit codes: 0 the frames were written (or --html-only wrote the pages), 1 a capture failed,
-2 the camera or the framing could not be resolved, 4 usage error, missing engine or no browser.
+Exit codes: 0 written, 1 capture failed, 2 unresolved camera axis or focus, 4 refused input
+or missing dependency. Results are compact JSON on stdout; refusals are JSON on stderr.
 """
 
 from __future__ import annotations
@@ -26,13 +24,15 @@ import argparse
 import json
 import math
 from pathlib import Path
+import re
 import shutil
-import subprocess
 import sys
-import tempfile
+
+from .result_summary import json_cli_stdout
 
 PROG = "os-optics-kit render"
 ERROR_EXIT = 4
+UNRESOLVED_ERRORS = {"CAMERA_UNDEFINED", "FOCUS_UNKNOWN", "FRAMING_EMPTY"}
 
 #: classes that are not optics: they would dominate a close-up, so the optics framing drops them
 NOT_OPTICS = ("SOURCE", "DETECTOR", "OBSERVATION_PLANE", "TARGET_PLANE", "OTHER_OPTICAL")
@@ -64,7 +64,9 @@ class RenderError(RuntimeError):
 
 # ----------------------------------------------------------------------------- camera and framing
 def unit(vector):
-    length = math.sqrt(sum(component * component for component in vector))
+    if len(vector) != 3 or not all(math.isfinite(component) for component in vector):
+        raise RenderError("CAMERA_UNDEFINED", "camera axes must contain three finite numbers (X,Y,Z)")
+    length = math.hypot(*vector)
     if length < 1e-12:
         raise RenderError("CAMERA_UNDEFINED", "a zero-length direction cannot define a camera")
     return [component / length for component in vector]
@@ -85,8 +87,8 @@ def optical_axis(document, override=None):
     if override:
         try:
             return unit([float(piece) for piece in override.replace(" ", "").split(",")])
-        except Exception:
-            raise RenderError("CAMERA_UNDEFINED", f"--axis expects X,Y,Z, not {override!r}") from None
+        except (ValueError, RenderError):
+            raise RenderError("CAMERA_UNDEFINED", f"--axis expects three finite numbers and a nonzero vector, not {override!r}") from None
     main = document.get("main_axis")
     if main and len(main) == 3 and any(abs(component) > 1e-12 for component in main):
         return unit([float(component) for component in main])
@@ -103,24 +105,30 @@ def optical_axis(document, override=None):
 def camera_direction(axis, azimuth_deg, elevation_deg, up_axis=(0.0, 0.0, 1.0)):
     """Eye direction from the framing centre for an azimuth (angle to the axis) and an elevation.
 
-    ``azimuth_deg`` 0 looks down the axis, 90 is exactly side-on. ``elevation_deg`` lifts the eye
-    towards ``up_axis``. Returns ``(direction, up)``: the direction points from the target to the
-    eye, and ``up`` is the screen-up vector, both unit length.
+    ``azimuth_deg`` is the actual angle to the optical axis, from 0 to 180 degrees. Projecting
+    ``up_axis`` perpendicular to that axis defines the elevation direction. ``elevation_deg``
+    is the angle above the plane perpendicular to that effective up: its magnitude cannot exceed
+    min(azimuth, 180 - azimuth). At +/-90 elevation screen up is undefined, so those poles are
+    excluded. Returns target-to-eye direction and screen up, both unit length.
     """
+    if not all(math.isfinite(value) for value in (azimuth_deg, elevation_deg)):
+        raise RenderError("CAMERA_INVALID", "camera angles must be finite numbers in degrees")
+    if not 0 <= azimuth_deg <= 180 or not -90 < elevation_deg < 90:
+        raise RenderError("CAMERA_INVALID", "use AZ from 0 to 180 degrees and EL strictly between -90 and 90")
+    if abs(elevation_deg) > min(azimuth_deg, 180 - azimuth_deg):
+        raise RenderError("CAMERA_INVALID", "this angle to the axis cannot reach that elevation; use |EL| <= min(AZ, 180-AZ)")
+    axis = unit(axis)
     world_up = unit(list(up_axis))
-    if abs(dot(world_up, axis)) > 0.999:
-        world_up = [0.0, 1.0, 0.0]
+    projected_up = [u - dot(world_up, axis) * a for u, a in zip(world_up, axis)]
+    if math.hypot(*projected_up) < 1e-12:
+        raise RenderError("CAMERA_UNDEFINED", "the optical axis is parallel to world up; choose a nonparallel --up-axis X,Y,Z")
+    world_up = unit(projected_up)
     side = cross(world_up, axis)
-    if abs(dot(side, side)) < 1e-12:
-        side = [0.0, 1.0, 0.0]
-    side = unit(side)
     azimuth, elevation = math.radians(azimuth_deg), math.radians(elevation_deg)
-    direction = [math.cos(azimuth) * a + math.sin(azimuth) * s for a, s in zip(axis, side)]
-    direction = unit([math.cos(elevation) * d + math.sin(elevation) * u for d, u in zip(direction, world_up)])
-    right = cross(world_up, direction)
-    if abs(dot(right, right)) < 1e-12:
-        right = [1.0, 0.0, 0.0]
-    up = unit(cross(right, direction))
+    side_component = math.sqrt(max(0.0, math.sin(azimuth) ** 2 - math.sin(elevation) ** 2))
+    direction = unit([math.cos(azimuth) * a + side_component * s + math.sin(elevation) * u
+                      for a, s, u in zip(axis, side, world_up)])
+    up = unit([u - dot(world_up, direction) * d for u, d in zip(world_up, direction)])
     return direction, up
 
 
@@ -178,11 +186,15 @@ def parse_camera(text):
         raise RenderError("CAMERA_INVALID", f"--camera expects AZ,EL[,ROLL] in degrees, not {text!r}") from None
     if len(values) not in (2, 3):
         raise RenderError("CAMERA_INVALID", f"--camera expects AZ,EL[,ROLL], not {text!r}")
+    if not all(math.isfinite(value) for value in values):
+        raise RenderError("CAMERA_INVALID", "camera angles must be finite numbers in degrees")
     roll = values[2] if len(values) == 3 else 0.0
     return values[0], values[1], roll
 
 
-def collect_shots(args, default_axis):
+def collect_shots(args, default_axis=None):
+    if args.name and (len(args.camera or []) != 1 or args.shots):
+        raise RenderError("SHOTS_INVALID", "--name needs exactly one --camera and no --shots file")
     shots = []
     for index, text in enumerate(args.camera or []):
         azimuth, elevation, roll = parse_camera(text)
@@ -196,24 +208,53 @@ def collect_shots(args, default_axis):
         for index, shot in enumerate(loaded):
             if not isinstance(shot, dict) or "azimuth_deg" not in shot:
                 raise RenderError("SHOTS_INVALID", f"--shots entry {index} needs at least azimuth_deg")
-            shots.append({"name": str(shot.get("name") or f"shot{len(shots) + 1}"),
-                          "azimuth_deg": float(shot["azimuth_deg"]),
-                          "elevation_deg": float(shot.get("elevation_deg", 0.0)),
-                          "roll_deg": float(shot.get("roll_deg", 0.0))})
+            try:
+                angles = [float(shot.get(key, 0.0)) for key in ("azimuth_deg", "elevation_deg", "roll_deg")]
+            except (TypeError, ValueError):
+                raise RenderError("SHOTS_INVALID", f"--shots entry {index} needs numeric angles") from None
+            shots.append({"name": shot.get("name", f"shot{len(shots) + 1}"),
+                          "azimuth_deg": angles[0], "elevation_deg": angles[1], "roll_deg": angles[2]})
     if not shots:
         raise RenderError("SHOTS_MISSING", "give at least one --camera AZ,EL or a --shots file")
-    seen = {}
+    seen = set()
     for shot in shots:
-        seen[shot["name"]] = seen.get(shot["name"], 0) + 1
-        if seen[shot["name"]] > 1:
+        name = shot["name"]
+        if not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}", name):
+            raise RenderError("SHOTS_INVALID", "shot names must start with a letter or digit and contain only "
+                              "letters, digits, underscores or hyphens (1-64 characters)")
+        if re.fullmatch(r"CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9]", name, re.IGNORECASE):
+            raise RenderError("SHOTS_INVALID", f"{name!r} is a reserved filename; choose another shot name")
+        if name.lower() in seen:
             raise RenderError("SHOTS_INVALID", f"duplicate shot name {shot['name']!r}")
+        seen.add(name.lower())
+        if not all(math.isfinite(shot[key]) for key in ("azimuth_deg", "elevation_deg", "roll_deg")):
+            raise RenderError("CAMERA_INVALID", "camera angles must be finite numbers")
     return shots
+
+
+def check_outputs(out, shots, html_only, overwrite, input_path=None):
+    """Check the complete batch before writing any output."""
+    paths = [out / "shots.json"]
+    for shot in shots:
+        paths.append(out / f"{shot['name']}.html")
+        if not html_only:
+            paths.append(out / f"{shot['name']}.png")
+    for path in paths:
+        if input_path and path.resolve() == input_path.resolve():
+            raise RenderError("OUTPUT_INVALID", "an output would replace --shots; choose a different --out directory")
+        if path.resolve().parent != out:
+            raise RenderError("OUTPUT_INVALID", f"{path.name} points outside --out; choose another output directory")
+        if path.exists() and not path.is_file():
+            raise RenderError("OUTPUT_INVALID", f"{path} is not a file; choose another output directory")
+        if (path.exists() or path.is_symlink()) and not overwrite:
+            raise RenderError("OUTPUT_EXISTS", f"{path} already exists; choose a new --out or use --overwrite")
 
 
 # ----------------------------------------------------------------------------------- the viewer page
 STYLE = """
 <style id="os-optics-kit-render">
-  header, aside, #footer, #banner, #tooltip, #triad, #labels { display: none !important; }
+  header, aside, #footer, #banner, #tooltip, #triad { display: none !important; }
+  __LABEL_STYLE__
   #main { display: block !important; }
   #stage { width: 100vw !important; height: 100vh !important; }
   html, body { background: __BACKGROUND__ !important; }
@@ -224,6 +265,11 @@ SCRIPT = """
 <script id="os-optics-kit-render-camera">
 (function () {
   var SHOT = __CONFIG__;
+  var deadline = Date.now() + (SHOT.timeout_ms || 20000);
+  window.__osOpticsShotState = {status: "waiting"};
+  function fail(code, message) {
+    window.__osOpticsShotState = {status: "error", error: {code: code, message: message}};
+  }
   function apply(viewer) {
     var V = viewer.camera.position.constructor;
     var B = viewer.focusBox.constructor;
@@ -232,27 +278,48 @@ SCRIPT = """
     viewer.labelMode = SHOT.labels ? "key" : "off";
     viewer.applyVisibility();
     if (!SHOT.beams) { viewer.beamObjects.forEach(function (group) { group.visible = false; }); }
-    var box = new B(new V().fromArray(SHOT.box_min), new V().fromArray(SHOT.box_max));
-    viewer.frame(new V().fromArray(SHOT.direction), new V().fromArray(SHOT.up), box);
-    viewer.autoFrame = null;
-    if (SHOT.roll_deg) {
-      var angle = SHOT.roll_deg * Math.PI / 180.0;
-      var target = viewer.controls.target.clone();
-      var offset = viewer.camera.position.clone().sub(target);
-      var up = viewer.camera.up.clone().applyAxisAngle(offset.clone().normalize(), angle);
-      viewer.camera.up.copy(up);
+    if (SHOT.background !== "studio") {
+      viewer.scene.background = null;
+      viewer.renderer.setClearColor(SHOT.background === "transparent" ? "#000000" : SHOT.background,
+                                    SHOT.background === "transparent" ? 0 : 1);
     }
-    viewer.requestRender();
-    window.__osOpticsShotState = "applied";
+    var box = new B(new V().fromArray(SHOT.box_min), new V().fromArray(SHOT.box_max));
+    var direction = new V().fromArray(SHOT.direction);
+    var up = new V().fromArray(SHOT.up).applyAxisAngle(direction, SHOT.roll_deg * Math.PI / 180);
+    // frame rebuilds the viewer's controls for this up vector, including roll.
+    viewer.resize();
+    viewer.frame(direction, up, box);
+    viewer.renderNow();
+    var matrix = viewer.camera.matrixWorld.elements.slice();
+    var actualDirection = viewer.camera.position.clone().sub(viewer.controls.target).normalize();
+    var actualUp = new V(matrix[4], matrix[5], matrix[6]);
+    var actualBack = new V(matrix[8], matrix[9], matrix[10]);
+    if (actualDirection.distanceTo(direction) > 1e-6 || actualUp.distanceTo(up) > 1e-6 ||
+        actualBack.distanceTo(direction) > 1e-6 || viewer.controls.target.distanceTo(box.getCenter(new V())) > 1e-6) {
+      throw new Error("the viewer did not apply the requested camera");
+    }
+    if (viewer.renderer.getContext().isContextLost() || viewer.renderer.info.render.calls === 0) {
+      throw new Error("the viewer did not render the scene");
+    }
+    window.__osOpticsShotState = {status: "ready", camera: {
+      direction: actualDirection.toArray(), up: actualUp.toArray(), matrix_world: matrix,
+      position: viewer.camera.position.toArray(), target: viewer.controls.target.toArray()
+    }};
   }
-  var tries = 0;
   (function waitForViewer() {
     var viewer = window.__opensciViewer;
     if (!viewer) {
-      if (tries++ < 600) { setTimeout(waitForViewer, 25); }
+      if (Date.now() < deadline) { setTimeout(waitForViewer, 25); }
+      else { fail("PAGE_UNEXPECTED", "the engine viewer hook is unavailable; use os-optics 0.12.x"); }
       return;
     }
-    try { apply(viewer); } catch (error) { window.__osOpticsShotState = "error: " + error.message; }
+    if (!["frame", "resize", "renderNow", "applyVisibility"].every(function (key) {
+      return typeof viewer[key] === "function";
+    })) {
+      fail("PAGE_UNEXPECTED", "the engine viewer hook is incomplete; use os-optics 0.12.x");
+      return;
+    }
+    try { apply(viewer); } catch (error) { fail("CAMERA_APPLY_FAILED", error.message); }
   })();
 })();
 </script>
@@ -261,8 +328,9 @@ SCRIPT = """
 
 def inject(page_html, config, background):
     """Put the camera script into the engine's self-contained page (before </body>)."""
-    style = STYLE.replace("__BACKGROUND__", background)
-    script = SCRIPT.replace("__CONFIG__", json.dumps(config, sort_keys=True))
+    style = STYLE.replace("__BACKGROUND__", "#f2f4f7" if background == "studio" else background)
+    style = style.replace("__LABEL_STYLE__", "" if config.get("labels") else "#labels { display: none !important; }")
+    script = SCRIPT.replace("__CONFIG__", json.dumps({**config, "background": background}, sort_keys=True))
     marker = page_html.lower().rfind("</body>")
     if marker < 0:
         raise RenderError("PAGE_UNEXPECTED", "the engine's page has no </body> to insert into")
@@ -270,8 +338,10 @@ def inject(page_html, config, background):
 
 
 def find_browser(explicit):
-    for candidate in ([explicit] if explicit else []) + list(CHROME_CANDIDATES):
-        if candidate and Path(candidate).exists():
+    if explicit:
+        return explicit if Path(explicit).is_file() else shutil.which(explicit)
+    for candidate in CHROME_CANDIDATES:
+        if Path(candidate).is_file():
             return candidate
     for name in ("google-chrome", "chromium", "chrome"):
         found = shutil.which(name)
@@ -280,22 +350,36 @@ def find_browser(explicit):
     return None
 
 
+def playwright_api():
+    try:
+        from playwright import sync_api
+    except ImportError:
+        raise RenderError("CAPTURE_NOT_INSTALLED", 'install PNG capture with: python -m pip install "os-optics-kit[render]"; '
+                          "or use --html-only") from None
+    return sync_api
+
+
 def capture(browser, page_path, png_path, width, height, timeout_s, transparent):
-    args = [browser, "--headless=new", "--no-sandbox", "--disable-gpu-sandbox",
-            "--allow-file-access-from-files", "--hide-scrollbars", "--force-device-scale-factor=1",
-            f"--window-size={width},{height}", f"--virtual-time-budget={max(1000, timeout_s * 1000)}",
-            f"--screenshot={Path(png_path)}"]
-    if transparent:
-        args.append("--default-background-color=00000000")
-    args.append(Path(page_path).resolve().as_uri())
-    with tempfile.TemporaryFile(mode="w+t", encoding="utf-8", errors="replace") as log:
-        completed = subprocess.run(args, stdout=subprocess.DEVNULL, stderr=log, timeout=timeout_s + 60)
-        if completed.returncode != 0:
-            log.seek(0)
-            tail = log.read()[-1500:]
-            raise RenderError("CAPTURE_FAILED", f"the browser exited {completed.returncode}", detail=tail)
-    if not Path(png_path).exists() or Path(png_path).stat().st_size < 2000:
-        raise RenderError("CAPTURE_FAILED", "the browser wrote no image", file=str(png_path))
+    api = playwright_api()
+    try:
+        with api.sync_playwright() as playwright:
+            with playwright.chromium.launch(executable_path=browser, headless=True, timeout=timeout_s * 1000) as chrome:
+                page = chrome.new_page(viewport={"width": width, "height": height}, device_scale_factor=1)
+                page.set_default_timeout(timeout_s * 1000)
+                page.goto(Path(page_path).resolve().as_uri())
+                page.wait_for_function("window.__osOpticsShotState && ['ready', 'error'].includes("
+                                       "window.__osOpticsShotState.status)", timeout=timeout_s * 1000 + 500)
+                state = page.evaluate("window.__osOpticsShotState")
+                if state["status"] != "ready":
+                    raise RenderError(state["error"]["code"], state["error"]["message"])
+                png = page.screenshot(omit_background=transparent, animations="disabled")
+                Path(png_path).write_bytes(png)
+                return state["camera"]
+    except api.TimeoutError:
+        raise RenderError("CAPTURE_TIMEOUT", f"the viewer was not ready within {timeout_s}s; inspect the HTML page "
+                          "or increase --timeout-s") from None
+    except api.Error as error:
+        raise RenderError("CAPTURE_FAILED", f"Chrome/Chromium could not capture the page: {error}") from None
 
 
 # ------------------------------------------------------------------------------------------- command
@@ -304,51 +388,65 @@ def build_parser():
                             formatter_class=argparse.RawDescriptionHelpFormatter, epilog=__doc__)
     parser.add_argument("run_dir")
     parser.add_argument("--out", required=True)
+    parser.add_argument("--overwrite", action="store_true", help="replace existing output files after checking the whole batch")
     parser.add_argument("--camera", action="append", metavar="AZ,EL[,ROLL]",
-                        help="one camera pose in degrees; repeat for several shots")
+                        help="angle to optical axis, elevation, optional roll in degrees; repeat for several shots")
     parser.add_argument("--shots", help="JSON list of {name, azimuth_deg, elevation_deg, roll_deg}")
-    parser.add_argument("--name", help="shot name when exactly one --camera is given")
+    parser.add_argument("--name", help="one-camera filename: 1-64 letters/digits/_/-, starting with a letter or digit")
     parser.add_argument("--focus", default="optics",
                         help="what the camera frames: optics (default), scene, or element:<id>")
     parser.add_argument("--size", default=DEFAULT_SIZE)
     parser.add_argument("--background", default="studio",
                         help="studio (the engine's backdrop), transparent, or #rrggbb")
-    parser.add_argument("--up-axis", default="0,0,1", help="world up axis, default 0,0,1")
+    parser.add_argument("--up-axis", default="0,0,1", help="world up X,Y,Z, nonparallel to optical axis; default 0,0,1")
     parser.add_argument("--axis", help="the optical axis X,Y,Z; default: the view's main axis")
     parser.add_argument("--edges", action="store_true", help="draw part outlines")
     parser.add_argument("--labels", action="store_true", help="draw key labels")
     parser.add_argument("--beams", action="store_true", help="keep the beam paths")
     parser.add_argument("--browser", help="browser executable; default: a Chrome/Chromium on this machine")
-    parser.add_argument("--html-only", action="store_true", help="write the camera-placed pages, capture nothing")
-    parser.add_argument("--timeout-s", type=int, default=20)
+    parser.add_argument("--html-only", action="store_true", help="write pages with a camera request; no browser verification or PNG")
+    parser.add_argument("--timeout-s", type=int, default=20, help="seconds to wait for page readiness/capture (default: 20)")
     return parser
 
 
 def main(argv=None):
     try:
-        args = build_parser().parse_args(argv or sys.argv[1:])
-        return run(args)
+        args = build_parser().parse_args(argv)
+        with json_cli_stdout():
+            manifest = run(args)
     except RenderError as error:
         print(json.dumps({"status": "ERROR", "error": {"code": error.code, "message": str(error), **error.details}},
-                         indent=1), flush=True)
-        return ERROR_EXIT
+                         separators=(",", ":")), file=sys.stderr)
+        return 2 if error.code in UNRESOLVED_ERRORS else ERROR_EXIT
     except ValueError as error:
-        print(json.dumps({"status": "ERROR", "error": {"code": "USAGE", "message": str(error)}}, indent=1), flush=True)
+        print(json.dumps({"status": "ERROR", "error": {"code": "USAGE", "message": str(error)}},
+                         separators=(",", ":")), file=sys.stderr)
         return ERROR_EXIT
+    except OSError as error:
+        print(json.dumps({"status": "ERROR", "error": {"code": "FILE_ERROR", "message": str(error)}},
+                         separators=(",", ":")), file=sys.stderr)
+        return ERROR_EXIT
+    print(json.dumps(manifest, separators=(",", ":")), flush=True)
+    return 1 if manifest["failed"] else 0
 
 
 def run(args):
+    width, height = parse_size(args.size)
+    if args.timeout_s <= 0:
+        raise RenderError("USAGE", "--timeout-s must be a positive number of seconds")
+    if args.background not in ("studio", "transparent") and not re.fullmatch(r"#[0-9a-fA-F]{6}", args.background):
+        raise RenderError("BACKGROUND_INVALID", "--background expects studio, transparent or a colour such as '#ff00ff'")
+    up_axis = unit([float(piece) for piece in args.up_axis.split(",")])
+    shots = collect_shots(args)
+    out = Path(args.out).resolve()
+    check_outputs(out, shots, args.html_only, args.overwrite, Path(args.shots) if args.shots else None)
+
     try:
         from os_optics.viewer import load_view, view_document
         from os_optics.viewer.page import standalone_html
     except ImportError:
         raise RenderError("ENGINE_NOT_INSTALLED",
                           "this command needs the os-optics engine's viewer: python -m pip install \"os-optics>=0.12,<0.13\"") from None
-
-    width, height = parse_size(args.size)
-    up_axis = [float(piece) for piece in args.up_axis.split(",")]
-    out = Path(args.out)
-    out.mkdir(parents=True, exist_ok=True)
 
     try:
         scene = load_view(args.run_dir)
@@ -358,51 +456,59 @@ def run(args):
     axis = optical_axis(document, args.axis)
     parts = part_points(scene)
     box_min, box_max = framing_box(parts, args.focus)
-    shots = collect_shots(args, axis)
-
     browser = None if args.html_only else find_browser(args.browser)
     if not args.html_only and not browser:
         raise RenderError("BROWSER_NOT_FOUND",
                           "no Chrome/Chromium found; pass --browser PATH, or --html-only to write the pages")
+    if not args.html_only:
+        playwright_api()
 
     background = args.background
     transparent = background == "transparent"
     page_html = standalone_html(document).decode("utf-8")
-    written = []
-    failures = 0
+    prepared = []
     for shot in shots:
         direction, up = camera_direction(axis, shot["azimuth_deg"], shot["elevation_deg"], up_axis)
         config = {"direction": direction, "up": up, "box_min": box_min, "box_max": box_max,
                   "roll_deg": shot["roll_deg"], "hide_classes": list(NOT_OPTICS) if args.focus == "optics" else [],
-                  "edges": bool(args.edges), "labels": bool(args.labels), "beams": bool(args.beams)}
-        page = inject(page_html, config, "transparent" if transparent else (
-            background if background.startswith("#") else "#f2f4f7"))
+                  "edges": bool(args.edges), "labels": bool(args.labels), "beams": bool(args.beams),
+                  "timeout_ms": args.timeout_s * 1000}
+        page = inject(page_html, config, background)
+        prepared.append((shot, direction, up, page))
+
+    # All input, geometry and output checks have passed for the entire batch.
+    out.mkdir(parents=True, exist_ok=True)
+    written = []
+    failures = 0
+    for shot, direction, up, page in prepared:
         page_path = out / f"{shot['name']}.html"
         page_path.write_text(page, encoding="utf-8")
         record = {"name": shot["name"], "html": page_path.name,
                   "azimuth_deg": shot["azimuth_deg"], "elevation_deg": shot["elevation_deg"],
-                  "roll_deg": shot["roll_deg"], "direction": [round(v, 6) for v in direction],
-                  "up": [round(v, 6) for v in up], "focus": args.focus,
+                  "roll_deg": shot["roll_deg"], "direction": None, "up": None, "focus": args.focus,
+                  "requested_camera": {"direction": direction, "up": up, "roll_deg": shot["roll_deg"]},
+                  "applied_camera": None, "status": "html_only",
                   "box_min": [round(v, 6) for v in box_min], "box_max": [round(v, 6) for v in box_max],
                   "image_px": [width, height], "png": None}
         if not args.html_only:
             try:
-                capture(browser, page_path, out / f"{shot['name']}.png", width, height, args.timeout_s, transparent)
+                applied = capture(browser, page_path, out / f"{shot['name']}.png", width, height,
+                                  args.timeout_s, transparent)
                 record["png"] = f"{shot['name']}.png"
+                record["status"] = "captured"
+                record["applied_camera"] = applied
+                record["direction"], record["up"] = applied["direction"], applied["up"]
             except RenderError as error:
                 failures += 1
-                record["error"] = error.as_dict() if hasattr(error, "as_dict") else {"code": error.code,
-                                                                                   "message": str(error)}
+                record["status"] = "failed"
+                record["error"] = {"code": error.code, "message": str(error)}
         written.append(record)
 
-    manifest = {"status": "ERROR" if failures else "OK", "run_dir": str(Path(args.run_dir).resolve()),
+    manifest = {"status": "FAIL" if failures else "OK", "run_dir": str(Path(args.run_dir).resolve()),
                 "out": str(out.resolve()), "focus": args.focus, "background": args.background,
                 "shots": written, "failed": failures}
     (out / "shots.json").write_text(json.dumps(manifest, indent=1) + "\n", encoding="utf-8")
-    print(json.dumps(manifest, indent=1), flush=True)
-    if failures:
-        return 1
-    return 0
+    return manifest
 
 
 if __name__ == "__main__":
