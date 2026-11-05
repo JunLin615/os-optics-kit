@@ -27,6 +27,7 @@ DIR, the skills directory of your agent host; it never overwrites a different fi
 | Explore one or two parameters | `sweep SPEC.json --base P.json --out STUDY` |
 | Explain what an edit changed | `compare RUN_A RUN_B --project CURRENT.json --out CMP` |
 | Plots and a report | `plot sweep STUDY --y target:ID`; `report STUDY --project CURRENT.json` |
+| Reproducible 3D figures | `render RUN --out FIGURES --camera 55,22 --background transparent` |
 | Sensitivity, tolerance | `sensitivity SPEC.json --out DIR`; `tolerance SPEC.json --out DIR` |
 | Catalog parts | `candidates --category ... --wavelength-nm ...` |
 | Detector CSV data | `measurements DATA.csv --x ... --signal ... --out DIR` |

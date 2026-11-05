@@ -62,6 +62,11 @@ agent, are in [Contributing with an agent](docs/contributing-with-an-agent.md).
 
 4. Commit with a sign-off (`git commit -s`), push to your fork and open a pull request.
 
+For render changes, also install `python -m pip install -e ".[render]"` and Chrome/Chromium, then
+run `python -m pytest tests/test_render_browser.py`. These catalog-free tests check actual PNG
+pixels, camera matrices, labels and capture errors. They skip when optional dependencies are missing;
+the published-engine CI job runs them with those dependencies installed.
+
 ## Sign-off (DCO)
 
 Every commit needs a `Signed-off-by:` line with your name and the email of the commit author. It certifies the

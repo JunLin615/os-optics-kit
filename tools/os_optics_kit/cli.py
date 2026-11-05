@@ -23,6 +23,10 @@ COMMANDS: dict[str, tuple[str, str]] = {
     "tolerance": ("tolerance_study", "seeded tolerance sampling under declared distributions"),
     "candidates": ("catalog_candidates", "rank catalog products for a requirement"),
     "measurements": ("analyze_measurements", "clean, fit and reference-normalize detector CSV data"),
+    "render": (
+        "render_views",
+        "render reproducible 3D figures with camera angles, roll and framing",
+    ),
     "cases": ("cases", "list, show, copy and verify the engine-reproducible cases"),
     "skills": ("skills", "list, show and install the vendor-neutral agent skills"),
     "contrib": ("contrib", "prepare a case or tool contribution as a PR-ready patch or bundle"),
