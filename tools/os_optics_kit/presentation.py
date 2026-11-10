@@ -98,7 +98,7 @@ TEXT: dict[str, dict[str, str]] = {
         "outcome.PASS": "PASS",
         "outcome.FAIL": "FAIL",
         "outcome.UNKNOWN": "UNKNOWN (no value or undefined)",
-        "outcome.OUT_OF_MODEL": "OUT_OF_MODEL (model scope)",
+        "outcome.OUT_OF_MODEL": "OUT_OF_MODEL (model scope issue)",
         "outcome.ERROR": "ERROR (refused or not run)",
         "outcome.MISSING": "missing",
         "legend.count": "{label} ({count})",
@@ -116,10 +116,12 @@ TEXT: dict[str, dict[str, str]] = {
         "title.sweep": "{y} vs {x}",
         "title.heatmap": "{y}",
         "title.power": "Received power",
+        "title.power_of": "Received power: {source}",
         "title.power_planes": "Observation planes",
         "title.power_planes_note": "solid: known; hatched: lower bound",
         "title.power_sinks": "Power ledger sinks",
         "title.view": "System view",
+        "title.view_of": "System view: {source}",
         "title.targets": "Target values",
         "axis.power_W": "received power [W]",
         "axis.power": "power [W]",
@@ -129,7 +131,7 @@ TEXT: dict[str, dict[str, str]] = {
         "caption.engine": "engine {build}",
         "caption.catalog": "catalog {version}",
         "caption.no_catalog": "catalog none (catalog-free run)",
-        "caption.view": "{title}: {angle} deg from the optical axis, {elevation} deg elevation.",
+        "caption.view": "{subject}, {angle}° from the optical axis at {elevation}° elevation.",
         "caption.sweep": "{y} across {count} samples of {x}; {passed} PASS.",
         "caption.power": "Power received by each observation plane and the power-ledger sinks.",
         "caption.targets": "Target values of {runs} with their bounds.",
@@ -159,10 +161,12 @@ TEXT: dict[str, dict[str, str]] = {
         "title.sweep": "{y} 随 {x} 的变化",
         "title.heatmap": "{y}",
         "title.power": "接收功率",
+        "title.power_of": "接收功率：{source}",
         "title.power_planes": "观测面",
         "title.power_planes_note": "实心：已知；斜线：下界",
         "title.power_sinks": "功率账目去向",
         "title.view": "系统视图",
+        "title.view_of": "系统视图：{source}",
         "title.targets": "目标值",
         "axis.power_W": "接收功率 [W]",
         "axis.power": "功率 [W]",
@@ -172,7 +176,7 @@ TEXT: dict[str, dict[str, str]] = {
         "caption.engine": "引擎 {build}",
         "caption.catalog": "目录 {version}",
         "caption.no_catalog": "无目录（不依赖目录的运行）",
-        "caption.view": "{title}：与光轴夹角 {angle}°，仰角 {elevation}°。",
+        "caption.view": "{subject}，与光轴夹角 {angle}°，仰角 {elevation}°。",
         "caption.sweep": "{y} 在 {x} 的 {count} 个样本上的取值；{passed} 个 PASS。",
         "caption.power": "各观测面接收的功率与功率账目去向。",
         "caption.targets": "{runs} 的目标值及其范围。",
@@ -458,7 +462,11 @@ def _font_index():
 
         index: dict[str, str] = {}
         for entry in font_manager.fontManager.ttflist:
-            index.setdefault(entry.name, entry.fname)
+            # only upright regular-weight files: a family installed only as Thin or Bold is not used for body text
+            weight = entry.weight if isinstance(entry.weight, int) else {"normal": 400, "regular": 400,
+                                                                          "book": 400}.get(str(entry.weight), 0)
+            if entry.style == "normal" and 350 <= weight <= 500:
+                index.setdefault(entry.name, entry.fname)
         _FONT_CACHE["index"] = index
     return _FONT_CACHE["index"]
 
