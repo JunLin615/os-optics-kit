@@ -251,7 +251,7 @@ def write_annotated(image, path, theme, title, caption):
         ax.imshow(mpimg.imread(image))
         ax.set_axis_off()
         if title:
-            fig.text(0.03, 0.95, title, fontsize=theme.font_pt("title"), fontweight="semibold", va="center")
+            fig.text(0.03, 0.95, title, fontsize=theme.font_pt("title"), fontweight="bold", va="center")
         if caption:
             fig.text(0.03, 0.035, caption, fontsize=theme.font_pt("caption"), color=theme.colors["muted"],
                      va="center")
