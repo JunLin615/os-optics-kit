@@ -207,18 +207,19 @@ def build_view(asset, ctx):
     files: dict[str, Path] = {"image": image}
     shown_title = pres.title_text(asset, theme, title)
     shown_caption = pres.caption_text(asset, theme, caption)
+    provenance = ""
+    if theme.provenance_in_figure:  # report preset: engine build and catalog release with the image
+        identity = source.identity
+        catalog = identity.get("catalog_version")
+        provenance = " | ".join((pres.text("caption.engine", theme.language,
+                                           build=identity.get("engine_build_id") or "-"),
+                                 pres.text("caption.catalog", theme.language, version=catalog) if catalog
+                                 else pres.text("caption.no_catalog", theme.language)))
     files["overlay"] = write_overlay(out / f"{asset['id']}.overlay.svg", theme, shown_title if theme.title else "",
-                                     shown_caption)
+                                     " | ".join(part for part in (shown_caption, provenance) if part))
     if theme.title or theme.captions == "figure" or theme.provenance_in_figure:
-        footer = shown_caption if theme.captions == "figure" else ""
-        if theme.provenance_in_figure:
-            identity = source.identity
-            catalog = identity.get("catalog_version")
-            footer = " | ".join(part for part in (footer, pres.text("caption.engine", theme.language,
-                                                                    build=identity.get("engine_build_id") or "-"),
-                                                  pres.text("caption.catalog", theme.language, version=catalog)
-                                                  if catalog else pres.text("caption.no_catalog", theme.language))
-                                if part)
+        footer = " | ".join(part for part in (shown_caption if theme.captions == "figure" else "", provenance)
+                            if part)
         files["annotated"] = write_annotated(image, out / f"{asset['id']}.annotated.png", theme,
                                              shown_title if theme.title else "", footer)
     if asset.get("interactive"):

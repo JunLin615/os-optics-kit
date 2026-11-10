@@ -538,7 +538,10 @@ def draw_power(left, right, monitors, budget, style):
             left.annotate(("bounded" if style.legacy else style.t("legend.bounded")) if upper is not None
                           else style.t("legend.lower_bound"),
                           (index, value), xytext=(0, 4), textcoords="offset points", ha="center",
-                          fontsize=style.fs(7))
+                          fontsize=style.fs(7), zorder=4,
+                          **({} if style.legacy or style.theme.background == "transparent" else
+                             {"bbox": {"boxstyle": "round,pad=0.15", "facecolor": style.theme.colors["face"],
+                                       "edgecolor": "none"}}))
         else:
             # Axes coordinates mark unavailable data without placing a false zero on the power axis.
             left.text(index, 0.02, state or "unavailable", transform=left.get_xaxis_transform(),
