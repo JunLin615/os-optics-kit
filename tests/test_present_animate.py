@@ -17,6 +17,7 @@ import math
 import os
 from pathlib import Path
 import sys
+from types import SimpleNamespace
 import unittest
 from unittest import mock
 
@@ -83,8 +84,10 @@ class Context:
         self.progress_calls.append((asset_id, done, total))
 
 
-def fake_study(root, rows_spec, *, unit="mm"):
-    """A saved study directory (summary.json, study.json, sample.json) without runs: values only."""
+def fake_study(root, rows_spec, *, unit="mm", wavelengths=None):
+    """A saved study directory (summary.json, study.json, sample.json) without runs: values only.
+
+    ``wavelengths``: one value per row adds a second parameter ``wavelength`` [nm]."""
     root = Path(root)
     rows = []
     for index, (x, y, outcome) in enumerate(rows_spec):
@@ -92,11 +95,16 @@ def fake_study(root, rows_spec, *, unit="mm"):
         rows.append({"sample_id": sample_id, "outcome": outcome, "param:gap": x, "param:gap:unit": "mm",
                      "target:waist": y, "target:waist:unit": unit, "target:waist:exact": y is not None,
                      "run_dir": None, "result_hash": f"hash{index}"})
+        if wavelengths:
+            rows[-1].update({"param:wavelength": wavelengths[index], "param:wavelength:unit": "nm"})
         sample_dir = root / "samples" / sample_id
         sample_dir.mkdir(parents=True)
         (sample_dir / "sample.json").write_text(json.dumps({"targets": [
             {"id": "waist", "bounds": {"minimum": 1.0, "maximum": 2.0}}]}), encoding="utf-8")
-    summary = {"parameters": [{"name": "gap", "unit": "mm", "count": len(rows)}],
+    parameters = [{"name": "gap", "unit": "mm", "count": len(rows)}]
+    if wavelengths:
+        parameters.append({"name": "wavelength", "unit": "nm", "count": len(set(wavelengths))})
+    summary = {"parameters": parameters,
                "columns": ["sample_id", "outcome", "param:gap", "param:gap:unit", "target:waist", "target:waist:unit",
                            "target:waist:exact", "run_dir"],
                "rows": rows, "identity": {"engine": {"engine_build_id": "test"}}}
@@ -124,6 +132,20 @@ class CameraPathTests(unittest.TestCase):
         level = an.orbit_poses(AXIS, UP, {**orbit, "elevation_deg": 0.0}, [0.0])[0]
         expected, _up = rv.camera_direction(AXIS, 55.0, 0.0, UP)
         self.assertLess(angle_between(level[0], expected), 1e-5)
+
+    def test_orbit_starts_with_light_left_to_right_like_present_views(self):
+        box = ([0.0, -6.0, -6.0], [150.0, 6.0, 6.0])
+        view = SimpleNamespace(axis=AXIS, document={"camera_fov_deg": 14.0}, box=lambda focus: box)
+        cfg = an.normalize({"id": "o", "kind": "animation", "mode": "orbit", "source": "run", "duration_s": 1,
+                            "fps": 8, "orbit": {"start_deg": 55, "elevation_deg": 0}})
+        shots, _segments, _focus = an.plan_orbit(cfg, view, "run", [0, 0, 320, 180])
+        expected, _up = an.pose_vectors(AXIS, [55.0, 0.0, 0.0], UP)
+        self.assertLess(angle_between(shots[0]["direction"], expected), 1e-5)
+        first = shots[0]
+        self.assertEqual(rv.left_to_right(first["direction"], first["up"], AXIS)[0], first["direction"])
+        self.assertTrue(all(shot.get("mirrored") for shot in shots))
+        steps = [angle_between(a["direction"], b["direction"]) for a, b in zip(shots, shots[1:])]
+        self.assertLess(max(steps) - min(steps), 1e-6)  # the mirrored path still turns evenly
 
     def test_orbit_about_optical_axis_keeps_angle_and_turns_rigidly(self):
         orbit = {"about": "optical_axis", "start_deg": 0.0, "sweep_deg": 90.0, "elevation_deg": 0.0,
@@ -195,6 +217,19 @@ class TimelineTests(unittest.TestCase):
         self.assertEqual(sum(s["frames"] for s in segments), round(9.6 * 24))
         self.assertEqual([s["start_s"] for s in segments[:3]], [0.0, 0.8, 1.6])
         self.assertTrue(all(s["frames"] in (19, 20) for s in segments))
+
+    def test_every_segment_of_a_frame_or_longer_gets_a_frame(self):
+        segments = [{"duration_s": d} for d in (0.375, 0.25, 0.25, 0.375, 0.25)]  # 1.5, 1, 1, 1.5, 1 frames at 4 fps
+        an.assign_timeline(segments, 4)
+        self.assertTrue(all(s["frames"] >= 1 for s in segments), [s["frames"] for s in segments])
+        short = [{"index": i, "duration_s": 0.1} for i in range(5)]
+        self.assertAlmostEqual(an.sample_hold(short, 4), 0.25)
+        self.assertEqual([s["duration_s"] for s in short], [0.25] * 5)
+        an.assign_timeline(short, 4)
+        self.assertEqual([s["frames"] for s in short], [1] * 5)
+        plan = an.segment_gif_timeline(short)
+        self.assertEqual([i for i, _ms in plan], [0, 1, 2, 3, 4])  # one GIF frame per sample
+        self.assertEqual(sum(ms for _i, ms in plan), 1250)
 
     def test_gif_timeline_merges_one_image_and_keeps_the_total(self):
         segments = [{"shot": "a", "duration_s": 0.5}] + [{"shot": f"m{i}", "duration_s": 0.25} for i in range(4)] + [
@@ -330,8 +365,11 @@ class PlotPlaybackMediaTests(unittest.TestCase):
         details = result["details"]
         self.assertEqual((details["samples"], details["missing_samples"], details["no_value_samples"]),
                          (3, ["s0002", "s0003", "s0001"], ["s0002"]))  # no saved runs
-        self.assertIn(pr.text("caption.recorded_samples", "en"), result["caption"]["en"])
-        self.assertIn(pr.text("caption.recorded_samples", "zh-CN"), result["caption"]["zh-CN"])
+        for language in pr.LANGUAGES:  # stated once in the caption and once on each frame, not in the title
+            note = pr.text("caption.recorded_samples", language)
+            self.assertEqual(result["caption"][language].count(note), 1)
+            self.assertNotIn(note, result["title"][language])
+        self.assertTrue(result["caption"]["en"][0].isupper() or result["caption"]["en"][0].isdigit())
         self.assertTrue(self.ctx.progress_calls)
 
         # replay the saved sequence in another language with GIF only: same order, timing and values
@@ -348,6 +386,92 @@ class PlotPlaybackMediaTests(unittest.TestCase):
             self.assertEqual([s.get(key) for s in replayed["segments"]], [s.get(key) for s in sequence["segments"]])
         self.assertIn("waist：无精确值", replayed["segments"][0]["label"])
         self.assertEqual(set(again["files"]), {"image", "gif", "sequence"})
+
+    def test_short_holds_keep_every_sample_in_every_format(self):
+        import imageio
+        from PIL import Image
+
+        asset = {**self.asset, "hold_s": 0.1, "fps": 4, "gif_fps": 2}  # 0.1 s is shorter than one frame at 4 fps
+        result = an.build_animation(asset, self.ctx)
+        sequence = json.loads(result["files"]["sequence"].read_text(encoding="utf-8"))
+        self.assertEqual([s["frames"] for s in sequence["segments"]], [1, 1, 1])
+        self.assertEqual([s["duration_s"] for s in sequence["segments"]], [0.25, 0.25, 0.25])
+        self.assertEqual(sequence["hold_s_applied"], 0.25)
+        self.assertEqual((result["details"]["hold_s"], result["details"]["hold_s_applied"]), (0.1, 0.25))
+        self.assertIn("0.25 s", result["caption"]["en"])
+        reader = imageio.get_reader(result["files"]["mp4"], "ffmpeg")
+        frames = [frame for frame in reader]
+        reader.close()
+        self.assertEqual(len(frames), 3)
+        self.assertEqual(len({frame.tobytes() for frame in frames}), 3)  # three different samples
+        with Image.open(result["files"]["gif"]) as gif:
+            self.assertEqual(gif.n_frames, 3)
+        self.assertEqual(sequence["gif"]["segments"], [0, 1, 2])
+
+    def test_plot_joins_samples_only_within_one_combination_of_the_other_parameters(self):
+        study_dir = fake_study(self.dir / "two", [(0.5, 1.1, "FAIL"), (1.0, 1.4, "PASS"), (0.5, 1.8, "PASS"),
+                                                  (1.0, 1.9, "PASS"), (1.5, 1.3, "FAIL")],
+                               wavelengths=[780.0, 780.0, 1064.0, 1064.0, 1064.0])
+        theme = pr.resolve_theme({"size": "640x360"})
+        study = an.study_samples(study_dir, "target:waist")
+        order = an.playback_order(study["samples"], "gap")
+        model = an.plot_model(theme, study, order)
+        self.assertEqual(model["groups"], ["wavelength = 780 nm", "wavelength = 1064 nm"])
+        figure = an._figure(theme, (640, 360))
+        plan_layout = an.layout(theme, (640, 360), "playback", "plot", True, False)
+        an._draw_plot(figure, theme, plan_layout, model, 0)
+        lines = [line for line in figure.axes[0].lines if not line.get_label().startswith("_")]
+        drawn = {line.get_label(): (list(line.get_xdata()), list(line.get_ydata())) for line in lines}
+        self.assertEqual(drawn, {"wavelength = 780 nm": ([0.5, 1.0], [1.1, 1.4]),
+                                 "wavelength = 1064 nm": ([0.5, 1.0, 1.5], [1.8, 1.9, 1.3])})
+        self.assertIn("wavelength = 780 nm", an.legend_labels(theme, model, ["PASS", "FAIL"]))
+        single = an.plot_model(theme, *(lambda st: (st, an.playback_order(st["samples"], "gap")))(
+            an.study_samples(self.study, "target:waist")))
+        self.assertEqual(single["groups"], [])
+
+    def test_frame_text_stays_inside_the_canvas_at_large_font_scales(self):
+        import matplotlib
+        from matplotlib.text import Text
+
+        study_dir = fake_study(self.dir / "wide", [(0.5, 1.1, "FAIL"), (1.0, 1.4, "PASS"), (0.5, None, "ERROR"),
+                                                   (1.0, 1.9, "UNKNOWN"), (1.5, 1.3, "OUT_OF_MODEL")],
+                               wavelengths=[780.0, 780.0, 1064.0, 1064.0, 1064.0])
+        labels = {"param:gap": {"en": "Lens gap after the collimator", "zh-CN": "准直器后的透镜间距"},
+                  "target:waist": {"en": "Output waist radius at the far plane", "zh-CN": "远场面的输出束腰半径"}}
+        cases = [(language, scale, size) for language in pr.LANGUAGES for scale in (1.4, 2.0)
+                 for size in ("1920x1080", "3840x2160", "1080x1080")]
+        checked = 0
+        for language, scale, size in cases:
+            theme = pr.resolve_theme({"language": language, "font_scale": scale, "size": size, "labels": labels})
+            if pr.missing_glyphs(["输出束腰"], theme.font_family) and language == "zh-CN":
+                continue
+            study = an.study_samples(study_dir, "target:waist")
+            order = an.playback_order(study["samples"], "gap")
+            model = an.plot_model(theme, study, order)
+            plan_layout = an.layout(theme, theme.size, "playback", "view+plot", True, False)
+            lines = [an.sample_label(theme, order[1], study["parameters"], "target:waist"),
+                     an.SEPARATOR.join([an.text("label.sample", language, index=2, count=5),
+                                        theme.text("caption.recorded_samples")])]
+            with matplotlib.rc_context(theme.rc()):
+                figure = an.overlay_figure(theme, plan_layout, "Output waist radius at the far plane vs lens gap "
+                                           "after the collimator", lines, plot=model, current=1,
+                                           note=an.text("note.no_run", language))
+                figure.canvas.draw()
+                renderer = figure.canvas.get_renderer()
+                width, height = theme.size
+                texts = [t for t in figure.findobj(Text) if t.get_visible() and t.get_text().strip()]
+                pr.check_glyphs([t.get_text() for t in texts], theme)
+                # the extent of everything drawn (ticks outside the axis range are not drawn)
+                box = figure.get_tightbbox(renderer).transformed(figure.dpi_scale_trans)
+                with self.subTest(language=language, scale=scale, size=size):
+                    self.assertGreaterEqual(box.x0, -1)
+                    self.assertLessEqual(box.x1, width + 1)
+                    self.assertGreaterEqual(box.y0, -1)
+                    self.assertLessEqual(box.y1, height + 1)
+                axes = figure.axes[0]
+                self.assertGreater(axes.get_window_extent(renderer).height, 0.12 * plan_layout["plot"][3])
+                checked += 1
+        self.assertGreaterEqual(checked, 6)
 
     def test_unknown_column_lists_the_columns(self):
         with self.assertRaises(pr.PresentationError) as caught:
@@ -425,6 +549,7 @@ class SavedRunAnimationTests(unittest.TestCase):
         self.assertEqual(len({json.dumps(shot["box_min"]) for shot in sequence["shots"]}), 1)
         self.assertEqual(result["details"]["views_captured"], 6)
         self.assertEqual(result["title"]["en"], "Expander: orbit view")
+        self.assertTrue(result["caption"]["en"].startswith("Camera turning 360° about the vertical around Expander"))
 
     def test_transition_into_l2(self):
         asset = {"id": "zoom-l2", "kind": "animation", "mode": "transition", "source": "run",
@@ -446,6 +571,8 @@ class SavedRunAnimationTests(unittest.TestCase):
         self.assertEqual(distances, sorted(distances, reverse=True))
         self.assertIn("L2", result["title"]["en"])
         self.assertIn("L2", result["caption"]["zh-CN"])
+        self.assertTrue(result["caption"]["en"].startswith("Camera move on Expander"))
+        self.assertIn("in 1 s, held 0.5 s at each end; 2 s at 6 fps", result["caption"]["en"])
 
     def test_playback_with_missing_sample_and_cached_restyle(self):
         asset = {"id": "l2-playback", "kind": "animation", "mode": "playback", "source": "study",

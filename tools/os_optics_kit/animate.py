@@ -61,6 +61,7 @@ DEFAULT_FOV_DEG = 14.0
 VIEW_CACHE = "animation-views"
 MEDIA_RECOVERY = 'python -m pip install "os-optics-kit[media]", or set formats to ["gif"]'
 RENDER_TIMEOUT_S = 60
+BROWSER_RECOVERY = "install Chrome or Chromium, or pass --browser PATH to present build"
 SEPARATOR = " · "
 #: outcome -> marker; colours come from the theme (presentation.STATUS_COLORS)
 MARKERS = {"NOT_APPLICABLE": "o", "PASS": "o", "FAIL": "X", "UNKNOWN": "D", "OUT_OF_MODEL": "^", "ERROR": "s"}
@@ -97,22 +98,24 @@ FIELDS: dict[str, dict[str, Any]] = {
                  "text": "saved sequence.json to replay (camera poses, order, timing), relative to the spec"},
 }
 
-#: figure text of the animations, both languages (to move into presentation.TEXT)
+#: figure text of the animations, both languages
 TEXT: dict[str, dict[str, str]] = {
     "en": {
         "title.orbit": "{source}: orbit view",
         "title.transition": "{source}: from {start} to {end}",
-        "title.playback": "{y} vs {x}: recorded samples",
-        "caption.orbit_up": "{source} as the camera turns {sweep} deg about the vertical at {elevation} deg "
+        "title.playback": "{y} vs {x}",
+        "caption.orbit_up": "Camera turning {sweep}° about the vertical around {source} at {elevation}° "
                             "elevation; {duration} s at {fps} fps.",
-        "caption.orbit_axis": "{source} as the camera turns {sweep} deg about the optical axis at {angle} deg to "
-                              "the axis; {duration} s at {fps} fps.",
-        "caption.transition": "{source}: camera move from {start} to {end}; {duration} s at {fps} fps.",
-        "caption.playback": "{count} recorded samples of {x} from {low} to {high}, {hold} s each; {passed} PASS.",
+        "caption.orbit_axis": "Camera turning {sweep}° about the optical axis of {source} at {angle}° to the axis; "
+                              "{duration} s at {fps} fps.",
+        "caption.transition": "Camera move on {source} from {start} to {end} in {move} s, held {hold} s at each "
+                              "end; {duration} s at {fps} fps.",
+        "caption.transition_direct": "Camera move on {source} from {start} to {end}; {duration} s at {fps} fps.",
+        "caption.playback": "{count} samples of {x} from {low} to {high}, {hold} s each; {passed} PASS.",
         "caption.playback_missing": "{count} without a saved run.",
         "focus.optics": "the optical system",
         "focus.scene": "the full scene",
-        "pose": "{focus} ({azimuth} deg, {elevation} deg elevation)",
+        "pose": "{focus} ({azimuth}°, {elevation}° elevation)",
         "label.value": "{name} = {value}",
         "label.no_value": "{name}: no exact value",
         "label.sample": "Sample {index} of {count}",
@@ -121,13 +124,15 @@ TEXT: dict[str, dict[str, str]] = {
     "zh-CN": {
         "title.orbit": "{source}：环绕视图",
         "title.transition": "{source}：从{start}到{end}",
-        "title.playback": "{y} 随 {x}：记录的样本",
+        "title.playback": "{y} 随 {x}",
         "caption.orbit_up": "相机绕竖直轴旋转 {sweep}°、仰角 {elevation}° 观察{source}；"
                             "{duration} 秒，{fps} 帧/秒。",
         "caption.orbit_axis": "相机绕光轴旋转 {sweep}°、与光轴夹角 {angle}° 观察{source}；"
                               "{duration} 秒，{fps} 帧/秒。",
-        "caption.transition": "{source}：相机从{start}移动到{end}；{duration} 秒，{fps} 帧/秒。",
-        "caption.playback": "{x} 从 {low} 到 {high} 的 {count} 个记录样本，每个显示 {hold} 秒；"
+        "caption.transition": "{source}：相机从{start}移动到{end}，用时 {move} 秒，首尾各停留 {hold} 秒；"
+                              "共 {duration} 秒，{fps} 帧/秒。",
+        "caption.transition_direct": "{source}：相机从{start}移动到{end}；{duration} 秒，{fps} 帧/秒。",
+        "caption.playback": "{x} 从 {low} 到 {high} 的 {count} 个样本，每个显示 {hold} 秒；"
                             "{passed} 个 PASS。",
         "caption.playback_missing": "{count} 个样本没有保存的运行结果。",
         "focus.optics": "光学系统",
@@ -463,14 +468,41 @@ def path_fractions(count, loop, easing):
 def assign_timeline(segments, fps):
     """Set ``start_s`` and ``frames`` (video frames at ``fps``) of each segment from its ``duration_s``.
 
-    Frame boundaries are rounded from the cumulative time, so the total equals round(duration * fps)."""
+    Frame boundaries are rounded half up from the cumulative time: a segment of at least 1 / fps gets a frame."""
     start = 0.0
     for segment in segments:
         end = start + segment["duration_s"]
         segment["start_s"] = round(start, 6)
-        segment["frames"] = int(round(end * fps)) - int(round(start * fps))
+        segment["frames"] = _frame_at(end, fps) - _frame_at(start, fps)
         start = end
     return round(start, 6)
+
+
+def _frame_at(seconds, fps):
+    """Video frame boundary at ``seconds`` (half up, tolerant of float error)."""
+    return int(math.floor(seconds * fps + 0.5 + 1e-9))
+
+
+def sample_hold(segments, fps):
+    """Show each recorded sample for at least one video frame: shorter holds are raised to 1 / fps.
+
+    Each segment's ``duration_s`` becomes the time it is shown; returns the shortest of them."""
+    minimum = 1.0 / fps
+    for segment in segments:
+        segment["duration_s"] = max(segment["duration_s"], minimum)
+    return round(min((s["duration_s"] for s in segments), default=minimum), 6)
+
+
+def segment_gif_timeline(segments):
+    """``[(segment index, duration_ms)]`` with one GIF frame per segment: durations rounded cumulatively to 10 ms,
+    at least 20 ms (the shortest delay viewers honour)."""
+    plan = []
+    start = 0.0
+    for segment in segments:
+        end = start + segment["duration_s"]
+        plan.append((segment["index"], max(20, int(round(end * 100)) * 10 - int(round(start * 100)) * 10)))
+        start = end
+    return plan
 
 
 def gif_timeline(segments, gif_fps, key=None):
@@ -619,7 +651,7 @@ def layout(theme, size, mode, panels, show_title, figure_caption):
         split = round(width * 0.56)
         view, plot = [0, header, split, body[3]], [split, header, width - split, body[3]]
     else:
-        split = round(body[3] * 0.55)
+        split = round(body[3] * 0.5)
         view, plot = [0, header, width, split], [0, header + split, width, body[3] - split]
     return {"size": [width, height], "pad": pad, "header": header, "footer": footer, "lines": lines,
             "view": view, "plot": plot}
@@ -653,38 +685,74 @@ def draw_overlay(theme, plan_layout, title, lines, plot=None, current=None, note
     """Transparent RGBA overlay at the exact frame size: title band, text lines, plot panel, view note."""
     import matplotlib
 
+    with matplotlib.rc_context(theme.rc()):
+        figure = overlay_figure(theme, plan_layout, title, lines, plot, current, note)
+        return _image(figure, plan_layout["size"])
+
+
+def overlay_figure(theme, plan_layout, title, lines, plot=None, current=None, note=None):
+    """The overlay as a matplotlib figure (call inside ``rc_context(theme.rc())``). Every text fits the canvas:
+    a line wider than its space is set in a smaller size."""
     width, height = plan_layout["size"]
     pad = plan_layout["pad"]
-    with matplotlib.rc_context(theme.rc()):
-        figure = _figure(theme, (width, height))
-        colors = theme.colors
-        if title and plan_layout["header"]:
-            figure.text(pad / width, 1 - pad / height, title, ha="left", va="top", color=colors["text"],
-                        fontsize=theme.font_pt("title"))
-        y = height - plan_layout["footer"] + pad * 0.5
-        for role, line in zip(plan_layout["lines"], lines):
-            figure.text(pad / width, 1 - y / height, line, ha="left", va="top",
-                        color=colors["text"] if role == "body" else colors["muted"], fontsize=theme.font_pt(role))
-            y += _px(theme, role, height) * 1.5
-        if note and plan_layout["view"]:
-            x0, y0, w0, h0 = plan_layout["view"]
-            figure.text((x0 + w0 / 2) / width, 1 - (y0 + h0 / 2) / height, note, ha="center", va="center",
-                        color=colors["muted"], fontsize=theme.font_pt("panel"))
-        if plot is not None and plan_layout["plot"]:
-            _draw_plot(figure, theme, plan_layout, plot, current)
-        return _image(figure, (width, height))
+    figure = _figure(theme, (width, height))
+    colors = theme.colors
+    if title and plan_layout["header"]:
+        _fit(figure, figure.text(pad / width, 1 - pad / height, title, ha="left", va="top", color=colors["text"],
+                                 fontsize=theme.font_pt("title")), width - 2 * pad)
+    y = height - plan_layout["footer"] + pad * 0.5
+    for role, line in zip(plan_layout["lines"], lines):
+        _fit(figure, figure.text(pad / width, 1 - y / height, line, ha="left", va="top",
+                                 color=colors["text"] if role == "body" else colors["muted"],
+                                 fontsize=theme.font_pt(role)), width - 2 * pad)
+        y += _px(theme, role, height) * 1.5
+    if note and plan_layout["view"]:
+        x0, y0, w0, h0 = plan_layout["view"]
+        _fit(figure, figure.text((x0 + w0 / 2) / width, 1 - (y0 + h0 / 2) / height, note, ha="center",
+                                 va="center", color=colors["muted"], fontsize=theme.font_pt("panel")), w0 - 2 * pad)
+    if plot is not None and plan_layout["plot"]:
+        _draw_plot(figure, theme, plan_layout, plot, current)
+    return figure
+
+
+def _fit(figure, artist, max_width_px=None, max_height_px=None, smallest=0.2):
+    """Reduce the font size of ``artist`` (a text or a legend) until it fits ``max_width_px`` x ``max_height_px``."""
+    renderer = figure.canvas.get_renderer()
+    texts = artist.get_texts() if hasattr(artist, "get_texts") else [artist]
+    start = [t.get_fontsize() for t in texts]
+    factor = 1.0
+
+    def too_big():
+        box = artist.get_window_extent(renderer)
+        return ((max_width_px is not None and box.width > max_width_px)
+                or (max_height_px is not None and box.height > max_height_px))
+
+    while too_big() and factor > smallest:
+        factor *= 0.92
+        for t, size in zip(texts, start):
+            t.set_fontsize(size * factor)
+    return artist
 
 
 def plot_model(theme, study, order):
     """Display values of the study curve and its fixed axis ranges (the same for every frame)."""
     parameter = next(p for p in study["parameters"] if p["name"] == study["order_by"])
     x_unit = parameter.get("unit")
+    others = [p for p in study["parameters"] if p["name"] != parameter["name"]]
     points = []
+    groups: list[str] = []
     for sample in order:
         x = sample["parameters"][parameter["name"]]["value"]
         x = theme.to_display(x, x_unit) if isinstance(x, (int, float)) and not isinstance(x, bool) else None
         yv = theme.to_display(sample["y"]["value"], study["unit"]) if sample["y"]["exact"] else None
-        points.append({"sample_id": sample["sample_id"], "x": x, "y": yv, "outcome": sample["outcome"]})
+        # samples are joined only when every other parameter has the same value: one curve per combination
+        group = ", ".join(text("label.value", theme.language, name=theme.label(f"param:{other['name']}"),
+                               value=_with_unit(theme, sample["parameters"][other["name"]]["value"],
+                                                sample["parameters"][other["name"]]["unit"])) for other in others)
+        if group not in groups:
+            groups.append(group)
+        points.append({"sample_id": sample["sample_id"], "x": x, "y": yv, "outcome": sample["outcome"],
+                       "group": groups.index(group)})
     xs = [p["x"] for p in points if p["x"] is not None]
     ys = [p["y"] for p in points if p["y"] is not None]
     bounds = study["bounds"] or {}
@@ -698,7 +766,8 @@ def plot_model(theme, study, order):
     x_span = (x_high - x_low) or abs(x_high) or 1.0
     shown_bounds = [theme.to_display(bounds.get(k), study["unit"]) if bounds.get(k) is not None else None
                     for k in ("minimum", "maximum")]
-    return {"points": points, "xlim": [x_low - 0.05 * x_span, x_high + 0.05 * x_span],
+    return {"points": points, "groups": groups if others else [],
+            "xlim": [x_low - 0.05 * x_span, x_high + 0.05 * x_span],
             "ylim": [bottom, high + 0.08 * span], "no_value_row": no_value_row, "bounds": shown_bounds,
             "x_label": theme.axis_label(f"param:{parameter['name']}", x_unit), "y_label": theme.axis_label(
                 study["y"], study["unit"])}
@@ -715,20 +784,18 @@ def _draw_plot(figure, theme, plan_layout, model, current):
     bottom = pad * 0.6 + small * 1.6 + body * 1.8
     right = pad * 1.6
     entries = legend_labels(theme, model, outcomes) if show_legend else []
-    axes_width = w0 - left - right
-    widest = max((_text_width(label, small) + small * 2.6 for label in entries), default=0.0)
-    columns = next((c for c in (3, 2) if c * widest <= axes_width), 1)
-    legend_rows = math.ceil(len(entries) / columns)
-    top = pad * 1.2 + legend_rows * small * 1.7
     axes = figure.add_axes([(x0 + left) / width, 1 - (y0 + h0 - bottom) / height,
-                            max(0.05, (w0 - left - right) / width), max(0.05, (h0 - top - bottom) / height)])
+                            max(0.05, (w0 - left - right) / width), max(0.05, (h0 - pad * 1.2 - bottom) / height)])
     if theme.background == "transparent":
         axes.set_facecolor("none")
     points = model["points"]
-    valued = sorted((p for p in points if p["x"] is not None and p["y"] is not None), key=lambda p: p["x"])
     line_color = theme.series_color(0)
-    if valued:
-        axes.plot([p["x"] for p in valued], [p["y"] for p in valued], color=line_color, linewidth=1.6, zorder=2)
+    for index, label in enumerate(model["groups"] or [None]):
+        valued = sorted((p for p in points if p["group"] == index and p["x"] is not None and p["y"] is not None),
+                        key=lambda p: p["x"])
+        if len(valued) > 1 or (label is not None and valued):
+            axes.plot([p["x"] for p in valued], [p["y"] for p in valued], linewidth=1.6, zorder=2,
+                      color=theme.series_color(index), label=label)
     low, high = model["bounds"]
     if low is not None and high is not None:
         axes.axhspan(low, high, color=line_color, alpha=0.12, zorder=1,
@@ -753,9 +820,10 @@ def _draw_plot(figure, theme, plan_layout, model, current):
             axes.scatter([p["x"] for p in without], [model["no_value_row"]] * len(without), marker=MARKERS[code],
                          s=size, facecolors="none", edgecolors=color, linewidths=1.2, zorder=3, clip_on=False,
                          label=theme.text("legend.no_exact", label=theme.outcome(code), count=len(without)))
+    no_value_note = None
     if model["no_value_row"] is not None:
         axes.axhline(model["no_value_row"], color=theme.colors["muted"], linewidth=0.8, linestyle=":", zorder=1)
-        axes.annotate(theme.text("note.no_exact_row"), xy=(0.0, model["no_value_row"]),
+        no_value_note = axes.annotate(theme.text("note.no_exact_row"), xy=(0.0, model["no_value_row"]),
                       xycoords=("axes fraction", "data"), xytext=(3, 3), textcoords="offset points",
                       fontsize=theme.font_pt("caption"), color=theme.colors["muted"])
     if current is not None:
@@ -767,17 +835,40 @@ def _draw_plot(figure, theme, plan_layout, model, current):
                          edgecolors=theme.colors["text"], linewidths=2.0, zorder=4, clip_on=False)
     axes.set_xlim(*model["xlim"])
     axes.set_ylim(*model["ylim"])
-    axes.set_xlabel(model["x_label"])
-    axes.set_ylabel(model["y_label"])
+    _fit(figure, axes.set_xlabel(model["x_label"]), w0 - left - right)
+    _fit(figure, axes.set_ylabel(model["y_label"]), max_height_px=(h0 - pad * 1.2 - bottom) * 0.6)
+    top = pad * 1.2
     if entries:
-        axes.legend(loc="lower left", bbox_to_anchor=(0.0, 1.01), ncol=columns, frameon=False,
-                    borderaxespad=0.2, handletextpad=0.4, columnspacing=1.0)
+        # the legend sits above the axes inside the plot panel, at most 40 % of its height: the largest text size
+        # for which some number of columns fits; the axes then start below it
+        handles, labels = axes.get_legend_handles_labels()
+        renderer = figure.canvas.get_renderer()
+        room, tallest = w0 - pad * 1.5, (h0 - bottom) * 0.4
+        anchor = ((x0 + pad * 0.75) / width, 1 - (y0 + pad * 0.6) / height)
+        legend, factor = None, 1.0
+        while legend is None:
+            for columns in range(1, min(3, len(labels)) + 1):
+                candidate = figure.legend(handles, labels, loc="upper left", bbox_to_anchor=anchor, ncol=columns,
+                                          frameon=False, borderaxespad=0.0, handletextpad=0.4, columnspacing=1.0,
+                                          fontsize=theme.font_pt("small") * factor)
+                box = candidate.get_window_extent(renderer)
+                if (box.width <= room and box.height <= tallest) or factor < 0.3:
+                    legend = candidate
+                    break
+                candidate.remove()
+            factor *= 0.9
+        top = pad * 1.2 + legend.get_window_extent(renderer).height
+    axes.set_position([(x0 + left) / width, 1 - (y0 + h0 - bottom) / height,
+                       max(0.05, (w0 - left - right) / width), max(0.05, (h0 - top - bottom) / height)])
+    if no_value_note is not None:
+        _fit(figure, no_value_note, axes.get_window_extent(figure.canvas.get_renderer()).width - 8)
 
 
 def legend_labels(theme, model, outcomes):
     """Legend entries of the playback plot (bounds, outcomes with counts, samples without a value)."""
     points = model["points"]
-    labels = []
+    labels = [label for index, label in enumerate(model.get("groups") or [])
+              if any(p["group"] == index and p["x"] is not None and p["y"] is not None for p in points)]
     low, high = model["bounds"]
     if low is not None and high is not None:
         labels.append(theme.text("legend.bounds", low=pr.fmt_number(low), high=pr.fmt_number(high)))
@@ -794,9 +885,6 @@ def legend_labels(theme, model, outcomes):
     return labels
 
 
-def _text_width(value, font_px):
-    """Approximate drawn width in pixels: wide (CJK) characters take one em, others about 0.6 em."""
-    return sum(font_px if ord(char) > 0x2E80 else 0.6 * font_px for char in value)
 
 
 def _base_color(theme):
@@ -896,13 +984,13 @@ def capture_views(ctx, asset_id, jobs, view_size, background, beams, visible, pr
     total = sum(len(v) for v in pending.values())
     if not total:
         return paths, 0, len(jobs)
-    if not ctx.browser:
+    browser = ctx.browser or rv.find_browser(None)
+    if not browser:
         raise pr.PresentationError("BROWSER_NOT_FOUND", "the view frames are captured with Chrome or Chromium, and "
-                                   "none was found", recovery="install Google Chrome or Chromium, or set its path "
-                                   "as the browser setting, then build again")
+                                   "none was found", recovery=BROWSER_RECOVERY)
     done = 0
     try:
-        with rv.BrowserSession(ctx.browser, size=tuple(view_size), timeout_s=RENDER_TIMEOUT_S) as session:
+        with rv.BrowserSession(browser, size=tuple(view_size), timeout_s=RENDER_TIMEOUT_S) as session:
             for run_dir, items in pending.items():
                 unique = {key: (shot, view) for shot, view, key in items}
                 shots = [{"name": key, "direction": shot["direction"], "up": shot["up"],
@@ -923,7 +1011,7 @@ def capture_views(ctx, asset_id, jobs, view_size, background, beams, visible, pr
                 if progress:
                     progress(done, total)
     except rv.RenderError as error:
-        recovery = {"BROWSER_NOT_FOUND": "install Google Chrome or Chromium, then build again",
+        recovery = {"BROWSER_NOT_FOUND": BROWSER_RECOVERY,
                     "CAPTURE_NOT_INSTALLED": 'python -m pip install "os-optics-kit[render]"'}.get(
                         error.code, "open the run with 'os-optics view RUN' to check it, then build again")
         raise pr.PresentationError(error.code, str(error), recovery=recovery) from None
@@ -999,11 +1087,23 @@ def plan_orbit(cfg, view, source_id, view_rect):
     loop = abs(cfg["orbit"]["sweep_deg"]) % 360 == 0
     fractions = path_fractions(count, loop, cfg["easing"])
     poses = orbit_poses(view.axis, cfg["up_axis"], cfg["orbit"], fractions)
+    # as in present's views, the orbit starts with light travelling from left to right: when the start pose is
+    # mirrored for that, the whole path is mirrored in the plane of the optical axis and world up
+    start = rv.left_to_right(poses[0][0], poses[0][1], view.axis, cfg["up_axis"])
+    mirrored = start[0] != poses[0][0]
+    if mirrored:
+        normal = rv.unit(rv.cross(rv.unit(cfg["up_axis"]), view.axis))
+
+        def mirror(vector):
+            along = rv.dot(vector, normal)
+            return rv.unit([v - 2.0 * along * n for v, n in zip(vector, normal)])
+
+        poses = [(mirror(d), mirror(u), angle) for d, u, angle in poses]
     box = _view_box(view, cfg["focus"])
     fov, aspect = _fov(view), _view_aspect(view_rect)
     distance = max(fit_distance(box, d, u, fov, aspect) for d, u, _angle in poses)
-    shots = [_shot(f"v{i:04d}", source_id, d, u, box, distance, angle_deg=round(angle, 6))
-             for i, (d, u, angle) in enumerate(poses)]
+    shots = [_shot(f"v{i:04d}", source_id, d, u, box, distance, angle_deg=round(angle, 6),
+                   **({"mirrored": True} if mirrored else {})) for i, (d, u, angle) in enumerate(poses)]
     segments = [{"index": i, "kind": "motion", "shot": shot["id"], "duration_s": 1.0 / cfg["fps"],
                  "fraction": round(fractions[i], 6)} for i, shot in enumerate(shots)]
     return shots, segments, [cfg["focus"]]
@@ -1108,9 +1208,12 @@ def _texts(cfg, theme, source, study=None, order=None):
         title = _both(lambda lang: text("title.transition", lang, source=source_name(lang),
                                         start=_focus_name(theme, cfg["from"]["focus"], lang),
                                         end=_focus_name(theme, cfg["to"]["focus"], lang)))
-        caption = _both(lambda lang: text("caption.transition", lang, source=source_name(lang),
+        key = "caption.transition" if cfg["hold_s"] > 0 else "caption.transition_direct"
+        caption = _both(lambda lang: text(key, lang, source=source_name(lang),
                                           start=pose(lang, "from"), end=pose(lang, "to"),
-                                          duration=_num(cfg["duration_s"]), fps=_num(cfg["fps"])))
+                                          move=_num(cfg["duration_s"]), hold=_num(cfg["hold_s"]),
+                                          duration=_num(cfg["duration_s"] + 2 * cfg["hold_s"]),
+                                          fps=_num(cfg["fps"])))
         return title, caption
     parameter = next(p for p in study["parameters"] if p["name"] == study["order_by"])
     values = [s["parameters"][parameter["name"]]["value"] for s in order]
@@ -1123,7 +1226,8 @@ def _texts(cfg, theme, source, study=None, order=None):
         low = _with_unit(local, min(numeric), parameter.get("unit")) if numeric else "-"
         high = _with_unit(local, max(numeric), parameter.get("unit")) if numeric else "-"
         pieces = [text("caption.playback", lang, count=len(order), x=local.label(f"param:{parameter['name']}"),
-                       low=low, high=high, hold=_num(cfg["hold_s"]), passed=passed)]
+                       low=low, high=high, hold=_num(cfg.get("hold_s_applied", cfg["hold_s"])),
+                       passed=passed)]
         if missing:
             pieces.append(text("caption.playback_missing", lang, count=missing))
         pieces.append(pr.text("caption.recorded_samples", lang))
@@ -1193,6 +1297,8 @@ def build_animation(asset: dict, ctx) -> dict:
             shots, segments = _replay(sequence_doc, cfg, None, None)
         visible = visibility(view, focuses)
         jobs = [(shot, source.path, view, source.identity) for shot in shots]
+    if cfg["mode"] == "playback":
+        cfg["hold_s_applied"] = sample_hold(segments, cfg["fps"])
     duration = assign_timeline(segments, cfg["fps"])
     automatic_title, automatic_caption = _texts(cfg, theme, source, study, order)
     title = pr.title_text(asset, theme, automatic_title) if theme.title else ""
@@ -1253,8 +1359,12 @@ def build_animation(asset: dict, ctx) -> dict:
         if fmt not in cfg["formats"] and stale.exists():
             stale.unlink()
     mp4 = _Mp4(out_dir / f"{asset_id}.mp4", size, cfg["fps"]) if "mp4" in cfg["formats"] else None
-    gif_plan = gif_timeline(segments, cfg["gif_fps"], key=lambda s: (s["shot"], overlay_key(s))) \
-        if "gif" in cfg["formats"] else []
+    if "gif" not in cfg["formats"]:
+        gif_plan = []
+    elif cfg["mode"] == "playback":  # one GIF frame per recorded sample
+        gif_plan = segment_gif_timeline(segments)
+    else:
+        gif_plan = gif_timeline(segments, cfg["gif_fps"], key=lambda s: (s["shot"], overlay_key(s)))
     gif_wanted = {index for index, _ms in gif_plan}
     gif_frames: dict[int, Any] = {}
     still_path = out_dir / f"{asset_id}.png"
@@ -1296,7 +1406,8 @@ def build_animation(asset: dict, ctx) -> dict:
         "size_px": list(size), "fps": cfg["fps"], "gif_fps": cfg["gif_fps"], "duration_s": duration,
         "frame_count": sum(s["frames"] for s in segments), "language": theme.language,
         "background": theme.background, "title": title, "caption": caption,
-        "settings": {k: v for k, v in cfg.items() if k != "sequence"},
+        "settings": {k: v for k, v in cfg.items() if k not in ("sequence", "hold_s_applied")},
+        "hold_s_applied": cfg.get("hold_s_applied"),
         "layout": {"view_rect_px": view_rect, "plot_rect_px": plan_layout["plot"], "header_px": plan_layout["header"],
                    "footer_px": plan_layout["footer"]},
         "view": None if view_rect is None else {"size_px": view_size, "render_background": background,
@@ -1328,7 +1439,8 @@ def build_animation(asset: dict, ctx) -> dict:
         parameter = next(p for p in study["parameters"] if p["name"] == study["order_by"])
         details.update({"samples": len(order), "parameter": {"name": parameter["name"], "unit": parameter.get("unit")},
                         "y": {"column": study["y"], "unit": study["unit"]}, "panels": cfg["panels"],
-                        "hold_s": cfg["hold_s"], "order": [s["sample_id"] for s in order],
+                        "hold_s": cfg["hold_s"], "hold_s_applied": cfg["hold_s_applied"],
+                        "order": [s["sample_id"] for s in order],
                         "missing_samples": [s["sample_id"] for s in order if not s["has_run"]],
                         "no_value_samples": [s["sample_id"] for s in order if not s["y"]["exact"]],
                         "by_outcome": {code: sum(1 for s in order if s["outcome"] == code) for code in MARKERS
@@ -1400,7 +1512,7 @@ def _data_document(source, study, order, cfg):
             "source": {"id": source.id, "label": source.label, "summary_sha256": study["summary_sha256"]},
             "parameters": [{"name": p["name"], "unit": p.get("unit")} for p in study["parameters"]],
             "order_by": study["order_by"], "y": {"column": study["y"], "unit": study["unit"]},
-            "bounds": study["bounds"], "hold_s": cfg["hold_s"],
+            "bounds": study["bounds"], "hold_s": cfg.get("hold_s_applied", cfg["hold_s"]),
             "samples": [{"order": position, "recorded_index": s["recorded_index"], "sample_id": s["sample_id"],
                          "parameters": s["parameters"], "y": s["y"], "outcome": s["outcome"],
                          "has_run": s["has_run"], "result_hash": s["identity"].get("result_hash")}
