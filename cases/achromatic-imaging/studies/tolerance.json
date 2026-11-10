@@ -1,0 +1,134 @@
+{
+  "max_evaluations": 17,
+  "parameters": [
+    {
+      "distribution": {
+        "high": 0.05,
+        "kind": "uniform",
+        "low": -0.05
+      },
+      "name": "decenter_u",
+      "ops": [
+        {
+          "frame": {
+            "component": "OBJ"
+          },
+          "op": "transform",
+          "selector": {
+            "ids": [
+              "OBJ"
+            ]
+          },
+          "translation_mm": [
+            "$value",
+            0,
+            0
+          ]
+        }
+      ],
+      "unit": "mm"
+    },
+    {
+      "distribution": {
+        "high": 0.05,
+        "kind": "uniform",
+        "low": -0.05
+      },
+      "name": "decenter_v",
+      "ops": [
+        {
+          "frame": {
+            "component": "OBJ"
+          },
+          "op": "transform",
+          "selector": {
+            "ids": [
+              "OBJ"
+            ]
+          },
+          "translation_mm": [
+            0,
+            "$value",
+            0
+          ]
+        }
+      ],
+      "unit": "mm"
+    },
+    {
+      "distribution": {
+        "kind": "normal",
+        "sigma": 0.02,
+        "truncate_sigma": 3
+      },
+      "name": "tilt_u",
+      "ops": [
+        {
+          "frame": {
+            "component": "OBJ"
+          },
+          "op": "transform",
+          "pivot": {
+            "component": "OBJ"
+          },
+          "rotation": {
+            "angle_deg": "$value",
+            "axis": [
+              1,
+              0,
+              0
+            ]
+          },
+          "selector": {
+            "ids": [
+              "OBJ"
+            ]
+          }
+        }
+      ],
+      "unit": "deg"
+    },
+    {
+      "distribution": {
+        "kind": "normal",
+        "sigma": 0.02,
+        "truncate_sigma": 3
+      },
+      "name": "tilt_v",
+      "ops": [
+        {
+          "frame": {
+            "component": "OBJ"
+          },
+          "op": "transform",
+          "pivot": {
+            "component": "OBJ"
+          },
+          "rotation": {
+            "angle_deg": "$value",
+            "axis": [
+              0,
+              1,
+              0
+            ]
+          },
+          "selector": {
+            "ids": [
+              "OBJ"
+            ]
+          }
+        }
+      ],
+      "unit": "deg"
+    }
+  ],
+  "samples": 16,
+  "seed": 20261111,
+  "targets": [
+    "pupil_spot_F",
+    "pupil_spot_d",
+    "pupil_spot_C",
+    "centroid_u",
+    "centroid_v"
+  ]
+}

@@ -1,0 +1,279 @@
+{
+  "components": [
+    {
+      "custom_part": {
+        "custom_part_key": "user-laser",
+        "description": "Gaussian laser source"
+      },
+      "instance_id": "SRC",
+      "nominal_pose": {
+        "position_mm": [
+          -10.0,
+          0.0,
+          0.0
+        ],
+        "quaternion_wxyz": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ]
+      },
+      "optical_role": "source",
+      "retained_dofs": [],
+      "selected_parameters": [],
+      "source_model": {
+        "m2": 1.0,
+        "model_kind": "GAUSSIAN_BEAM",
+        "polarization": {
+          "angle_deg": 0.0,
+          "kind": "LINEAR"
+        },
+        "spectral_lines": [
+          {
+            "power_w": 0.0003333333333333333,
+            "wavelength_nm": 486.1327
+          },
+          {
+            "power_w": 0.0003333333333333333,
+            "wavelength_nm": 587.5618
+          },
+          {
+            "power_w": 0.0003333333333333333,
+            "wavelength_nm": 656.2725
+          }
+        ],
+        "waist_position_mm": 0.0,
+        "waist_radius_mm": 1.0
+      }
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "objective",
+        "description": "Achromatic doublet N-BK7/N-F2 f = 75 mm (native component lens.achromat)"
+      },
+      "instance_id": "OBJ",
+      "nominal_pose": {
+        "position_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "quaternion_wxyz": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ]
+      },
+      "optical_model_id": "objective",
+      "optical_role": "lens",
+      "retained_dofs": [],
+      "selected_parameters": []
+    }
+  ],
+  "compute_budget": {
+    "max_interactions_per_path": 32,
+    "max_paths": 4096,
+    "max_trace_steps": 100000,
+    "pupil_points_per_ring": 16,
+    "pupil_ring_count": 8
+  },
+  "materials": [],
+  "model_materials": [
+    {
+      "basis": "SCHOTT N-BK7 optical glass datasheet",
+      "dispersion": {
+        "b": [
+          "1.03961212",
+          "0.231792344",
+          "1.01046945"
+        ],
+        "c_um2": [
+          "0.00600069867",
+          "0.0200179144",
+          "103.560653"
+        ],
+        "kind": "SELLMEIER"
+      },
+      "display_name": "N-BK7",
+      "material_id": "N-BK7",
+      "valid_band_nm": {
+        "max_nm": "700",
+        "min_nm": "450",
+        "status": "DESIGN_BASIS"
+      }
+    },
+    {
+      "basis": "SCHOTT N-F2 optical glass datasheet",
+      "dispersion": {
+        "b": [
+          "1.39757037",
+          "0.159201403",
+          "1.2686543"
+        ],
+        "c_um2": [
+          "0.00995906143",
+          "0.0546931752",
+          "119.248346"
+        ],
+        "kind": "SELLMEIER"
+      },
+      "display_name": "N-F2",
+      "material_id": "N-F2",
+      "valid_band_nm": {
+        "max_nm": "700",
+        "min_nm": "450",
+        "status": "DESIGN_BASIS"
+      }
+    }
+  ],
+  "observations": [
+    {
+      "absorbing": false,
+      "aperture": {
+        "center_offset_mm": [
+          0.0,
+          0.0
+        ],
+        "obstruction_radius_mm": 0.0,
+        "radius_mm": 2.0,
+        "shape": "circle"
+      },
+      "medium": "air",
+      "observation_id": "image",
+      "pose": {
+        "position_mm": [
+          76.478991,
+          0.0,
+          0.0
+        ],
+        "quaternion_wxyz": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ]
+      }
+    }
+  ],
+  "optical_models": [
+    {
+      "design_geometry": {
+        "diameter_mm": "12.7",
+        "kind": "CYLINDER",
+        "status": "NOMINAL",
+        "z_max_mm": "5",
+        "z_min_mm": "0"
+      },
+      "display_name": "Achromatic doublet N-BK7/N-F2 f = 75 mm",
+      "frame": {
+        "nominal_propagation": "+Z",
+        "optical_axis": "+Z",
+        "origin": "FIRST_SURFACE_VERTEX",
+        "symmetry": "ROTATIONAL_ABOUT_LOCAL_Z"
+      },
+      "model": {
+        "approximations": [
+          "CEMENT_LAYER_NOT_MODELLED",
+          "EDGE_AS_OPAQUE_RIM",
+          "GHOST_REFLECTIONS_NOT_TRACED",
+          "IDEAL_SURFACE_FIGURE",
+          "NOMINAL_PRESCRIPTION"
+        ],
+        "edge_radius_mm": "6.35",
+        "fidelity": "SURFACE_PRESCRIPTION",
+        "media": [
+          "N-BK7",
+          "N-F2"
+        ],
+        "model_kind": "SURFACE_SEQUENCE",
+        "model_version": "2",
+        "status": "DERIVED",
+        "surfaces": [
+          {
+            "clear_radius_mm": "3",
+            "radius_mm": "32.73212",
+            "status": "DERIVED",
+            "surface_id": "S1",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "0"
+          },
+          {
+            "clear_radius_mm": "3",
+            "radius_mm": "-32.73212",
+            "status": "DERIVED",
+            "surface_id": "S2",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "3"
+          },
+          {
+            "clear_radius_mm": "3",
+            "radius_mm": "-984.019095",
+            "status": "DERIVED",
+            "surface_id": "S3",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "5"
+          }
+        ],
+        "valid_band_nm": {
+          "max_nm": "700",
+          "min_nm": "450",
+          "status": "DERIVED"
+        }
+      },
+      "model_id": "objective"
+    }
+  ],
+  "project_schema_version": "2.0",
+  "schema": "opensci.project",
+  "targets": [
+    {
+      "maximum": 0.005,
+      "metric": "spot_rms_mm",
+      "observation_id": "image",
+      "parameters": [],
+      "target_id": "pupil_spot_F",
+      "unit": "mm",
+      "wavelength_nm": 486.1327
+    },
+    {
+      "maximum": 0.005,
+      "metric": "spot_rms_mm",
+      "observation_id": "image",
+      "parameters": [],
+      "target_id": "pupil_spot_d",
+      "unit": "mm",
+      "wavelength_nm": 587.5618
+    },
+    {
+      "maximum": 0.005,
+      "metric": "spot_rms_mm",
+      "observation_id": "image",
+      "parameters": [],
+      "target_id": "pupil_spot_C",
+      "unit": "mm",
+      "wavelength_nm": 656.2725
+    },
+    {
+      "maximum": 0.05,
+      "metric": "spot_centroid_u_mm",
+      "minimum": -0.05,
+      "observation_id": "image",
+      "parameters": [],
+      "target_id": "centroid_u",
+      "unit": "mm",
+      "wavelength_nm": 587.5618
+    },
+    {
+      "maximum": 0.05,
+      "metric": "spot_centroid_v_mm",
+      "minimum": -0.05,
+      "observation_id": "image",
+      "parameters": [],
+      "target_id": "centroid_v",
+      "unit": "mm",
+      "wavelength_nm": 587.5618
+    }
+  ]
+}
