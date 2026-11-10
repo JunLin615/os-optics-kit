@@ -8,7 +8,7 @@
 
 ## 运行与修改参数
 
-固定版本的科学计算依赖需要 **Python 3.12 或更新版本**，本例已在 Python 3.14.8 验证。安装 os-optics 0.13.0 与 os-optics-kit 0.2.0，复制本案例，然后在复制后的目录内运行：
+固定版本的科学计算依赖需要 **Python 3.12 或更新版本**，本例已在 Python 3.14.8 验证。安装 os-optics 0.13.0 与 os-optics-kit 0.3.0，复制本案例，然后在复制后的目录内运行：
 
 ```bash
 python -m pip install -r requirements-flat-top.txt
@@ -47,3 +47,25 @@ python workflow.py --out out/default --redraw
 - `results.json`：原生运行标识和目标、外部观测量、独立检查、依赖版本与实测计算耗时。
 
 生成的运行目录和数组保存到你指定的输出目录。本案例可以通过 `os-optics-kit cases copy phase-only-flat-top --dest DEST` 独立复制使用。
+
+## 展示保存结果
+
+安装 Chrome/Chromium 后，为每种样式创建新的输出目录：
+
+```bash
+python present_case.py out/default --out figures/en --bundle figures/flat-top-en.zip
+python present_case.py out/default --out figures/zh --language zh-CN
+python present_case.py out/default --out figures/dark --language zh-CN --background dark
+```
+
+在本地打开 `index.html`。图库包含原生系统视图、原生照明半径对比，以及采用共用物理色标的外部强度图和中心剖面。图旁提供 PNG、SVG、双语说明、数值数据、输入哈希、单位及重绘设置。中文绘图需要 Microsoft YaHei 或 Noto Sans CJK SC 等中文字体。辅助脚本读取保存结果，以保存的场核对 CV 与功率，不运行引擎或优化器，源文件保持不变。
+
+Kit 0.3.0 的 `present` 支持原生运行/研究数据绘图，不直接导入任意外部场。辅助脚本使用其公共主题和图库接口绘制外部结果。由于 `present` 视图未开放向上轴设置，+Z 原生系统视图通过公共 `render_shots` 接口指定 +Y 向上生成。因此 `presentation.json` 只重建原生目标图；完整图库由本案例辅助脚本生成。变体的原生目标随光源宽度缩放，外部相位掩模则保持固定。
+
+ZIP 可离线浏览。解压后，使用包内辅助脚本与数据，无需原始运行目录即可重绘外部图：
+
+```bash
+python assets/flat-top/present_case.py --redraw-external assets/flat-top/case-redraw.json --out redrawn --language zh-CN --background dark
+```
+
+完整原生重绘仍需保存的原生运行目录。上述 Python 依赖与 Chrome/Chromium 支持本文工作流。

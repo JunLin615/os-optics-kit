@@ -46,7 +46,9 @@
       "path": "cases/bounded-aberration-correction",
       "engine": "0.13.0",
       "catalog": null,
-      "tools": [],
+      "tools": [
+        "present"
+      ],
       "tags": [
         "catalog-free",
         "aberration",
@@ -59,6 +61,7 @@
         "README.zh-CN.md",
         "expected.json",
         "images/layout.png",
+        "present_case.py",
         "project.json",
         "requirements-aberration.txt",
         "workflow.py"
@@ -73,7 +76,8 @@
       "engine": "0.13.0",
       "catalog": null,
       "tools": [
-        "summary"
+        "summary",
+        "present"
       ],
       "tags": [
         "catalog-free",
@@ -87,6 +91,7 @@
         "README.zh-CN.md",
         "expected.json",
         "images/layout.png",
+        "present_case.py",
         "project.json",
         "requirements-light-sheet.txt",
         "workflow.py"
@@ -366,7 +371,9 @@
       "path": "cases/phase-only-flat-top",
       "engine": "0.13.0",
       "catalog": null,
-      "tools": [],
+      "tools": [
+        "present"
+      ],
       "tags": [
         "catalog-free",
         "beam-shaping",
@@ -380,6 +387,7 @@
         "README.zh-CN.md",
         "expected.json",
         "images/layout.png",
+        "present_case.py",
         "project.json",
         "requirements-flat-top.txt",
         "workflow.py"

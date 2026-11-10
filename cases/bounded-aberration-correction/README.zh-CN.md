@@ -79,3 +79,44 @@ Powell 搜索只使用标量传感器读数，调整前五项，每项范围为 
 
 傅里叶计算采用 6 mm 光瞳窗口，将 512² 网格补零至 2048² 以细化焦面采样。
 若需其它视野，可从保存的复数光瞳重建完整焦场。生成结果保存在版本控制之外。
+
+## 从保存结果制作展示素材（kit 0.3.0）
+
+```bash
+python present_case.py out/default out/stronger --out talk/zh --language zh-CN --background light --size 1920x1080 --bundle talk/aberration-zh.zip
+python present_case.py out/default out/stronger --out talk/en --language en --background light
+python present_case.py out/default out/stronger --out talk/dark --language zh-CN --background dark
+os-optics-kit present gallery talk/zh
+os-optics-kit present bundle talk/zh --out talk/share.zip --only psf,response
+```
+
+离线打开 `talk/zh/index.html`。辅助脚本读取 `science.npz`、`metrics.json`、
+`config.json`，用复数光瞳场核对强度比，并在导出后检查输入文件摘要未变。
+不会运行引擎或优化器。每次更换样式使用新的 `--out`。
+引擎光路视图需要 Chrome/Chromium；中文需要微软雅黑或 Noto Sans CJK SC 等字体。
+
+有效的原生 `presentation.json` 通过公开 `present.build` 绘制保存的扩束半径目标。
+光路沿 Z 轴，kit 0.3.0 的 `present` 未提供相机上方向参数，直接构建该视图会报告
+`CAMERA_UNDEFINED`。脚本调用公开 `render_shots`，使用真实光轴 Z、上方向 Y，
+再将原生视图卡加入图库。半径目标评价扩束光路，不代表校正后的 PSF 性能。
+参与比较的输入只允许球差系数不同；边界、光学参数或网格不同会被拒绝，避免混淆因果。
+
+kit 0.3.0 的原生曲线只支持 sweep、power、targets，不能直接读取外部 PSF 数组。
+本案例用公开主题、字体接口绘制两张外部结果图，再按 `assets.json` 公开协议加入
+素材卡，调用官方 gallery 和 bundle。没有改写私有绘图处理器，也没有伪造引擎结果。
+**完整素材必须通过 `present_case.py` 重绘**；单独 `present build` 只重建原生半径目标，
+会从索引中移除案例追加的视图卡和外部卡片。
+
+`psf` 展示首组结果的三个状态，共用 0–1 线性色标；`response` 比较每组以自身等功率
+理想值归一化的轴上强度比。每张外部卡包含 PNG、可编辑 SVG、双语图注、所选绘图
+数据 `plot-data.npz`、`provenance.json`、`redraw.json`（主题、单位、归一化、来源、
+数据选择）及案例辅助脚本。保存结果的相对路径和摘要用于溯源，不嵌入本机绝对路径。
+与原生素材包一样，完整图库重绘时恢复保存的运行目录，或向脚本传入迁移后的目录。
+已解压的外部卡片也能只用包内快照重绘，无需原始运行目录：
+
+```bash
+python present_case.py --redraw-external talk/zh/assets/psf/redraw.json --out psf-dark --language zh-CN --background dark
+```
+
+同一命令支持 `response` 卡的 `redraw.json`；输出包含 PNG、SVG 以及快照、配置和
+辅助脚本，便于再次重绘。

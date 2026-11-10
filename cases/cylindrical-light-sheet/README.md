@@ -37,3 +37,24 @@ The engine computes two-surface refraction, Gaussian q parameters and power. Its
 `profiles.npz` stores z and y in mm, two-axis 1/e² radii in mm, the longitudinal x=0 intensity in W/mm² and the waist intensity integrated over x in W/mm. These profiles evaluate the separable TEM00 formula from the native q and power. `preview.png` shows that longitudinal map and the thickness curve. `configuration.json` keeps the physical inputs separate from the plot; `--plot-only` consumes saved data without simulation. `run/project.json` is the engine-normalized configuration for that sample.
 
 An independent ABCD calculation refracts q into the glass, propagates through its thickness, refracts out and propagates to the observation plane. Both axes agree with the engine within 2e-16 relative error in all three examples. The workflow also checks 0.995² power transmission and numerically integrates the waist marginal. It keeps these external checks in `metrics.json`, separate from the engine's target assessments. All generated files stay in the chosen output directory.
+
+## Presentation from saved results
+
+Kit 0.3.0, Chrome/Chromium and a Chinese font (Microsoft YaHei or Noto Sans CJK SC) support the presentation helper. Its inputs are completed `workflow.py` output folders, not project files. The first input supplies the reference map and native view; add the 65 mm folder to show the missed thickness target.
+
+```bash
+python present_case.py ../sheet-default ../sheet-f40 --out ../sheet-talk-en --language en --background light --size 1920x1080 --bundle ../sheet-talk-en.zip
+python present_case.py ../sheet-default ../sheet-f40 ../sheet-f65 --out ../sheet-talk-zh --language zh-CN --background dark --size 1920x1080 --bundle ../sheet-talk-zh.zip
+```
+
+Open `index.html` for three cards: a native system view, the official `present` target comparison, and an external longitudinal map plus FWHM curves. PNG/SVG, bilingual captions, data snapshots, provenance and relative-path asset records accompany the figures. The view is a native raster capture. The marker pair on each FWHM curve locates ±zR; legend values are waist FWHM and full range. Native target plots retain their true radius and Rayleigh-range units. All input science files are read only; changing language, background or size requires a new output directory and never invokes the solver.
+
+Two kit 0.3.0 limits are explicit. Native `present` plots support sweep, power and targets, not these external NPZ arrays. Also, its view asset cannot supply the nonparallel up axis required for this +Z model (`CAMERA_UNDEFINED`). The helper therefore uses public `render_shots` with optical axis Z and up Y for the view, and public presentation theme/font functions for the external plot. It registers both honestly through the gallery asset index. `presentation.json` remains a valid native target specification; rebuilding it alone does not redraw or retain the helper's two additional cards. Re-run the helper for the full gallery. Native source directories are not copied into bundles.
+
+The bundle includes the external snapshot, units/origin, `case-redraw.json` and a copy of this helper. After extracting it, the external figure can be redrawn independently of the original runs:
+
+```bash
+python sheet-talk-en/assets/profiles/present_case.py --redraw-external sheet-talk-en/assets/profiles/case-redraw.json --out ../sheet-profiles-restyled --language zh-CN --background dark --size 1920x1080
+```
+
+This last command creates only the external figure and its gallery; it does not recreate the native view or target plot. The original three-card presentation is recreated with the saved result folders and the first command above.

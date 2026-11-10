@@ -5,7 +5,7 @@ summary: A two-surface cylindrical lens focuses a 488 nm Gaussian beam along y. 
 engine: 0.13.0
 catalog: none
 project: project.json
-tools: summary
+tools: summary, present
 tags: catalog-free, light-sheet, cylindrical-lens, gaussian-beam
 license: MIT
 ---
@@ -23,6 +23,7 @@ python -m pip install -r requirements-light-sheet.txt
 os-optics project run project.json --out-dir ../sheet-native
 python workflow.py --out ../sheet-default
 python workflow.py --focal-length-mm 40 --out ../sheet-f40
+python present_case.py ../sheet-default ../sheet-f40 --out ../sheet-talk --bundle ../sheet-talk.zip
 ```
 
 ## Targets
@@ -31,8 +32,8 @@ Native `thin-waist`: waist_radius_y_mm <= 0.008493218, equivalent to FWHM <=10 u
 
 ## Baseline
 
-Engine 0.13.0; no catalog. Source 488 nm, 10 mW, 1 mm waist. Cylinder entrance radius 26 mm, plane exit, 10 mm clear diameter, 0.995 power transmission per surface. Paraxial separable Gaussian model, M²=1.
+Engine 0.13.0 and kit 0.3.0; no catalog. Source 488 nm, 10 mW, 1 mm waist. Cylinder entrance radius 26 mm, plane exit, 10 mm clear diameter, 0.995 power transmission per surface. Paraxial separable Gaussian model, M²=1.
 
 ## Files
 
-`project.json` is the normalized default. `workflow.py` builds the prescribed lens through the public native interface and saves its configuration, handoff, targets, scientific profiles and preview under `--out`. `--plot-only` redraws saved profiles. See both READMEs for units, equations and parameter limits.
+`project.json` is the normalized default. `workflow.py` builds the prescribed lens through the public native interface and saves its configuration, handoff, targets, scientific profiles and preview under `--out`. `--plot-only` redraws saved profiles. `present_case.py` reuses saved results for bilingual galleries and bundles, with external FWHM/profile redraw explicitly distinguished from native targets. See both READMEs for units, equations, parameter limits and presentation API limits.

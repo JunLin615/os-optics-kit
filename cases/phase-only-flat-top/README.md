@@ -8,7 +8,7 @@ The native optical system uses a 532 nm, 10 mW TEM00 source with a 0.5 mm waist,
 
 ## Run and change a parameter
 
-Use **Python 3.12 or newer** for the pinned scientific dependencies (verified with Python 3.14.8). Install os-optics 0.13.0 and os-optics-kit 0.2.0, copy this case, then run inside the copied directory:
+Use **Python 3.12 or newer** for the pinned scientific dependencies (verified with Python 3.14.8). Install os-optics 0.13.0 and os-optics-kit 0.3.0, copy this case, then run inside the copied directory:
 
 ```bash
 python -m pip install -r requirements-flat-top.txt
@@ -47,3 +47,25 @@ The workflow checks the native handoff against independent complex-q propagation
 - `results.json`: native identities/targets, external observables, independent checks, dependency versions and measured compute time.
 
 Keep generated runs and arrays in your chosen output directory. The case files can be copied independently with `os-optics-kit cases copy phase-only-flat-top --dest DEST`.
+
+## Present saved results
+
+With Chrome/Chromium installed, create a fresh output folder for each style:
+
+```bash
+python present_case.py out/default --out figures/en --bundle figures/flat-top-en.zip
+python present_case.py out/default --out figures/zh --language zh-CN
+python present_case.py out/default --out figures/dark --language zh-CN --background dark
+```
+
+Open `index.html` locally. The gallery includes a native system view, the native illumination-radius comparison, and external intensity maps plus center profiles with a shared physical scale. PNG, SVG, bilingual captions, numeric data, input hashes, units and redraw settings accompany the plots. Chinese drawing needs a CJK font, such as Microsoft YaHei or Noto Sans CJK SC. The helper reads saved results, verifies CV/power against the saved fields and never runs the engine or optimizer. Source files remain unchanged.
+
+Kit 0.3.0 `present` accepts native run/study plots, not arbitrary external fields. The helper uses its public theme and gallery APIs for the external plot. The +Z native system view uses public `render_shots` with +Y up because `present` views do not expose an up-axis setting. `presentation.json` therefore rebuilds only the native target plot; run this case helper for the complete gallery. The variant native target is scaled with source width; the external phase mask remains fixed.
+
+The ZIP is an offline viewing bundle. To redraw its external figure without original run directories, extract it and use the included helper and data:
+
+```bash
+python assets/flat-top/present_case.py --redraw-external assets/flat-top/case-redraw.json --out redrawn --language zh-CN --background dark
+```
+
+Full native redraw still requires the saved native runs. The Python dependencies above and Chrome/Chromium support the documented workflow.

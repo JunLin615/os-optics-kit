@@ -5,7 +5,7 @@ summary: Feed a Gaussian relay handoff into a scalar pupil model. Five bounded p
 engine: 0.13.0
 catalog: none
 project: project.json
-tools: none
+tools: present
 tags: catalog-free, aberration, optimization, handoff
 license: MIT
 ---
@@ -24,6 +24,7 @@ python -m pip install -r requirements-aberration.txt
 python workflow.py --out out/default
 python workflow.py --out out/stronger --spherical-waves 0.1
 python workflow.py --out out/default --redraw-only
+python present_case.py out/default out/stronger --out talk/en --bundle talk/aberration.zip
 ```
 
 Output directories must be new. `--bound-waves` sets the symmetric control limit
@@ -45,6 +46,11 @@ Matplotlib 3.11.2. Default runtime about 3 s. ABCD q error <6e-15;
 Parseval error <7e-16. Independent polar quadrature differs by <0.00073
 for the two documented runs. Sensor is noiseless; scalar paraxial optics,
 continuous phase controls, fixed compensation of nominal curvature.
+
+Presentation uses kit 0.3.0. Add `--language zh-CN`, `--background dark`, or
+`--size 1920x1080` with a new `--out`. The case helper redraws saved external PSFs
+and ratios; native `present build` handles the relay radius target. No solver runs.
+Open `talk/en/index.html`; see bilingual README for fonts, camera and handoff.
 
 ## Files
 

@@ -5,7 +5,7 @@ summary: Design a phase-only mask for a circular flat top, then change the Gauss
 engine: 0.13.0
 catalog: none
 project: project.json
-tools: none
+tools: present
 tags: catalog-free, beam-shaping, phase-mask, fourier-optics, interop
 license: MIT
 ---
@@ -16,12 +16,13 @@ A 532 nm, 10 mW beam feeds a phase-only Fourier design. A circular super-Gaussia
 
 ## Run
 
-Use Python 3.12+ with os-optics 0.13.0 and os-optics-kit 0.2.0. In a copied case directory:
+Use Python 3.12+ with os-optics 0.13.0 and os-optics-kit 0.3.0. In a copied case directory:
 
 ```bash
 python -m pip install -r requirements-flat-top.txt
 python workflow.py --out out/flat-top
 python workflow.py --out out/flat-top --redraw
+python present_case.py out/flat-top --out figures/en --bundle figures/flat-top.zip
 ```
 
 `--width-scale 1.1` tests a wider input; `--radius-mm 0.45` redesigns the target. Use a fresh output directory for each computation. Default compute time is about 7 seconds on the recorded Windows/Python 3.14 environment.
@@ -36,4 +37,4 @@ Catalog-free. Scalar, coherent, paraxial model; continuous lossless phase and id
 
 ## Files
 
-`project.json` and `expected.json` describe native illumination. `workflow.py` saves native runs, handoffs, `science.npz`, `configuration.json`, `results.json` and `preview.png` under the chosen output directory. The READMEs define the data and optical boundary. `images/layout.png` shows the native reference system.
+`project.json` and `expected.json` describe native illumination. `workflow.py` saves native runs, handoffs, `science.npz`, `configuration.json`, `results.json` and `preview.png`. `present_case.py` redraws saved data with kit themes, bilingual captions and an offline gallery; see the READMEs for the native/external boundary and portable external redraw. `images/layout.png` shows the native reference system.

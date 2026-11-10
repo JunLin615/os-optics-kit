@@ -88,3 +88,52 @@ Parseval power conservation and direct coherent sum versus FFT center agree to
 The Fourier calculation uses a 6 mm pupil window and zero pads 512² samples to
 2048² for focal sampling. Reconstruct the full focal field from the saved complex
 pupil if another crop is needed. Keep generated results outside version control.
+
+## Presentation from saved results (kit 0.3.0)
+
+```bash
+python present_case.py out/default out/stronger --out talk/en --language en --background light --size 1920x1080 --bundle talk/aberration-en.zip
+python present_case.py out/default out/stronger --out talk/zh --language zh-CN --background light
+python present_case.py out/default out/stronger --out talk/dark --language en --background dark
+os-optics-kit present gallery talk/en
+os-optics-kit present bundle talk/en --out talk/share.zip --only psf,response
+```
+
+Open `talk/en/index.html` offline. The helper reads `science.npz`, `metrics.json`
+and `config.json`; it checks ratios against the complex pupil fields and verifies
+their hashes after export. Neither the engine nor the optimizer runs. Use a new
+`--out` for every style. Chrome/Chromium is needed for the native relay view;
+Chinese text needs a CJK font such as Microsoft YaHei or Noto Sans CJK SC.
+
+The valid native `presentation.json` builds the saved relay radius target with
+public `present.build`. For this Z-directed relay, kit 0.3.0 does not expose the
+camera up-axis in `present`; its direct view build fails with `CAMERA_UNDEFINED`.
+The helper uses public `render_shots` with optical axis Z and up-axis Y, adding
+the native view card to the gallery. The radius target measures the relay, not
+corrected PSF performance. Comparison inputs must differ only in spherical
+coefficient; differing bounds or optics are rejected to avoid confounded comparisons.
+
+Kit 0.3.0 has native sweep, power and target plots, but no external-array PSF
+plot type. This case therefore uses the published theme/font helpers for its two
+external plots, then appends plot cards through the documented `assets.json`
+protocol before calling official gallery and bundle functions. No private plot
+handler or synthetic engine result is used. **Redraw the full set with
+`present_case.py`**; standalone `present build` rebuilds only the native radius
+target and removes the case-added view and external cards from its index.
+
+`psf` shows the first run's three states with a shared linear 0–1 color scale;
+`response` compares saved runs' on-axis ratios at their own equal-power ideal.
+Each external card contains PNG, editable SVG, bilingual captions, selected
+`plot-data.npz`, `provenance.json`, `redraw.json` (theme, units, normalization,
+origin and source selection), and a copy of the case helper. Relative saved-run
+paths and input hashes preserve traceability without embedding local absolute
+paths. As with native bundles, restore the saved runs or pass their new paths to
+the helper to rebuild the full gallery. An extracted external card can also be
+redrawn independently from its bundled snapshot, without the original runs:
+
+```bash
+python present_case.py --redraw-external talk/en/assets/psf/redraw.json --out psf-zh --language zh-CN --background dark
+```
+
+The same command accepts the `response` card's `redraw.json`; each result includes
+PNG, SVG and the portable snapshot/config/helper for another redraw.
