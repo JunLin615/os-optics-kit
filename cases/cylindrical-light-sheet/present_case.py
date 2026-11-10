@@ -1,8 +1,4 @@
-"""Present saved light-sheet results; never construct or solve an optical model.
-
-Native assets use present.build. The longitudinal map and FWHM curves are an
-explicit case-local external plot, registered through the public asset index.
-"""
+"""Create a gallery of the cylindrical lens, light-sheet thickness and propagation range."""
 from __future__ import annotations
 
 import argparse
@@ -25,10 +21,10 @@ def bilingual(en, zh):
 
 TITLE = bilingual("Light-sheet thickness and range", "光片厚度与传播范围")
 CAPTION = bilingual(
-    "External redraw of saved Gaussian profiles. The map is the first run at x = 0; curves use each run's own "
-    "waist origin. Dots mark ±zR, the full sqrt(2)-thickness range. FWHM = sqrt(2 ln 2) × radius. No solver runs.",
-    "由保存的高斯分布外部重绘。纵截面取首个结果的 x = 0；各曲线以自身束腰为原点。圆点标记 ±zR，"
-    "即 sqrt(2) 倍厚度的全范围。FWHM = sqrt(2 ln 2) × 半径。不运行求解器。")
+    "Gaussian profiles derived from the saved q parameters and power. The map is the first run at x = 0; "
+    "curves use each run's waist origin. Dots mark ±zR, the full sqrt(2)-thickness range. FWHM = sqrt(2 ln 2) × radius.",
+    "由保存的 q 参数与功率计算高斯分布。纵截面取首个结果的 x = 0；各曲线以自身束腰为原点。圆点标记 ±zR，"
+    "即 sqrt(2) 倍厚度的全范围。FWHM = sqrt(2 ln 2) × 半径。")
 
 
 def read_json(path):
@@ -85,9 +81,9 @@ def native_spec(paths, data, theme, out):
             "sources": sources, "assets": [
                 {"id": "targets", "kind": "plot", "type": "targets", "sources": list(sources),
                  "targets": ["thin-waist", "sheet-range"], "reference": "run-0",
-                 "title": bilingual("Native radius and Rayleigh range targets", "原生半径与瑞利长度目标"),
-                 "caption": bilingual("Native 1/e² waist radius and zR; these are not FWHM and full range.",
-                                      "原生 1/e² 束腰半径与 zR；对应量分别为半径和瑞利长度。")}]}
+                 "title": bilingual("Waist radius and Rayleigh range targets", "束腰半径与瑞利长度目标"),
+                 "caption": bilingual("1/e² waist radius w0 and Rayleigh range zR. Thickness FWHM = sqrt(2 ln 2) w0; full range = 2 zR.",
+                                      "1/e² 束腰半径 w0 与瑞利长度 zR。厚度 FWHM = sqrt(2 ln 2) w0；全范围 = 2 zR。")}]}
 
 
 def system_asset(out, root, theme_settings):
@@ -108,8 +104,8 @@ def system_asset(out, root, theme_settings):
     write_json(folder / "camera.json", {"renderer": "os_optics_kit.render_views.render_shots", "source": "run-0",
                                         "axis": [0, 0, 1], "up_axis": [0, 1, 0], "camera": [80, 10], "shot": shots[0]})
     title = bilingual("Cylindrical lens and beam", "柱面透镜与光束")
-    caption = bilingual("Saved native reference run; propagation is left to right. Public render uses Z axis and Y up.",
-                        "保存的原生参考结果；光沿左至右传播。公开 render 接口使用 Z 光轴与 Y 向上。")
+    caption = bilingual("A cylindrical lens focuses the Gaussian beam along y while the x axis stays wide. Light propagates left to right.",
+                        "柱面透镜沿 y 方向聚焦高斯光束，x 方向保持较宽。光沿左至右传播。")
     asset = {"id": "system", "kind": "view", "title": title, "caption": caption}
     provenance = pres.provenance_record(asset, theme, [], [folder / "camera.json"], out,
                                         extra={"origin": "Saved native run through the official public renderer",
@@ -129,7 +125,7 @@ def system_asset(out, root, theme_settings):
             "files": {"image": pres.file_record(image, out), "camera": pres.file_record(folder / "camera.json", out)},
             "preview": relative(preview, out), "size_px": pres.image_size(image),
             "provenance": relative(folder / "provenance.json", out), "caption_files": captions,
-            "details": {"renderer": "public render_shots", "present_up_axis_gap": True}}
+            "details": {"focusing_axis": "y", "cylinder_axis": "x"}}
 
 
 def external_asset(out, data, arrays, theme_settings):

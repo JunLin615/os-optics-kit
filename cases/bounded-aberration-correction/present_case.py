@@ -1,8 +1,4 @@
-"""Case-local presentation of saved aberration results; never run a solver.
-
-Native relay: public render_shots; native radius target: present.build. PSFs: saved arrays, public
-theme, asset index, gallery and bundle contracts. See the accompanying README.
-"""
+"""Create a gallery of the Gaussian relay and saved scalar Fourier aberration results."""
 from __future__ import annotations
 
 import argparse
@@ -20,22 +16,22 @@ from os_optics_kit.render_views import camera_direction, left_to_right, render_s
 
 
 TITLES = {
-    "relay": {"en": "Gaussian relay feeding the external pupil",
-              "zh-CN": "向外部光瞳提供输入的高斯扩束光路"},
+    "relay": {"en": "Gaussian relay and pupil plane",
+              "zh-CN": "高斯扩束光路与光瞳平面"},
     "psf": {"en": "Five controls recover the focal core",
             "zh-CN": "五个控制量恢复焦斑中心强度"},
     "response": {"en": "Uncontrolled spherical aberration limits recovery",
                  "zh-CN": "不受控球差限制强度恢复"},
 }
 CAPTIONS = {
-    "relay": {"en": "Saved native relay only. The engine radius target is not a corrected PSF metric.",
-              "zh-CN": "仅展示保存的引擎扩束光路。引擎半径目标不是校正后 PSF 的评价量。"},
+    "relay": {"en": "The Gaussian relay provides a 1.300313 mm beam radius at the pupil plane, within the 1.29–1.31 mm target.",
+              "zh-CN": "高斯扩束光路在光瞳平面提供 1.300313 mm 光束半径，满足 1.29–1.31 mm 目标。"},
     "psf": {"en": "External scalar Fourier PSFs from the first saved run. Equal transmitted power; "
-                   "one shared linear scale normalized to the ideal on-axis intensity. No simulation is run.",
-            "zh-CN": "第一组保存结果的外部标量傅里叶 PSF。透射功率相同，三图共用以理想轴上强度归一化的线性色标。未重新计算光学结果。"},
-    "response": {"en": "Saved on-axis intensity ratios, not peak-search Strehl. Each run is normalized "
-                        "to its own equal-power ideal. Only five modes are controlled; spherical remains fixed.",
-                 "zh-CN": "保存的轴上强度比，不是搜索峰值得到的 Strehl 比。每组以自身等功率理想值归一化。仅控制五种模式，球差保持不变。"},
+                   "one shared linear scale normalized to the ideal on-axis intensity.",
+            "zh-CN": "第一组保存结果的外部标量傅里叶 PSF。透射功率相同，三图共用以理想轴上强度归一化的线性色标。"},
+    "response": {"en": "Intensity at the fixed optical-axis position, normalized to each run's equal-power ideal "
+                        "on-axis intensity. Five modes are controlled; the spherical coefficient stays fixed during correction.",
+                 "zh-CN": "固定光轴位置的强度，以每组等功率理想轴上强度归一化。控制五种模式，球差系数在校正过程中保持固定。"},
 }
 STATES = {"en": ["Ideal", "Disturbed", "Corrected"], "zh-CN": ["理想", "受扰", "校正后"]}
 
@@ -123,7 +119,7 @@ def response_figure(runs, theme):
     ax.set_ylabel("On-axis intensity / ideal" if lang == "en" else "轴上强度 / 理想值")
     ax.legend(loc="upper right", ncols=2)
     ax.grid(axis="x", visible=False)
-    note = "External scalar result · ideal = 1 · not peak-search Strehl" if lang == "en" else "外部标量结果 · 理想值 = 1 · 非搜索峰值 Strehl 比"
+    note = "External scalar Fourier model · equal-power ideal = 1" if lang == "en" else "外部标量傅里叶模型 · 等功率理想值 = 1"
     fig.text(.5, .065, note, ha="center", fontsize=theme.font_pt("small"))
     return fig
 
@@ -145,7 +141,7 @@ def add_card(out, asset_id, figure, runs, theme, theme_config):
         arrays.update(focal_x_mm=runs[0]["axis_mm"], focal_intensity_W_per_mm2=runs[0]["intensity"],
                       ideal_peak_W_per_mm2=np.array(runs[0]["peak"]))
     np.savez_compressed(snapshot, **arrays)
-    details = {"origin": "external scalar Fourier calculation; not an engine PSF or target",
+    details = {"origin": "external scalar Fourier calculation from the Gaussian relay handoff",
                "selection": "first saved run, all three states" if asset_id == "psf" else "all saved runs, on-axis ratios",
                "states": ["ideal", "disturbed", "corrected"],
                "units": {"focal_x_mm": "mm (displayed as µm)", "focal_intensity_W_per_mm2": "W/mm²",
@@ -284,7 +280,9 @@ def main():
     if not paths:
         parser.error("Supply RUN [VARIANT...] or --redraw-external CONFIG.")
     theme_config = {"preset": "presentation", "language": "en", "background": "light",
-                    "size": "1920x1080", **theme_config}
+                    "size": "1920x1080", "labels": {
+                        "target:relay_radius": {"en": "Relay 1/e² radius", "zh-CN": "扩束光束 1/e² 半径"}},
+                    **theme_config}
     runs = [read_run(path) for path in paths]
     reference = {key: value for key, value in runs[0]["config"].items() if key != "spherical_waves"}
     if any({key: value for key, value in run["config"].items() if key != "spherical_waves"} != reference for run in runs):
@@ -293,10 +291,10 @@ def main():
     out.mkdir(parents=True)
     spec = pr.default_spec()
     spec.update(title=TITLES["psf"], theme=theme_config,
-                sources={"relay": {"path": pr.portable_path(paths[0] / "engine", out), "label": "Native relay"}},
+                sources={"relay": {"path": pr.portable_path(paths[0] / "engine", out),
+                                   "label": {"en": "Gaussian relay", "zh-CN": "高斯扩束光路"}}},
                 assets=[{"id": "relay-radius", "kind": "plot", "type": "targets", "sources": ["relay"],
-                         "title": {"en": "Native relay radius target (not a PSF metric)",
-                                   "zh-CN": "引擎扩束半径目标（不是 PSF 评价量）"},
+                         "title": {"en": "Relay beam radius", "zh-CN": "扩束光束半径"},
                          "caption": CAPTIONS["relay"]}])
     pr.save_spec(spec, out / "presentation.json")
     built = present.build(out / "presentation.json", gallery=False, quiet=True)

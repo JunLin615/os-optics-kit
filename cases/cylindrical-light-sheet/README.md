@@ -28,7 +28,7 @@ python workflow.py --focal-length-mm 65 --out ../sheet-f65
 python workflow.py --out ../sheet-default --plot-only
 ```
 
-The complete default workflow takes about 4–5 seconds on the checked Windows/Python 3.14 environment, including preview rendering; scientific construction and calculation take about 2 seconds. `--focal-length-mm` accepts 25–110 mm and `--input-waist-mm` accepts 0.5–1.5 mm. Each changed focal length rebuilds the cylindrical prescription with the public native builder. Shorter focal lengths or larger input waists reduce thickness and range; the engine assesses each design's two targets. A workflow exit code of 1 means one of these example thresholds is missed.
+The complete default workflow takes about 4–5 seconds on the checked Windows/Python 3.14 environment, including preview rendering; scientific construction and calculation take about 2 seconds. `--focal-length-mm` accepts 25–110 mm and `--input-waist-mm` accepts 0.5–1.5 mm. Each changed focal length rebuilds the cylindrical prescription from the specified surfaces. Shorter focal lengths or larger input waists reduce thickness and range; the engine assesses each design's two targets. A workflow exit code of 1 means one of these example thresholds is missed.
 
 ## Read the saved result
 
@@ -40,21 +40,34 @@ An independent ABCD calculation refracts q into the glass, propagates through it
 
 ## Presentation from saved results
 
-Kit 0.3.0, Chrome/Chromium and a Chinese font (Microsoft YaHei or Noto Sans CJK SC) support the presentation helper. Its inputs are completed `workflow.py` output folders, not project files. The first input supplies the reference map and native view; add the 65 mm folder to show the missed thickness target.
+Use kit 0.3.0 and Chrome/Chromium, with Microsoft YaHei or Noto Sans CJK SC for
+Chinese text. Inputs are completed `workflow.py` output folders. The first input
+supplies the reference map and system view; add the 65 mm folder to compare the
+design that exceeds the waist-thickness limit.
 
 ```bash
 python present_case.py ../sheet-default ../sheet-f40 --out ../sheet-talk-en --language en --background light --size 1920x1080 --bundle ../sheet-talk-en.zip
 python present_case.py ../sheet-default ../sheet-f40 ../sheet-f65 --out ../sheet-talk-zh --language zh-CN --background dark --size 1920x1080 --bundle ../sheet-talk-zh.zip
 ```
 
-Open `index.html` for three cards: a native system view, the official `present` target comparison, and an external longitudinal map plus FWHM curves. PNG/SVG, bilingual captions, data snapshots, provenance and relative-path asset records accompany the figures. The view is a native raster capture. The marker pair on each FWHM curve locates ±zR; legend values are waist FWHM and full range. Native target plots retain their true radius and Rayleigh-range units. All input science files are read only; changing language, background or size requires a new output directory and never invokes the solver.
+Open `index.html` for the cylindrical-lens view, radius/range target comparison,
+and longitudinal intensity map with FWHM curves. The map and curves derive from
+the saved Gaussian q parameters and power. Markers locate ±zR; legend values give
+waist FWHM and full range. The target plot shows 1/e² waist radius and Rayleigh range.
+PNG/SVG, bilingual captions, numeric snapshots and provenance accompany the figures.
 
-Two kit 0.3.0 limits are explicit. Native `present` plots support sweep, power and targets, not these external NPZ arrays. Also, its view asset cannot supply the nonparallel up axis required for this +Z model (`CAMERA_UNDEFINED`). The helper therefore uses public `render_shots` with optical axis Z and up Y for the view, and public presentation theme/font functions for the external plot. It registers both honestly through the gallery asset index. `presentation.json` remains a valid native target specification; rebuilding it alone does not redraw or retain the helper's two additional cards. Re-run the helper for the full gallery. Native source directories are not copied into bundles.
+The helper reads saved results. Use a new output directory for each language,
+background or size. Rebuild the complete gallery with `present_case.py` and the
+saved result folders. `presentation.json` covers the native target comparison;
+running `present build` on it replaces the gallery index with that plot.
+Camera settings, data sources, units and input hashes are stored in the asset records.
 
-The bundle includes the external snapshot, units/origin, `case-redraw.json` and a copy of this helper. After extracting it, the external figure can be redrawn independently of the original runs:
+The ZIP contains the offline gallery and external profile snapshot. After extraction:
 
 ```bash
 python sheet-talk-en/assets/profiles/present_case.py --redraw-external sheet-talk-en/assets/profiles/case-redraw.json --out ../sheet-profiles-restyled --language zh-CN --background dark --size 1920x1080
 ```
 
-This last command creates only the external figure and its gallery; it does not recreate the native view or target plot. The original three-card presentation is recreated with the saved result folders and the first command above.
+This command redraws the profile figure and its gallery from packaged data.
+Recreating all three cards requires the saved result folders and the full-gallery
+command above; pass the new folder locations after moving them.

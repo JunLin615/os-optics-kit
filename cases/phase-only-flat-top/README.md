@@ -29,9 +29,9 @@ The target intensity is proportional to `exp(-2*(r/0.42 mm)^16)`. CV is the stan
 | Designed input | 0.0119713 | 0.9948493 |
 | Source waist ×0.9, fixed mask | 0.0745046 | 0.9970254 |
 
-Both outputs integrate to 10 mW. A high captured power fraction does not guarantee uniform illumination. Open `preview.png` to compare the shared-scale intensity maps and center profiles; the narrower input produces a central intensity excess.
+Both outputs integrate to 10 mW. Captured power and illumination uniformity describe different aspects of the beam. Open `preview.png` to compare the shared-scale intensity maps and center profiles; the narrower input produces a central intensity excess.
 
-Smooth radial energy transport initializes the phase. The 251 Gerchberg–Saxton updates minimize the whole target's relative squared intensity error: 0.00059689 → 0.00009383. The smooth initial field already has core CV 0.00495 and power fraction 0.98976. Optimization improves target agreement and power fraction while increasing core CV to 0.01197; CV is an observed tradeoff, not the optimization objective.
+Smooth radial energy transport initializes the phase. The 251 Gerchberg–Saxton updates minimize the whole target's relative squared intensity error: 0.00059689 → 0.00009383. The smooth initial field already has core CV 0.00495 and power fraction 0.98976. Optimization improves target agreement and power fraction while increasing core CV to 0.01197; CV tracks the uniformity tradeoff as the target-intensity error is minimized.
 
 ## Model and checks
 
@@ -58,14 +58,26 @@ python present_case.py out/default --out figures/zh --language zh-CN
 python present_case.py out/default --out figures/dark --language zh-CN --background dark
 ```
 
-Open `index.html` locally. The gallery includes a native system view, the native illumination-radius comparison, and external intensity maps plus center profiles with a shared physical scale. PNG, SVG, bilingual captions, numeric data, input hashes, units and redraw settings accompany the plots. Chinese drawing needs a CJK font, such as Microsoft YaHei or Noto Sans CJK SC. The helper reads saved results, verifies CV/power against the saved fields and never runs the engine or optimizer. Source files remain unchanged.
+Open `index.html` locally. The gallery includes the Gaussian reference system,
+illumination-radius comparison, and external scalar Fourier intensity maps and
+center profiles on a shared physical scale. The variant's native radius target
+scales with the source width; the external phase mask stays fixed.
 
-Kit 0.3.0 `present` accepts native run/study plots, not arbitrary external fields. The helper uses its public theme and gallery APIs for the external plot. The +Z native system view uses public `render_shots` with +Y up because `present` views do not expose an up-axis setting. `presentation.json` therefore rebuilds only the native target plot; run this case helper for the complete gallery. The variant native target is scaled with source width; the external phase mask remains fixed.
+PNG, SVG plots, bilingual captions, numeric snapshots and redraw settings accompany
+the figures. Chinese drawing needs Microsoft YaHei or Noto Sans CJK SC. The helper
+reads saved results and verifies CV and power against the saved fields. Camera
+settings, input hashes, units and data origin are recorded alongside the assets.
 
-The ZIP is an offline viewing bundle. To redraw its external figure without original run directories, extract it and use the included helper and data:
+Use `present_case.py` to rebuild the complete gallery from the saved run folder,
+passing its new location after moving it. `presentation.json` covers the native
+target plot; running `present build` on it replaces the gallery index with that plot.
+
+The ZIP contains the offline gallery and external intensity snapshot. After
+extracting `flat-top-en.zip`, redraw the external figure with its included helper:
 
 ```bash
-python assets/flat-top/present_case.py --redraw-external assets/flat-top/case-redraw.json --out redrawn --language zh-CN --background dark
+python flat-top-en/assets/flat-top/present_case.py --redraw-external flat-top-en/assets/flat-top/case-redraw.json --out redrawn --language zh-CN --background dark
 ```
 
-Full native redraw still requires the saved native runs. The Python dependencies above and Chrome/Chromium support the documented workflow.
+This command uses packaged data. Full system and target redraw requires the saved
+native runs and the full-gallery command above.

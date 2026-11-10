@@ -14,8 +14,8 @@ license: MIT
 
 A 532 nm relay supplies a 1.300313 mm Gaussian radius. An external 1.5 mm pupil,
 curvature compensation and ideal 120 mm Fourier lens produce the focal field.
-Powell search sees only normalized on-axis intensity; five controls cannot remove
-the sixth, spherical mode. Every trial is saved.
+Powell search uses normalized on-axis intensity to adjust five controls;
+the sixth, spherical coefficient stays fixed during correction. Every trial is saved.
 
 ## Run
 
@@ -35,7 +35,7 @@ Output directories must be new. `--bound-waves` sets the symmetric control limit
 
 Engine target `relay_radius`: 1.29–1.31 mm at `modulator`, MET at 1.300313 mm.
 The external principal observable is on-axis intensity divided by the ideal
-on-axis intensity at equal transmitted power, not a peak-search Strehl ratio.
+on-axis intensity at equal transmitted power. The measurement position stays fixed on the optical axis.
 Default: 0.092393 → 0.895105. With 0.1 waves spherical: 0.106409 → 0.692747.
 Transmitted power is 18.60305 mW in every phase state.
 
@@ -49,8 +49,8 @@ continuous phase controls, fixed compensation of nominal curvature.
 
 Presentation uses kit 0.3.0. Add `--language zh-CN`, `--background dark`, or
 `--size 1920x1080` with a new `--out`. The case helper redraws saved external PSFs
-and ratios; native `present build` handles the relay radius target. No solver runs.
-Open `talk/en/index.html`; see bilingual README for fonts, camera and handoff.
+and ratios alongside the relay view and radius target.
+Open `talk/en/index.html`; see the bilingual README for fonts and redraw commands.
 
 ## Files
 

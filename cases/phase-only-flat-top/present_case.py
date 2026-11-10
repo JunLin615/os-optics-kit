@@ -1,4 +1,4 @@
-"""Redraw saved flat-top fields with the kit theme and offline gallery; no solver calls."""
+"""Create an offline gallery comparing saved flat-top fields and Gaussian illumination."""
 from __future__ import annotations
 
 import argparse
@@ -21,10 +21,10 @@ def bi(en, zh):
 
 TITLE = bi("Flat-top illumination sensitivity", "平顶光斑的照明敏感性")
 CAPTION = bi(
-    "External Fourier fields saved by workflow.py; identical phase mask and intensity scale. "
-    "CV is evaluated in r < 0.75 R; target power uses target > 10% of peak. Native assets show the Gaussian reference.",
-    "workflow.py 保存的外部傅里叶场；使用同一相位掩模与强度色标。CV 统计范围为 r < 0.75 R；"
-    "目标区功率取目标强度大于峰值 10% 的区域。原生图展示高斯参考系统。")
+    "External scalar Fourier fields with the same phase mask and intensity scale. "
+    "CV is evaluated in r < 0.75 R; target power uses target > 10% of peak.",
+    "外部标量傅里叶场，使用同一相位掩模与强度色标。CV 统计范围为 r < 0.75 R；"
+    "目标区功率取目标强度大于峰值 10% 的区域。")
 
 
 def read_json(path):
@@ -86,7 +86,7 @@ def native_spec(root, out, data, theme):
             "assets": [
                 {"id": "illumination", "kind": "plot", "type": "targets",
                  "sources": ["nominal", "variant"], "targets": ["illumination_radius"], "reference": "nominal",
-                 "title": bi("Native illumination-radius comparison", "原生照明半径对比"),
+                 "title": bi("Illumination-radius comparison", "照明半径对比"),
                  "caption": bi("Nominal radius target 0.749–0.752 mm; the variant uses its own width-scaled target. "
                                "Physical radii change while the external phase mask stays fixed.",
                                "标称半径目标为 0.749–0.752 mm；变体使用按输入宽度缩放的目标。"
@@ -106,8 +106,8 @@ def native_view(root, out, settings):
     if records[0]["status"] != "captured":
         raise RuntimeError(f"Native view failed: {records[0].get('error')}")
     title = bi("Gaussian illumination and reference lens", "高斯照明与参考透镜")
-    caption = bi("Saved native run, axis +Z, up +Y. Public render_shots supplies the view; the mask is external.",
-                 "保存的原生运行，光轴 +Z，向上 +Y。视图由公共 render_shots 接口生成；掩模在外部计算。")
+    caption = bi("The −40/+60 mm telescope illuminates the 100 mm Fourier lens. The view shows the unmodulated Gaussian reference.",
+                 "−40/+60 mm 扩束透镜组为 100 mm 傅里叶透镜提供照明。图中展示未调制的高斯参考光束。")
     write_json(folder / "camera.json", {"axis": [0, 0, 1], "up_axis": [0, 1, 0],
                                         "direction": direction, "up": up, "applied": records[0].get("applied_camera"),
                                         "renderer": "os_optics_kit.render_views.render_shots",

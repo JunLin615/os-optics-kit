@@ -36,4 +36,4 @@ Engine 0.13.0 and kit 0.3.0; no catalog. Source 488 nm, 10 mW, 1 mm waist. Cylin
 
 ## Files
 
-`project.json` is the normalized default. `workflow.py` builds the prescribed lens through the public native interface and saves its configuration, handoff, targets, scientific profiles and preview under `--out`. `--plot-only` redraws saved profiles. `present_case.py` reuses saved results for bilingual galleries and bundles, with external FWHM/profile redraw explicitly distinguished from native targets. See both READMEs for units, equations, parameter limits and presentation API limits.
+`project.json` is the normalized default. `workflow.py` builds the prescribed lens from the specified surfaces and saves its configuration, handoff, targets, scientific profiles and preview under `--out`. `--plot-only` redraws saved profiles. `present_case.py` reuses saved results for bilingual galleries and bundles, showing the system, radius targets and derived FWHM profiles. See both READMEs for units, equations, parameter limits and redraw commands.

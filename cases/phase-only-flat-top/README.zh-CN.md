@@ -29,9 +29,9 @@ python workflow.py --out out/default --redraw
 | 设计入射光 | 0.0119713 | 0.9948493 |
 | 光源束腰 ×0.9，固定掩模 | 0.0745046 | 0.9970254 |
 
-两个输出的积分功率均为 10 mW。较高的目标区域功率比例并不保证照明均匀。打开 `preview.png` 查看使用共同色标的强度图与中心剖面；较窄入射光在中心产生更高强度。
+两个输出的积分功率均为 10 mW。目标区域功率比例与照明均匀性分别描述光束的不同特征。打开 `preview.png` 查看使用共同色标的强度图与中心剖面；较窄入射光在中心产生更高强度。
 
-相位初值来自平滑径向能量映射。251 次 Gerchberg–Saxton 更新最小化整个目标的相对强度平方误差，使其从 0.00059689 降至 0.00009383。平滑初始场的核心 CV 已达 0.00495，功率比例为 0.98976。优化改善目标吻合程度和功率比例，同时将核心 CV 增至 0.01197；CV 是需要观察的折中指标，并非优化目标。
+相位初值来自平滑径向能量映射。251 次 Gerchberg–Saxton 更新最小化整个目标的相对强度平方误差，使其从 0.00059689 降至 0.00009383。平滑初始场的核心 CV 已达 0.00495，功率比例为 0.98976。优化改善目标吻合程度和功率比例，同时将核心 CV 增至 0.01197；优化以目标强度误差为目标，CV 则反映均匀性的折中变化。
 
 ## 模型与检查
 
@@ -58,14 +58,23 @@ python present_case.py out/default --out figures/zh --language zh-CN
 python present_case.py out/default --out figures/dark --language zh-CN --background dark
 ```
 
-在本地打开 `index.html`。图库包含原生系统视图、原生照明半径对比，以及采用共用物理色标的外部强度图和中心剖面。图旁提供 PNG、SVG、双语说明、数值数据、输入哈希、单位及重绘设置。中文绘图需要 Microsoft YaHei 或 Noto Sans CJK SC 等中文字体。辅助脚本读取保存结果，以保存的场核对 CV 与功率，不运行引擎或优化器，源文件保持不变。
+在本地打开 `index.html`。图库包含高斯参考系统、照明半径对比，以及共用物理
+色标的外部标量傅里叶强度图和中心剖面。变体的原生半径目标随光源宽度缩放，
+外部相位掩模保持固定。
 
-Kit 0.3.0 的 `present` 支持原生运行/研究数据绘图，不直接导入任意外部场。辅助脚本使用其公共主题和图库接口绘制外部结果。由于 `present` 视图未开放向上轴设置，+Z 原生系统视图通过公共 `render_shots` 接口指定 +Y 向上生成。因此 `presentation.json` 只重建原生目标图；完整图库由本案例辅助脚本生成。变体的原生目标随光源宽度缩放，外部相位掩模则保持固定。
+图旁提供 PNG、SVG 曲线图、双语说明、数值快照和重绘设置。中文绘图需要微软雅黑
+或 Noto Sans CJK SC 字体。辅助脚本读取保存结果，以保存的场核对 CV 与功率。
+相机设置、输入哈希、单位及数据来源保存在图件记录中。
 
-ZIP 可离线浏览。解压后，使用包内辅助脚本与数据，无需原始运行目录即可重绘外部图：
+使用 `present_case.py` 从保存的运行目录重建完整图库，迁移后传入新目录位置。
+`presentation.json` 对应原生目标图；对该文件运行 `present build` 会将图库
+索引替换为这张图。
+
+ZIP 包含离线图库与外部强度快照。解压 `flat-top-en.zip` 后使用包内脚本重绘：
 
 ```bash
-python assets/flat-top/present_case.py --redraw-external assets/flat-top/case-redraw.json --out redrawn --language zh-CN --background dark
+python flat-top-en/assets/flat-top/present_case.py --redraw-external flat-top-en/assets/flat-top/case-redraw.json --out redrawn --language zh-CN --background dark
 ```
 
-完整原生重绘仍需保存的原生运行目录。上述 Python 依赖与 Chrome/Chromium 支持本文工作流。
+该命令使用包内数据。完整系统及目标重绘需要保存的原生运行目录和上面的完整
+图库命令。

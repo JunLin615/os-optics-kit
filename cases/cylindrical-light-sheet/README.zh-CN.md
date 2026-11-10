@@ -28,7 +28,7 @@ python workflow.py --focal-length-mm 65 --out ../sheet-f65
 python workflow.py --out ../sheet-default --plot-only
 ```
 
-在已检查的 Windows/Python 3.14 环境中，默认完整流程约需 4–5 秒，包含预览绘制；物理配置构建与计算约需 2 秒。`--focal-length-mm` 接受 25–110 mm，`--input-waist-mm` 接受 0.5–1.5 mm。改变焦距时，流程使用公开的原生建模接口重新构造柱面处方。缩短焦距或增大入射束腰，会减小光片厚度和传播范围；引擎逐项评估两个目标。流程退出码 1 表示至少一个示例阈值未满足。
+在已检查的 Windows/Python 3.14 环境中，默认完整流程约需 4–5 秒，包含预览绘制；物理配置构建与计算约需 2 秒。`--focal-length-mm` 接受 25–110 mm，`--input-waist-mm` 接受 0.5–1.5 mm。改变焦距时，流程根据曲面参数重新构造柱面处方。缩短焦距或增大入射束腰，会减小光片厚度和传播范围；引擎逐项评估两个目标。流程退出码 1 表示至少一个示例阈值未满足。
 
 ## 读取保存的结果
 
@@ -38,23 +38,32 @@ python workflow.py --out ../sheet-default --plot-only
 
 独立 ABCD 计算依次完成 q 在入射面折射、玻璃内传播、出射面折射和到观测面的传播。三个方案中两轴 q 与引擎的相对误差均小于 2e-16。流程还检查 0.995² 的功率透射率，并对束腰边缘分布进行数值积分。外部检查保存在 `metrics.json`，与引擎目标评估分开。所有生成文件均写入指定的输出目录。
 
-## 从保存结果制作展示材料
+## 从保存结果制作展示素材
 
-展示脚本使用 kit 0.3.0、Chrome/Chromium，以及微软雅黑或 Noto Sans CJK SC 中文字体。输入是已完成的 `workflow.py` 结果目录，不是项目文件。首个输入提供参考纵截面和原生视图；加入 65 mm 结果可展示厚度目标未满足的情况。
+使用 kit 0.3.0、Chrome/Chromium，中文绘图需微软雅黑或 Noto Sans CJK SC 字体。
+输入为已完成的 `workflow.py` 结果目录。首个输入提供参考纵截面和系统视图；
+加入 65 mm 结果可比较超过束腰厚度上限的设计。
 
 ```bash
 python present_case.py ../sheet-default ../sheet-f40 --out ../sheet-talk-en --language en --background light --size 1920x1080 --bundle ../sheet-talk-en.zip
 python present_case.py ../sheet-default ../sheet-f40 ../sheet-f65 --out ../sheet-talk-zh --language zh-CN --background dark --size 1920x1080 --bundle ../sheet-talk-zh.zip
 ```
 
-打开 `index.html` 查看三张卡片：原生系统视图、官方 `present` 目标对比、外部纵截面及 FWHM 曲线。图件附有 PNG/SVG、双语图注、数据快照、来源记录和相对路径资产索引；系统视图为原生光栅截图。FWHM 曲线的两个圆点表示 ±zR，图例数值依次为束腰 FWHM 和全范围。原生目标图保留实际的半径与瑞利长度量纲。输入科学文件始终只读；改变语言、背景或尺寸时使用新的输出目录，无须再次求解。
+打开 `index.html` 查看柱面透镜视图、半径与范围目标对比、纵向强度分布及 FWHM
+曲线。分布与曲线由保存的高斯 q 参数和功率计算。圆点标记 ±zR，图例给出束腰
+FWHM 和全范围；目标图展示 1/e² 束腰半径与瑞利长度。图旁提供 PNG/SVG、双语
+说明、数值快照和溯源记录。
 
-kit 0.3.0 的两处限制在此明确区分：原生 `present` 图型支持 sweep、power 和 targets，不支持这些外部 NPZ 数组；其 view 资产也不能设置本 +Z 模型所需的非平行向上轴，会返回 `CAMERA_UNDEFINED`。因此，本脚本通过公开 `render_shots` 接口设置 Z 光轴、Y 向上生成视图，通过公开展示主题和字体接口绘制外部图，并按图库资产索引协议如实登记两者。`presentation.json` 仍是有效的原生目标图配置；单独重建它不会重绘或保留本脚本额外登记的两张卡片。完整图库应重新运行本脚本。分发包不复制原始原生结果目录。
+辅助脚本读取保存结果。每种语言、背景或尺寸使用新的输出目录。使用
+`present_case.py` 和保存的运行目录重建完整图库。`presentation.json` 对应原生
+目标对比图；对它运行 `present build` 会将图库索引替换为这张图。相机设置、
+数据来源、单位与输入哈希保存在图件记录中。
 
-分发包包含外部数据快照、单位与来源、`case-redraw.json` 和本脚本副本。解压后可以脱离原始结果单独重绘外部图：
+ZIP 包含离线图库和外部高斯分布快照。解压后运行：
 
 ```bash
 python sheet-talk-en/assets/profiles/present_case.py --redraw-external sheet-talk-en/assets/profiles/case-redraw.json --out ../sheet-profiles-restyled --language zh-CN --background dark --size 1920x1080
 ```
 
-最后一条命令仅生成外部图及其图库，不重建原生视图或目标图。完整三卡片展示材料通过保存的结果目录及前面的命令重新生成。
+该命令使用包内数据重绘分布图及其图库。重建全部三张卡片需要保存的运行目录和
+上面的完整图库命令；迁移后传入新目录位置。
