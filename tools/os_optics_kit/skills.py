@@ -116,11 +116,44 @@ def check_skill(directory):
     for term in HOST_TERMS:
         if re.search(rf"\b{re.escape(term)}\b", text):
             problems.append(f"{name}: names the agent host or protocol {term!r}; skills are vendor-neutral")
+    problems += _check_reference_pages(directory)
     entry = {"name": fields.get("name", name), "kind": _kind(fields), "description": fields.get("description", ""),
              "version": fields.get("version", ""), "command": fields.get("command", ""),
              "requires": fields.get("requires", ""), "path": f"skills/{name}/{SKILL_FILE}", "tokens": tokens,
              "sha256": hashlib.sha256(data).hexdigest()}
     return entry, problems
+
+
+def _check_reference_pages(directory):
+    """Other Markdown pages of a skill (read only when a task needs them): same budget, LF, vendor-neutral."""
+    problems = []
+    name = Path(directory).name
+    for page in sorted(Path(directory).glob("*.md")):
+        if page.name == SKILL_FILE:  # checked by check_skill; only its links to the other pages here
+            problems += [f"{name}: {SKILL_FILE} refers to {link}, which is not in the skill folder"
+                         for link in re.findall(r"`([a-z0-9-]+\.md)`", page.read_text(encoding="utf-8"))
+                         if not (Path(directory) / link).is_file()]
+            continue
+        data = page.read_bytes()
+        try:
+            text = data.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            problems.append(f"{name}: {page.name} is not UTF-8 ({exc.reason})")
+            continue
+        if b"\r" in data:
+            problems.append(f"{name}: {page.name} must use LF line endings")
+        tokens = fm.token_estimate(text)
+        if tokens > fm.BUDGETS[SKILL_FILE]:
+            problems.append(f"{name}: {page.name} is {tokens} tokens (ceil(characters/4)), budget "
+                            f"{fm.BUDGETS[SKILL_FILE]}")
+        for term in HOST_TERMS:
+            if re.search(rf"\b{re.escape(term)}\b", text):
+                problems.append(f"{name}: {page.name} names the agent host or protocol {term!r}; skills are "
+                                "vendor-neutral")
+        for link in re.findall(r"`([a-z0-9-]+\.md)`", text):
+            if not (Path(directory) / link).is_file():
+                problems.append(f"{name}: {page.name} refers to {link}, which is not in the skill folder")
+    return problems
 
 
 def _check_fields(directory_name, fields):

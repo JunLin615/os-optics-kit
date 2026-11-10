@@ -458,9 +458,7 @@ def build_asset(asset, ctx, previous):
         reused["_abs"] = {role: ctx.out_dir / record["path"] for role, record in previous["files"].items()}
         return reused
     out = ctx.asset_dir(asset["id"])
-    for stale in out.iterdir():  # the folder belongs to this asset: start clean so no old file is listed
-        if stale.is_file():
-            stale.unlink()
+    _clear_previous(out, asset, ctx)
     try:
         result = _handlers()[asset["kind"]](asset, ctx)
     except (pres.PresentationError, wc.WorkflowError) as error:
@@ -495,6 +493,18 @@ def build_asset(asset, ctx, previous):
             "sources": [s.id for s in sources], "depends_on": result.get("depends_on", asset_ids),
             "details": wc.json_safe(result.get("details") or {}), "fingerprint": fingerprint,
             "_abs": files}
+
+
+def _clear_previous(out, asset, ctx):
+    """Remove the files of this asset's folder before drawing it again, except files the asset definition refers to
+    (a ``sequence`` to replay), so no file of an earlier build stays listed or bundled."""
+    keep = set()
+    for key in ("sequence",):
+        if isinstance(asset.get(key), str):
+            keep.add((ctx.spec_dir / asset[key]).resolve())
+    for path in out.iterdir():
+        if path.is_file() and path.resolve() not in keep:
+            path.unlink()
 
 
 MISSING_CODES = {"SOURCE_MISSING", "SOURCE_UNKNOWN", "SOURCE_UNREADABLE", "COLUMN_UNKNOWN", "TARGET_UNKNOWN",

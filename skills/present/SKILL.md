@@ -1,6 +1,6 @@
 ---
 name: present
-description: Prepare slide-ready material from saved runs and studies - system views, result plots, comparisons, animations, an offline gallery and a portable bundle - and restyle it (language, background, text size, figure size) from a saved configuration without simulating.
+description: Prepare slide-ready material from saved runs and studies - system views, result plots, comparisons, animations, an offline gallery and a portable bundle - and restyle it (language, background, text and figure size) from a saved configuration without simulating.
 version: 0.1.0
 command: os-optics-kit present
 requires: os-optics>=0.13,<0.14; os-optics-kit[plot]; os-optics-kit[render] for views and animations; os-optics-kit[media] for MP4
@@ -11,17 +11,17 @@ kind: tool
 
 ## When to use
 
-- "Prepare presentation material from these results": a system view, result figures, captions, a gallery.
-- "Use a white background, Chinese labels and larger text": restyle a built set; nothing reruns.
+- "Prepare presentation material from these results": system view, result figures, captions, gallery.
+- "White background, Chinese labels, larger text": restyle a built set; nothing reruns.
 - Compare saved alternatives in one consistent layout: read `compare.md` in this folder.
-- Hand results to a colleague as an offline gallery or bundle: read `handoff.md`.
-- A short orbit, a move to a detail view, or playback of recorded study samples: read `animate.md`.
+- Hand results over as an offline gallery or bundle: read `handoff.md`.
+- An orbit, a move to a detail view, or playback of recorded study samples: read `animate.md`.
 
 ## When not to use
 
 - New results or design changes: `edit`, `sweep`, `os-optics project run` first.
 - Numbers for a decision: `summary`, `compare`; a detailed record: `report`.
-- One quick plot or camera pose: `plot` (`--theme` also works there) or `render`.
+- One quick plot or camera pose: `plot --theme ...` or `render`.
 
 ## Inputs
 
@@ -31,21 +31,22 @@ os-optics-kit present build DIR/presentation.json [--set KEY=VALUE]... [--only I
 os-optics-kit present list DIR | settings | gallery DIR | bundle DIR --out X.zip [--only ID,...]
 ```
 
-`init` writes `presentation.json`: theme, sources (relative paths) and default assets (views, power and
-target charts, study curves, comparisons). Edit it or use `--set`; `present settings` lists every key: `theme.language` `en|zh-CN`, `theme.background`
-`light|dark|transparent`, `theme.font_scale`, `theme.size` `slide|4k|WxH`, `theme.title`, `theme.preset`
-`presentation|report`, `theme.units` (`{"mm": "um"}`), `theme.labels`, `assets.<id>.caption`,
-`assets.<id>.camera` `[angle to axis, elevation]`. Keep the user's known preferences (language, background,
-size) in `theme` from the start.
+`init` writes `presentation.json`: theme, sources (relative paths) and default assets (views, power
+and target charts, study curves, comparisons). Edit it or use `--set`; `present settings` lists
+every key. Common: `theme.language` `en|zh-CN`, `theme.background` `light|dark|transparent`,
+`theme.font_scale`, `theme.size` `slide|4k|WxH`, `theme.title`, `theme.preset` `presentation|report`,
+`theme.units` `{"mm": "um"}`, `theme.labels`, `assets.<id>.caption`, `assets.<id>.camera`.
+Put the user's known preferences (language, background, size) in `theme` from the start.
 
 ## Outputs
 
-`DIR/assets/<id>/` (PNG, SVG/PDF for plots, data.json, caption.<lang>.txt, provenance.json; views add an
-editable text overlay and an annotated PNG), `previews/<id>.png`, `assets.json` (asset index), `index.html`
-(offline gallery), `contact-sheet.png` (previews labelled by id). Stdout: each asset's id, status and paths. `--set` changes are saved in `presentation.json`;
-unchanged assets are reused. Exit 0 done; 2 `INCOMPLETE` (an asset's source, target or panel is missing:
-`missing[]` names it with a recovery step, the other assets are built); 4 refused input (JSON on stderr,
-e.g. `FONT_MISSING`, `BROWSER_NOT_FOUND`, `MEDIA_EXTRA_MISSING`, each with `recovery`).
+`DIR/assets/<id>/`: PNG, SVG/PDF for plots, `data.json`, `caption.<lang>.txt`, `provenance.json`;
+views add an editable text overlay and an annotated PNG. Also `previews/<id>.png`, `assets.json`
+(asset index), `index.html` (offline gallery), `contact-sheet.png` (previews labelled by id).
+Stdout: each asset's id, status and paths. `--set` changes are saved in `presentation.json`;
+unchanged assets are reused. Exit 0 done; 2 `INCOMPLETE`: `missing[]` names each asset whose
+source, target or panel is missing, with a recovery step, and the rest is built; 4 refused input
+(JSON on stderr with `recovery`, e.g. `FONT_MISSING`, `BROWSER_NOT_FOUND`, `MEDIA_EXTRA_MISSING`).
 
 ## Minimal example
 
@@ -60,9 +61,9 @@ os-optics-kit present build talk/presentation.json --set theme.language=zh-CN --
 
 ## Limits
 
-- Choose assets from `contact-sheet.png` by id; write the narrative from `data.json` values.
+- Pick assets from `contact-sheet.png` by id; write the narrative from `data.json` values.
 - 3D views are raster images from the engine viewer; plots are also vector.
-- Chinese text needs an installed CJK font (Noto Sans CJK SC, Microsoft YaHei or PingFang SC).
+- Chinese needs a CJK font (Noto Sans CJK SC, Microsoft YaHei or PingFang SC).
 
 ## Version
 
