@@ -150,7 +150,7 @@ class CaseFlowTests(unittest.TestCase):
         self.assertEqual(code, 0, doc)
         patch = (out / json.loads((out / "bundle.json").read_text(encoding="utf-8"))["patch"]).read_text("utf-8")
         self.assertIn("summary: Two ideal thin lenses expand the beam.", patch)
-        self.assertNotIn("\r", (out / "case" / "CASE.md").read_text(encoding="utf-8", newline=""))
+        self.assertNotIn(b"\r", (out / "case" / "CASE.md").read_bytes())
 
         # the same case cannot be added twice; a broken edit is refused with the problems listed
         code, doc = call(["case", str(self.project), "--name", "ideal-expander", "--repo", str(applied),
