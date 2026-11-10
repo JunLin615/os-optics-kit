@@ -176,7 +176,11 @@ def build_view(asset, ctx):
         view = ViewScene(source.path, axis=_axis_text(asset.get("axis")))
         box = view_box(asset, ctx, view)
         direction, up = camera_direction(view.axis, azimuth, elevation)
-        if asset.get("orientation", "left-to-right") == "left-to-right":
+        orientation = asset.get("orientation", "left-to-right")
+        if orientation not in ("left-to-right", "as-given"):
+            raise pres.PresentationError("SPEC_INVALID", f"asset {asset['id']}: orientation {orientation!r}; use "
+                                         "left-to-right or as-given", key=f"assets.{asset['id']}.orientation")
+        if orientation == "left-to-right":
             direction, up = left_to_right(direction, up, view.axis)
         records = render_shots(source.path, [{"name": asset["id"], "direction": direction, "up": up,
                                               "roll_deg": roll}], out, size=theme.size,
@@ -449,15 +453,20 @@ def _entry_files(files, out_dir):
 
 
 def _reusable(previous, fingerprint, out_dir):
-    if not previous or previous.get("fingerprint") != fingerprint or previous.get("status") not in ("written",
-                                                                                                    "reused"):
+    """Whether the previous build's files of an asset can stand: same fingerprint, every listed file inside the
+    output directory and unchanged."""
+    if not previous or previous.get("fingerprint") != fingerprint or previous.get("status") not in (
+            "written", "reused", "stale"):
         return False
-    for record in [*previous.get("files", {}).values()]:
-        path = Path(out_dir) / record["path"]
-        if not path.is_file() or wc.sha256_file(path) != record["sha256"]:
+    root = Path(out_dir).resolve()
+    for relative in [*(r.get("path") for r in (previous.get("files") or {}).values()), previous.get("preview")]:
+        if not isinstance(relative, str):
             return False
-    preview = previous.get("preview")
-    return bool(preview) and (Path(out_dir) / preview).is_file()
+        path = (root / relative).resolve()
+        if root not in path.parents or not path.is_file():
+            return False
+    return all(wc.sha256_file(root / record["path"]) == record.get("sha256")
+               for record in previous.get("files", {}).values())
 
 
 def build_asset(asset, ctx, previous):
@@ -474,7 +483,7 @@ def build_asset(asset, ctx, previous):
                 problems.append(error)
     for asset_id in asset_ids:
         dependency = ctx.built(asset_id)
-        if dependency is None or dependency["status"] not in ("written", "reused"):
+        if dependency is None or dependency["status"] not in ("written", "reused", "stale"):
             problems.append(pres.PresentationError(
                 "PANEL_MISSING", f"asset {asset['id']} uses asset {asset_id!r}, which is not available",
                 recovery=f"add or fix asset {asset_id!r}, or remove it from {asset['id']}", asset=asset_id))
@@ -487,15 +496,26 @@ def build_asset(asset, ctx, previous):
                 "caption": pres.localized(asset.get("caption"), theme.language, ""), "files": {},
                 "sources": source_ids, "depends_on": asset_ids, "error": problems[0].as_dict()}
     # source labels and the set of sources decide titles and captions; a replayed sequence decides the frames
-    replayed = [wc.sha256_file(ctx.spec_dir / asset[key]) for key in ("sequence",)
-                if isinstance(asset.get(key), str) and (ctx.spec_dir / asset[key]).is_file()]
-    fingerprint = pres.fingerprint(asset, theme.summary(), theme.labels, identities,
-                                   [ctx.built(a)["fingerprint"] for a in asset_ids],
-                                   ctx.spec.get("sources"), replayed)
+    fingerprint = asset_fingerprint(asset, ctx, theme, identities, source_ids, asset_ids)
     if _reusable(previous, fingerprint, ctx.out_dir):
         reused = {**previous, "status": "reused"}
         reused["_abs"] = {role: ctx.out_dir / record["path"] for role, record in previous["files"].items()}
         return reused
+    return _draw(asset, ctx, theme, source_ids, asset_ids, entry, fingerprint)
+
+
+def asset_fingerprint(asset, ctx, theme, identities, source_ids, asset_ids):
+    """The inputs that decide an asset's files: definition, settings, source identities and labels, panels,
+    a replayed file."""
+    replayed = [wc.sha256_file(ctx.spec_dir / asset[key]) for key in ("sequence",)
+                if isinstance(asset.get(key), str) and (ctx.spec_dir / asset[key]).is_file()]
+    return pres.fingerprint(asset, theme.summary(), theme.labels, identities,
+                            [(ctx.built(a) or {}).get("fingerprint") for a in asset_ids],
+                                   {s: (ctx.spec.get("sources") or {}).get(s) for s in source_ids},
+                            len(ctx.spec.get("sources") or {}), replayed)
+
+
+def _draw(asset, ctx, theme, source_ids, asset_ids, entry, fingerprint):
     out = ctx.asset_dir(asset["id"])
     _clear_previous(out, asset, ctx)
     try:
@@ -536,6 +556,17 @@ def build_asset(asset, ctx, previous):
             "sources": [s.id for s in sources], "depends_on": result.get("depends_on", asset_ids),
             "details": wc.json_safe(result.get("details") or {}), "fingerprint": fingerprint,
             "_abs": files}
+
+
+def _current(asset, ctx, entry):
+    """Whether an asset drawn earlier still matches the current settings and sources."""
+    source_ids, asset_ids = references(asset)
+    try:
+        identities = {s: ctx.source(s).identity for s in source_ids}
+    except pres.PresentationError:
+        return False
+    fingerprint = asset_fingerprint(asset, ctx, ctx.asset_theme(asset), identities, source_ids, asset_ids)
+    return _reusable(entry, fingerprint, ctx.out_dir)
 
 
 def _clear_previous(out, asset, ctx):
@@ -638,8 +669,8 @@ def build(spec_path, *, settings=(), only=None, out_dir=None, gallery=True, brow
         if wanted is not None and asset["id"] not in wanted:
             if asset["id"] in previous:
                 entry = {**previous[asset["id"]]}
-                if entry.get("status") == "written":
-                    entry["status"] = "reused"  # carried over from the previous build, not drawn now
+                if entry.get("status") in ("written", "reused", "stale"):  # carried over, not drawn now
+                    entry["status"] = "reused" if _current(asset, ctx, entry) else "stale"
                 entry["_abs"] = {role: out_dir / record["path"] for role, record in entry.get("files", {}).items()}
             else:
                 entry = {"id": asset["id"], "kind": asset["kind"], "status": "pending", "files": {}}
@@ -653,7 +684,7 @@ def build(spec_path, *, settings=(), only=None, out_dir=None, gallery=True, brow
     _remove_stale(out_dir, previous, entries)
     ordered = [{k: v for k, v in entries[a["id"]].items() if k != "_abs"} for a in assets]
     counts = {status: sum(1 for e in ordered if e["status"] == status)
-              for status in ("written", "reused", "missing_input", "failed", "pending")}
+              for status in ("written", "reused", "stale", "missing_input", "failed", "pending")}
     theme = ctx.theme
     manifest = {"schema": pres.MANIFEST_SCHEMA, "schema_version": pres.SCHEMA_VERSION, "kit_version": __version__,
                 "generated": wc.utc_now(), "title": pres.localized(ctx_spec.get("title"), theme.language, ""),
@@ -791,8 +822,9 @@ def init(paths, out_dir, *, labels=None, title=None, theme=None, settings=(), an
         if any(_run_targets(path) for _, path in runs):
             assets.append({"id": "targets-compare", "kind": "plot", "type": "targets",
                            "sources": [s for s, _ in runs]})
-        assets.append({"id": "views-compare", "kind": "compose", "layout": "before-after" if len(runs) == 2
-                       else "row", "panels": [{"asset": f"view-{s}"} for s, _ in runs]})
+        # a row: two runs may be alternatives, so "before"/"after" is left to the user (layout before-after)
+        assets.append({"id": "views-compare", "kind": "compose", "layout": "row",
+                       "panels": [{"asset": f"view-{s}"} for s, _ in runs]})
     for source_id, path in studies:
         for column in _study_targets(path)[:4]:
             assets.append({"id": f"sweep-{source_id}-{column.split(':', 1)[1]}"[:64].lower().replace(":", "-"),
@@ -868,7 +900,9 @@ def settings_document():
                 "view": {"source": "run source id", "camera": "[angle to optical axis, elevation, roll?] deg",
                          "focus": "optics | scene | element:<id>", "beams": "true", "labels": "false",
                          "edges": "false", "margin": VIEW_MARGIN, "framing_sources": "[run ids] shared framing",
-                         "box": "[[x,y,z],[x,y,z]] mm", "interactive": "false: also write the interactive viewer"},
+                         "box": "[[x,y,z],[x,y,z]] mm", "interactive": "false: also write the interactive viewer",
+                         "orientation": "left-to-right (default: light travels left to right, the camera is "
+                                        "mirrored across the plane of the optical axis and up) | as-given"},
                 "plot": {"type": {"sweep": {"source": "study id", "y": "target:<id> | derived:<name> | param:<name>"},
                                   "power": {"source": "run id"},
                                   **compose_figures.settings()["plot"]}},

@@ -13,9 +13,9 @@ kind: tool
 
 - "Prepare presentation material from these results": system view, result figures, captions, gallery.
 - "White background, Chinese labels, larger text": restyle a built set; nothing reruns.
-- Compare saved alternatives in one consistent layout: read `compare.md` in this folder.
-- Hand results over as an offline gallery or bundle: read `handoff.md`.
-- An orbit, a move to a detail view, or playback of recorded study samples: read `animate.md`.
+- Compare saved alternatives in one consistent layout: `skills show present compare.md`.
+- Hand results over as an offline gallery or bundle: `skills show present handoff.md`.
+- Orbit, move to a detail view, playback of recorded study samples: `skills show present animate.md`.
 
 ## When not to use
 

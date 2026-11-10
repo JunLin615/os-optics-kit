@@ -89,7 +89,7 @@ class ThemeTests(unittest.TestCase):
         theme = pres.resolve_theme({"units": {"mm": "um"}, "language": "zh-CN",
                                     "labels": {"target:spot": {"en": "Spot radius", "zh-CN": "光斑半径"}}})
         self.assertAlmostEqual(theme.to_display(0.0165, "mm"), 16.5)
-        self.assertEqual(theme.axis_label("target:spot", "mm"), "光斑半径 [um]")
+        self.assertEqual(theme.axis_label("target:spot", "mm"), "光斑半径 [µm]")
         self.assertEqual(theme.label("param:gap"), "gap")
         self.assertIsNone(theme.to_display(None, "mm"))
 
@@ -360,7 +360,9 @@ class BuildTests(unittest.TestCase):
         # a changed source label redraws the assets that show it
         code, result, err = call(["build", str(out / "presentation.json"), "--no-gallery", "--quiet",
                                   "--set", "sources.nominal.label=Adjusted"])
-        self.assertEqual(result["counts"]["reused"], 0, result)
+        status = {a["id"]: a["status"] for a in result["assets"]}
+        self.assertEqual(status["power-nominal"], "written", result)  # shows the label
+        self.assertEqual(status[heatmap["id"]], "reused", result)  # does not use that source
         # a crafted asset index never makes a build delete files outside an asset's own folder
         victim = self.root / "keep-me.txt"
         victim.write_text("user file", encoding="utf-8")
@@ -370,6 +372,34 @@ class BuildTests(unittest.TestCase):
         wc.write_json(out / "assets.json", manifest)
         call(["build", str(out / "presentation.json"), "--no-gallery", "--quiet"])
         self.assertTrue(victim.is_file())
+
+    def test_an_edited_replayed_file_redraws_the_asset(self):
+        from os_optics_kit import workflow_common as wc
+
+        out = self.root / "replayed"
+        spec = self.plot_spec(out)
+        power = next(a for a in spec["assets"] if a["type"] == "power")
+        (out / "seq.json").write_text("{}", encoding="utf-8")
+        power["sequence"] = "seq.json"  # any file an asset replays is part of its fingerprint
+        pres.save_spec(spec, out / "presentation.json")
+        call(["build", str(out / "presentation.json"), "--no-gallery", "--quiet", "--only", power["id"]])
+        code, result, _ = call(["build", str(out / "presentation.json"), "--no-gallery", "--quiet",
+                                "--only", power["id"]])
+        self.assertEqual(next(a for a in result["assets"] if a["id"] == power["id"])["status"], "reused")
+        (out / "seq.json").write_text('{"edited": true}', encoding="utf-8")
+        code, result, _ = call(["build", str(out / "presentation.json"), "--no-gallery", "--quiet",
+                                "--only", power["id"]])
+        self.assertEqual(next(a for a in result["assets"] if a["id"] == power["id"])["status"], "written")
+        self.assertTrue((out / "seq.json").is_file())
+        # an asset left out by --only is "stale" once its settings changed, "reused" while they still match
+        sweep = next(a for a in spec["assets"] if a["type"] == "sweep")["id"]
+        call(["build", str(out / "presentation.json"), "--no-gallery", "--quiet"])
+        code, result, _ = call(["build", str(out / "presentation.json"), "--no-gallery", "--quiet", "--only",
+                                power["id"], "--set", f"assets.{sweep}.caption=Spot radius near the focus"])
+        status = {a["id"]: a["status"] for a in result["assets"]}
+        self.assertEqual(status[sweep], "stale")
+        self.assertEqual(status[power["id"]], "reused")
+        self.assertIsNotNone(wc.read_json(out / "assets.json"))
 
     def test_output_inside_a_source_is_refused(self):
         out = self.root / "inside"

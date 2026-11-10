@@ -9,12 +9,12 @@ requires `os-optics>=0.13,<0.14`. Engine guide:
 
 ```bash
 os-optics-kit skills list
-os-optics-kit skills show NAME
+os-optics-kit skills show NAME [PAGE]
 os-optics-kit skills install --dest DIR
 ```
 
 `skills list` prints the index (name, description, command, requirement) as compact JSON. Read one
-skill before using its command. `skills install` copies the skill directories and `skills.json` into
+skill before using its command; `skills show NAME PAGE` prints a further page it names. `skills install` copies the skill directories and `skills.json` into
 DIR, the skills directory of your agent host; it never overwrites a different file without `--force`.
 
 ## Route by task

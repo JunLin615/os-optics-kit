@@ -94,8 +94,8 @@
       "command": "os-optics-kit present",
       "requires": "os-optics>=0.13,<0.14; os-optics-kit[plot]; os-optics-kit[render] for views and animations; os-optics-kit[media] for MP4",
       "path": "skills/present/SKILL.md",
-      "tokens": 882,
-      "sha256": "e7f932ccf2ccbd4111b306ab8abdb06f5d02e63d18b0bc1c8708d4208c37ec33"
+      "tokens": 887,
+      "sha256": "77c2fd97fc0a40c66a3bbbdc94c47d1c83cb667519c244980ac3a5f0bb834868"
     },
     {
       "name": "render",

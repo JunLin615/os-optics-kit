@@ -236,6 +236,11 @@ def text(key, language, **values):
     return tidy(table[key].format(**values), language)
 
 
+def unit_text(unit):
+    """A unit as printed in figures: ``um`` -> ``µm``, ``uW`` -> ``µW``, ``urad`` -> ``µrad``."""
+    return {"um": "µm", "uW": "µW", "urad": "µrad"}.get(unit, unit) if isinstance(unit, str) else unit
+
+
 def fmt_number(value, digits=6):
     """Compact number for labels (``1.99607``, ``0.00054``); None -> ``-``."""
     if value is None or (isinstance(value, float) and not math.isfinite(value)):
@@ -321,7 +326,7 @@ class Theme:
 
     def axis_label(self, identifier, unit, default=None):
         name = self.label(identifier, default)
-        shown = self.display_unit(unit)
+        shown = unit_text(self.display_unit(unit))
         return f"{name} [{shown}]" if shown and shown not in wc.UNITLESS else name
 
     # -- figure geometry
@@ -525,6 +530,12 @@ def _charmap(path):
     return _FONT_CACHE[key]
 
 
+def has_cjk_font():
+    """Whether an installed regular-weight font draws Simplified Chinese (needs matplotlib)."""
+    return not missing_glyphs(["中文"], [name for name in CJK_FONTS if name in _font_index()]) \
+        if any(name in _font_index() for name in CJK_FONTS) else False
+
+
 def missing_glyphs(strings, families):
     """Characters of ``strings`` that none of the installed ``families`` can draw."""
     index = _font_index()
@@ -708,7 +719,8 @@ def source_kind(path):
 def resolve_source(spec_dir, source_id, entry):
     """``Source`` for ``sources.<id>``; refuses a missing or unreadable path with a recovery step."""
     path = Path(entry["path"])
-    path = path if path.is_absolute() else Path(spec_dir) / path
+    # normalized lexically: on POSIX, resolve() keeps ".." after a folder that does not exist yet
+    path = Path(os.path.normpath(os.path.abspath(path if path.is_absolute() else Path(spec_dir) / path)))
     kind = source_kind(path)
     if kind is None:
         raise PresentationError(

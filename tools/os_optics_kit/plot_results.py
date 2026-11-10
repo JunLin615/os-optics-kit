@@ -348,7 +348,7 @@ def draw_curve(ax, rows, parameter, y, unit, bounds, style, *, y_limits=None):
     values = [v for _x, v in valued]
     if y_limits is not None:
         low, high = y_limits
-    elif values:
+    elif values and not style.legacy:
         # the drawn range (values and target band): nearly equal values must not squeeze the no-value row onto them
         bottom, top = ax.get_ylim()
         low, high = min(min(values), bottom), max(max(values), top)
@@ -383,7 +383,7 @@ def draw_curve(ax, rows, parameter, y, unit, bounds, style, *, y_limits=None):
     if y_limits is not None:
         pad = 0.05 * span
         ax.set_ylim(min(low, lower if missing else low) - pad, high + pad)
-    if missing and values:
+    if missing and values and not style.legacy:
         # the row of samples without a value lies below every value: no tick there, so it never reads as a value
         bottom, top = ax.get_ylim()
         ax.set_yticks([t for t in ax.get_yticks() if low - 0.02 * span <= t <= top])
@@ -533,7 +533,8 @@ def draw_power(left, right, monitors, budget, style):
             if upper is not None:
                 left.errorbar(index, value, yerr=[[0.0], [max(0.0, upper - value)]],
                               fmt="none", color=color, capsize=4)
-            left.annotate(style.t("legend.bounded") if upper is not None else style.t("legend.lower_bound"),
+            left.annotate(("bounded" if style.legacy else style.t("legend.bounded")) if upper is not None
+                          else style.t("legend.lower_bound"),
                           (index, value), xytext=(0, 4), textcoords="offset points", ha="center",
                           fontsize=style.fs(7))
         else:

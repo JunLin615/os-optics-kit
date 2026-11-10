@@ -35,7 +35,7 @@ from . import workflow_common as wc
 
 INDEX_FILE = "index.html"
 CONTACT_SHEET_FILE = "contact-sheet.png"
-BUILT_STATUSES = ("written", "reused")
+BUILT_STATUSES = ("written", "reused", "stale")
 #: largest contact sheet width in pixels
 CONTACT_SHEET_MAX_WIDTH = 2400
 ZIP_DATE = (1980, 1, 1, 0, 0, 0)
@@ -69,6 +69,7 @@ GALLERY_TEXT: dict[str, dict[str, str]] = {
         "position": "{index} of {count}",
         "status.written": "Drawn",
         "status.reused": "Up to date",
+        "status.stale": "Drawn with earlier settings",
         "status.missing_input": "Missing input",
         "status.failed": "Not drawn",
         "status.pending": "Not built yet",
@@ -129,6 +130,7 @@ GALLERY_TEXT: dict[str, dict[str, str]] = {
         "position": "{index} / {count}",
         "status.written": "已绘制",
         "status.reused": "已是最新",
+        "status.stale": "按之前的设置绘制",
         "status.missing_input": "缺少输入",
         "status.failed": "未能绘制",
         "status.pending": "尚未生成",
@@ -166,7 +168,7 @@ GALLERY_TEXT: dict[str, dict[str, str]] = {
 FILE_ROLES = ("image", "annotated", "clean", "svg", "pdf", "overlay", "mp4", "gif", "viewer", "sequence", "layout",
               "camera", "data")
 PANEL_ROLE = re.compile(r"panel-(\d+)(?:-[a-z0-9]+)?")
-STATUSES = ("written", "reused", "missing_input", "failed", "pending")
+STATUSES = ("written", "reused", "stale", "missing_input", "failed", "pending")
 #: asset settings the page shows elsewhere (id, kind, title, caption)
 SHOWN_KEYS = ("id", "kind", "title", "caption")
 

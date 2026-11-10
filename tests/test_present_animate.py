@@ -265,10 +265,10 @@ class PlaybackTextTests(unittest.TestCase):
         parameters = [{"name": "l2_shift", "unit": "mm"}]
         theme = pr.resolve_theme({})
         self.assertEqual(an.sample_label(theme, sample, parameters, "target:expanded_waist"),
-                         "l2_shift = 0.54 mm · expanded_waist = 1.99645 mm · PASS")
+                         "l2_shift = 0.54 mm · expanded_waist = 1.99645 mm · MET")
         microns = pr.resolve_theme({"units": {"mm": "um"}, "labels": {"param:l2_shift": "L2 shift"}})
         self.assertEqual(an.sample_label(microns, sample, parameters, "target:expanded_waist"),
-                         "L2 shift = 540 um · expanded_waist = 1996.45 um · PASS")
+                         "L2 shift = 540 µm · expanded_waist = 1996.45 µm · MET")
         empty = {**sample, "y": {"value": None, "unit": "mm", "exact": False}, "outcome": "UNKNOWN"}
         label = an.sample_label(theme, empty, parameters, "target:expanded_waist")
         self.assertIn("expanded_waist: no exact value", label)
@@ -315,11 +315,30 @@ class SettingsTests(unittest.TestCase):
         self.assertIn("322x180", caught.exception.details["recovery"])
 
     def test_missing_media_extra_names_the_install_step(self):
+        with mock.patch.dict(sys.modules, {"imageio_ffmpeg": None, "matplotlib": None, "PIL": None}):
+            with self.assertRaises(pr.PresentationError) as caught:
+                an.media_modules(["gif"])
+        self.assertEqual(caught.exception.details["recovery"], 'python -m pip install "os-optics-kit[plot]"')
+        require(self, find_spec("matplotlib") is not None and find_spec("PIL") is not None, "matplotlib and Pillow")
         with mock.patch.dict(sys.modules, {"imageio_ffmpeg": None}):
             with self.assertRaises(pr.PresentationError) as caught:
                 an.media_modules(["mp4", "gif"])
         self.assertEqual(caught.exception.code, "MEDIA_EXTRA_MISSING")
         self.assertEqual(caught.exception.details["recovery"], an.MEDIA_RECOVERY)
+
+
+class AssessmentTests(unittest.TestCase):
+    def test_samples_are_marked_by_the_plotted_targets_assessment(self):
+        theme = pr.resolve_theme({})
+        row = {"outcome": "FAIL", "target:radius": 2.0, "target:radius:assessment": "MET",
+               "target:radius:applicability_issue_codes": []}
+        self.assertEqual(an._marker_class(row, "target:radius"), "PASS")
+        self.assertEqual(an.status_text(theme, "PASS", "target:radius"), "MET")
+        self.assertEqual(an._marker_class({**row, "target:radius:assessment": "UNMET", "outcome": "PASS"},
+                                          "target:radius"), "FAIL")
+        self.assertEqual(an._marker_class({"outcome": "ERROR"}, "target:radius"), "ERROR")
+        self.assertEqual(an._marker_class({"outcome": "FAIL", "derived:x": 1.0}, "derived:x"), "FAIL")
+        self.assertEqual(an.status_text(theme, "FAIL", "derived:x"), "FAIL")
 
 
 # --------------------------------------------------------------------------------------------- media without the engine
@@ -348,7 +367,7 @@ class PlotPlaybackMediaTests(unittest.TestCase):
         self.assertEqual([s["sample_id"] for s in sequence["segments"]], ["s0002", "s0003", "s0001"])
         self.assertEqual(sequence["frame_count"], 12)
         self.assertIn("gap = 0.5 mm · waist: no exact value · ERROR", sequence["segments"][0]["label"])
-        self.assertIn("gap = 1 mm · waist = 1.2 mm · FAIL", sequence["segments"][1]["label"])
+        self.assertIn("gap = 1 mm · waist = 1.2 mm · UNMET", sequence["segments"][1]["label"])
         self.assertFalse(any(Path(v).is_absolute() for v in sequence["outputs"].values()))
         self.assertNotIn(str(self.dir), files["sequence"].read_text(encoding="utf-8"))
         data = json.loads(result["data_files"][0].read_text(encoding="utf-8"))

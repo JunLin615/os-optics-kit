@@ -111,7 +111,9 @@ TEXT: dict[str, dict[str, str]] = {
         "caption.transition": "Camera move on {source} from {start} to {end} in {move} s, held {hold} s at each "
                               "end; {duration} s at {fps} fps.",
         "caption.transition_direct": "Camera move on {source} from {start} to {end}; {duration} s at {fps} fps.",
-        "caption.playback": "{count} samples of {x} from {low} to {high}, {hold} s each; {passed} PASS.",
+        "caption.playback": "{count} samples of {x} from {low} to {high}, {hold} s each; {passed} meet the "
+                            "target.",
+        "caption.playback_outcome": "{count} samples of {x} from {low} to {high}, {hold} s each; {passed} PASS.",
         "caption.playback_missing": "{count} without a saved run.",
         "focus.optics": "the optical system",
         "focus.scene": "the full scene",
@@ -133,7 +135,9 @@ TEXT: dict[str, dict[str, str]] = {
                               "共 {duration} 秒，{fps} 帧/秒。",
         "caption.transition_direct": "{source}：相机从{start}移动到{end}；{duration} 秒，{fps} 帧/秒。",
         "caption.playback": "{x} 从 {low} 到 {high} 的 {count} 个样本，每个显示 {hold} 秒；"
-                            "{passed} 个 PASS。",
+                            "其中 {passed} 个满足目标。",
+        "caption.playback_outcome": "{x} 从 {low} 到 {high} 的 {count} 个样本，每个显示 {hold} 秒；"
+                                    "{passed} 个 PASS。",
         "caption.playback_missing": "{count} 个样本没有保存的运行结果。",
         "focus.optics": "光学系统",
         "focus.scene": "完整场景",
@@ -573,7 +577,8 @@ def study_samples(study_dir, y, order_by=None):
                                        "unit": row.get(f"param:{p['name']}:unit") or p.get("unit")}
                            for p in parameters},
             "y": {"value": value if exact else None, "unit": unit, "exact": bool(exact)},
-            "outcome": row.get("outcome") or "ERROR", "has_run": has_run, "run_dir": run_rel if has_run else None,
+            # as in the sweep plot: a target column is marked by that target's own assessment (MET/UNMET)
+            "outcome": _marker_class(row, y), "has_run": has_run, "run_dir": run_rel if has_run else None,
             "identity": {k: row.get(k) for k in ("project_hash", "input_hash", "result_hash", "engine_build_id")},
         })
     bounds = None
@@ -604,12 +609,12 @@ def playback_order(samples, parameter):
 
 def _with_unit(theme, value, unit):
     shown = theme.to_display(value, unit) if unit else value
-    unit_text = theme.display_unit(unit) if unit and unit not in wc.UNITLESS else ""
+    unit_text = pr.unit_text(theme.display_unit(unit)) if unit and unit not in wc.UNITLESS else ""
     return f"{pr.fmt_number(shown)} {unit_text}".strip()
 
 
 def sample_label(theme, sample, parameters, y):
-    """``l2_shift = 0.54 mm · expanded_waist = 1.99645 mm · PASS`` in the theme language (no value: says so)."""
+    """``l2_shift = 0.54 mm · expanded_waist = 1.99645 mm · MET`` in the theme language (no value: says so)."""
     pieces = []
     for parameter in parameters:
         entry = sample["parameters"][parameter["name"]]
@@ -620,8 +625,26 @@ def sample_label(theme, sample, parameters, y):
                            value=_with_unit(theme, sample["y"]["value"], sample["y"]["unit"])))
     else:
         pieces.append(text("label.no_value", theme.language, name=theme.label(y)))
-    pieces.append(theme.outcome(sample["outcome"]))
+    pieces.append(status_text(theme, sample["outcome"], y))
     return SEPARATOR.join(pieces)
+
+
+def _marker_class(row, y):
+    from .plot_results import marker_class
+
+    class _Themed:  # marker_class only asks whether the figure is themed
+        legacy = False
+
+    return marker_class({**row, "outcome": row.get("outcome") or "ERROR"}, y, _Themed())
+
+
+def status_text(theme, code, y):
+    """Status shown for a sample: MET/UNMET/... for a target column, else the sample outcome."""
+    from .plot_results import ASSESSMENT_LABEL
+
+    if y.startswith("target:") and code in ASSESSMENT_LABEL:
+        return ASSESSMENT_LABEL[code]
+    return theme.outcome(code)
 
 
 # --------------------------------------------------------------------------------------------- layout and drawing
@@ -766,7 +789,7 @@ def plot_model(theme, study, order):
     x_span = (x_high - x_low) or abs(x_high) or 1.0
     shown_bounds = [theme.to_display(bounds.get(k), study["unit"]) if bounds.get(k) is not None else None
                     for k in ("minimum", "maximum")]
-    return {"points": points, "groups": groups if others else [],
+    return {"points": points, "groups": groups if others else [], "y": study["y"],
             "xlim": [x_low - 0.05 * x_span, x_high + 0.05 * x_span],
             "ylim": [bottom, high + 0.08 * span], "no_value_row": no_value_row, "bounds": shown_bounds,
             "x_label": theme.axis_label(f"param:{parameter['name']}", x_unit), "y_label": theme.axis_label(
@@ -814,12 +837,14 @@ def _draw_plot(figure, theme, plan_layout, model, current):
             axes.scatter([p["x"] for p in with_value], [p["y"] for p in with_value], marker=MARKERS[code], s=size,
                          color=color, edgecolors=theme.colors["face"] if theme.colors["face"] != "none" else "white",
                          linewidths=0.8, zorder=3,
-                         label=theme.text("legend.count", label=theme.outcome(code), count=len(group)))
+                         label=theme.text("legend.count", label=status_text(theme, code, model["y"]),
+                                          count=len(group)))
         without = [p for p in group if p["y"] is None and p["x"] is not None]
         if without:
             axes.scatter([p["x"] for p in without], [model["no_value_row"]] * len(without), marker=MARKERS[code],
                          s=size, facecolors="none", edgecolors=color, linewidths=1.2, zorder=3, clip_on=False,
-                         label=theme.text("legend.no_exact", label=theme.outcome(code), count=len(without)))
+                         label=theme.text("legend.no_exact", label=status_text(theme, code, model["y"]),
+                                          count=len(without)))
     no_value_note = None
     if model["no_value_row"] is not None:
         axes.axhline(model["no_value_row"], color=theme.colors["muted"], linewidth=0.8, linestyle=":", zorder=1)
@@ -878,10 +903,11 @@ def legend_labels(theme, model, outcomes):
     for code in outcomes:
         group = [p for p in points if p["outcome"] == code]
         if any(p["y"] is not None and p["x"] is not None for p in group):
-            labels.append(theme.text("legend.count", label=theme.outcome(code), count=len(group)))
+            labels.append(theme.text("legend.count", label=status_text(theme, code, model["y"]), count=len(group)))
         without = [p for p in group if p["y"] is None and p["x"] is not None]
         if without:
-            labels.append(theme.text("legend.no_exact", label=theme.outcome(code), count=len(without)))
+            labels.append(theme.text("legend.no_exact", label=status_text(theme, code, model["y"]),
+                                     count=len(without)))
     return labels
 
 
@@ -1225,7 +1251,8 @@ def _texts(cfg, theme, source, study=None, order=None):
         local = dataclasses.replace(theme, language=lang)
         low = _with_unit(local, min(numeric), parameter.get("unit")) if numeric else "-"
         high = _with_unit(local, max(numeric), parameter.get("unit")) if numeric else "-"
-        pieces = [text("caption.playback", lang, count=len(order), x=local.label(f"param:{parameter['name']}"),
+        key = "caption.playback" if study["y"].startswith("target:") else "caption.playback_outcome"
+        pieces = [text(key, lang, count=len(order), x=local.label(f"param:{parameter['name']}"),
                        low=low, high=high, hold=_num(cfg.get("hold_s_applied", cfg["hold_s"])),
                        passed=passed)]
         if missing:
