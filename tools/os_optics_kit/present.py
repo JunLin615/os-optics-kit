@@ -158,7 +158,7 @@ def view_box(asset, ctx, view):
 def build_view(asset, ctx):
     """A system view of a saved run through the engine's viewer: clean PNG, editable text overlay (SVG), an
     annotated PNG when the theme shows titles, and optionally the interactive viewer page."""
-    from .render_views import RenderError, ViewScene, render_shots
+    from .render_views import RenderError, ViewScene, camera_direction, left_to_right, render_shots
 
     theme = ctx.asset_theme(asset)
     source = ctx.source(_required(asset, "source"))
@@ -168,9 +168,12 @@ def build_view(asset, ctx):
     azimuth, elevation, roll = _camera(asset.get("camera"))
     out = ctx.asset_dir(asset["id"])
     try:
-        view = ViewScene(source.path, axis=asset.get("axis"))
+        view = ViewScene(source.path, axis=_axis_text(asset.get("axis")))
         box = view_box(asset, ctx, view)
-        records = render_shots(source.path, [{"name": asset["id"], "azimuth_deg": azimuth, "elevation_deg": elevation,
+        direction, up = camera_direction(view.axis, azimuth, elevation)
+        if asset.get("orientation", "left-to-right") == "left-to-right":
+            direction, up = left_to_right(direction, up, view.axis)
+        records = render_shots(source.path, [{"name": asset["id"], "direction": direction, "up": up,
                                               "roll_deg": roll}], out, size=theme.size,
                                background=theme.render_background(), box=box,
                                focus=asset.get("focus", "optics"), beams=asset.get("beams", True),
@@ -209,6 +212,17 @@ def build_view(asset, ctx):
     return {"files": files, "data_files": [camera_file], "title": title, "caption": caption, "sources": [source.id],
             "details": {"camera": [azimuth, elevation, roll], "focus": asset.get("focus", "optics"),
                         "box_mm": camera["box_mm"], "beams": asset.get("beams", True)}}
+
+
+def _axis_text(value):
+    """A view's ``axis``: [X, Y, Z] or "X,Y,Z" -> the render command's "X,Y,Z" (None: the view's main axis)."""
+    if value is None or isinstance(value, str):
+        return value
+    if isinstance(value, list) and len(value) == 3 and all(isinstance(v, (int, float)) and not isinstance(v, bool)
+                                                           for v in value):
+        return ",".join(repr(float(v)) for v in value)
+    raise pres.PresentationError("SPEC_INVALID", f"axis {value!r}: give the optical axis as [X, Y, Z]",
+                                 recovery="set the asset's axis to three numbers, e.g. [1, 0, 0]")
 
 
 def _render_recovery(code):
@@ -278,12 +292,14 @@ def _required(asset, key):
     return value
 
 
-def _plot_style(theme, out, data_file, identity, language):
+def _plot_style(theme, out, data_file, identity, language, asset=None):
     from . import plot_results as pr
 
     provenance = pr.caption(data_file, out, engine_build=identity.get("engine_build_id"),
                             catalog_version=identity.get("catalog_version"), language=language)
-    return pr.Style(theme, provenance=provenance, companions=False)
+    style = pr.Style(theme, provenance=provenance, companions=False)
+    style.title_override = pres.localized((asset or {}).get("title"), language, "") or None
+    return style
 
 
 def build_plot_sweep(asset, ctx, theme, out):
@@ -299,7 +315,7 @@ def build_plot_sweep(asset, ctx, theme, out):
             "rows": [{key: row.get(key) for key in row if key == "sample_id" or key == "outcome" or key == y
                       or key.startswith(f"{y}:") or key.startswith("param:")} for row in rows]}
     data_file = wc.write_json(out / "data.json", data)
-    style = _plot_style(theme, out, data_file, source.identity, theme.language)
+    style = _plot_style(theme, out, data_file, source.identity, theme.language, asset)
     passed = sum(1 for row in rows if row["outcome"] == "PASS")
     names = {lang: (pres.resolve_theme({**ctx.spec.get("theme", {}), "language": lang}).label(y),
                     pres.resolve_theme({**ctx.spec.get("theme", {}), "language": lang}).label(
@@ -327,7 +343,7 @@ def build_plot_power(asset, ctx, theme, out):
         raise pres.PresentationError("SPEC_INVALID", f"asset {asset['id']}: a power plot needs a run source")
     monitors, budget, identity = pr.power_data(source.path)
     data_file = wc.write_json(out / "data.json", {"run": source.id, "monitors": monitors, "power_budget": budget})
-    style = _plot_style(theme, out, data_file, identity, theme.language)
+    style = _plot_style(theme, out, data_file, identity, theme.language, asset)
     several = len(ctx.spec.get("sources") or {}) > 1
     title = {lang: pres.text("title.power_of", lang, source=pres.localized(source.label, lang, source.id))
              if several else pres.text("title.power", lang) for lang in pres.LANGUAGES}
@@ -476,7 +492,7 @@ def build_asset(asset, ctx, previous):
         return {**entry, "status": status, "title": pres.localized(asset.get("title"), theme.language, ""),
                 "caption": pres.localized(asset.get("caption"), theme.language, ""), "files": {},
                 "sources": source_ids, "depends_on": asset_ids, "error": error.as_dict()}
-    except ImportError as error:  # an optional extra this asset needs
+    except Exception as error:  # noqa: BLE001 - an optional extra or an unexpected problem fails this asset only
         return {**entry, "status": "failed", "title": pres.localized(asset.get("title"), theme.language, ""),
                 "caption": "", "files": {}, "sources": source_ids, "depends_on": asset_ids,
                 "error": wc.error_document(error)}
@@ -749,10 +765,14 @@ def init(paths, out_dir, *, labels=None, title=None, theme=None, settings=(), an
             assets.append({"id": f"sweep-{source_id}-{column.split(':', 1)[1]}"[:64].lower().replace(":", "-"),
                            "kind": "plot", "type": "sweep", "source": source_id, "y": column})
     if runs and studies:
-        sweep = next((a["id"] for a in assets if a.get("type") == "sweep"), None)
+        sweep = next((a for a in assets if a.get("type") == "sweep"), None)
         if sweep:
+            base = (wc.read_json(studies[0][1] / "study.json").get("base_project") or {}).get("project_hash")
+            # the view of the design the study varied: the run of the study's base project, else the first run
+            run_id = next((s for s, path in runs if base and pres.source_identity("run", path).get("project_hash")
+                           == base), runs[0][0])
             assets.append({"id": "system-and-result", "kind": "compose", "layout": "system-plot",
-                           "panels": [{"asset": f"view-{runs[0][0]}"}, {"asset": sweep}]})
+                           "panels": [{"asset": f"view-{run_id}"}, {"asset": sweep["id"]}]})
     if animate:
         if runs:
             assets.append({"id": f"orbit-{runs[0][0]}", "kind": "animation", "mode": "orbit", "source": runs[0][0]})

@@ -2,7 +2,7 @@
 
 Usage:
   os-optics-kit skills list                         the skill index (compact JSON): load this first
-  os-optics-kit skills show NAME                    print skills/NAME/SKILL.md
+  os-optics-kit skills show NAME [PAGE]             print skills/NAME/SKILL.md, or another page of it (compare.md)
   os-optics-kit skills install --dest DIR [--only a,b] [--force]
                                                     copy skills/<name>/ to DIR/<name>/ and write DIR/skills.json
   os-optics-kit skills index --check [--root DIR]   validate every skill and compare skills.json with the skills
@@ -264,7 +264,12 @@ def cmd_show(args):
     names = skill_names(load_index(root))
     if args.name not in names:
         raise SkillsError("SKILL_UNKNOWN", f"no skill {args.name!r}", known=names)
-    sys.stdout.write((root / "skills" / args.name / SKILL_FILE).read_text(encoding="utf-8"))
+    folder = root / "skills" / args.name
+    page = args.page or SKILL_FILE
+    pages = sorted(p.name for p in folder.glob("*.md"))
+    if page not in pages:
+        raise SkillsError("PAGE_UNKNOWN", f"skill {args.name!r} has no page {page!r}", known=pages)
+    sys.stdout.write((folder / page).read_text(encoding="utf-8"))
     return EXIT_OK
 
 
@@ -379,8 +384,9 @@ def build_parser():
     p = sub.add_parser("list", help="Print the skill index (compact JSON)")
     p.add_argument("--root", type=Path, help=root_help)
     p.set_defaults(handler=cmd_list)
-    p = sub.add_parser("show", help="Print one skill's SKILL.md")
+    p = sub.add_parser("show", help="Print one skill's SKILL.md or another page of it")
     p.add_argument("name", help="Skill name")
+    p.add_argument("page", nargs="?", help="another page of the skill, e.g. compare.md")
     p.add_argument("--root", type=Path, help=root_help)
     p.set_defaults(handler=cmd_show)
     p = sub.add_parser("install", help="Copy skills to a directory")

@@ -146,8 +146,8 @@ TEXT: dict[str, dict[str, str]] = {
         "outcome.OUT_OF_MODEL": "OUT_OF_MODEL（超出模型范围）",
         "outcome.ERROR": "ERROR（被拒绝或未运行）",
         "outcome.MISSING": "缺失",
-        "legend.count": "{label}（{count}）",
-        "legend.no_exact": "{label}，无精确值（{count}）",
+        "legend.count": "{label} ({count})",
+        "legend.no_exact": "{label}，无精确值 ({count})",
         "legend.bounds": "目标范围 [{low}, {high}]",
         "legend.minimum": "目标下限 {value}",
         "legend.maximum": "目标上限 {value}",
@@ -211,14 +211,17 @@ def localized(value, language, default=""):
 
 _CJK = "\u2e80-\u9fff\uf900-\ufaff\uff00-\uffef"
 _CJK_GAP = re.compile(f"(?<=[{_CJK}]) +(?=[{_CJK}])")
+_HAN = "\u2e80-\u2fff\u3040-\u9fff\uf900-\ufaff"  # Chinese characters without full-width punctuation
+_LATIN_HAN = re.compile(f"(?<=[A-Za-z0-9%)\\]])(?=[{_HAN}])|(?<=[{_HAN}])(?=[A-Za-z0-9(\\[])")
 
 
 def tidy(value, language):
-    """Chinese spacing: no space between two Chinese characters (``光斑半径 随 位移`` -> ``光斑半径随位移``), so
-    one template reads well with identifiers and with Chinese labels."""
+    """Chinese spacing: no space between two Chinese characters (``光斑半径 随 位移`` -> ``光斑半径随位移``) and one
+    space between Chinese and Latin text (``Original与L2`` -> ``Original 与 L2``), so one template reads well with
+    identifiers and with Chinese labels."""
     if language != "zh-CN" or not isinstance(value, str):
         return value
-    return _CJK_GAP.sub("", value)
+    return _LATIN_HAN.sub(" ", _CJK_GAP.sub("", value))
 
 
 def text(key, language, **values):

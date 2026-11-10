@@ -132,6 +132,25 @@ def camera_direction(axis, azimuth_deg, elevation_deg, up_axis=(0.0, 0.0, 1.0)):
     return direction, up
 
 
+def left_to_right(direction, up, axis, world_up=(0.0, 0.0, 1.0)):
+    """Mirror a camera to the other side of the optical axis when the axis would point to the left of the image,
+    so light travels from left to right. The mirror is the plane of the optical axis and world up, so the angle to
+    the axis and the elevation stay the same."""
+    forward = [-d for d in direction]
+    if dot(cross(forward, up), axis) >= -1e-9:
+        return direction, up
+    normal = cross(world_up, axis)
+    if math.hypot(*normal) < 1e-12:
+        return direction, up
+    normal = unit(normal)
+
+    def mirror(vector):
+        along = dot(vector, normal)
+        return unit([v - 2.0 * along * n for v, n in zip(vector, normal)])
+
+    return mirror(direction), mirror(up)
+
+
 def part_points(scene):
     """``part_id -> (class, [(x, y, z), ...])`` for every drawn part, in world millimetres."""
     parts = {}

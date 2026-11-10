@@ -111,6 +111,45 @@ class ThemeTests(unittest.TestCase):
         pres.check_glyphs(["spot radius [mm]"], theme)
 
 
+class TextAndCameraTests(unittest.TestCase):
+    def test_chinese_spacing(self):
+        self.assertEqual(pres.tidy("光斑半径 随 透镜位移 的变化", "zh-CN"), "光斑半径随透镜位移的变化")
+        self.assertEqual(pres.tidy("Original与L2 sweep", "zh-CN"), "Original 与 L2 sweep")
+        self.assertEqual(pres.tidy("spot 随 gap", "en"), "spot 随 gap")
+        self.assertEqual(pres.text("legend.count", "zh-CN", label="PASS", count=5), "PASS (5)")
+
+    def test_views_show_light_travelling_left_to_right(self):
+        from os_optics_kit import render_views as rv
+
+        for axis in ([1, 0, 0], [0, 1, 0], [-1, 0, 0], [0.6, 0.8, 0]):
+            for azimuth, elevation in ((86, 8), (55, 22), (120, -10)):
+                direction, up = rv.camera_direction(axis, azimuth, elevation)
+                turned, screen_up = rv.left_to_right(direction, up, axis)
+                self.assertGreater(rv.dot(rv.cross([-d for d in turned], screen_up), axis), 0.0)
+                self.assertAlmostEqual(rv.dot(turned, rv.unit(axis)), rv.dot(direction, rv.unit(axis)))
+                self.assertAlmostEqual(turned[2], direction[2])  # same elevation
+
+    def test_axis_as_list_or_text(self):
+        self.assertEqual(present._axis_text([-1, 0, 0]), "-1.0,0.0,0.0")
+        self.assertEqual(present._axis_text("0,1,0"), "0,1,0")
+        self.assertIsNone(present._axis_text(None))
+        with self.assertRaises(pres.PresentationError):
+            present._axis_text([1, 0])
+
+    def test_skill_pages_are_shown_by_name(self):
+        from os_optics_kit import skills
+
+        for page in ("compare.md", "handoff.md", "animate.md"):
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(skills.main(["show", "present", page]), 0)
+            self.assertTrue(out.getvalue().startswith("# present:"), page)
+        err = io.StringIO()
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
+            self.assertEqual(skills.main(["show", "present", "nope.md"]), 4)
+        self.assertIn("PAGE_UNKNOWN", err.getvalue())
+
+
 class SpecificationTests(unittest.TestCase):
     def spec(self):
         spec = pres.default_spec()

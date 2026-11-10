@@ -361,6 +361,8 @@ def pose_vectors(axis, camera, up_axis):
     except rv.RenderError as error:
         raise pr.PresentationError(error.code, str(error), recovery="use 0 <= AZ <= 180 and |EL| <= min(AZ, 180-AZ), "
                                    "as in 'os-optics-kit render --camera'") from None
+    # as in present's views: light travels from left to right
+    direction, up = rv.left_to_right(direction, up, axis, up_axis)
     if roll:
         up = rotate(up, direction, math.radians(roll))
     return direction, up

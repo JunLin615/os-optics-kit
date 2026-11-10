@@ -76,6 +76,7 @@ class Style:
         self.legacy = theme is None
         self.provenance = provenance  # provenance text replacing the computed one (present: the asset's data.json)
         self.companions = companions  # write <name>.caption.txt / .provenance.txt next to the figure
+        self.title_override = None  # present: the asset's own title replaces the automatic one
         self.theme = theme or pres.resolve_theme({"preset": "report", "base_font_pt": 9.0})
         self.size = size
 
@@ -118,13 +119,20 @@ class Style:
 
     def title(self, ax, text, **kwargs):
         if self.legacy or self.theme.title:
-            ax.set_title(text, **kwargs)
+            ax.set_title(self.title_override or text, **kwargs)
 
     def legend(self, ax, **kwargs):
-        if not self.legacy and self.theme.legend == "none":
+        if self.legacy:
+            ax.legend(**kwargs)
             return
-        if not self.legacy and self.theme.legend == "outside":
-            kwargs = {**kwargs, "loc": "upper left", "bbox_to_anchor": (1.01, 1.0)}
+        if self.theme.legend == "none":
+            return
+        if self.theme.legend == "outside":
+            kwargs = {**kwargs, "loc": "upper left", "bbox_to_anchor": (1.02, 1.0), "borderaxespad": 0.0}
+        elif self.theme.background != "transparent":
+            # inside the axes the legend gets the figure background, so a curve behind it stays readable
+            kwargs = {**kwargs, "frameon": True, "facecolor": self.theme.colors["face"], "edgecolor": "none",
+                      "framealpha": 0.88}
         ax.legend(**kwargs)
 
 
@@ -179,6 +187,7 @@ def save_themed(fig, out_dir, name, style, provenance_text, *, caption_text=None
         footer.append(provenance_text)
     if layout == "tight":
         fig.tight_layout()
+        fit_legends(fig)
     if footer:
         fig.text(0.01, 0.01, "\n".join(footer), fontsize=theme.font_pt("caption"), color=theme.colors["muted"],
                  ha="left", va="bottom")
@@ -201,6 +210,16 @@ def save_themed(fig, out_dir, name, style, provenance_text, *, caption_text=None
                                                           provenance_text + "\n").as_posix()
     written["caption"] = caption_text
     return written
+
+
+def fit_legends(fig):
+    """Shrink the axes so legends placed outside them stay on the canvas."""
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    right = max((legend.get_window_extent(renderer).x1 / fig.bbox.width for ax in fig.axes
+                 for legend in [ax.get_legend()] if legend is not None), default=0.0)
+    if right > 0.995:
+        fig.subplots_adjust(right=max(0.3, fig.subplotpars.right - (right - 0.985)))
 
 
 def finish(fig, out_dir, name, style, provenance_text, caption_text=None):
