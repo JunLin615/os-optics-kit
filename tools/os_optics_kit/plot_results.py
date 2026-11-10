@@ -553,7 +553,13 @@ def draw_power(left, right, monitors, budget, style):
     if total:
         left.axhline(total, color="#555555", linestyle="--", linewidth=0.9,
                      label=style.t("legend.total_input", value=f"{total:.6g}"))
-        style.legend(left, fontsize=style.fs(7), frameon=False)
+        if style.legacy:
+            style.legend(left, fontsize=style.fs(7), frameon=False)
+        else:  # named at the line's end, above it, so it covers no bar
+            left.annotate(style.t("legend.total_input", value=f"{total:.6g}"), xy=(1.0, total),
+                          xycoords=("axes fraction", "data"), xytext=(0, 3), textcoords="offset points",
+                          ha="right", va="bottom", fontsize=style.fs(7), color=style.theme.colors["muted"])
+            left.set_ylim(top=max(left.get_ylim()[1], total * 1.12))
     sinks = budget.get("total_sinks") or {}
     right.barh(range(len(sinks)), list(sinks.values()), color="#8a8a8a", height=0.6, edgecolor="white")
     right.set_yticks(range(len(sinks)), list(sinks))

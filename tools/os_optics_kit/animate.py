@@ -362,7 +362,11 @@ def screen_up(direction, up):
     return rv.unit(projected)
 
 
-def pose_vectors(axis, camera, up_axis):
+def _classes(view):
+    return [part_class for part_class, _points in (getattr(view, "parts", None) or {}).values()]
+
+
+def pose_vectors(axis, camera, up_axis, straight=True):
     """``(direction, up)`` of a camera ``[AZ, EL, ROLL]`` as ``render --camera`` states it (roll folded into up)."""
     azimuth, elevation, roll = camera
     try:
@@ -371,7 +375,8 @@ def pose_vectors(axis, camera, up_axis):
         raise pr.PresentationError(error.code, str(error), recovery="use 0 <= AZ <= 180 and |EL| <= min(AZ, 180-AZ), "
                                    "as in 'os-optics-kit render --camera'") from None
     # as in present's views: light travels from left to right
-    direction, up = rv.left_to_right(direction, up, axis, up_axis)
+    if straight:  # a folded system keeps the requested side (see render_views.straight_layout)
+        direction, up = rv.left_to_right(direction, up, axis, up_axis)
     if roll:
         up = rotate(up, direction, math.radians(roll))
     return direction, up
@@ -1115,7 +1120,8 @@ def plan_orbit(cfg, view, source_id, view_rect):
     poses = orbit_poses(view.axis, cfg["up_axis"], cfg["orbit"], fractions)
     # as in present's views, the orbit starts with light travelling from left to right: when the start pose is
     # mirrored for that, the whole path is mirrored in the plane of the optical axis and world up
-    start = rv.left_to_right(poses[0][0], poses[0][1], view.axis, cfg["up_axis"])
+    start = rv.left_to_right(poses[0][0], poses[0][1], view.axis, cfg["up_axis"]) \
+        if rv.straight_layout(view.box("scene"), view.axis, cfg["up_axis"], _classes(view)) else poses[0][:2]
     mirrored = start[0] != poses[0][0]
     if mirrored:
         normal = rv.unit(rv.cross(rv.unit(cfg["up_axis"]), view.axis))
@@ -1141,7 +1147,8 @@ def plan_transition(cfg, view, source_id, view_rect):
     fov, aspect = _fov(view), _view_aspect(view_rect)
     ends = []
     for pose in (cfg["from"], cfg["to"]):
-        direction, up = pose_vectors(view.axis, pose["camera"], cfg["up_axis"])
+        direction, up = pose_vectors(view.axis, pose["camera"], cfg["up_axis"],
+                                     rv.straight_layout(view.box("scene"), view.axis, cfg["up_axis"], _classes(view)))
         box = _view_box(view, pose["focus"])
         ends.append((direction, up, box, fit_distance(box, direction, up, fov, aspect)))
     poses = transition_poses(ends[0], ends[1], fractions)
@@ -1168,7 +1175,9 @@ def plan_playback(cfg, study_dir, study, view_rect, views):
         boxes = [_view_box(views[s["sample_id"]], cfg["focus"]) for s in order if s["sample_id"] in views]
         box = rv.union_box(boxes)
         reference = views[next(s["sample_id"] for s in order if s["sample_id"] in views)]
-        direction, up = pose_vectors(reference.axis, cfg["camera"], cfg["up_axis"])
+        direction, up = pose_vectors(reference.axis, cfg["camera"], cfg["up_axis"],
+                                     rv.straight_layout(reference.box("scene"), reference.axis, cfg["up_axis"],
+                                                       _classes(reference)))
         distance = fit_distance(box, direction, up, _fov(reference), _view_aspect(view_rect))
         for sample in order:
             if sample["sample_id"] in views:

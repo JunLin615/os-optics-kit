@@ -151,6 +151,26 @@ def left_to_right(direction, up, axis, world_up=(0.0, 0.0, 1.0)):
     return mirror(direction), mirror(up)
 
 
+#: part classes of the engine viewer that fold the beam path
+FOLDING_CLASSES = frozenset({"MIRROR", "BEAMSPLITTER", "GRATING"})
+
+
+def straight_layout(box, axis, world_up=(0.0, 0.0, 1.0), classes=None):
+    """Whether a scene's parts (``box``: the whole scene) lie along the optical axis (a straight system): then a
+    side view is mirrored so
+    light travels left to right. A folded system (it extends across the axis, e.g. after a fold mirror) keeps the
+    requested side, which shows the reflecting faces."""
+    extent = [high - low for low, high in zip(box[0], box[1])]
+    if classes is not None and set(classes) & FOLDING_CLASSES:
+        return False  # mirrors, beam splitters and gratings fold the beam path
+    normal = cross(list(world_up), axis)
+    if sum(n * n for n in normal) < 1e-24:
+        return True
+    along = abs(dot(extent, unit(axis)))
+    across = abs(dot(extent, unit(normal)))
+    return across <= 0.25 * max(along, 1e-9)
+
+
 def part_points(scene):
     """``part_id -> (class, [(x, y, z), ...])`` for every drawn part, in world millimetres."""
     parts = {}

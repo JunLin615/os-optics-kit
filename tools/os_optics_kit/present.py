@@ -163,7 +163,8 @@ def view_box(asset, ctx, view):
 def build_view(asset, ctx):
     """A system view of a saved run through the engine's viewer: clean PNG, editable text overlay (SVG), an
     annotated PNG when the theme shows titles, and optionally the interactive viewer page."""
-    from .render_views import RenderError, ViewScene, camera_direction, left_to_right, render_shots
+    from .render_views import (RenderError, ViewScene, camera_direction, left_to_right, render_shots,
+                               straight_layout)
 
     theme = ctx.asset_theme(asset)
     source = ctx.source(_required(asset, "source"))
@@ -176,11 +177,12 @@ def build_view(asset, ctx):
         view = ViewScene(source.path, axis=_axis_text(asset.get("axis")))
         box = view_box(asset, ctx, view)
         direction, up = camera_direction(view.axis, azimuth, elevation)
-        orientation = asset.get("orientation", "left-to-right")
-        if orientation not in ("left-to-right", "as-given"):
+        orientation = asset.get("orientation", "auto")
+        if orientation not in ("auto", "left-to-right", "as-given"):
             raise pres.PresentationError("SPEC_INVALID", f"asset {asset['id']}: orientation {orientation!r}; use "
-                                         "left-to-right or as-given", key=f"assets.{asset['id']}.orientation")
-        if orientation == "left-to-right":
+                                         "auto, left-to-right or as-given", key=f"assets.{asset['id']}.orientation")
+        if orientation == "left-to-right" or (orientation == "auto" and straight_layout(view.box("scene"), view.axis,
+                                                                    classes=[c for c, _p in view.parts.values()])):
             direction, up = left_to_right(direction, up, view.axis)
         records = render_shots(source.path, [{"name": asset["id"], "direction": direction, "up": up,
                                               "roll_deg": roll}], out, size=theme.size,
@@ -207,10 +209,18 @@ def build_view(asset, ctx):
     shown_caption = pres.caption_text(asset, theme, caption)
     files["overlay"] = write_overlay(out / f"{asset['id']}.overlay.svg", theme, shown_title if theme.title else "",
                                      shown_caption)
-    if theme.title or theme.captions == "figure":
+    if theme.title or theme.captions == "figure" or theme.provenance_in_figure:
+        footer = shown_caption if theme.captions == "figure" else ""
+        if theme.provenance_in_figure:
+            identity = source.identity
+            catalog = identity.get("catalog_version")
+            footer = " | ".join(part for part in (footer, pres.text("caption.engine", theme.language,
+                                                                    build=identity.get("engine_build_id") or "-"),
+                                                  pres.text("caption.catalog", theme.language, version=catalog)
+                                                  if catalog else pres.text("caption.no_catalog", theme.language))
+                                if part)
         files["annotated"] = write_annotated(image, out / f"{asset['id']}.annotated.png", theme,
-                                             shown_title if theme.title else "",
-                                             shown_caption if theme.captions == "figure" else "")
+                                             shown_title if theme.title else "", footer)
     if asset.get("interactive"):
         viewer = out / "viewer.html"
         viewer.write_bytes(view.interactive_page())
@@ -661,8 +671,8 @@ def build(spec_path, *, settings=(), only=None, out_dir=None, gallery=True, brow
         for asset in reversed(order):
             if asset["id"] in wanted:
                 wanted.update(references(asset)[1])
-        for asset in order:
-            if set(references(asset)[1]) & wanted:
+        for asset in order:  # compositions drawn before are redrawn with the new panel
+            if set(references(asset)[1]) & wanted and asset["id"] in previous:
                 wanted.add(asset["id"])
     entries: dict[str, dict] = {}
     for index, asset in enumerate(order):
@@ -901,8 +911,9 @@ def settings_document():
                          "focus": "optics | scene | element:<id>", "beams": "true", "labels": "false",
                          "edges": "false", "margin": VIEW_MARGIN, "framing_sources": "[run ids] shared framing",
                          "box": "[[x,y,z],[x,y,z]] mm", "interactive": "false: also write the interactive viewer",
-                         "orientation": "left-to-right (default: light travels left to right, the camera is "
-                                        "mirrored across the plane of the optical axis and up) | as-given"},
+                         "orientation": "auto (default: a straight system is shown with light travelling left "
+                                        "to right; a folded one from the requested side) | left-to-right | "
+                                        "as-given"},
                 "plot": {"type": {"sweep": {"source": "study id", "y": "target:<id> | derived:<name> | param:<name>"},
                                   "power": {"source": "run id"},
                                   **compose_figures.settings()["plot"]}},

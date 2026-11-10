@@ -129,6 +129,14 @@ class TextAndCameraTests(unittest.TestCase):
                 self.assertAlmostEqual(rv.dot(turned, rv.unit(axis)), rv.dot(direction, rv.unit(axis)))
                 self.assertAlmostEqual(turned[2], direction[2])  # same elevation
 
+    def test_folded_systems_keep_the_requested_side(self):
+        from os_optics_kit import render_views as rv
+
+        straight = ([-100.0, -12.7, -12.7], [200.0, 12.7, 12.7])
+        self.assertTrue(rv.straight_layout(straight, [1, 0, 0], classes=["SOURCE", "LENS", "TARGET_PLANE"]))
+        self.assertFalse(rv.straight_layout(straight, [1, 0, 0], classes=["SOURCE", "MIRROR"]))
+        self.assertFalse(rv.straight_layout(([-110.0, -12.0, -12.0], [12.0, 400.0, 12.0]), [1, 0, 0]))
+
     def test_axis_as_list_or_text(self):
         self.assertEqual(present._axis_text([-1, 0, 0]), "-1.0,0.0,0.0")
         self.assertEqual(present._axis_text("0,1,0"), "0,1,0")
