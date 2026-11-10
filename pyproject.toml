@@ -30,6 +30,8 @@ dependencies = ["os-optics>=0.13,<0.14"]
 [project.optional-dependencies]
 plot = ["matplotlib>=3.10,<4"]
 render = ["playwright>=1.50,<2"]
+# MP4 export of presentation animations (GIF needs only Pillow, installed with matplotlib)
+media = ["imageio-ffmpeg>=0.5,<1"]
 
 [project.scripts]
 os-optics-kit = "os_optics_kit.cli:main"

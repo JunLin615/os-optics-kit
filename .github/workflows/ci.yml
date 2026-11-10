@@ -204,6 +204,11 @@ jobs:
       - name: Is the verified engine on PyPI?
         id: gate
         run: python scripts/engine_release.py
+      - name: Chinese fonts for the figure tests
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends fonts-noto-cjk
       - name: Cases changed by the pull request
         id: cases
         if: steps.gate.outputs.run == 'true' && github.event_name == 'pull_request'
@@ -228,6 +233,14 @@ jobs:
           run-alignment/.venv/bin/python -m pip install 'playwright>=1.50,<2'
           run-alignment/.venv/bin/python -c "from os_optics_kit.render_views import find_browser; assert find_browser(None), 'Chrome/Chromium is required'"
           run-alignment/.venv/bin/python -m pytest tests/test_render_browser.py --basetemp=run-alignment/render-proof --junitxml=run-alignment/render-tests.xml
+      - name: Presentation with published engine, Chrome and MP4 encoder
+        if: steps.gate.outputs.run == 'true'
+        env:
+          # missing fonts, browser or media encoder fail these tests instead of skipping them
+          OS_OPTICS_KIT_REQUIRE_PRESENTATION: "1"
+        run: |
+          run-alignment/.venv/bin/python -m pip install 'imageio-ffmpeg>=0.5,<1'
+          run-alignment/.venv/bin/python -m pytest tests/test_present.py tests/test_present_gallery.py             tests/test_present_compose.py tests/test_present_animate.py             --basetemp=run-alignment/present-proof --junitxml=run-alignment/present-tests.xml
       - name: Verify the changed cases
         if: >-
           ${{ !cancelled() && steps.gate.outputs.run == 'true' && github.event_name == 'pull_request'
@@ -243,6 +256,38 @@ jobs:
               || status=1
           done
           exit "$status"
+      - name: Presentation demo from the beam-expander case (review artifact)
+        if: ${{ !cancelled() && steps.gate.outputs.run == 'true' }}
+        env:
+          OPENSCI_CATALOG_DIR: ${{ github.workspace }}/run-alignment/.catalog
+          OPENSCI_CATALOG_CHECK_INTERVAL: "0"
+        run: |
+          kit="$PWD/run-alignment/.venv/bin/os-optics-kit"
+          engine="$PWD/run-alignment/.venv/bin/os-optics"
+          demo=run-alignment/presentation-demo
+          mkdir -p "$demo/results" && cp -r cases/beam-expander/project.json cases/beam-expander/studies "$demo/results/"
+          cd "$demo/results"
+          "$engine" project run project.json --out-dir run > /dev/null
+          # the swapped lens misses its target (exit 1): that run is the "before" of the demo
+          "$kit" edit project.json --edits studies/beam_expander_swap_l2.json --out swapped.json --run swapped-run \
+            > /dev/null || test $? -eq 1
+          "$kit" sweep studies/beam_expander_l2_sweep.json --base swapped.json --out l2-sweep > /dev/null
+          "$kit" edit swapped.json --edits studies/beam_expander_move_l2.json --out final.json --run final-run > /dev/null
+          cd ..
+          "$kit" present init results/swapped-run results/final-run results/l2-sweep --out talk --animate \
+            --labels "L2 swapped,L2 moved,L2 position" --title "Beam expander: restoring collimation"
+          "$kit" present build talk/presentation.json --quiet
+          "$kit" present build talk/presentation.json --out talk-zh-4k --quiet --set theme.language=zh-CN \
+            --set theme.background=light --set theme.font_scale=1.3 --set theme.size=4k
+          "$kit" present bundle talk --out talk-bundle.zip
+          rm -rf results talk/.cache talk-zh-4k/.cache
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() && steps.gate.outputs.run == 'true' }}
+        with:
+          name: presentation-demo
+          path: run-alignment/presentation-demo/
+          if-no-files-found: warn
+          retention-days: 14
       - name: Preserve reports, logs and runs
         id: artifact
         if: ${{ !cancelled() && steps.gate.outputs.run == 'true' }}
@@ -253,6 +298,7 @@ jobs:
             run-alignment/
             !run-alignment/.venv*/**
             !run-alignment/.catalog/**
+            !run-alignment/presentation-demo/**
           if-no-files-found: warn
           retention-days: 14
       - name: Write job summary

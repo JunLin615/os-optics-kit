@@ -132,6 +132,45 @@ def camera_direction(axis, azimuth_deg, elevation_deg, up_axis=(0.0, 0.0, 1.0)):
     return direction, up
 
 
+def left_to_right(direction, up, axis, world_up=(0.0, 0.0, 1.0)):
+    """Mirror a camera to the other side of the optical axis when the axis would point to the left of the image,
+    so light travels from left to right. The mirror is the plane of the optical axis and world up, so the angle to
+    the axis and the elevation stay the same."""
+    forward = [-d for d in direction]
+    if dot(cross(forward, up), axis) >= -1e-9:
+        return direction, up
+    normal = cross(world_up, axis)
+    if math.hypot(*normal) < 1e-12:
+        return direction, up
+    normal = unit(normal)
+
+    def mirror(vector):
+        along = dot(vector, normal)
+        return unit([v - 2.0 * along * n for v, n in zip(vector, normal)])
+
+    return mirror(direction), mirror(up)
+
+
+#: part classes of the engine viewer that fold the beam path
+FOLDING_CLASSES = frozenset({"MIRROR", "BEAMSPLITTER", "GRATING"})
+
+
+def straight_layout(box, axis, world_up=(0.0, 0.0, 1.0), classes=None):
+    """Whether a scene's parts (``box``: the whole scene) lie along the optical axis (a straight system): then a
+    side view is mirrored so
+    light travels left to right. A folded system (it extends across the axis, e.g. after a fold mirror) keeps the
+    requested side, which shows the reflecting faces."""
+    extent = [high - low for low, high in zip(box[0], box[1])]
+    if classes is not None and set(classes) & FOLDING_CLASSES:
+        return False  # mirrors, beam splitters and gratings fold the beam path
+    normal = cross(list(world_up), axis)
+    if sum(n * n for n in normal) < 1e-24:
+        return True
+    along = abs(dot(extent, unit(axis)))
+    across = abs(dot(extent, unit(normal)))
+    return across <= 0.25 * max(along, 1e-9)
+
+
 def part_points(scene):
     """``part_id -> (class, [(x, y, z), ...])`` for every drawn part, in world millimetres."""
     parts = {}
@@ -270,14 +309,14 @@ SCRIPT = """
   function fail(code, message) {
     window.__osOpticsShotState = {status: "error", error: {code: code, message: message}};
   }
-  function apply(viewer) {
+  function apply(viewer, SHOT) {
     var V = viewer.camera.position.constructor;
     var B = viewer.focusBox.constructor;
     (SHOT.hide_classes || []).forEach(function (name) { viewer.hiddenClasses[name] = true; });
     viewer.showEdges = !!SHOT.edges;
     viewer.labelMode = SHOT.labels ? "key" : "off";
     viewer.applyVisibility();
-    if (!SHOT.beams) { viewer.beamObjects.forEach(function (group) { group.visible = false; }); }
+    viewer.beamObjects.forEach(function (group) { group.visible = !!SHOT.beams; });
     if (SHOT.background !== "studio") {
       viewer.scene.background = null;
       viewer.renderer.setClearColor(SHOT.background === "transparent" ? "#000000" : SHOT.background,
@@ -289,6 +328,15 @@ SCRIPT = """
     // frame rebuilds the viewer's controls for this up vector, including roll.
     viewer.resize();
     viewer.frame(direction, up, box);
+    if (SHOT.distance_mm > 0 && viewer.camera.isPerspectiveCamera) {
+      // a fixed eye distance on the same line of sight (constant scale across the frames of an animation)
+      viewer.camera.position.copy(viewer.controls.target).addScaledVector(direction, SHOT.distance_mm);
+      viewer.camera.near = SHOT.distance_mm / 1000;
+      viewer.camera.far = SHOT.distance_mm * 50;
+      viewer.camera.updateProjectionMatrix();
+      viewer.controls.update();
+      viewer.autoFrame = null;
+    }
     viewer.renderNow();
     var matrix = viewer.camera.matrixWorld.elements.slice();
     var actualDirection = viewer.camera.position.clone().sub(viewer.controls.target).normalize();
@@ -306,6 +354,12 @@ SCRIPT = """
       position: viewer.camera.position.toArray(), target: viewer.controls.target.toArray()
     }};
   }
+  // Later shots of a batch reuse the loaded page: render_shots calls this with each shot's camera.
+  window.__osOpticsApplyShot = function (config) {
+    var shot = Object.assign({}, SHOT, config);
+    try { apply(window.__opensciViewer, shot); } catch (error) { fail("CAMERA_APPLY_FAILED", error.message); }
+    return window.__osOpticsShotState;
+  };
   (function waitForViewer() {
     var viewer = window.__opensciViewer;
     if (!viewer) {
@@ -319,7 +373,7 @@ SCRIPT = """
       fail("PAGE_UNEXPECTED", "the engine viewer hook is incomplete; use os-optics 0.13.x");
       return;
     }
-    try { apply(viewer); } catch (error) { fail("CAMERA_APPLY_FAILED", error.message); }
+    try { apply(viewer, SHOT); } catch (error) { fail("CAMERA_APPLY_FAILED", error.message); }
   })();
 })();
 </script>
@@ -513,6 +567,202 @@ def run(args):
                 "shots": written, "failed": failures}
     (out / "shots.json").write_text(json.dumps(manifest, indent=1) + "\n", encoding="utf-8")
     return manifest
+
+
+class ViewScene:
+    """A saved run's view, loaded once: optical axis, part geometry and the engine's self-contained page."""
+
+    def __init__(self, run_dir, *, axis=None):
+        try:
+            from os_optics.viewer import load_view, view_document
+            from os_optics.viewer.page import standalone_html
+        except ImportError:
+            raise RenderError("ENGINE_NOT_INSTALLED", "this command needs the os-optics engine's viewer: "
+                              "python -m pip install \"os-optics>=0.13,<0.14\"") from None
+        try:
+            self.scene = load_view(run_dir)
+        except Exception as error:  # noqa: BLE001 - the engine's refusal is the message
+            raise RenderError("RUN_UNREADABLE", str(error)) from None
+        self.document = view_document(self.scene)
+        self.axis = optical_axis(self.document, axis)
+        self.parts = part_points(self.scene)
+        self._standalone_html = standalone_html
+
+    def box(self, focus="optics"):
+        return framing_box(self.parts, focus)
+
+    def page(self, config, background):
+        """The engine page with the camera script for ``config`` (see ``SCRIPT``)."""
+        return inject(self._standalone_html(self.document).decode("utf-8"), config, background)
+
+    def interactive_page(self):
+        """The engine's own interactive page (orbit, select, measure), unchanged."""
+        return self._standalone_html(self.document)
+
+
+def union_box(boxes):
+    """Smallest axis-aligned box holding every ``(min, max)`` box: shared framing across runs."""
+    boxes = list(boxes)
+    return ([min(b[0][i] for b in boxes) for i in range(3)], [max(b[1][i] for b in boxes) for i in range(3)])
+
+
+def shot_camera(view, shot, up_axis=(0.0, 0.0, 1.0)):
+    """``(direction, up)`` of a shot: explicit unit vectors ``direction``/``up``, or angles as in ``--camera``."""
+    if shot.get("direction") is not None:
+        direction = unit([float(v) for v in shot["direction"]])
+        up = unit([float(v) for v in shot.get("up") or up_axis])
+        up = [u - dot(up, direction) * d for u, d in zip(up, direction)]
+        if math.hypot(*up) < 1e-9:
+            raise RenderError("CAMERA_UNDEFINED", f"shot {shot.get('name')}: up is parallel to the view direction")
+        return direction, unit(up)
+    return camera_direction(view.axis, float(shot["azimuth_deg"]), float(shot.get("elevation_deg", 0.0)), up_axis)
+
+
+class BrowserSession:
+    """One headless Chrome page reused by several ``render_shots`` calls (for example one per saved run).
+
+    ``with BrowserSession(browser, size=(1280, 720)) as session: render_shots(run, shots, out, session=session)``.
+    The page size is the session's; every call through it captures at that size."""
+
+    def __init__(self, browser=None, *, size=DEFAULT_SIZE, timeout_s=30):
+        self.width, self.height = parse_size(size) if isinstance(size, str) else size
+        self.timeout_s = timeout_s
+        self.browser = find_browser(browser)
+        if not self.browser:
+            raise RenderError("BROWSER_NOT_FOUND", "no Chrome/Chromium found; install Chrome or Chromium, or pass "
+                              "its executable with --browser PATH")
+        self.api = playwright_api()
+        self.page = None
+        self._playwright = None
+        self._chrome = None
+
+    def __enter__(self):
+        try:
+            self._playwright = self.api.sync_playwright().start()
+            self._chrome = self._playwright.chromium.launch(executable_path=self.browser, headless=True,
+                                                            timeout=self.timeout_s * 1000)
+            self.page = self._chrome.new_page(viewport={"width": self.width, "height": self.height},
+                                              device_scale_factor=1)
+            self.page.set_default_timeout(self.timeout_s * 1000)
+        except self.api.TimeoutError:
+            self.__exit__(None, None, None)
+            raise RenderError("CAPTURE_TIMEOUT", f"browser launch timed out after {self.timeout_s}s") from None
+        except self.api.Error as error:
+            self.__exit__(None, None, None)
+            raise RenderError("CAPTURE_FAILED", f"Chrome/Chromium could not start: {error}") from None
+        return self
+
+    def __exit__(self, *exc):
+        chrome, playwright = self._chrome, self._playwright
+        self._chrome = self._playwright = self.page = None
+        for close in ((chrome.close if chrome is not None else None),
+                      (playwright.stop if playwright is not None else None)):
+            if close is not None:
+                try:
+                    close()
+                except Exception:  # noqa: BLE001 - closing a browser that already failed
+                    pass
+        return False
+
+
+def render_shots(run_dir, shots, out_dir, *, size=DEFAULT_SIZE, background="studio", focus="optics", box=None,
+                 beams=True, labels=False, edges=False, up_axis=(0.0, 0.0, 1.0), axis=None, browser=None,
+                 timeout_s=30, keep_html=False, view=None, progress=None, session=None):
+    """Capture several camera poses of one saved run in one browser session; returns one record per shot.
+
+    ``shots``: ``[{"name", "azimuth_deg", "elevation_deg", "roll_deg"}]`` or ``[{"name", "direction", "up",
+    "roll_deg"}]``; any shot may carry its own ``box`` ``[min_xyz, max_xyz]`` (mm) instead of ``box`` / ``focus``,
+    and a ``distance_mm`` (eye to box centre) that replaces the fitted distance, so several shots keep one scale.
+    Writes ``<name>.png`` into ``out_dir`` (and the camera page ``<name>.html`` with ``keep_html``). A failed
+    shot is recorded with status ``failed`` and its error; the others are still captured. ``progress(done, total)``
+    is called after each shot. ``session``: an open ``BrowserSession`` to reuse (its page size replaces ``size``)."""
+    if session is not None:
+        width, height = session.width, session.height
+    else:
+        width, height = parse_size(size) if isinstance(size, str) else size
+    view = view or ViewScene(run_dir, axis=axis)
+    up_axis = unit(list(up_axis))
+    default_box = box or view.box(focus)
+    if session is None:
+        browser = find_browser(browser)
+        if not browser:
+            raise RenderError("BROWSER_NOT_FOUND", "no Chrome/Chromium found; install Chrome or Chromium, or pass "
+                              "its executable with --browser PATH")
+        api = playwright_api()
+    else:
+        api = session.api
+    transparent = background == "transparent"
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    prepared = []
+    for shot in shots:
+        direction, up = shot_camera(view, shot, up_axis)
+        shot_box = shot.get("box") or default_box
+        distance = shot.get("distance_mm")
+        prepared.append((shot, {"direction": direction, "up": up, "box_min": list(shot_box[0]),
+                                "box_max": list(shot_box[1]), "roll_deg": float(shot.get("roll_deg", 0.0)),
+                                "distance_mm": float(distance) if distance else None,
+                                "hide_classes": list(NOT_OPTICS) if focus == "optics" else [],
+                                "edges": bool(edges), "labels": bool(labels), "beams": bool(beams),
+                                "timeout_ms": timeout_s * 1000}))
+    if not prepared:
+        return []
+    page_path = out_dir / (f"{prepared[0][0]['name']}.html" if keep_html else ".render-page.html")
+    page_path.write_text(view.page(prepared[0][1], background), encoding="utf-8")
+    records: list[dict] = []
+    shoot = (out_dir, background, transparent, (width, height), timeout_s, page_path, keep_html, progress)
+    try:
+        if session is not None:
+            _shoot(session.page, view, prepared, records, *shoot)
+        else:
+            with api.sync_playwright() as playwright:
+                with playwright.chromium.launch(executable_path=browser, headless=True,
+                                                timeout=timeout_s * 1000) as chrome:
+                    page = chrome.new_page(viewport={"width": width, "height": height}, device_scale_factor=1)
+                    page.set_default_timeout(timeout_s * 1000)
+                    _shoot(page, view, prepared, records, *shoot)
+    except api.TimeoutError:
+        stage = f"shot {prepared[len(records)][0]['name']}" if len(records) < len(prepared) else "capture"
+        raise RenderError("CAPTURE_TIMEOUT", f"{stage} timed out after {timeout_s}s; raise the timeout or "
+                          "open the view with 'os-optics view RUN' to inspect it") from None
+    except api.Error as error:
+        raise RenderError("CAPTURE_FAILED", f"Chrome/Chromium could not capture the page: {error}") from None
+    finally:
+        if not keep_html:
+            page_path.unlink(missing_ok=True)
+    return records
+
+
+def _shoot(page, view, prepared, records, out_dir, background, transparent, size, timeout_s, page_path, keep_html,
+           progress):
+    """Load the run's camera page into ``page`` and capture every prepared shot (``render_shots``)."""
+    width, height = size
+    page.goto(page_path.resolve().as_uri())
+    page.wait_for_function("window.__osOpticsShotState && ['ready', 'error'].includes("
+                           "window.__osOpticsShotState.status)", timeout=timeout_s * 1000 + 500)
+    for index, (shot, config) in enumerate(prepared):
+        record = {"name": shot["name"], "png": None, "status": "failed",
+                  "requested_camera": {"direction": config["direction"], "up": config["up"],
+                                       "roll_deg": config["roll_deg"]},
+                  "box_min": [round(v, 6) for v in config["box_min"]],
+                  "box_max": [round(v, 6) for v in config["box_max"]], "image_px": [width, height]}
+        if config["distance_mm"]:
+            record["distance_mm"] = config["distance_mm"]
+        state = page.evaluate("config => window.__osOpticsApplyShot(config)", config)
+        if state.get("status") != "ready":
+            error = state.get("error") or {}
+            record["error"] = {"code": error.get("code", "CAMERA_APPLY_FAILED"),
+                               "message": error.get("message", "the camera was not applied")}
+        else:
+            page.evaluate("() => new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done)))")
+            png = out_dir / f"{shot['name']}.png"
+            png.write_bytes(page.screenshot(omit_background=transparent, animations="disabled"))
+            record.update({"png": png.name, "status": "captured", "applied_camera": state["camera"]})
+        if keep_html and index:
+            (out_dir / f"{shot['name']}.html").write_text(view.page(config, background), encoding="utf-8")
+        records.append(record)
+        if progress:
+            progress(index + 1, len(prepared))
 
 
 if __name__ == "__main__":

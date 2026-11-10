@@ -1,7 +1,7 @@
 # Agent guide
 
 os-optics-kit: tools, engine-reproducible cases and skills for the OS Optics engine (`os-optics`).
-Install with `python -m pip install "os-optics[protected]" os-optics-kit` (Python 3.11+); kit 0.2.x
+Install with `python -m pip install "os-optics[protected]" os-optics-kit` (Python 3.11+); kit 0.3.x
 requires `os-optics>=0.13,<0.14`. Engine guide:
 [os-optics AGENT_GUIDE](https://github.com/JunLin615/os-optics/blob/main/AGENT_GUIDE.md).
 
@@ -9,12 +9,12 @@ requires `os-optics>=0.13,<0.14`. Engine guide:
 
 ```bash
 os-optics-kit skills list
-os-optics-kit skills show NAME
+os-optics-kit skills show NAME [PAGE]
 os-optics-kit skills install --dest DIR
 ```
 
 `skills list` prints the index (name, description, command, requirement) as compact JSON. Read one
-skill before using its command. `skills install` copies the skill directories and `skills.json` into
+skill before using its command; `skills show NAME PAGE` prints a further page it names. `skills install` copies the skill directories and `skills.json` into
 DIR, the skills directory of your agent host; it never overwrites a different file without `--force`.
 
 ## Route by task
@@ -28,6 +28,11 @@ DIR, the skills directory of your agent host; it never overwrites a different fi
 | Explain what an edit changed | `compare RUN_A RUN_B --project CURRENT.json --out CMP` |
 | Plots and a report | `plot sweep STUDY --y target:ID`; `report STUDY --project CURRENT.json` |
 | Reproducible 3D figures | `render RUN --out FIGURES --camera 55,22 --background transparent` |
+| Presentation material | `present` skill: `present init RUN STUDY --out DIR`; `present build DIR/presentation.json` |
+| Restyle without rerunning | `present build DIR/presentation.json --set theme.language=zh-CN --set theme.font_scale=1.3` |
+| Compare saved alternatives | `present init RUN_A RUN_B --labels A,B --out DIR` (target chart, shared-framing views) |
+| Gallery or bundle handoff | `present list DIR`; `present bundle DIR --out X.zip --only ID,...` |
+| Orbit, detail move, sample playback | `present init ... --animate`; fields: `present settings` |
 | Sensitivity, tolerance | `sensitivity SPEC.json --out DIR`; `tolerance SPEC.json --out DIR` |
 | Catalog parts | `candidates --category ... --wavelength-nm ...` |
 | Detector CSV data | `measurements DATA.csv --x ... --signal ... --out DIR` |

@@ -63,7 +63,10 @@ agent, are in [Contributing with an agent](docs/contributing-with-an-agent.md).
 4. Commit with a sign-off (`git commit -s`), push to your fork and open a pull request.
 
 For render changes, also install `python -m pip install -e ".[render]"` and Chrome/Chromium, then
-run `python -m pytest tests/test_render_browser.py`. These catalog-free tests check actual PNG
+run `python -m pytest tests/test_render_browser.py`. The presentation tests (`tests/test_present*.py`) also
+draw Chinese figures and encode MP4: install `".[plot,render,media]"` and a CJK font (on Linux
+`fonts-noto-cjk`; Windows and macOS include one). With `OS_OPTICS_KIT_REQUIRE_PRESENTATION=1` a missing
+browser or encoder fails these tests instead of skipping them. These catalog-free tests check actual PNG
 pixels, camera matrices, labels and capture errors. They skip when optional dependencies are missing;
 the published-engine CI job runs them with those dependencies installed.
 

@@ -1,7 +1,7 @@
 ---
 name: plot
 description: Draw standard PNG and SVG plots from saved results without simulating - sweep curves or two-parameter heatmaps with target bounds, the power distribution of a run, signed bar charts and histograms. Use it to show study or run results.
-version: 0.2.0
+version: 0.3.0
 command: os-optics-kit plot
 requires: os-optics>=0.13,<0.14; os-optics-kit[plot]
 kind: tool
@@ -27,11 +27,15 @@ kind: tool
 - `bars DATA.json`: `{"labels", "values", "unit", "title", "ylabel"?}`.
 - `histogram DATA.json`: `{"values", "unit", "title", "xlabel"?, "bounds"?: {"minimum", "maximum"}, "bins"?}`.
 - `--out DIR` (default: `plots/` in the study, or next to the run), `--name STEM`.
+- `--theme presentation|report|FILE` and `--set KEY=VALUE` (theme keys: `language=zh-CN`, `background=dark`,
+  `font_scale=1.3`, `size=4k`, `title=false`, `units={"mm": "um"}`; `os-optics-kit present settings` lists
+  them). For a set of figures with a gallery, use `present`.
 
 ## Outputs
 
 `<name>.png` and `<name>.svg`, each captioned with the data file (relative path and sha256 prefix), the
-engine build and the catalog release. Stdout: one JSON document with the written paths and point counts.
+engine build and the catalog release. With `--theme presentation` that record goes to
+`<name>.provenance.txt` and the caption to `<name>.caption.txt`, keeping the figure clean. Stdout: one JSON document with the written paths and point counts.
 Exit 0 written, 4 invalid input or missing matplotlib (`PLOT_EXTRA_MISSING`).
 
 ## Minimal example
@@ -52,5 +56,6 @@ After a `sweep` into `study`: `os-optics-kit plot sweep study --y target:spot_ra
 
 ## Version
 
+0.3.0 (os-optics-kit 0.3.0): presentation themes (`--theme`, `--set`), verified with os-optics 0.13.0.
 0.2.0 (os-optics-kit 0.2.0), verified with os-optics 0.13.0, matplotlib 3.11 and catalog release
 2026-10-28.1.

@@ -9,7 +9,8 @@ English · [简体中文](https://github.com/JunLin615/os-optics-kit/blob/main/R
 
 os-optics-kit builds on the [OS Optics](https://github.com/JunLin615/os-optics) engine. It provides one command,
 `os-optics-kit`, with tools that edit Projects by ID, sweep parameters, compare saved runs, plot, report, render 3D
-figures, estimate sensitivity and tolerance, select catalog parts and analyze detector measurements; a collection of cases, designs
+figures, estimate sensitivity and tolerance, select catalog parts, analyze detector measurements and prepare presentation
+material; a collection of cases, designs
 that rerun on the engine and compare with their recorded outcome; and a vendor-neutral skill page for each tool,
 which any coding agent can load.
 
@@ -20,7 +21,7 @@ which any coding agent can load.
 | [`os-optics`](https://github.com/JunLin615/os-optics) | GitHub | Product documentation and feedback |
 | [`os-optics-kit`](https://github.com/JunLin615/os-optics-kit) | GitHub | This repository: tools, cases, skills and contributions |
 
-**[Agent guide](https://github.com/JunLin615/os-optics-kit/blob/main/AGENT_GUIDE.md) · [Design studies](https://github.com/JunLin615/os-optics-kit/blob/main/docs/en/workflows.md) · [Measurements](https://github.com/JunLin615/os-optics-kit/blob/main/docs/en/measurements.md) · [External tools](https://github.com/JunLin615/os-optics-kit/blob/main/docs/en/interop.md) · [Workflow recipes](https://github.com/JunLin615/os-optics-kit/blob/main/docs/workflow-recipes.md) · [Contributing](https://github.com/JunLin615/os-optics-kit/blob/main/CONTRIBUTING.md)**
+**[Agent guide](https://github.com/JunLin615/os-optics-kit/blob/main/AGENT_GUIDE.md) · [Design studies](https://github.com/JunLin615/os-optics-kit/blob/main/docs/en/workflows.md) · [Measurements](https://github.com/JunLin615/os-optics-kit/blob/main/docs/en/measurements.md) · [Presentation](https://github.com/JunLin615/os-optics-kit/blob/main/docs/en/presentation.md) · [External tools](https://github.com/JunLin615/os-optics-kit/blob/main/docs/en/interop.md) · [Workflow recipes](https://github.com/JunLin615/os-optics-kit/blob/main/docs/workflow-recipes.md) · [Contributing](https://github.com/JunLin615/os-optics-kit/blob/main/CONTRIBUTING.md)**
 
 ## Install
 
@@ -30,7 +31,7 @@ os-optics doctor
 ```
 
 Python 3.11 or newer. Plots need the `plot` extra: `python -m pip install "os-optics-kit[plot]"`; 3D figure capture
-needs the `render` extra and Chrome or Chromium. Cases that use
+needs the `render` extra and Chrome or Chromium; MP4 animations need the `media` extra. Cases that use
 catalog components need the catalog: `os-optics catalog sync`. The engine's
 [installation guide](https://github.com/JunLin615/os-optics/blob/main/docs/en/installation.md) covers virtual
 environments and upgrades.
@@ -52,6 +53,24 @@ os-optics-kit summary run
 directory of your agent host (`SKILLS_DIR`). The cases ship inside the package, so `cases copy` and `cases verify`
 work without a clone; `verify` reruns the case and compares the run status and every target assessment with the
 recorded outcome. `os-optics-kit <command> --help` describes every command.
+
+## Presentation material
+
+`os-optics-kit present` turns saved runs and studies into slide-ready material: system views, result plots,
+comparison figures and animations, with an offline gallery and a portable bundle. Everything is drawn from one saved
+`presentation.json`, so a new language, background, text size or figure size is a rebuild, not a new simulation.
+
+```bash
+python -m pip install "os-optics-kit[plot,render,media]"
+os-optics-kit present init run --out talk --title "Focusing lens"
+os-optics-kit present build talk/presentation.json
+os-optics-kit present build talk/presentation.json --out talk-zh \
+    --set theme.language=zh-CN --set theme.background=light --set theme.font_scale=1.3
+os-optics-kit present bundle talk-zh --out talk-zh.zip
+```
+
+See the [presentation guide](https://github.com/JunLin615/os-optics-kit/blob/main/docs/en/presentation.md) for sizes,
+fonts, comparisons, animations and handoff.
 
 ## Cases
 
@@ -83,6 +102,7 @@ and `expected.json` (the verified outcome), plus its own scripts, study specs or
 | `plot` | `os-optics-kit plot` | Draw sweep curves, heatmaps, power distributions, bar charts and histograms |
 | `report` | `os-optics-kit report` | Assemble a Markdown and JSON report with counts, diagnostics and artifact hashes |
 | `render` | `os-optics-kit render` | Render 3D figures of a run at chosen camera angles, with element framing and a manifest |
+| `present` | `os-optics-kit present` | Build themed views, plots, comparisons and animations from saved results, with a gallery and bundle |
 | `sensitivity` | `os-optics-kit sensitivity` | Rank design parameters by finite-difference sensitivity at two step sizes |
 | `tolerance` | `os-optics-kit tolerance` | Run a seeded tolerance study under declared distributions |
 | `candidates` | `os-optics-kit candidates` | List catalog products that pass explicit filters, sorted by closeness to a value |
@@ -96,7 +116,7 @@ importable (`import os_optics_kit`), and `python -m os_optics_kit <command>` run
 
 ## Version alignment
 
-os-optics-kit 0.2.x requires `os-optics>=0.13,<0.14` and was verified with os-optics 0.13.0 and catalog release
+os-optics-kit 0.3.x requires `os-optics>=0.13,<0.14` and was verified with os-optics 0.13.0 and catalog release
 2026-10-28.1 ([`baseline.json`](https://github.com/JunLin615/os-optics-kit/blob/main/baseline.json)). Each case records the engine and catalog release it was verified
 with. See [case format](https://github.com/JunLin615/os-optics-kit/blob/main/docs/case-format.md) and [engine alignment](https://github.com/JunLin615/os-optics-kit/blob/main/docs/engine-alignment.md).
 
