@@ -126,13 +126,50 @@ class TextTests(unittest.TestCase):
         theme = pres.resolve_theme({})
         data = targets_document(theme)
         caption = cf.targets_caption(data, "en", lambda lang: pres.resolve_theme({"language": lang}))
-        self.assertIn("waist and spot of Nominal, Swapped L2 and Final with the target bounds.", caption)
-        self.assertIn("waist: Nominal is within bounds; Swapped L2 is outside the bounds; missing for Final.",
+        self.assertIn("The chart shows waist and spot for Nominal, Swapped L2 and Final with the target bounds.",
                       caption)
+        self.assertIn("For waist, Nominal is within bounds; Swapped L2 is outside the bounds; Final does not report "
+                      "this target.", caption)
         self.assertIn("Swapped L2 has no exact value", caption)
         zh = cf.targets_caption(data, "zh-CN", lambda lang: pres.resolve_theme({"language": lang}))
-        self.assertIn("最终缺失", zh)
+        self.assertIn("最终没有该目标", zh)
+        self.assertTrue(zh.startswith("图中显示标称、更换 L2 和最终的 waist、spot 及目标范围。"), zh)
+        self.assertLessEqual(zh.split("。")[0].count("和"), 1)  # one 和 per sentence
         self.assertIsNone(ABSOLUTE.search(caption + zh))
+
+    def test_targets_caption_summarises_per_run_for_many_targets(self):
+        theme = pres.resolve_theme({})
+        data = targets_document(theme)
+        runs = data["runs"][:1]
+        runs[0]["label"] = {"en": "mirror", "zh-CN": "mirror"}
+        panels = []
+        for number in range(6):
+            assessment = "UNMET" if number in (2, 4) else "MET"
+            panels.append({"target": f"t{number}", "metric": "beam_radius_mm", "unit": "mm", "split_by_unit": False,
+                           "entries": [entry("a", "exact", 1.0, assessment=assessment)]})
+        data.update({"runs": runs, "panels": panels, "targets": [f"t{n}" for n in range(6)]})
+        themes = lambda lang: pres.resolve_theme({"language": lang})  # noqa: E731
+        caption = cf.targets_caption(cf.add_display_values(data, theme), "en", themes)
+        self.assertEqual(caption, "The chart shows 6 targets for mirror with their bounds. Mirror meets 4 of 6 "
+                                  "targets; outside the bounds: t2 and t4.")
+        for panel in panels[2:5:2]:
+            panel["entries"][0].update({"assessment": "MET", "outcome": "PASS"})
+        caption = cf.targets_caption(data, "en", themes)
+        self.assertTrue(caption.endswith("Mirror meets all 6 targets."), caption)
+        self.assertEqual(caption.count("within bounds"), 0)
+        zh = cf.targets_caption(data, "zh-CN", themes)
+        self.assertIn("满足全部 6 个目标。", zh)
+
+    def test_captions_are_sentences(self):
+        self.assertEqual(cf.sentence("mirror meets all 6 targets.", "en"), "Mirror meets all 6 targets.")
+        self.assertEqual(cf.sentence("标称满足", "zh-CN"), "标称满足")
+        for key in ("caption.before_after", "caption.panels_row", "caption.system_plot"):
+            for language in ("en", "zh-CN"):
+                value = cf.text(key, language, before="Swapped L2", after="Final", labels="A 和 B", view="Final",
+                                plot="L2 sweep")
+                self.assertTrue(value.endswith("." if language == "en" else "。"), value)
+        self.assertEqual(cf.text("caption.system_plot", "zh-CN", view="Final", plot="L2 sweep"),
+                         "Final 的系统视图与 L2 sweep 并排显示。")
 
 
 class ScaleTests(unittest.TestCase):
@@ -154,7 +191,8 @@ class ScaleTests(unittest.TestCase):
         mixed = self.axes((1, "target:waist", "mm", [1.0]), (2, "target:spot", "mm", [0.01]))
         self.assertEqual(cf.decide_scale("auto", mixed, what="y")["reason"], "QUANTITIES_DIFFER")
         self.assertEqual(cf.decide_scale(True, mixed, what="y")["limits"], [0.01, 1.0])
-        self.assertEqual(cf.decide_scale([0, 5], mixed, what="y")["limits"], [0.0, 5.0])
+        explicit = cf.decide_scale([0, 5], mixed, what="y")
+        self.assertEqual((explicit["limits"], explicit["axis_range"], explicit["exact"]), ([0.0, 5.0], [0.0, 5.0], True))
         self.assertEqual(cf.decide_scale(False, same, what="y")["reason"], "OFF")
         self.assertEqual(cf.decide_scale("auto", [], what="color")["reason"], "NO_REDRAWN_PLOTS")
         with self.assertRaises(pres.PresentationError) as caught:
@@ -187,12 +225,19 @@ class GeometryTests(unittest.TestCase):
         column = cf.compose_geometry("column", [self.panel(1, "targets"), self.panel(2, "sweep")])
         self.assertEqual(column.cells, [(0, 0, 1), (1, 0, 1)])
 
+    def test_wide_views_in_a_row_wrap_to_two_rows(self):
+        wide = [self.panel(i, size=(3000, 800)) for i in (1, 2, 3)]
+        self.assertEqual(cf.wrap_row(wide, size=(1920, 1080), header_px=60), 2)
+        normal = [self.panel(i, size=(1600, 1200)) for i in (1, 2)]
+        self.assertIsNone(cf.wrap_row(normal, size=(1920, 1080)))  # two panels stay in one row
+
     def test_invalid_compose_settings(self):
         for asset in ({"id": "x", "layout": "diagonal", "panels": [{"asset": "a"}]},
                       {"id": "x", "layout": "before-after", "panels": [{"asset": "a"}]},
                       {"id": "x", "layout": "row", "panels": [{"asset": "a"}], "spacing": 0.5},
                       {"id": "x", "layout": "grid", "panels": [{"asset": "a"}], "columns": 0},
-                      {"id": "x", "layout": "row", "panels": [{"asset": "a"}], "shared": {"z": True}}):
+                      {"id": "x", "layout": "row", "panels": [{"asset": "a"}], "shared": {"z": True}},
+                      {"id": "x", "layout": "row", "panels": [{"asset": "a"}], "wrap": "yes"}):
             with self.assertRaises(pres.PresentationError, msg=asset) as caught:
                 cf._check_compose(asset)
             self.assertEqual(caught.exception.code, "SPEC_INVALID")
@@ -225,11 +270,62 @@ class DrawingTests(unittest.TestCase):
             self.assertIn("missing", texts)
             self.assertEqual(info[0]["states"], {"a": "exact", "b": "exact", "c": "missing"})
             spot_texts = [t.get_text() for t in fig.get_axes()[1].texts]
-            self.assertTrue(any("bounded" in t for t in spot_texts))
+            self.assertTrue(any(cf.text("legend.bounded", "en") in t for t in spot_texts))
             self.assertTrue(any(t.startswith("no value") for t in spot_texts))
             self.assertEqual(cf.text_overflow(fig), [])
         finally:
             plt.close(fig)
+
+    def test_value_labels_stay_off_titles_and_other_points(self):
+        import matplotlib.pyplot as plt
+        from matplotlib.transforms import Bbox
+
+        theme = pres.resolve_theme({"language": "zh-CN", "size": "4k", "font_scale": 1.4})
+        data = targets_document(theme)
+        # three close values at the top of the range: the labels need head room and must not cover the markers
+        data["panels"][0]["entries"] = [entry("a", "exact", 2.0996), entry("b", "exact", 2.0994, delta=0.00037878),
+                                        entry("c", "exact", 2.0998)]
+        cf.add_display_values(data, theme)
+        fig, info = self.draw(theme, data)
+        try:
+            cf.settle_target_labels(fig, info)
+            fig.canvas.draw()
+            renderer = fig.canvas.get_renderer()
+            ax = info[0]["ax"]
+            frame_box = ax.get_window_extent(renderer)
+            radius = info[0]["marker_pt"] * fig.dpi / 72 / 2
+            points = [ax.transData.transform((i["index"], i["value"])) for i in info[0]["labels"]]
+            for number, item in enumerate(info[0]["labels"]):
+                box = cf._label_box(item, renderer)
+                self.assertLessEqual(box.y1, frame_box.y1 + 1)  # inside the axes, below the two-line title
+                for other, (x, y) in enumerate(points):
+                    if other != number:
+                        marker = Bbox.from_extents(x - radius, y - radius, x + radius, y + radius)
+                        self.assertFalse(cf._overlaps(box, marker), (number, other))
+            texts = [t.get_text() for t in ax.texts]
+            self.assertIn("2.0994\nΔ +0.00037878 mm", texts)  # 6 significant digits, delta with its unit
+        finally:
+            plt.close(fig)
+
+    def test_overflow_check_sees_clipped_axis_labels_and_legends_over_data(self):
+        import matplotlib.pyplot as plt
+
+        theme = pres.resolve_theme({})
+        with cf.drawing(theme) as pyplot:
+            fig = pyplot.figure(figsize=(4, 3), dpi=100)  # no layout engine: the long label runs off the canvas
+            ax = fig.add_axes((0.1, 0.05, 0.85, 0.9))
+            ax.set_xlabel("a very long axis label that cannot fit into this narrow figure [mm]")
+            ax.plot([0, 1, 2, 3], [0, 1, 2, 3], label="curve")
+            ax.legend(loc="center")
+            try:
+                self.assertTrue(any("very long" in t for t, _b in cf.text_overflow(fig)))
+                renderer = fig.canvas.get_renderer()
+                self.assertTrue(cf.legend_over_data(ax, renderer))
+                self.assertNotEqual(cf.place_legend(fig, ax), None)
+                fig.canvas.draw()
+                self.assertFalse(cf.legend_over_data(ax, fig.canvas.get_renderer()))
+            finally:
+                plt.close(fig)
 
     def test_shared_limits_and_display_units(self):
         import matplotlib.pyplot as plt
@@ -238,11 +334,9 @@ class DrawingTests(unittest.TestCase):
         data = targets_document(theme)
         self.assertEqual(data["panels"][0]["display_unit"], "um")
         self.assertAlmostEqual(data["panels"][0]["entries"][0]["display_value"], 2000.0)
-        fig, info = self.draw(theme, data, y_limits=[0.0, 2500.0])
+        fig, info = self.draw(theme, data, y_limits=[0.0, 2500.0], fixed=True)
         try:
-            low, high = info[0]["y_limits"]
-            self.assertLess(low, 0.0)
-            self.assertGreater(high, 2500.0)
+            self.assertEqual(info[0]["y_limits"], [0.0, 2500.0])  # an explicit range is drawn exactly
             self.assertEqual(fig.get_axes()[0].get_ylabel(), "value [um]")
         finally:
             plt.close(fig)
@@ -319,7 +413,8 @@ class SyntheticComposeTests(unittest.TestCase):
             self.assertEqual(size, record["content_px"][2:])
             self.assertIsNotNone(record["crop_px"])  # uniform margins trimmed, one crop for both views
         self.assertEqual(layout["panels"][0]["crop_px"], layout["panels"][1]["crop_px"])
-        self.assertIn("Before: view-a; after: view-b.", result["caption"]["en"])
+        self.assertIn("The left panel shows view-a before the change and the right panel shows view-b after it. "
+                      "The views share one camera and one framing.", result["caption"]["en"])
         for path in out.rglob("*.json"):
             self.assertIsNone(ABSOLUTE.search(path.read_text(encoding="utf-8")), path.name)
 
@@ -348,9 +443,9 @@ class SyntheticComposeTests(unittest.TestCase):
                                     panels=[{"asset": "targets"}])
         self.assertTrue(result["details"]["scales"]["y"]["applied"])
         layout = wc.read_json(self.dir / "assets" / "combo" / "layout.json")
-        for low, high in layout["panels"][0]["y_limits"]:
-            self.assertLess(low, 0)
-            self.assertGreater(high, 3)
+        for limits in layout["panels"][0]["y_limits"]:
+            self.assertEqual(limits, [0.0, 3.0])  # the stated range, not padded
+        self.assertIn("from 0 to 3 mm", result["caption"]["en"])
 
     def test_views_with_different_boxes_report_independent_framing(self):
         self.ctx._built["view-b"]["details"]["box_mm"] = [[0, 0, 0], [20, 1, 1]]
@@ -358,7 +453,42 @@ class SyntheticComposeTests(unittest.TestCase):
         _asset, result = self.build(layout="row", panels=[{"asset": "view-a"}, {"asset": "view-b"}])
         self.assertEqual(result["details"]["framing"], "independent")
         self.assertIn("framing_sources", result["details"]["framing_detail"]["recovery"])
-        self.assertNotIn("share one camera and framing", result["caption"]["en"])
+        self.assertNotIn("one framing", result["caption"]["en"])
+        self.assertIn("The views share one camera; their framing differs.", result["caption"]["en"])
+
+    def test_different_cameras_are_not_called_shared(self):
+        self.ctx._built["view-b"]["details"]["camera"] = [30, 10, 0]
+        _asset, result = self.build(layout="column", panels=[{"asset": "view-a"}, {"asset": "view-b"}])
+        self.assertEqual(result["details"]["framing_detail"]["camera"], "independent")
+        caption = result["caption"]["en"]
+        self.assertIn("The views share one framing; their cameras differ.", caption)
+        self.assertIn("one above the other", caption)  # a column layout is not "side by side"
+        self.assertNotIn("camera and", caption)
+
+    def test_a_row_of_wide_views_uses_two_rows(self):
+        self.spec["assets"].append({"id": "view-c", "kind": "view"})
+        folder = self.ctx.asset_dir("view-c")
+        self.ctx._built["view-c"] = {**self.ctx._built["view-a"], "id": "view-c", "title": "view-c",
+                                     "_abs": {"image": raster(folder / "view-c.png", (960, 540))}}
+        _asset, result = self.build(layout="row", panels=[{"asset": "view-a"}, {"asset": "view-b"},
+                                                          {"asset": "view-c"}])
+        layout = wc.read_json(self.dir / "assets" / "combo" / "layout.json")
+        self.assertEqual((layout["layout"], layout["arrangement"]), ("row", "grid"))
+        cells = [p["cell_px"] for p in layout["panels"]]
+        self.assertGreater(cells[2][1], cells[0][1])  # the third view on a second row ...
+        self.assertAlmostEqual(cells[2][0] + cells[2][2] / 2, 960, delta=40)  # ... centred
+        self.assertNotIn("side by side", result["caption"]["en"])
+        _asset, result = self.build(layout="row", wrap=False, panels=[{"asset": "view-a"}, {"asset": "view-b"},
+                                                                      {"asset": "view-c"}])
+        self.assertIn("side by side", result["caption"]["en"])
+
+    def test_duplicate_default_labels_name_each_plot(self):
+        for name in ("targets", "targets-um"):
+            self.ctx._built[name]["sources"] = ["s"]
+        self.spec["sources"] = {"s": {"path": "nowhere"}}  # unresolvable: labels fall back to titles
+        _asset, result = self.build(layout="row", panels=[{"asset": "targets"}, {"asset": "targets-um"}])
+        labels = [p["label"] for p in result["details"]["panels"]]
+        self.assertEqual(len(set(labels)), 2, labels)
 
     def test_report_preset_writes_pdf_with_caption_in_figure(self):
         self.spec["theme"] = {"preset": "report"}
@@ -370,6 +500,7 @@ class SyntheticComposeTests(unittest.TestCase):
         svg = result["files"]["svg"].read_text(encoding="utf-8")
         self.assertIn("<image", svg)  # the raster panel is embedded
         self.assertIn("side by side", svg)  # captions "figure": the caption is text in the figure
+        self.assertNotIn("legend_over_data", result["details"])
 
     def test_chinese_dark_4k(self):
         self.spec["theme"] = {"preset": "presentation", "language": "zh-CN", "background": "dark", "size": "4k"}
@@ -501,8 +632,8 @@ class PresentBuildTests(unittest.TestCase):
         entry = self.entry("far")
         self.assertEqual(entry["details"]["missing"], [{"target": "far_radius", "source": "nominal"}])
         self.assertIsNone(entry["details"]["panels"][0]["values"]["nominal"])
-        self.assertIn("missing for Nominal", entry["captions"]["en"])
-        self.assertIn("标称缺失", entry["captions"]["zh-CN"])
+        self.assertIn("Nominal does not report this target", entry["captions"]["en"])
+        self.assertIn("标称没有该目标", entry["captions"]["zh-CN"])
 
     def test_composition_of_redrawn_plots(self):
         entry = self.entry("result-pair")
