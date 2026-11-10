@@ -310,13 +310,13 @@ SCRIPT = """
     var viewer = window.__opensciViewer;
     if (!viewer) {
       if (Date.now() < deadline) { setTimeout(waitForViewer, 25); }
-      else { fail("PAGE_UNEXPECTED", "the engine viewer hook is unavailable; use os-optics 0.12.x"); }
+      else { fail("PAGE_UNEXPECTED", "the engine viewer hook is unavailable; use os-optics 0.13.x"); }
       return;
     }
     if (!["frame", "resize", "renderNow", "applyVisibility"].every(function (key) {
       return typeof viewer[key] === "function";
     })) {
-      fail("PAGE_UNEXPECTED", "the engine viewer hook is incomplete; use os-optics 0.12.x");
+      fail("PAGE_UNEXPECTED", "the engine viewer hook is incomplete; use os-optics 0.13.x");
       return;
     }
     try { apply(viewer); } catch (error) { fail("CAMERA_APPLY_FAILED", error.message); }
@@ -450,7 +450,7 @@ def run(args):
         from os_optics.viewer.page import standalone_html
     except ImportError:
         raise RenderError("ENGINE_NOT_INSTALLED",
-                          "this command needs the os-optics engine's viewer: python -m pip install \"os-optics>=0.12,<0.13\"") from None
+                          "this command needs the os-optics engine's viewer: python -m pip install \"os-optics>=0.13,<0.14\"") from None
 
     try:
         scene = load_view(args.run_dir)

@@ -1,9 +1,9 @@
 ---
 name: report
 description: Assemble a factual Markdown and JSON report from a sweep study or saved runs without rerunning - identity, inputs, edits, target outcomes, counts with denominators, diagnostics, freshness, plots and an artifact list with sha256. Use it to hand results to a person.
-version: 0.1.0
+version: 0.2.0
 command: os-optics-kit report
-requires: os-optics>=0.12,<0.13
+requires: os-optics>=0.13,<0.14
 kind: tool
 ---
 
@@ -50,4 +50,4 @@ For a study: `os-optics-kit report study --project project.json --plots study/pl
 
 ## Version
 
-0.1.0 (os-optics-kit 0.1.0), verified with os-optics 0.12.0 and catalog release 2026-10-28.1.
+0.2.0 (os-optics-kit 0.2.0), verified with os-optics 0.13.0 and catalog release 2026-10-28.1.

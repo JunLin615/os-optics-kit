@@ -4,7 +4,7 @@ Run from the repository root: python -m unittest tests.test_interop -v
 
 The reference formulas, input parsing and network handling need only numpy (and
 scipy for the diffraction reference); third-party solvers are never imported here.
-Checks that run the Engine need the kit's engine requirement (os-optics>=0.12,<0.13) and are
+Checks that run the Engine need the kit's engine requirement (os-optics>=0.13,<0.14) and are
 skipped otherwise, as is any check whose optional dependency is missing.
 """
 
@@ -47,16 +47,16 @@ class CommonTests(unittest.TestCase):
         self.assertLess(common.version_tuple("0.6.1"), common.MINIMUM_ENGINE)
 
     def test_require_engine_refuses_engines_outside_the_kit_requirement(self):
-        self.assertEqual(common.ENGINE_REQUIREMENT, ">=0.12,<0.13")
-        self.assertEqual(common.MINIMUM_ENGINE, (0, 12))
+        self.assertEqual(common.ENGINE_REQUIREMENT, ">=0.13,<0.14")
+        self.assertEqual(common.MINIMUM_ENGINE, (0, 13))
         for installed, code in (("0.6.1", "ENGINE_UNSUPPORTED"), ("0.10.0", "ENGINE_UNSUPPORTED"),
-                                ("0.11.0", "ENGINE_UNSUPPORTED"), ("0.13.0", "ENGINE_UNSUPPORTED"),
+                                ("0.12.0", "ENGINE_UNSUPPORTED"), ("0.14.0", "ENGINE_UNSUPPORTED"),
                                 (None, "ENGINE_NOT_INSTALLED")):
             with self.subTest(installed=installed), patch.object(_engine, "engine_version", return_value=installed):
-                with self.assertRaisesRegex(RuntimeError, "os-optics>=0.12,<0.13") as caught:
+                with self.assertRaisesRegex(RuntimeError, "os-optics>=0.13,<0.14") as caught:
                     common.require_engine()
                 self.assertEqual(caught.exception.code, code)
-        for installed in ("0.12.0", "0.12.3"):
+        for installed in ("0.13.0", "0.13.3"):
             with patch.object(_engine, "engine_version", return_value=installed):
                 self.assertEqual(common.require_engine(), installed)
                 self.assertTrue(common.engine_supported(installed))
@@ -86,7 +86,7 @@ class CommonTests(unittest.TestCase):
                 self.assertAlmostEqual(got, want, places=12)
 
 
-@unittest.skipUnless(engine_supported(), "needs os-optics>=0.12,<0.13")
+@unittest.skipUnless(engine_supported(), "needs os-optics>=0.13,<0.14")
 class OptimizationOutcomeTests(unittest.TestCase):
     def test_refused_sample_is_logged_and_counts_toward_budget(self):
         oe = case_module("interop-optimization", "optimize_expander")
@@ -429,7 +429,7 @@ class MetasurfaceFitTests(unittest.TestCase):
         self.assertAlmostEqual(self.fit.aperture_fraction(30.0, 50.0), 1 - math.exp(-2 * 2500 / 900), places=15)
 
 
-@unittest.skipUnless(HAS_NUMPY and engine_supported(), "needs numpy and os-optics>=0.12,<0.13")
+@unittest.skipUnless(HAS_NUMPY and engine_supported(), "needs numpy and os-optics>=0.13,<0.14")
 class EngineInteropTests(unittest.TestCase):
     def test_hom_layout_exports_a_four_mode_lossless_network(self):
         from os_optics.local import json_api

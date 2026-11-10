@@ -8,7 +8,7 @@ electromagnetic solvers run in your own Python environment and read what OpenSci
 exports. Each of the four cases below compares the external result with an independent
 reference; its `CASE.md` records the versions, the commands and the verified outcome.
 
-The cases were verified with os-optics 0.12.0. The numerical comparisons below are those
+The cases were verified with os-optics 0.13.0. The numerical comparisons below are those
 verified runs. They use the linear optical network with per-path group delays, native
 components and the `TABULATED_THIN_LENS` model kind. The scripts that run the Engine check
 the installed version and stop with a clear message on an older engine; the external-side
@@ -43,7 +43,7 @@ python -m venv .venv
 ```
 
 On Windows use `.venv\Scripts\python`. The requirements files request
-`os-optics>=0.12,<0.13` and `os-optics-kit>=0.1,<0.2` and pin the tested versions of the
+`os-optics>=0.13,<0.14` and `os-optics-kit>=0.2,<0.3` and pin the tested versions of the
 third-party packages, which are never dependencies of `os-optics` or `os-optics-kit`.
 
 Every script prints one JSON summary on stdout. Its `outcome` compares OpenSci with an

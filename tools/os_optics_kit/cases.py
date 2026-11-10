@@ -288,7 +288,7 @@ def check_case(path):
             if meta.get("license") and meta["license"] != "MIT":
                 add("FRONT_MATTER_LICENSE", "CASE.md license must be MIT")
             if meta.get("engine") and not re.fullmatch(r"\d+\.\d+\.\d+", meta["engine"]):
-                add("FRONT_MATTER_ENGINE", "CASE.md engine must be a released version such as 0.12.0")
+                add("FRONT_MATTER_ENGINE", "CASE.md engine must be a released version such as 0.13.0")
             from .cli import COMMANDS
 
             for tool in _items(meta.get("tools", "none")):

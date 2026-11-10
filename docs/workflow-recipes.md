@@ -2,9 +2,9 @@
 
 [Agent guide](../AGENT_GUIDE.md). English-only reference for the kit's tools
 (`os-optics-kit <command>`) and the case workflows; read only the section the task needs.
-Each command's `--help` holds its complete specification. os-optics-kit 0.1.x works with
-os-optics 0.12 ([installation](https://github.com/JunLin615/os-optics/blob/main/docs/en/installation.md));
-the quoted results come from os-optics 0.12.0 and catalog release `2026-10-28.1`. Human
+Each command's `--help` holds its complete specification. os-optics-kit 0.2.x works with
+os-optics 0.13 ([installation](https://github.com/JunLin615/os-optics/blob/main/docs/en/installation.md));
+the quoted results come from os-optics 0.13.0 and catalog release `2026-10-28.1`. Human
 walkthrough: [English](en/workflows.md) · [简体中文](zh-CN/workflows.md).
 
 ## Conventions
@@ -30,7 +30,7 @@ walkthrough: [English](en/workflows.md) · [简体中文](zh-CN/workflows.md).
 
 | Command | Exit 0 | 1 | 2 | 3 | 4 |
 | --- | --- | --- | --- | --- | --- |
-| `summary` | `PASS`, `WARNING`, `NOT_APPLICABLE` | `FAIL` | `UNKNOWN` | `OUT_OF_MODEL`, `OUT_OF_MODEL_SCOPE` | error |
+| `summary` | `PASS`, `WARNING`, `NOT_APPLICABLE` | `FAIL` | `UNKNOWN`, including a partial run (`PARTIAL`) | `OUT_OF_MODEL`, `OUT_OF_MODEL_SCOPE` | error, including a `FAILED` or `CANCELLED` run |
 | `edit` | `EDITED`, `ALREADY_APPLIED`, `DESCRIBED`; with `--run` outcome `PASS` or `NOT_APPLICABLE` | outcome `FAIL` | outcome `UNKNOWN` | outcome `OUT_OF_MODEL` | refused, `RUN_REFUSED` |
 | `sweep` | `COMPLETED` | `NO_FEASIBLE` (constraints given, none met) | | | refused |
 | `sensitivity` | `COMPLETED` | | `INCOMPLETE` (a derivative unavailable) | | refused |
@@ -40,6 +40,13 @@ walkthrough: [English](en/workflows.md) · [简体中文](zh-CN/workflows.md).
 | `measurements` | `PASS`, `WARNING` | `FAIL` (RMSE bound exceeded) | `UNKNOWN` (no fit) | | error |
 | `cases verify` | every case matches `expected.json` | a case differs | | | usage error, unknown case, no engine |
 | case `workflow.py` | nominal `PASS` | nominal `FAIL` | `UNKNOWN` | `OUT_OF_MODEL` | `ERROR`, refused |
+
+A partial run (execution `PARTIAL`, for example a reached `max_return_analysis_work`
+reported as `RETURN_ANALYSIS_BUDGET`) is `UNKNOWN`, exit 2, even when its targets are met;
+an unmet selected target keeps `FAIL`, exit 1. A `FAILED` or `CANCELLED` run is `ERROR`,
+exit 4. For a `RETURN_ANALYSIS_BUDGET` run these are the codes of
+`os-optics project run --status-contract aggregate`; under its default `requirements`
+contract the engine exits 3 for it.
 
 `edit --run` uses the outcome of its selected targets. It retains the
 engine's execution, requirements, quantity validity and issue fields. Outcome classes

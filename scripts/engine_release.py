@@ -2,7 +2,7 @@
 
 python scripts/engine_release.py                    # the verified engine of baseline.json
 python scripts/engine_release.py --candidate latest # the newest release, if newer than the verified one
-python scripts/engine_release.py --candidate 0.12.1
+python scripts/engine_release.py --candidate 0.13.0
 
 Writes ``run=true|false`` and ``version=X`` to $GITHUB_OUTPUT (or --github-output) and one line to the job summary
 when nothing runs. Prints one compact JSON document. Exit 0 whether or not the release exists; 1 when PyPI cannot

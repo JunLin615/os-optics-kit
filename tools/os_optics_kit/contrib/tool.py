@@ -22,6 +22,7 @@ import tempfile
 from pathlib import Path
 
 from .. import _frontmatter as fm
+from .._engine import ENGINE_REQUIREMENT
 from .. import skills as kit_skills
 from . import _common as C
 from . import _templates as T
@@ -286,7 +287,7 @@ def contribute_tool(args) -> dict:
                             "os-optics-kit (os-optics, plot extra: matplotlib); a helper that needs them belongs "
                             "with a case")
         baseline = C.read_baseline(repo) or {}
-        requirement = (baseline.get("engine") or {}).get("requirement") or ">=0.12,<0.13"
+        requirement = (baseline.get("engine") or {}).get("requirement") or ENGINE_REQUIREMENT
         requires = f"os-optics{requirement}" if facts["engine"] else "none"
 
         if args.refresh:

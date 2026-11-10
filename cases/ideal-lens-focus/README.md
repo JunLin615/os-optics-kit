@@ -22,7 +22,7 @@ os-optics view run
 | --- | --- | --- | --- |
 | `spot_radius` | 0.01693 mm | ≤ 0.05 mm | MET |
 
-The value is the Gaussian focus w' = λf / (πw) = 16.93 µm. Verified with os-optics 0.12.0; run status PASS.
+The value is the Gaussian focus w' = λf / (πw) = 16.93 µm. Verified with os-optics 0.13.0; run status PASS.
 
 `python ideal_lens_focus.py --out run-api` builds the same design with the engine's request API and exports the
 arrivals as CSV; `--maximum-radius-mm 0.001` shows an unmet target (FAIL, exit code 1).

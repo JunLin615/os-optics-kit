@@ -1,9 +1,9 @@
 ---
 name: run-case
 description: Find an engine-reproducible OS Optics case, copy it, run it, check it against its recorded outcome and adapt it. Use when a worked design close to the user's question exists or a known-good starting Project is needed.
-version: 0.1.0
+version: 0.2.0
 command: os-optics-kit cases
-requires: os-optics>=0.12,<0.13
+requires: os-optics>=0.13,<0.14
 kind: guide
 ---
 
@@ -57,4 +57,4 @@ rerun, and read the new assessments; the case's expected.json no longer applies 
 
 ## Version
 
-0.1.0: first release with os-optics-kit 0.1.0 (cases verified with os-optics 0.12.0, catalog 2026-10-28.1).
+0.2.0 (os-optics-kit 0.2.0): cases verified with os-optics 0.13.0, catalog 2026-10-28.1.

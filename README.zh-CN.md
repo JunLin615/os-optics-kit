@@ -8,7 +8,7 @@
 [![Python](https://img.shields.io/pypi/pyversions/os-optics-kit.svg)](https://pypi.org/project/os-optics-kit/)
 
 os-optics-kit 基于 [OS Optics](https://github.com/JunLin615/os-optics) 引擎，提供一个命令 `os-optics-kit`：
-其中的工具可以按标识修改 Project、扫描参数、比较已保存的运行、绘图、生成报告、估计灵敏度和公差、
+其中的工具可以按标识修改 Project、扫描参数、比较已保存的运行、绘图、生成报告、渲染三维图、估计灵敏度和公差、
 挑选目录元件以及分析探测器测量数据；一组案例，即可在引擎上重新运行并与记录结果比较的设计；以及每个工具
 对应的一份与厂商无关的技能说明，任何编程 Agent 都可以加载。
 
@@ -28,7 +28,8 @@ python -m pip install "os-optics[protected]" os-optics-kit
 os-optics doctor
 ```
 
-需要 Python 3.11 及以上版本。绘图需要 `plot` 扩展：`python -m pip install "os-optics-kit[plot]"`。
+需要 Python 3.11 及以上版本。绘图需要 `plot` 扩展：`python -m pip install "os-optics-kit[plot]"`；
+截取三维图需要 `render` 扩展和 Chrome 或 Chromium。
 使用目录元件的案例需要光学元件目录：`os-optics catalog sync`。虚拟环境和升级方法见引擎的
 [安装指南](https://github.com/JunLin615/os-optics/blob/main/docs/zh-CN/installation.md)。
 
@@ -77,6 +78,7 @@ os-optics-kit summary run
 | `compare` | `os-optics-kit compare` | 按目标和平面标识比较已保存的运行或扫描样本，并给出时效 |
 | `plot` | `os-optics-kit plot` | 绘制扫描曲线、热图、功率分布、条形图和直方图 |
 | `report` | `os-optics-kit report` | 生成 Markdown 和 JSON 报告，含计数、诊断信息和产物哈希 |
+| `render` | `os-optics-kit render` | 按指定相机角度渲染运行的三维图，可对准单个元件，并输出清单文件 |
 | `sensitivity` | `os-optics-kit sensitivity` | 以两种步长的有限差分灵敏度对设计参数排序 |
 | `tolerance` | `os-optics-kit tolerance` | 在声明的分布下运行带种子的公差研究 |
 | `candidates` | `os-optics-kit candidates` | 列出满足明确筛选条件的目录产品，按与给定值的接近程度排序 |
@@ -90,7 +92,7 @@ os-optics-kit summary run
 
 ## 版本对应
 
-os-optics-kit 0.1.x 需要 `os-optics>=0.12,<0.13`，已在 os-optics 0.12.0 和目录版本 2026-10-28.1 上验证
+os-optics-kit 0.2.x 需要 `os-optics>=0.13,<0.14`，已在 os-optics 0.13.0 和目录版本 2026-10-28.1 上验证
 （[`baseline.json`](baseline.json)）。每个案例记录验证时使用的引擎和目录版本。见
 [案例格式（英文）](docs/case-format.md)和[引擎对齐（英文）](docs/engine-alignment.md)。
 

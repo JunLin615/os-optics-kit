@@ -14,7 +14,7 @@ Front matter: flat `key: value` lines only. `name` equals the directory name (ke
 `description`: what the command does and when to use it, at most 300 characters. `version` is the skill's own
 MAJOR.MINOR.PATCH. `command` is the CLI entry (`os-optics-kit <command>`), or `none` for a guide. `requires` lists
 what must be installed besides the kit, items separated by `; `, or `none`; an engine requirement equals the kit's
-(os-optics>=0.12,<0.13). `kind` is `tool`, `contribution` or `guide`.
+(os-optics>=0.13,<0.14). `kind` is `tool`, `contribution` or `guide`.
 Budget: at most 900 tokens, estimated as ceil(characters / 4). Name no agent host or host protocol. -->
 
 # {{name}}

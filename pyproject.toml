@@ -25,7 +25,7 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Physics",
 ]
 # The kit follows the engine's minor releases: each kit release declares the engine minor it was verified with.
-dependencies = ["os-optics>=0.12,<0.13"]
+dependencies = ["os-optics>=0.13,<0.14"]
 
 [project.optional-dependencies]
 plot = ["matplotlib>=3.10,<4"]

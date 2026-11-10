@@ -21,7 +21,7 @@ os-optics view run
 | --- | --- | --- | --- |
 | `spot_radius` | 0.01693 mm | ≤ 0.05 mm | MET |
 
-该值即高斯聚焦公式 w' = λf / (πw) = 16.93 µm。已用 os-optics 0.12.0 验证；运行状态 PASS。
+该值即高斯聚焦公式 w' = λf / (πw) = 16.93 µm。已用 os-optics 0.13.0 验证；运行状态 PASS。
 
 `python ideal_lens_focus.py --out run-api` 用引擎的请求 API 构建同一设计并把到达数据导出为 CSV；
 `--maximum-radius-mm 0.001` 演示未满足的目标（FAIL，退出码 1）。

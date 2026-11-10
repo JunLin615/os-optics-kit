@@ -25,7 +25,7 @@ file holds a machine-local absolute path.
 name: ideal-lens-focus                 # the directory name
 title: Gaussian focus of an ideal thin lens
 summary: one or two sentences, at most 300 characters
-engine: 0.12.0                         # engine version of the verified run
+engine: 0.13.0                         # engine version of the verified run
 catalog: none                          # catalog release the Project pins, or none
 project: project.json
 tools: summary                         # os-optics-kit commands the case uses, comma-separated, or none
@@ -55,7 +55,7 @@ Copy the chosen PNG files to `images/` and show each one in the README.
 ```json
 {
   "catalog": null,
-  "engine": "0.12.0",
+  "engine": "0.13.0",
   "schema": "os-optics-kit.case-expected",
   "schema_version": 1,
   "status": "PASS",

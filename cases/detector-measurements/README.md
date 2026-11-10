@@ -34,4 +34,4 @@ os-optics-kit measurements data/detector_response.csv --x input_power_mW --signa
 Both channels drift by 7 % over the scan; their ratio does not. Rows with a missing or invalid reading or a
 non-positive dark-subtracted reference are excluded and listed in `processed.csv`; the analyses report WARNING for the exclusions and PASS for the
 RMSE targets. `data/README.md` gives the formulas behind the data and their attribution. Verified with
-os-optics 0.12.0; run status PASS.
+os-optics 0.13.0; run status PASS.

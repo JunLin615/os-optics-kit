@@ -135,8 +135,8 @@ class EngineRequirementTests(unittest.TestCase):
         self.assertIn(f'"{_engine.ENGINE_DISTRIBUTION}{_engine.ENGINE_REQUIREMENT}"', dependencies)
 
     def test_satisfies(self):
-        for version, expected in (("0.12.0", True), ("0.12.3", True), ("0.12.0rc1", True), ("0.12.0+abc", True),
-                                  ("0.11.9", False), ("0.13.0", False), ("1.0", False), (None, False)):
+        for version, expected in (("0.13.0", True), ("0.13.3", True), ("0.13.0rc1", True), ("0.13.0+abc", True),
+                                  ("0.12.9", False), ("0.14.0", False), ("1.0", False), (None, False)):
             self.assertEqual(_engine.satisfies(version), expected, version)
         self.assertTrue(_engine.satisfies("2.1", ">=2,!=2.0"))
         self.assertFalse(_engine.satisfies("2.0.0", ">=2,!=2.0"))
@@ -145,9 +145,9 @@ class EngineRequirementTests(unittest.TestCase):
 
     def test_interop_minimum_is_derived_from_the_requirement(self):
         self.assertEqual(interop.MINIMUM_ENGINE, _engine.minimum_version())
-        self.assertEqual(interop.MINIMUM_ENGINE, (0, 12))
+        self.assertEqual(interop.MINIMUM_ENGINE, (0, 13))
         self.assertEqual(interop.version_tuple("0.10.2+abc"), (0, 10, 2))
-        self.assertTrue(interop.engine_supported("0.12.0"))
+        self.assertTrue(interop.engine_supported("0.13.0"))
         self.assertFalse(interop.engine_supported("0.10.0"))
 
     def test_require_engine_refusals(self):
@@ -156,21 +156,21 @@ class EngineRequirementTests(unittest.TestCase):
                 interop.require_engine()
         self.assertEqual(caught.exception.code, "ENGINE_NOT_INSTALLED")
         self.assertIsInstance(caught.exception, RuntimeError)
-        with patch.object(_engine, "engine_version", return_value="0.11.0"):
+        with patch.object(_engine, "engine_version", return_value="0.12.0"):
             with self.assertRaises(_engine.DependencyError) as caught:
                 interop.require_engine()
         self.assertEqual((caught.exception.code, caught.exception.details["installed"]),
-                         ("ENGINE_UNSUPPORTED", "0.11.0"))
-        with patch.object(_engine, "engine_version", return_value="0.12.1"):
-            self.assertEqual(interop.require_engine(), "0.12.1")
+                         ("ENGINE_UNSUPPORTED", "0.12.0"))
+        with patch.object(_engine, "engine_version", return_value="0.13.1"):
+            self.assertEqual(interop.require_engine(), "0.13.1")
 
     def test_dependency_errors(self):
         with patch.object(_engine, "engine_version", return_value=None):
             error = _engine.dependency_error(ModuleNotFoundError("x", name="os_optics.local"))
         self.assertEqual(error["code"], "ENGINE_NOT_INSTALLED")
-        with patch.object(_engine, "engine_version", return_value="0.12.0"):
+        with patch.object(_engine, "engine_version", return_value="0.13.0"):
             error = _engine.dependency_error(ImportError("cannot import name 'x'", name="os_optics.results"))
-        self.assertEqual((error["code"], error["installed"]), ("ENGINE_UNSUPPORTED", "0.12.0"))
+        self.assertEqual((error["code"], error["installed"]), ("ENGINE_UNSUPPORTED", "0.13.0"))
         error = _engine.dependency_error(ModuleNotFoundError("x", name="matplotlib.pyplot"))
         self.assertEqual(error["code"], "PLOT_EXTRA_MISSING")
         self.assertIsNone(_engine.dependency_error(ModuleNotFoundError("x", name="scipy")))

@@ -33,5 +33,5 @@ python step1_unit_cells.py --out ms
 | 留出的测试情形（波长、25 µm 光束、1.5°） | 全部在声明误差之内 |
 | 450 nm、5°、8°、20°、未验证的指标 | OUT_OF_MODEL_SCOPE，目标 INDETERMINATE |
 
-该模型是这一超透镜的仿真模型，不是可订购的产品。已在 Python 3.14.7 上用 os-optics 0.12.0 验证
+该模型是这一超透镜的仿真模型，不是可订购的产品。已在 Python 3.14.7 上用 os-optics 0.13.0 验证
 （grcwa 0.1.2、numpy 2.5.4、scipy 1.18.1）。

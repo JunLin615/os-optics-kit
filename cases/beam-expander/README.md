@@ -34,5 +34,5 @@ The study files in `studies/` change the design by ID with `os-optics-kit edit` 
 | Move L2 by the best shift, +0.54 mm | `final.json` | 1.99645 mm | PASS |
 
 The beam radius at the output plane (`output_beam_radius`, added by the swap) stays within 1 % throughout: the
-waist radius reacts to collimation, the radius at one plane barely does. Verified with os-optics 0.12.0 and catalog
+waist radius reacts to collimation, the radius at one plane barely does. Verified with os-optics 0.13.0 and catalog
 2026-10-28.1; run status PASS.

@@ -496,6 +496,25 @@ class CatalogBeamExpanderDemoTests(unittest.TestCase):
         self.assertEqual((code, out["run"]["outcome"]), (0, "PASS"), err)
         self.assertEqual(out["run"]["targets"][0]["value"], rows[6]["target:expanded_waist"])
 
+    def test_return_analysis_budget_is_unknown_with_met_targets(self):
+        """os-optics 0.13: a run whose return-light analysis reaches max_return_analysis_work is PARTIAL
+        (RETURN_ANALYSIS_BUDGET); its targets may be MET, yet the outcome is UNKNOWN (exit 2), like the Engine's
+        aggregate status contract."""
+        from os_optics_kit import result_summary
+
+        with TempDir() as d:
+            edits = wc.write_json(d / "budget.json", {"ops": [
+                {"op": "set_compute_budget", "compute_budget": {"max_return_analysis_work": 1}}]})
+            code, out, err = invoke(ep.main, [str(self.dir / "base-run" / "project.json"), "--edits", str(edits),
+                                              "--out", str(d / "limited.json"), "--run", str(d / "limited-run")])
+            self.assertEqual((code, out["run"]["outcome"]), (2, "UNKNOWN"), err)
+            self.assertEqual(out["run"]["execution"]["outcome"], "PARTIAL")
+            self.assertIn("max_return_analysis_work", out["run"]["execution"]["budgets"]["exhausted"])
+            self.assertEqual({t["assessment"] for t in out["run"]["targets"]}, {"MET"})
+            code, summary, err = invoke(result_summary.main, [str(d / "limited-run")])
+            self.assertEqual((code, summary["status"], summary["requirement_outcome"]), (2, "UNKNOWN", "UNKNOWN"), err)
+            self.assertIn("RETURN_ANALYSIS_BUDGET", {issue["code"] for issue in summary["issues"]})
+
     def test_comparison_plots_and_report(self):
         d = self.dir
         document = cr.compare([d / "base-run", d / "swapped-run", d / "final-run"], project=d / "final.json")

@@ -31,4 +31,4 @@ calculus and Malus' law.
 | `hwp_angle_deg` | 0 … 67.5° | 1 (22.5°) | 7 | 0 |
 | `wavelength_nm` | 1000 … 1100 | 3 | 0 | 2 (1064 and 1100 nm, outside the plate's band) |
 
-Verified with os-optics 0.12.0; run status PASS.
+Verified with os-optics 0.13.0; run status PASS.

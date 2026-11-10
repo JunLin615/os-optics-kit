@@ -1,8 +1,8 @@
 # Agent guide
 
 os-optics-kit: tools, engine-reproducible cases and skills for the OS Optics engine (`os-optics`).
-Install with `python -m pip install "os-optics[protected]" os-optics-kit` (Python 3.11+); kit 0.1.x
-requires `os-optics>=0.12,<0.13`. Engine guide:
+Install with `python -m pip install "os-optics[protected]" os-optics-kit` (Python 3.11+); kit 0.2.x
+requires `os-optics>=0.13,<0.14`. Engine guide:
 [os-optics AGENT_GUIDE](https://github.com/JunLin615/os-optics/blob/main/AGENT_GUIDE.md).
 
 ## Load the skills
@@ -56,8 +56,9 @@ Saved results keep their identities after edits. `compare` and `os-optics result
 `TARGETS_CHANGED`, ...). A historical result describes the earlier design; rerun when the task needs
 the edited one.
 
-Exit codes: 0 completed or PASS; 1 FAIL, `NO_FEASIBLE`, `NO_MATCH` or a case mismatch; 2 UNKNOWN or
-`INCOMPLETE`; 3 OUT_OF_MODEL; 4 refused input, with a JSON error on stderr. Stdout is compact JSON;
+Exit codes: 0 completed or PASS; 1 FAIL, `NO_FEASIBLE`, `NO_MATCH` or a case mismatch; 2 UNKNOWN (also
+a partial run, `PARTIAL`) or `INCOMPLETE`; 3 OUT_OF_MODEL; 4 refused input, with a JSON
+error on stderr. Stdout is compact JSON;
 details stay in files.
 
 ## Inputs and recovery

@@ -18,7 +18,7 @@ name: {name}
 description: Does one thing; use it when that thing is needed.
 version: 0.1.0
 command: {command}
-requires: os-optics>=0.12,<0.13
+requires: os-optics>=0.13,<0.14
 kind: tool
 ---
 
@@ -174,7 +174,7 @@ class IndexCheckTests(unittest.TestCase):
         self.assertEqual(self.problems(good), [])
         cases = {
             "name 'Sweep' differs": good.replace("name: sweep", "name: Sweep"),
-            "missing key 'requires'": good.replace("requires: os-optics>=0.12,<0.13\n", ""),
+            "missing key 'requires'": good.replace("requires: os-optics>=0.13,<0.14\n", ""),
             "unknown key 'author'": good.replace("kind: tool\n", "kind: tool\nauthor: x\n"),
             "version '1.0' is not": good.replace("version: 0.1.0", "version: 1.0"),
             "kind 'helper' must be": good.replace("kind: tool", "kind: helper"),
@@ -182,7 +182,7 @@ class IndexCheckTests(unittest.TestCase):
                 "description: Does one thing; use it when that thing is needed.", "description: " + "x" * 301),
             "command 'os-optics-kit sweeps' must be": good.replace("command: os-optics-kit sweep",
                                                                   "command: os-optics-kit sweeps"),
-            "the engine requirement of this kit": good.replace("os-optics>=0.12,<0.13", "os-optics>=0.11"),
+            "the engine requirement of this kit": good.replace("os-optics>=0.13,<0.14", "os-optics>=0.12"),
             "front matter: line 1": good[4:],
             "front matter: line 8: duplicate key": good.replace("kind: tool", "kind: tool\nname: sweep"),
         }

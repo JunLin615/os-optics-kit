@@ -1,14 +1,14 @@
 {
   "schema": "os-optics-kit.cases",
   "schema_version": 1,
-  "kit_version": "0.1.0",
+  "kit_version": "0.2.0",
   "cases": [
     {
       "name": "beam-expander",
       "title": "Catalog beam expander: swap a lens, sweep its spacing, restore collimation",
       "summary": "A Keplerian beam expander of two catalog plano-convex lenses (f = 50 mm and 100 mm, 780 nm, 1 mm waist) reaches its 1.9961 mm output waist. The studies swap L2 for a 100.3 mm fused-silica lens, sweep L2 along the beam and apply the best shift.",
       "path": "cases/beam-expander",
-      "engine": "0.12.0",
+      "engine": "0.13.0",
       "catalog": "2026-10-28.1",
       "tools": [
         "candidates",
@@ -44,7 +44,7 @@
       "title": "Detector linearity and reference-channel normalization",
       "summary": "A 1 mW, 532 nm beam is split 50:50 onto a signal and a reference detector, each with a 2.5 mm radius active area. Two synthetic data sets with known answers calibrate the signal detector's linearity and normalize slow source drift by the reference channel.",
       "path": "cases/detector-measurements",
-      "engine": "0.12.0",
+      "engine": "0.13.0",
       "catalog": null,
       "tools": [
         "measurements"
@@ -75,7 +75,7 @@
       "title": "Beam expansion and focusing workflow",
       "summary": "A Keplerian expander (ideal thin lenses f = 50 mm and 150 mm) and a 100 mm focusing lens take a 780 nm, 0.5 mm waist beam to a 1.5 mm expanded radius and a focus below 20 um. The workflow studies gap error, focal length, wavelength and waist one at a time against a complex-q reference.",
       "path": "cases/expansion-focus",
-      "engine": "0.12.0",
+      "engine": "0.13.0",
       "catalog": null,
       "tools": [
         "sweep",
@@ -116,7 +116,7 @@
       "title": "Gaussian focus of an ideal thin lens",
       "summary": "A 532 nm Gaussian beam with a 1 mm waist radius is focused by an ideal thin lens (f = 100 mm); the 1/e^2 radius in the back focal plane must stay below 50 um. Catalog-free: the lens is the engine's native ideal thin lens.",
       "path": "cases/ideal-lens-focus",
-      "engine": "0.12.0",
+      "engine": "0.13.0",
       "catalog": null,
       "tools": [
         "summary"
@@ -144,7 +144,7 @@
       "title": "Diffraction at a declared stop, handed off to external codes",
       "summary": "A 532 nm TEM00 beam (1 mm waist, 1 mW) passes a 1.2 mm radius stop and an ideal f = 200 mm lens. The engine's transverse-plane handoff feeds LightPipes, prysm, POPPY and Diffractio, which compute the diffracted focus the paraxial Gaussian result cannot give after truncation.",
       "path": "cases/interop-diffraction",
-      "engine": "0.12.0",
+      "engine": "0.13.0",
       "catalog": null,
       "tools": [],
       "tags": [
@@ -178,7 +178,7 @@
       "title": "Metasurface lens as a tabulated virtual component",
       "summary": "A TiO2 nanopillar metalens (f = 200 um at 532 nm, 100 um diameter) is characterized with RCWA (grcwa) and angular-spectrum focusing, fitted as a TABULATED_THIN_LENS with stated errors and domain, and checked in the engine on held-out test cases and out-of-domain counterexamples.",
       "path": "cases/interop-metasurface",
-      "engine": "0.12.0",
+      "engine": "0.13.0",
       "catalog": null,
       "tools": [],
       "tags": [
@@ -209,7 +209,7 @@
       "title": "External optimization and Sobol tolerance of a beam expander",
       "summary": "SciPy and Optuna collimate a catalog-free Keplerian expander (ideal thin lenses f = 50 mm and 150 mm, 532 nm, 0.5 mm waist) by moving L2, with every design run by the engine; SALib Sobol indices then rank the mounting errors. An ABCD reference checks every value.",
       "path": "cases/interop-optimization",
-      "engine": "0.12.0",
+      "engine": "0.13.0",
       "catalog": null,
       "tools": [],
       "tags": [
@@ -238,7 +238,7 @@
       "title": "Hong-Ou-Mandel interference from the linear optical network export",
       "summary": "Two 780 nm sources meet on a native 50:50 plate splitter. The engine exports the layout as a linear optical network (modes, transfer matrix, path group delays); Perceval and Piquasso compute two-photon statistics from it and match a closed-form reference.",
       "path": "cases/interop-quantum",
-      "engine": "0.12.0",
+      "engine": "0.13.0",
       "catalog": null,
       "tools": [],
       "tags": [
@@ -271,7 +271,7 @@
       "title": "Beam position and pointing after a fold mirror",
       "summary": "A 633 nm beam folds 90 deg at a flat mirror onto planes 100 mm and 400 mm away; positions must stay within 0.1 mm and pointing within 0.5 mrad. The workflow studies mirror tilt and source offset against exact reflection geometry and the 2-theta law.",
       "path": "cases/mirror-alignment",
-      "engine": "0.12.0",
+      "engine": "0.13.0",
       "catalog": null,
       "tools": [
         "measurements",
@@ -310,7 +310,7 @@
       "title": "Polarization control with a half-wave plate and a polarizer",
       "summary": "A linearly polarized 1030 nm beam passes a rotatable half-wave plate and a linear polarizer. At 22.5 deg the plate turns the polarization to 45 deg and 0.891 mW of 1 mW reaches the detector. The workflow studies plate angle and wavelength against Jones calculus and Malus' law.",
       "path": "cases/polarization-control",
-      "engine": "0.12.0",
+      "engine": "0.13.0",
       "catalog": null,
       "tools": [
         "edit",

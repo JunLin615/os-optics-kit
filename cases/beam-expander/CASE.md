@@ -2,7 +2,7 @@
 name: beam-expander
 title: Catalog beam expander: swap a lens, sweep its spacing, restore collimation
 summary: A Keplerian beam expander of two catalog plano-convex lenses (f = 50 mm and 100 mm, 780 nm, 1 mm waist) reaches its 1.9961 mm output waist. The studies swap L2 for a 100.3 mm fused-silica lens, sweep L2 along the beam and apply the best shift.
-engine: 0.12.0
+engine: 0.13.0
 catalog: 2026-10-28.1
 project: project.json
 tools: candidates, edit, sweep, compare, plot, report
@@ -41,7 +41,7 @@ os-optics-kit report l2-sweep --project final.json --plots l2-sweep/plots --chan
 
 ## Baseline
 
-os-optics 0.12.0, catalog 2026-10-28.1: run status PASS (`expected.json`).
+os-optics 0.13.0, catalog 2026-10-28.1: run status PASS (`expected.json`).
 `os-optics-kit cases verify beam-expander` repeats the run and compares it.
 
 ## Files

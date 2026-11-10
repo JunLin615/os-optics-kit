@@ -1,6 +1,6 @@
 {
   "catalog": null,
-  "engine": "0.12.0",
+  "engine": "0.13.0",
   "schema": "os-optics-kit.case-expected",
   "schema_version": 1,
   "status": "WARNING",

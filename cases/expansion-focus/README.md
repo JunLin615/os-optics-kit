@@ -35,4 +35,4 @@ The default workflow runs 22 designs. Every engine value agrees with an independ
 | `waist_radius_mm` | 0.25 … 4 | 3 | 1 | 1 (severe truncation) |
 
 `studies/` adds a sensitivity study, a band-edge sensitivity study, a seeded tolerance study (92 of 100 samples
-pass) and two compute-budget edits. Verified with os-optics 0.12.0; run status PASS.
+pass) and two compute-budget edits. Verified with os-optics 0.13.0; run status PASS.

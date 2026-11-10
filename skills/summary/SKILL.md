@@ -1,9 +1,9 @@
 ---
 name: summary
 description: Read a saved os-optics run directory into one compact JSON document (targets, assessments, power budget, issues, identity) with an exit code per requirement outcome. Use it after every run before deciding anything.
-version: 0.1.0
+version: 0.2.0
 command: os-optics-kit summary
-requires: os-optics>=0.12,<0.13
+requires: os-optics>=0.13,<0.14
 kind: tool
 ---
 
@@ -33,8 +33,9 @@ unit, bounds, `assessment` MET / UNMET / INDETERMINATE / NOT_APPLICABLE, quantit
 `power_budget`, `issues`, `model_scope_issues`, `identity` (engine build, catalog release, hashes),
 `integrity`, `artifacts`, `view_command`.
 
-Exit: 0 met or no targets declared, 1 an unmet target, 2 indeterminate, 3 a selected target outside its
-model, 4 invalid input, broken artifact or failed run (JSON error on stderr).
+Exit: 0 met or no targets declared, 1 an unmet target, 2 indeterminate or a partial run (`PARTIAL`,
+e.g. `RETURN_ANALYSIS_BUDGET`), 3 a selected target outside its model, 4 invalid input,
+broken artifact or failed run (JSON error on stderr).
 
 ## Minimal example
 
@@ -52,4 +53,4 @@ os-optics-kit summary run
 
 ## Version
 
-0.1.0 (os-optics-kit 0.1.0), verified with os-optics 0.12.0 and catalog release 2026-10-28.1.
+0.2.0 (os-optics-kit 0.2.0), verified with os-optics 0.13.0 and catalog release 2026-10-28.1.

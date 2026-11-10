@@ -33,4 +33,4 @@ os-optics results targets run
 | 按最佳位移 +0.54 mm 移动 L2 | `final.json` | 1.99645 mm | PASS |
 
 输出面上的光束半径（换镜时新增的 `output_beam_radius`）始终在 1 % 以内：束腰半径对准直敏感，单个面上的半径几乎不变。
-已用 os-optics 0.12.0 与目录 2026-10-28.1 验证；运行状态 PASS。
+已用 os-optics 0.13.0 与目录 2026-10-28.1 验证；运行状态 PASS。
