@@ -1,7 +1,7 @@
 {
   "schema": "os-optics-kit.skills",
   "schema_version": 1,
-  "kit_version": "0.2.0",
+  "kit_version": "0.3.0",
   "token_estimate": "ceil(characters/4)",
   "budgets": {
     "SKILL.md": 900,
@@ -79,12 +79,23 @@
       "name": "plot",
       "kind": "tool",
       "description": "Draw standard PNG and SVG plots from saved results without simulating - sweep curves or two-parameter heatmaps with target bounds, the power distribution of a run, signed bar charts and histograms. Use it to show study or run results.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "command": "os-optics-kit plot",
       "requires": "os-optics>=0.13,<0.14; os-optics-kit[plot]",
       "path": "skills/plot/SKILL.md",
-      "tokens": 522,
-      "sha256": "0c448c6b1cb793469d63ed406fe2eed139c6e221b46a6dcb6b4d8acf82451d96"
+      "tokens": 652,
+      "sha256": "9c98e6d7aaba45f97965d453ab6e315e627a5c68de8c7b224b77986dc683a5f8"
+    },
+    {
+      "name": "present",
+      "kind": "tool",
+      "description": "Prepare slide-ready material from saved runs and studies - system views, result plots, comparisons, animations, an offline gallery and a portable bundle - and restyle it (language, background, text and figure size) from a saved configuration without simulating.",
+      "version": "0.1.0",
+      "command": "os-optics-kit present",
+      "requires": "os-optics>=0.13,<0.14; os-optics-kit[plot]; os-optics-kit[render] for views and animations; os-optics-kit[media] for MP4",
+      "path": "skills/present/SKILL.md",
+      "tokens": 887,
+      "sha256": "77c2fd97fc0a40c66a3bbbdc94c47d1c83cb667519c244980ac3a5f0bb834868"
     },
     {
       "name": "render",

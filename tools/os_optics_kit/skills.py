@@ -2,7 +2,7 @@
 
 Usage:
   os-optics-kit skills list                         the skill index (compact JSON): load this first
-  os-optics-kit skills show NAME                    print skills/NAME/SKILL.md
+  os-optics-kit skills show NAME [PAGE]             print skills/NAME/SKILL.md, or another page of it (compare.md)
   os-optics-kit skills install --dest DIR [--only a,b] [--force]
                                                     copy skills/<name>/ to DIR/<name>/ and write DIR/skills.json
   os-optics-kit skills index --check [--root DIR]   validate every skill and compare skills.json with the skills
@@ -116,11 +116,44 @@ def check_skill(directory):
     for term in HOST_TERMS:
         if re.search(rf"\b{re.escape(term)}\b", text):
             problems.append(f"{name}: names the agent host or protocol {term!r}; skills are vendor-neutral")
+    problems += _check_reference_pages(directory)
     entry = {"name": fields.get("name", name), "kind": _kind(fields), "description": fields.get("description", ""),
              "version": fields.get("version", ""), "command": fields.get("command", ""),
              "requires": fields.get("requires", ""), "path": f"skills/{name}/{SKILL_FILE}", "tokens": tokens,
              "sha256": hashlib.sha256(data).hexdigest()}
     return entry, problems
+
+
+def _check_reference_pages(directory):
+    """Other Markdown pages of a skill (read only when a task needs them): same budget, LF, vendor-neutral."""
+    problems = []
+    name = Path(directory).name
+    for page in sorted(Path(directory).glob("*.md")):
+        if page.name == SKILL_FILE:  # checked by check_skill; only its links to the other pages here
+            problems += [f"{name}: {SKILL_FILE} refers to {link}, which is not in the skill folder"
+                         for link in re.findall(r"`([a-z0-9-]+\.md)`", page.read_text(encoding="utf-8"))
+                         if not (Path(directory) / link).is_file()]
+            continue
+        data = page.read_bytes()
+        try:
+            text = data.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            problems.append(f"{name}: {page.name} is not UTF-8 ({exc.reason})")
+            continue
+        if b"\r" in data:
+            problems.append(f"{name}: {page.name} must use LF line endings")
+        tokens = fm.token_estimate(text)
+        if tokens > fm.BUDGETS[SKILL_FILE]:
+            problems.append(f"{name}: {page.name} is {tokens} tokens (ceil(characters/4)), budget "
+                            f"{fm.BUDGETS[SKILL_FILE]}")
+        for term in HOST_TERMS:
+            if re.search(rf"\b{re.escape(term)}\b", text):
+                problems.append(f"{name}: {page.name} names the agent host or protocol {term!r}; skills are "
+                                "vendor-neutral")
+        for link in re.findall(r"`([a-z0-9-]+\.md)`", text):
+            if not (Path(directory) / link).is_file():
+                problems.append(f"{name}: {page.name} refers to {link}, which is not in the skill folder")
+    return problems
 
 
 def _check_fields(directory_name, fields):
@@ -231,7 +264,12 @@ def cmd_show(args):
     names = skill_names(load_index(root))
     if args.name not in names:
         raise SkillsError("SKILL_UNKNOWN", f"no skill {args.name!r}", known=names)
-    sys.stdout.write((root / "skills" / args.name / SKILL_FILE).read_text(encoding="utf-8"))
+    folder = root / "skills" / args.name
+    page = args.page or SKILL_FILE
+    pages = sorted(p.name for p in folder.glob("*.md"))
+    if page not in pages:
+        raise SkillsError("PAGE_UNKNOWN", f"skill {args.name!r} has no page {page!r}", known=pages)
+    sys.stdout.write((folder / page).read_text(encoding="utf-8"))
     return EXIT_OK
 
 
@@ -346,8 +384,9 @@ def build_parser():
     p = sub.add_parser("list", help="Print the skill index (compact JSON)")
     p.add_argument("--root", type=Path, help=root_help)
     p.set_defaults(handler=cmd_list)
-    p = sub.add_parser("show", help="Print one skill's SKILL.md")
+    p = sub.add_parser("show", help="Print one skill's SKILL.md or another page of it")
     p.add_argument("name", help="Skill name")
+    p.add_argument("page", nargs="?", help="another page of the skill, e.g. compare.md")
     p.add_argument("--root", type=Path, help=root_help)
     p.set_defaults(handler=cmd_show)
     p = sub.add_parser("install", help="Copy skills to a directory")

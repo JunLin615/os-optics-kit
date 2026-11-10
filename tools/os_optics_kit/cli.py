@@ -27,6 +27,10 @@ COMMANDS: dict[str, tuple[str, str]] = {
         "render_views",
         "render reproducible 3D figures with camera angles, roll and framing",
     ),
+    "present": (
+        "present",
+        "presentation material from saved results: themed figures, comparisons, animations, gallery, bundle",
+    ),
     "cases": ("cases", "list, show, copy and verify the engine-reproducible cases"),
     "skills": ("skills", "list, show and install the vendor-neutral agent skills"),
     "contrib": ("contrib", "prepare a case or tool contribution as a PR-ready patch or bundle"),

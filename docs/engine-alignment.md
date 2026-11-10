@@ -43,7 +43,7 @@ python scripts/check_alignment.py --engine latest --out run-latest        # newe
 python scripts/check_alignment.py --engine 0.13.0 --out run-0130          # an exact release
 python scripts/check_alignment.py --engine-wheel os_optics-X.Y.Z-py3-none-any.whl \
   --catalog-file public_optical_catalog.json --out run-local              # before a release is on PyPI
-python scripts/check_alignment.py --kit-wheel dist/os_optics_kit-0.2.0-py3-none-any.whl --out run-kit-wheel
+python scripts/check_alignment.py --kit-wheel dist/os_optics_kit-0.3.0-py3-none-any.whl --out run-kit-wheel
 python scripts/check_alignment.py --optional all --out run-full           # include the optional checks
 python scripts/check_alignment.py --only spec-be-report --out run-flow    # one check and what it needs
 python scripts/check_alignment.py --skip cases-verify --out run-no-cases  # leave a check out
