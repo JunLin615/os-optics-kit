@@ -289,6 +289,15 @@ SCRIPT = """
     // frame rebuilds the viewer's controls for this up vector, including roll.
     viewer.resize();
     viewer.frame(direction, up, box);
+    if (SHOT.distance_mm > 0 && viewer.camera.isPerspectiveCamera) {
+      // a fixed eye distance on the same line of sight (constant scale across the frames of an animation)
+      viewer.camera.position.copy(viewer.controls.target).addScaledVector(direction, SHOT.distance_mm);
+      viewer.camera.near = SHOT.distance_mm / 1000;
+      viewer.camera.far = SHOT.distance_mm * 50;
+      viewer.camera.updateProjectionMatrix();
+      viewer.controls.update();
+      viewer.autoFrame = null;
+    }
     viewer.renderNow();
     var matrix = viewer.camera.matrixWorld.elements.slice();
     var actualDirection = viewer.camera.position.clone().sub(viewer.controls.target).normalize();
@@ -570,25 +579,79 @@ def shot_camera(view, shot, up_axis=(0.0, 0.0, 1.0)):
     return camera_direction(view.axis, float(shot["azimuth_deg"]), float(shot.get("elevation_deg", 0.0)), up_axis)
 
 
+class BrowserSession:
+    """One headless Chrome page reused by several ``render_shots`` calls (for example one per saved run).
+
+    ``with BrowserSession(browser, size=(1280, 720)) as session: render_shots(run, shots, out, session=session)``.
+    The page size is the session's; every call through it captures at that size."""
+
+    def __init__(self, browser=None, *, size=DEFAULT_SIZE, timeout_s=30):
+        self.width, self.height = parse_size(size) if isinstance(size, str) else size
+        self.timeout_s = timeout_s
+        self.browser = find_browser(browser)
+        if not self.browser:
+            raise RenderError("BROWSER_NOT_FOUND", "no Chrome/Chromium found; install Chrome or Chromium, or pass "
+                              "its executable as the browser setting")
+        self.api = playwright_api()
+        self.page = None
+        self._playwright = None
+        self._chrome = None
+
+    def __enter__(self):
+        try:
+            self._playwright = self.api.sync_playwright().start()
+            self._chrome = self._playwright.chromium.launch(executable_path=self.browser, headless=True,
+                                                            timeout=self.timeout_s * 1000)
+            self.page = self._chrome.new_page(viewport={"width": self.width, "height": self.height},
+                                              device_scale_factor=1)
+            self.page.set_default_timeout(self.timeout_s * 1000)
+        except self.api.TimeoutError:
+            self.__exit__(None, None, None)
+            raise RenderError("CAPTURE_TIMEOUT", f"browser launch timed out after {self.timeout_s}s") from None
+        except self.api.Error as error:
+            self.__exit__(None, None, None)
+            raise RenderError("CAPTURE_FAILED", f"Chrome/Chromium could not start: {error}") from None
+        return self
+
+    def __exit__(self, *exc):
+        chrome, playwright = self._chrome, self._playwright
+        self._chrome = self._playwright = self.page = None
+        for close in ((chrome.close if chrome is not None else None),
+                      (playwright.stop if playwright is not None else None)):
+            if close is not None:
+                try:
+                    close()
+                except Exception:  # noqa: BLE001 - closing a browser that already failed
+                    pass
+        return False
+
+
 def render_shots(run_dir, shots, out_dir, *, size=DEFAULT_SIZE, background="studio", focus="optics", box=None,
                  beams=True, labels=False, edges=False, up_axis=(0.0, 0.0, 1.0), axis=None, browser=None,
-                 timeout_s=30, keep_html=False, view=None, progress=None):
+                 timeout_s=30, keep_html=False, view=None, progress=None, session=None):
     """Capture several camera poses of one saved run in one browser session; returns one record per shot.
 
     ``shots``: ``[{"name", "azimuth_deg", "elevation_deg", "roll_deg"}]`` or ``[{"name", "direction", "up",
-    "roll_deg"}]``; any shot may carry its own ``box`` ``[min_xyz, max_xyz]`` (mm) instead of ``box`` / ``focus``.
+    "roll_deg"}]``; any shot may carry its own ``box`` ``[min_xyz, max_xyz]`` (mm) instead of ``box`` / ``focus``,
+    and a ``distance_mm`` (eye to box centre) that replaces the fitted distance, so several shots keep one scale.
     Writes ``<name>.png`` into ``out_dir`` (and the camera page ``<name>.html`` with ``keep_html``). A failed
     shot is recorded with status ``failed`` and its error; the others are still captured. ``progress(done, total)``
-    is called after each shot."""
-    width, height = parse_size(size) if isinstance(size, str) else size
+    is called after each shot. ``session``: an open ``BrowserSession`` to reuse (its page size replaces ``size``)."""
+    if session is not None:
+        width, height = session.width, session.height
+    else:
+        width, height = parse_size(size) if isinstance(size, str) else size
     view = view or ViewScene(run_dir, axis=axis)
     up_axis = unit(list(up_axis))
     default_box = box or view.box(focus)
-    browser = find_browser(browser)
-    if not browser:
-        raise RenderError("BROWSER_NOT_FOUND", "no Chrome/Chromium found; install Chrome or Chromium, or pass "
-                          "its executable as the browser setting")
-    api = playwright_api()
+    if session is None:
+        browser = find_browser(browser)
+        if not browser:
+            raise RenderError("BROWSER_NOT_FOUND", "no Chrome/Chromium found; install Chrome or Chromium, or pass "
+                              "its executable as the browser setting")
+        api = playwright_api()
+    else:
+        api = session.api
     transparent = background == "transparent"
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -596,8 +659,10 @@ def render_shots(run_dir, shots, out_dir, *, size=DEFAULT_SIZE, background="stud
     for shot in shots:
         direction, up = shot_camera(view, shot, up_axis)
         shot_box = shot.get("box") or default_box
+        distance = shot.get("distance_mm")
         prepared.append((shot, {"direction": direction, "up": up, "box_min": list(shot_box[0]),
                                 "box_max": list(shot_box[1]), "roll_deg": float(shot.get("roll_deg", 0.0)),
+                                "distance_mm": float(distance) if distance else None,
                                 "hide_classes": list(NOT_OPTICS) if focus == "optics" else [],
                                 "edges": bool(edges), "labels": bool(labels), "beams": bool(beams),
                                 "timeout_ms": timeout_s * 1000}))
@@ -605,43 +670,20 @@ def render_shots(run_dir, shots, out_dir, *, size=DEFAULT_SIZE, background="stud
         return []
     page_path = out_dir / (f"{prepared[0][0]['name']}.html" if keep_html else ".render-page.html")
     page_path.write_text(view.page(prepared[0][1], background), encoding="utf-8")
-    records = []
-    stage = "browser launch"
+    records: list[dict] = []
+    shoot = (out_dir, background, transparent, (width, height), timeout_s, page_path, keep_html, progress)
     try:
-        with api.sync_playwright() as playwright:
-            with playwright.chromium.launch(executable_path=browser, headless=True,
-                                            timeout=timeout_s * 1000) as chrome:
-                page = chrome.new_page(viewport={"width": width, "height": height}, device_scale_factor=1)
-                page.set_default_timeout(timeout_s * 1000)
-                stage = "page loading"
-                page.goto(page_path.resolve().as_uri())
-                stage = "camera readiness"
-                page.wait_for_function("window.__osOpticsShotState && ['ready', 'error'].includes("
-                                       "window.__osOpticsShotState.status)", timeout=timeout_s * 1000 + 500)
-                for index, (shot, config) in enumerate(prepared):
-                    record = {"name": shot["name"], "png": None, "status": "failed",
-                              "requested_camera": {"direction": config["direction"], "up": config["up"],
-                                                   "roll_deg": config["roll_deg"]},
-                              "box_min": [round(v, 6) for v in config["box_min"]],
-                              "box_max": [round(v, 6) for v in config["box_max"]], "image_px": [width, height]}
-                    stage = f"shot {shot['name']}"
-                    state = page.evaluate("config => window.__osOpticsApplyShot(config)", config)
-                    if state.get("status") != "ready":
-                        error = state.get("error") or {}
-                        record["error"] = {"code": error.get("code", "CAMERA_APPLY_FAILED"),
-                                           "message": error.get("message", "the camera was not applied")}
-                    else:
-                        page.evaluate("() => new Promise(done => requestAnimationFrame(() => "
-                                      "requestAnimationFrame(done)))")
-                        png = out_dir / f"{shot['name']}.png"
-                        png.write_bytes(page.screenshot(omit_background=transparent, animations="disabled"))
-                        record.update({"png": png.name, "status": "captured", "applied_camera": state["camera"]})
-                    if keep_html and index:
-                        (out_dir / f"{shot['name']}.html").write_text(view.page(config, background), encoding="utf-8")
-                    records.append(record)
-                    if progress:
-                        progress(index + 1, len(prepared))
+        if session is not None:
+            _shoot(session.page, view, prepared, records, *shoot)
+        else:
+            with api.sync_playwright() as playwright:
+                with playwright.chromium.launch(executable_path=browser, headless=True,
+                                                timeout=timeout_s * 1000) as chrome:
+                    page = chrome.new_page(viewport={"width": width, "height": height}, device_scale_factor=1)
+                    page.set_default_timeout(timeout_s * 1000)
+                    _shoot(page, view, prepared, records, *shoot)
     except api.TimeoutError:
+        stage = f"shot {prepared[len(records)][0]['name']}" if len(records) < len(prepared) else "capture"
         raise RenderError("CAPTURE_TIMEOUT", f"{stage} timed out after {timeout_s}s; raise the timeout or "
                           "open the view with 'os-optics view RUN' to inspect it") from None
     except api.Error as error:
@@ -650,6 +692,38 @@ def render_shots(run_dir, shots, out_dir, *, size=DEFAULT_SIZE, background="stud
         if not keep_html:
             page_path.unlink(missing_ok=True)
     return records
+
+
+def _shoot(page, view, prepared, records, out_dir, background, transparent, size, timeout_s, page_path, keep_html,
+           progress):
+    """Load the run's camera page into ``page`` and capture every prepared shot (``render_shots``)."""
+    width, height = size
+    page.goto(page_path.resolve().as_uri())
+    page.wait_for_function("window.__osOpticsShotState && ['ready', 'error'].includes("
+                           "window.__osOpticsShotState.status)", timeout=timeout_s * 1000 + 500)
+    for index, (shot, config) in enumerate(prepared):
+        record = {"name": shot["name"], "png": None, "status": "failed",
+                  "requested_camera": {"direction": config["direction"], "up": config["up"],
+                                       "roll_deg": config["roll_deg"]},
+                  "box_min": [round(v, 6) for v in config["box_min"]],
+                  "box_max": [round(v, 6) for v in config["box_max"]], "image_px": [width, height]}
+        if config["distance_mm"]:
+            record["distance_mm"] = config["distance_mm"]
+        state = page.evaluate("config => window.__osOpticsApplyShot(config)", config)
+        if state.get("status") != "ready":
+            error = state.get("error") or {}
+            record["error"] = {"code": error.get("code", "CAMERA_APPLY_FAILED"),
+                               "message": error.get("message", "the camera was not applied")}
+        else:
+            page.evaluate("() => new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done)))")
+            png = out_dir / f"{shot['name']}.png"
+            png.write_bytes(page.screenshot(omit_background=transparent, animations="disabled"))
+            record.update({"png": png.name, "status": "captured", "applied_camera": state["camera"]})
+        if keep_html and index:
+            (out_dir / f"{shot['name']}.html").write_text(view.page(config, background), encoding="utf-8")
+        records.append(record)
+        if progress:
+            progress(index + 1, len(prepared))
 
 
 if __name__ == "__main__":
