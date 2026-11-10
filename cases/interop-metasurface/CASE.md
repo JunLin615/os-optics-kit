@@ -2,7 +2,7 @@
 name: interop-metasurface
 title: Metasurface lens as a tabulated virtual component
 summary: A TiO2 nanopillar metalens (f = 200 um at 532 nm, 100 um diameter) is characterized with RCWA (grcwa) and angular-spectrum focusing, fitted as a TABULATED_THIN_LENS with stated errors and domain, and checked in the engine on held-out test cases and out-of-domain counterexamples.
-engine: 0.12.0
+engine: 0.13.0
 catalog: none
 project: project.json
 tools: none
@@ -46,7 +46,7 @@ Steps 1–4 took 24 minutes in the verified run; steps 1 and 2 never import the 
 
 ## Baseline
 
-os-optics 0.12.0, no catalog: run status WARNING (`expected.json`). Steps 1–4 verified on Python 3.14.7 with the
+os-optics 0.13.0, no catalog: run status WARNING (`expected.json`). Steps 1–4 verified on Python 3.14.7 with the
 pinned versions in `requirements-metasurface.txt`.
 
 ## Files

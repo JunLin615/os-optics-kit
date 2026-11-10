@@ -2,7 +2,7 @@
 name: expansion-focus
 title: Beam expansion and focusing workflow
 summary: A Keplerian expander (ideal thin lenses f = 50 mm and 150 mm) and a 100 mm focusing lens take a 780 nm, 0.5 mm waist beam to a 1.5 mm expanded radius and a focus below 20 um. The workflow studies gap error, focal length, wavelength and waist one at a time against a complex-q reference.
-engine: 0.12.0
+engine: 0.13.0
 catalog: none
 project: project.json
 tools: sweep, compare, plot, report, sensitivity, tolerance
@@ -44,7 +44,7 @@ compute budget gives a PARTIAL run with every target INDETERMINATE.
 
 ## Baseline
 
-os-optics 0.12.0, no catalog: run status PASS (`expected.json`).
+os-optics 0.13.0, no catalog: run status PASS (`expected.json`).
 `os-optics-kit cases verify expansion-focus` repeats the run and compares it.
 
 ## Files

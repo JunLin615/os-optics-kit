@@ -7,7 +7,7 @@ How os-optics-kit stays aligned with the os-optics engine and the optical catalo
 | Item | Where | Rule |
 | --- | --- | --- |
 | Kit version | `tools/os_optics_kit/_version.py`, `baseline.json` `kit_version` | Independent semantic version of os-optics-kit; a release tag `vX.Y.Z` must name it |
-| Supported engine | `pyproject.toml` dependency, `baseline.json` `engine.requirement` | One engine minor series, e.g. `>=0.12,<0.13`; both files state the same range |
+| Supported engine | `pyproject.toml` dependency, `baseline.json` `engine.requirement` | One engine minor series, e.g. `>=0.13,<0.14`; both files state the same range |
 | Verified engine | `baseline.json` `engine.verified_version` | The os-optics release the tests, tools and cases were verified with; inside the supported range |
 | Catalog snapshot | `baseline.json` `catalog` | The public catalog release the cases run on, with its schema version and SHA-256 |
 | Case baseline | each case's `CASE.md` (`engine`, `catalog`) and `expected.json` | The engine and catalog the case was verified with, and its verified run status and target assessments |
@@ -40,10 +40,10 @@ engine and the kit there, prepares the catalog and runs the checks in `alignment
 ```bash
 python scripts/check_alignment.py --out run-alignment                     # verified engine from PyPI
 python scripts/check_alignment.py --engine latest --out run-latest        # newest engine release
-python scripts/check_alignment.py --engine 0.12.1 --out run-0121          # an exact release
-python scripts/check_alignment.py --engine-wheel os_optics-0.12.1-py3-none-any.whl \
+python scripts/check_alignment.py --engine 0.13.1 --out run-0131          # an exact release
+python scripts/check_alignment.py --engine-wheel os_optics-0.13.1-py3-none-any.whl \
   --catalog-file public_optical_catalog.json --out run-local              # before a release is on PyPI
-python scripts/check_alignment.py --kit-wheel dist/os_optics_kit-0.1.0-py3-none-any.whl --out run-kit-wheel
+python scripts/check_alignment.py --kit-wheel dist/os_optics_kit-0.2.0-py3-none-any.whl --out run-kit-wheel
 python scripts/check_alignment.py --optional all --out run-full           # include the optional checks
 python scripts/check_alignment.py --only spec-be-report --out run-flow    # one check and what it needs
 python scripts/check_alignment.py --skip cases-verify --out run-no-cases  # leave a check out

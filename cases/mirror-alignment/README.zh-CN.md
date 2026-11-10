@@ -28,4 +28,4 @@ python workflow.py --out wf
 
 参与比较的 122 个数值全部与精确矢量反射和小角度 2θ 定律一致。合成测量变体（`--synthetic-measurements`，数据行标记为
 SYNTHETIC）在五个面上拟合位置，把 1 mrad 的镜面倾斜还原为 1.997 ± 0.018 mrad 的指向（期望 2 mrad）。
-已用 os-optics 0.12.0 验证；运行状态 PASS。
+已用 os-optics 0.13.0 验证；运行状态 PASS。

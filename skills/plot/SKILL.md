@@ -1,9 +1,9 @@
 ---
 name: plot
 description: Draw standard PNG and SVG plots from saved results without simulating - sweep curves or two-parameter heatmaps with target bounds, the power distribution of a run, signed bar charts and histograms. Use it to show study or run results.
-version: 0.1.0
+version: 0.2.0
 command: os-optics-kit plot
-requires: os-optics>=0.12,<0.13; os-optics-kit[plot]
+requires: os-optics>=0.13,<0.14; os-optics-kit[plot]
 kind: tool
 ---
 
@@ -52,5 +52,5 @@ After a `sweep` into `study`: `os-optics-kit plot sweep study --y target:spot_ra
 
 ## Version
 
-0.1.0 (os-optics-kit 0.1.0), verified with os-optics 0.12.0, matplotlib 3.11 and catalog release
+0.2.0 (os-optics-kit 0.2.0), verified with os-optics 0.13.0, matplotlib 3.11 and catalog release
 2026-10-28.1.

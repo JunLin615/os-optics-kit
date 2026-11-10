@@ -16,8 +16,9 @@ What it provides:
 * ``check`` (``json_api.check_project``) and ``run_sample``: one in-process run into a sample directory, returned as
   a sample record whatever happens (an Engine refusal at load or at run is recorded, never raised);
 * selected-requirement shorthand: ERROR (no result), OUT_OF_MODEL (selected target applicability),
-  UNKNOWN (indeterminate), FAIL (unmet), PASS (all selected targets met), NOT_APPLICABLE (no selected requirements);
-  full execution, quantity states and target assessments are retained independently;
+  UNKNOWN (indeterminate, or a calculation that did not complete), FAIL (unmet), PASS (all selected targets met),
+  NOT_APPLICABLE (no selected requirements); full execution, quantity states and target assessments are retained
+  independently;
 * ``freshness`` delegates to the Engine's CURRENT / HISTORICAL / UNDETERMINED decision with its reasons;
 * sha256 / JSON / CSV writers (LF line endings) and bounded-output helpers.
 
@@ -385,6 +386,19 @@ def classify(status, model_scope_issues, targets, selected=None, out_of_model_is
     return "PASS" if all(value == "MET" for value in assessments) else "UNKNOWN"
 
 
+def requirement_outcome(status, execution, model_scope_issues, targets, selected=None, out_of_model_issues=()):
+    """``classify`` with the execution applied: a FAILED or CANCELLED calculation is ERROR, and a PARTIAL one (a
+    budget reached, e.g. RETURN_ANALYSIS_BUDGET) is never PASS or NOT_APPLICABLE but UNKNOWN, as the Engine's
+    aggregate status contract reports it; an unmet or out-of-model selected target keeps FAIL / OUT_OF_MODEL."""
+    state = (execution or {}).get("outcome")
+    if state in ("FAILED", "CANCELLED"):
+        return "ERROR"
+    outcome = classify(status, model_scope_issues, targets, selected, out_of_model_issues)
+    if state == "PARTIAL" and outcome in ("PASS", "NOT_APPLICABLE"):
+        return "UNKNOWN"
+    return outcome
+
+
 def target_value_is_exact(target):
     """Whether this target's numeric value can be used as an exact study operand.
 
@@ -496,11 +510,11 @@ def sample_from_summary(summary, selected=None):
                 seen.add(key)
                 out_of_model.append({"code": code, "status": "OUT_OF_MODEL_SCOPE", "location": key[1]})
     status = summary["status"]
+    execution = (summary.get("outcome") or {}).get("execution")
     return {
-        "outcome": "ERROR" if (summary.get("outcome") or {}).get("execution", {}).get("outcome") in ("FAILED", "CANCELLED")
-        else classify(status, scope, targets, selected, out_of_model),
+        "outcome": requirement_outcome(status, execution, scope, targets, selected, out_of_model),
         "status": status, "engine_status": summary.get("engine_status"),
-        "execution": (summary.get("outcome") or {}).get("execution"),
+        "execution": execution,
         "requirements": (summary.get("outcome") or {}).get("requirements"),
         "in_model_scope": not scope and not out_of_model and status != "OUT_OF_MODEL_SCOPE",
         "model_scope_issues": scope, "out_of_model_issues": out_of_model, "targets": targets,

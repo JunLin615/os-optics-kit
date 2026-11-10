@@ -1,9 +1,9 @@
 ---
 name: sensitivity
 description: Finite-difference sensitivity of selected targets to explicit design parameters, with two step sizes checked against each other and every sample saved; ranks parameters per target. Use it to find which positions, angles or values a target depends on most.
-version: 0.1.0
+version: 0.2.0
 command: os-optics-kit sensitivity
-requires: os-optics>=0.12,<0.13
+requires: os-optics>=0.13,<0.14
 kind: tool
 ---
 
@@ -63,4 +63,4 @@ os-optics-kit sensitivity sensitivity.json --out sens
 
 ## Version
 
-0.1.0 (os-optics-kit 0.1.0), verified with os-optics 0.12.0 and catalog release 2026-10-28.1.
+0.2.0 (os-optics-kit 0.2.0), verified with os-optics 0.13.0 and catalog release 2026-10-28.1.

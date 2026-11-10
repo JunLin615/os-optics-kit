@@ -112,13 +112,35 @@ class EngineControlsTests(unittest.TestCase):
             limited["targets"] = []
             record = wc.run_sample(limited, directory / "limited_free")
             self.assertEqual(record["execution"]["outcome"], "PARTIAL")
-            self.assertEqual((record["status"], record["outcome"]), ("UNKNOWN", "NOT_APPLICABLE"))
+            self.assertFalse(record["requirements"]["declared"])
+            # A calculation that did not complete is never NOT_APPLICABLE (exit 0), even without targets.
+            self.assertEqual((record["status"], record["outcome"]), ("UNKNOWN", "UNKNOWN"))
             from os_optics_kit import result_summary
             from tests.workflow_fixtures import invoke
             code, summary, error = invoke(result_summary.main, [record["run_dir"]])
-            self.assertEqual((code, error), (0, ""))
+            self.assertEqual((code, error), (2, ""))
             self.assertEqual(summary["outcome"]["execution"]["outcome"], "PARTIAL")
-            self.assertEqual(summary["requirement_outcome"], "NOT_APPLICABLE")
+            self.assertEqual(summary["requirement_outcome"], "UNKNOWN")
+
+    def test_partial_execution_is_never_pass(self):
+        met = [{"id": "t", "assessment": "MET", "status": "PASS"}]
+        unmet = [{"id": "t", "assessment": "UNMET", "status": "FAIL"}]
+        out = [{"id": "t", "assessment": "INDETERMINATE", "status": "OUT_OF_MODEL_SCOPE"}]
+        for execution, targets, expected in (
+            ({"outcome": "COMPLETED"}, met, "PASS"),
+            ({"outcome": "COMPLETED"}, [], "NOT_APPLICABLE"),
+            ({"outcome": "PARTIAL"}, met, "UNKNOWN"),
+            ({"outcome": "PARTIAL"}, [], "UNKNOWN"),
+            ({"outcome": "PARTIAL"}, unmet, "FAIL"),
+            ({"outcome": "PARTIAL"}, out, "OUT_OF_MODEL"),
+            ({"outcome": "FAILED"}, met, "ERROR"),
+            ({"outcome": "CANCELLED"}, met, "ERROR"),
+            (None, met, "PASS"),
+        ):
+            with self.subTest(execution=execution, targets=targets):
+                self.assertEqual(wc.requirement_outcome("UNKNOWN", execution, [], targets), expected)
+                self.assertEqual(wc.WORKFLOW_EXIT_CODES[expected], {"PASS": 0, "NOT_APPLICABLE": 0, "FAIL": 1,
+                                 "UNKNOWN": 2, "OUT_OF_MODEL": 3, "ERROR": 4}[expected])
 
     def test_objective_validity_and_requirement_feasibility_are_separate(self):
         rows = [

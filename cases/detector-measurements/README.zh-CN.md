@@ -32,4 +32,4 @@ os-optics-kit measurements data/detector_response.csv --x input_power_mW --signa
 
 两个通道在扫描期间都漂移了 7 %，二者之比保持不变。读数缺失或无效、或扣除暗读数后参考值非正的行被排除，并列在 `processed.csv` 中；
 两项分析因排除行而报告 WARNING，RMSE 目标为 PASS。`data/README.md` 给出数据的构造公式与来源说明。
-已用 os-optics 0.12.0 验证；运行状态 PASS。
+已用 os-optics 0.13.0 验证；运行状态 PASS。

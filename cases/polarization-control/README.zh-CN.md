@@ -29,4 +29,4 @@ python workflow.py --out wf
 | `hwp_angle_deg` | 0 … 67.5° | 1（22.5°） | 7 | 0 |
 | `wavelength_nm` | 1000 … 1100 | 3 | 0 | 2（1064 与 1100 nm，超出波片波段） |
 
-已用 os-optics 0.12.0 验证；运行状态 PASS。
+已用 os-optics 0.13.0 验证；运行状态 PASS。

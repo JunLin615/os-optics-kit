@@ -43,7 +43,7 @@ agent, are in [Contributing with an agent](docs/contributing-with-an-agent.md).
    python -m venv .venv
    . .venv/bin/activate            # Windows: .venv\Scripts\activate
    python -m pip install --upgrade pip
-   python -m pip install "os-optics[protected]==0.12.0" matplotlib
+   python -m pip install "os-optics[protected]==0.13.0" matplotlib
    python -m pip install --no-deps -e .
    python -m pip install --group dev
    ```

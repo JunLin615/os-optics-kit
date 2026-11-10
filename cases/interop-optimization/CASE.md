@@ -2,7 +2,7 @@
 name: interop-optimization
 title: External optimization and Sobol tolerance of a beam expander
 summary: SciPy and Optuna collimate a catalog-free Keplerian expander (ideal thin lenses f = 50 mm and 150 mm, 532 nm, 0.5 mm waist) by moving L2, with every design run by the engine; SALib Sobol indices then rank the mounting errors. An ABCD reference checks every value.
-engine: 0.12.0
+engine: 0.13.0
 catalog: none
 project: project.json
 tools: none
@@ -40,7 +40,7 @@ The strict requirement leaves no feasible design: outcome NO_FEASIBLE_RESULT, ex
 
 ## Baseline
 
-os-optics 0.12.0, no catalog: run status PASS (`expected.json`). The optimization was verified on Python 3.14.7 with
+os-optics 0.13.0, no catalog: run status PASS (`expected.json`). The optimization was verified on Python 3.14.7 with
 the pinned versions in `requirements-optimization.txt`. `os-optics-kit cases verify interop-optimization` repeats
 the engine run.
 

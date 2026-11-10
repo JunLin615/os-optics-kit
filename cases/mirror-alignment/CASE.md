@@ -2,7 +2,7 @@
 name: mirror-alignment
 title: Beam position and pointing after a fold mirror
 summary: A 633 nm beam folds 90 deg at a flat mirror onto planes 100 mm and 400 mm away; positions must stay within 0.1 mm and pointing within 0.5 mrad. The workflow studies mirror tilt and source offset against exact reflection geometry and the 2-theta law.
-engine: 0.12.0
+engine: 0.13.0
 catalog: none
 project: project.json
 tools: measurements, edit, sweep, compare, plot, report, sensitivity, tolerance
@@ -43,7 +43,7 @@ The tolerance study passes 64 of 100 seeded samples.
 
 ## Baseline
 
-os-optics 0.12.0, no catalog: run status PASS (`expected.json`).
+os-optics 0.13.0, no catalog: run status PASS (`expected.json`).
 `os-optics-kit cases verify mirror-alignment` repeats the run and compares it.
 
 ## Files

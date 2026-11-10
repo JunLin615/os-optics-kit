@@ -2,7 +2,7 @@
 name: polarization-control
 title: Polarization control with a half-wave plate and a polarizer
 summary: A linearly polarized 1030 nm beam passes a rotatable half-wave plate and a linear polarizer. At 22.5 deg the plate turns the polarization to 45 deg and 0.891 mW of 1 mW reaches the detector. The workflow studies plate angle and wavelength against Jones calculus and Malus' law.
-engine: 0.12.0
+engine: 0.13.0
 catalog: none
 project: project.json
 tools: edit, sweep, compare, plot, report, sensitivity, tolerance
@@ -43,7 +43,7 @@ wavelength gives 3 PASS, 6 FAIL and 9 out of model (every 1064 nm sample).
 
 ## Baseline
 
-os-optics 0.12.0, no catalog: run status PASS (`expected.json`).
+os-optics 0.13.0, no catalog: run status PASS (`expected.json`).
 `os-optics-kit cases verify polarization-control` repeats the run and compares it.
 
 ## Files

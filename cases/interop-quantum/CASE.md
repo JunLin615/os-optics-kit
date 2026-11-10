@@ -2,7 +2,7 @@
 name: interop-quantum
 title: Hong-Ou-Mandel interference from the linear optical network export
 summary: Two 780 nm sources meet on a native 50:50 plate splitter. The engine exports the layout as a linear optical network (modes, transfer matrix, path group delays); Perceval and Piquasso compute two-photon statistics from it and match a closed-form reference.
-engine: 0.12.0
+engine: 0.13.0
 catalog: none
 project: project.json
 tools: none
@@ -40,7 +40,7 @@ python run_quantum.py q --inputs quantum_inputs.json
 
 ## Baseline
 
-os-optics 0.12.0, no catalog: run status PASS (`expected.json`). The quantum side was verified on Python 3.14.7 with
+os-optics 0.13.0, no catalog: run status PASS (`expected.json`). The quantum side was verified on Python 3.14.7 with
 the pinned versions in `requirements-quantum.txt`.
 
 ## Files

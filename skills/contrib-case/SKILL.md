@@ -1,9 +1,9 @@
 ---
 name: contrib-case
 description: Turn a finished os-optics design into a PR-ready os-optics-kit case: engine-verified project.json, CASE.md, README with rendered images, expected outcome and a git patch. Use when the user wants to share a design as a case.
-version: 0.1.0
+version: 0.2.0
 command: os-optics-kit contrib case
-requires: os-optics>=0.12,<0.13
+requires: os-optics>=0.13,<0.14
 kind: contribution
 ---
 
@@ -63,4 +63,4 @@ os-optics-kit contrib case --refresh contrib-case-beam-expander-2x --open-pr
 
 ## Version
 
-0.1.0: first version (os-optics-kit 0.1.0).
+0.2.0 (os-optics-kit 0.2.0): for os-optics 0.13.

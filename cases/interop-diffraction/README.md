@@ -34,5 +34,5 @@ python external_focus.py diff
 The transmitted power is exact in every case. Without truncation the engine's focal peak matches the diffraction
 result; after a `GAUSSIAN_TRUNCATION` warning only the power is reliable and the focal irradiance comes from the
 external calculation. LightPipes converges to the Hankel-integral reference within 1e-3 on all three stops, prysm and
-POPPY reproduce its profile to 4e-7 and Diffractio its peak to 3e-5. Verified with os-optics 0.12.0 on Python 3.14.7
+POPPY reproduce its profile to 4e-7 and Diffractio its peak to 3e-5. Verified with os-optics 0.13.0 on Python 3.14.7
 and, for Diffractio, Python 3.12.14.

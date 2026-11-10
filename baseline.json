@@ -1,11 +1,11 @@
 {
   "schema": "os-optics-kit.baseline",
   "schema_version": 1,
-  "kit_version": "0.1.0",
+  "kit_version": "0.2.0",
   "engine": {
     "distribution": "os-optics",
-    "requirement": ">=0.12,<0.13",
-    "verified_version": "0.12.0"
+    "requirement": ">=0.13,<0.14",
+    "verified_version": "0.13.0"
   },
   "catalog": {
     "version": "2026-10-28.1",

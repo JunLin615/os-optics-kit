@@ -209,8 +209,8 @@ class CopyTests(unittest.TestCase):
         with patch.object(C._kit_engine, "engine_version", return_value=None):
             code, _out, err = call(["verify", CATALOG_FREE])
         self.assertEqual((code, json.loads(err)["error"]["code"]), (4, "ENGINE_NOT_INSTALLED"))
-        self.assertIn('os-optics>=0.12,<0.13', json.loads(err)["error"]["message"])
-        with patch.object(C._kit_engine, "engine_version", return_value="0.11.0"):
+        self.assertIn('os-optics>=0.13,<0.14', json.loads(err)["error"]["message"])
+        with patch.object(C._kit_engine, "engine_version", return_value="0.12.0"):
             code, _out, err = call(["verify", CATALOG_FREE])
         self.assertEqual((code, json.loads(err)["error"]["code"]), (4, "ENGINE_UNSUPPORTED"))
 

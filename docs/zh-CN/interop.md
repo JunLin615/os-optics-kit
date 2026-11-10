@@ -4,7 +4,7 @@
 
 OpenSci 计算光路、高斯光束、偏振、功率以及设计的线性光学网络。优化器、衍射程序、量子光学模拟器和电磁求解器在你自己的 Python 环境中运行，读取 OpenSci 导出的数据。下面四个案例都把外部结果与独立参考比较；各案例的 `CASE.md` 记录版本、命令和验证结果。
 
-这些案例已在 os-optics 0.12.0 上验证，下文数值比较即为这些验证运行的结果。它们用到带逐路径群延迟的线性光学网络、原生元件和 `TABULATED_THIN_LENS` 模型类型。运行引擎的脚本会检查已安装版本，引擎版本过旧时给出明确提示并停止；外部侧脚本只读取导出文件，不导入引擎。
+这些案例已在 os-optics 0.13.0 上验证，下文数值比较即为这些验证运行的结果。它们用到带逐路径群延迟的线性光学网络、原生元件和 `TABULATED_THIN_LENS` 模型类型。运行引擎的脚本会检查已安装版本，引擎版本过旧时给出明确提示并停止；外部侧脚本只读取导出文件，不导入引擎。
 
 | 专题 | OpenSci 提供 | 外部工具计算 | 案例 |
 | --- | --- | --- | --- |
@@ -28,7 +28,7 @@ python -m venv .venv
 .venv/bin/python -m pip install -r requirements-optimization.txt
 ```
 
-Windows 上使用 `.venv\Scripts\python`。依赖文件要求 `os-optics>=0.12,<0.13` 和 `os-optics-kit>=0.1,<0.2`，并固定第三方软件包的已验证版本；这些软件包都不是 `os-optics` 或 `os-optics-kit` 的依赖。
+Windows 上使用 `.venv\Scripts\python`。依赖文件要求 `os-optics>=0.13,<0.14` 和 `os-optics-kit>=0.2,<0.3`，并固定第三方软件包的已验证版本；这些软件包都不是 `os-optics` 或 `os-optics-kit` 的依赖。
 
 每个脚本在 stdout 输出一个 JSON 摘要。其中的 `outcome` 是 OpenSci 与外部工具或独立参考的比较结果，不是 OpenSci 运行状态：所有比较都在给定容差内时为 `WITHIN_TOLERANCE`（退出码 0），有比较超出容差时为 `OUT_OF_TOLERANCE`（退出码 1），只生成数据的步骤为 `COMPLETED`（退出码 0），出错时退出码为 4（stderr 上给出 JSON 错误）。OpenSci 自身的状态（`PASS`、`WARNING`、`OUT_OF_MODEL_SCOPE` 等）单独列在 `engine_status` 中。
 

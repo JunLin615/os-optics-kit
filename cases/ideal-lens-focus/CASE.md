@@ -2,7 +2,7 @@
 name: ideal-lens-focus
 title: Gaussian focus of an ideal thin lens
 summary: A 532 nm Gaussian beam with a 1 mm waist radius is focused by an ideal thin lens (f = 100 mm); the 1/e^2 radius in the back focal plane must stay below 50 um. Catalog-free: the lens is the engine's native ideal thin lens.
-engine: 0.12.0
+engine: 0.13.0
 catalog: none
 project: project.json
 tools: summary
@@ -38,7 +38,7 @@ The last command tightens the bound to 1 µm: status FAIL, exit code 1.
 
 ## Baseline
 
-os-optics 0.12.0, no catalog: run status PASS, every target MET (`expected.json`).
+os-optics 0.13.0, no catalog: run status PASS, every target MET (`expected.json`).
 `os-optics-kit cases verify ideal-lens-focus` repeats the run and compares it.
 
 ## Files

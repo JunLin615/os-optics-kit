@@ -29,4 +29,4 @@ The nominal design is aligned: every position and direction cosine is zero to ro
 
 All 122 compared values agree with exact vector reflection and the small-angle 2θ law. The synthetic-measurement
 variant (`--synthetic-measurements`, rows labelled SYNTHETIC) fits positions on five planes and recovers a 1 mrad
-mirror tilt as 1.997 ± 0.018 mrad of pointing (expected 2 mrad). Verified with os-optics 0.12.0; run status PASS.
+mirror tilt as 1.997 ± 0.018 mrad of pointing (expected 2 mrad). Verified with os-optics 0.13.0; run status PASS.

@@ -3,7 +3,7 @@ name: render
 description: Render reproducible 3D figures with camera angles, roll, element framing and a manifest.
 version: 0.1.0
 command: os-optics-kit render
-requires: os-optics>=0.12,<0.13
+requires: os-optics>=0.13,<0.14
 kind: tool
 ---
 
@@ -67,10 +67,10 @@ os-optics-kit render RUN --out closeup --camera 55,22,45 --focus element:LENS --
 
 ## Limits
 
-Uses the os-optics 0.12 viewer's camera hook. An unavailable hook reports `PAGE_UNEXPECTED`;
+Uses the os-optics viewer's camera hook. An unavailable hook reports `PAGE_UNEXPECTED`;
 a failed camera application reports `CAMERA_APPLY_FAILED`. Failed captures have no PNG recorded.
 With `--overwrite`, an old PNG remains untouched if its replacement capture fails; check `shots.json`.
 
 ## Version
 
-0.1.0 (os-optics-kit 0.1.0): first version.
+0.1.0 (os-optics-kit 0.2.0): first version, verified with os-optics 0.13.0.

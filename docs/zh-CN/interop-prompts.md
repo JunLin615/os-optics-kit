@@ -2,14 +2,14 @@
 
 [外部工具指南](interop.md) · [English](../en/interop-prompts.md) · 简体中文
 
-以下模板供人阅读和改写：复制一个模板到你自己的编程 Agent，替换尖括号中的内容。实际交给 Agent 时可以使用中文，也可以使用[英文版](../en/interop-prompts.md)。每个模板都要求 Agent 在你的环境中、用你已安装的工具完成计算，并把 OpenSci 结果与外部结果分开报告。对应的案例（`interop-optimization`、`interop-diffraction`、`interop-quantum`、`interop-metasurface`）在 os-optics 0.12 和 os-optics-kit 0.1 上运行。
+以下模板供人阅读和改写：复制一个模板到你自己的编程 Agent，替换尖括号中的内容。实际交给 Agent 时可以使用中文，也可以使用[英文版](../en/interop-prompts.md)。每个模板都要求 Agent 在你的环境中、用你已安装的工具完成计算，并把 OpenSci 结果与外部结果分开报告。对应的案例（`interop-optimization`、`interop-diffraction`、`interop-quantum`、`interop-metasurface`）在 os-optics 0.13 和 os-optics-kit 0.2 上运行。
 
 模板只涉及仿真和分析。
 
 ## 优化与容差（SciPy、Optuna、SALib）
 
 ```text
-在当前 Python 环境中，将 OS Optics 0.12 和 os-optics-kit 与 SciPy、Optuna 或 SALib 联用。
+在当前 Python 环境中，将 OS Optics 0.13 和 os-optics-kit 与 SciPy、Optuna 或 SALib 联用。
 我的设计：<Project 文件或描述>。目标：<指标，例如 output 平面的输出发散半角，单位 rad>；
 变量：<元件 id 和字段，以及范围和单位>；需要分析的容差：<字段及 ± 范围>。
 
@@ -30,7 +30,7 @@
 ## 衍射与成像（prysm、POPPY、LightPipes 或 Diffractio）
 
 ```text
-在我的环境中，将 OS Optics 0.12 和 os-optics-kit 与 <prysm / POPPY / LightPipes / Diffractio> 联用。
+在我的环境中，将 OS Optics 0.13 和 os-optics-kit 与 <prysm / POPPY / LightPipes / Diffractio> 联用。
 光路：<Project 文件或描述：光源、光阑或孔径、透镜、观察面>。
 问题：<例如焦面峰值辐照度，以及 50 um 半径内的环围功率>。
 
@@ -50,7 +50,7 @@
 ## 量子光子学（Perceval，Piquasso 作交叉校验）
 
 ```text
-在我的环境中，将 OS Optics 0.12 和 os-optics-kit 与 Perceval 联用；若已安装 Piquasso，
+在我的环境中，将 OS Optics 0.13 和 os-optics-kit 与 Perceval 联用；若已安装 Piquasso，
 用它做独立交叉校验。光路：<Project 文件或描述>。量子输入：每个光源的光子数 <...>、偏振模式 <H/V>、
 波包 <形状、均方根时长、零延迟不可区分度>、探测器 <类型、效率、暗计数概率、对应的观察面>。
 
@@ -70,7 +70,7 @@
 ## 超表面响应转为虚拟聚焦元件（grcwa、meent、DFlat 或 metabox）
 
 ```text
-在我的环境中，将 OS Optics 0.12 和 os-optics-kit 与 <grcwa / meent / DFlat / metabox> 联用，
+在我的环境中，将 OS Optics 0.13 和 os-optics-kit 与 <grcwa / meent / DFlat / metabox> 联用，
 把超表面透镜的响应转为 OpenSci 的 TABULATED_THIN_LENS 模型并用于我的光路。
 超表面：<材料、晶格、柱体族、设计波长、焦距、口径>。使用范围：<波长、入射光束尺寸、视场角、偏振>。
 

@@ -2,7 +2,7 @@
 name: detector-measurements
 title: Detector linearity and reference-channel normalization
 summary: A 1 mW, 532 nm beam is split 50:50 onto a signal and a reference detector, each with a 2.5 mm radius active area. Two synthetic data sets with known answers calibrate the signal detector's linearity and normalize slow source drift by the reference channel.
-engine: 0.12.0
+engine: 0.13.0
 catalog: none
 project: project.json
 tools: measurements
@@ -46,7 +46,7 @@ os-optics-kit measurements data/reference_drift.csv --x time_s --signal signal_V
 
 ## Baseline
 
-os-optics 0.12.0, no catalog: run status PASS (`expected.json`).
+os-optics 0.13.0, no catalog: run status PASS (`expected.json`).
 `os-optics-kit cases verify detector-measurements` repeats the run and compares it.
 
 ## Files

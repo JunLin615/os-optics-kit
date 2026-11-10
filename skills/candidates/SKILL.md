@@ -1,9 +1,9 @@
 ---
 name: candidates
 description: Bounded table of public catalog products that pass explicit filters (category, form, wavelength, readiness, numeric ranges with units), sorted by closeness to a value or by a field. Use it to pick catalog parts for a requirement.
-version: 0.1.0
+version: 0.2.0
 command: os-optics-kit candidates
-requires: os-optics>=0.12,<0.13
+requires: os-optics>=0.13,<0.14
 kind: tool
 ---
 
@@ -49,4 +49,4 @@ os-optics-kit candidates --category LENS --form PLANO_CONVEX_LENS --wavelength-n
 
 ## Version
 
-0.1.0 (os-optics-kit 0.1.0), verified with os-optics 0.12.0 and catalog release 2026-10-28.1.
+0.2.0 (os-optics-kit 0.2.0), verified with os-optics 0.13.0 and catalog release 2026-10-28.1.

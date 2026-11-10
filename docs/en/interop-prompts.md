@@ -6,14 +6,14 @@ Copy one template into your own coding agent and replace the parts in angle
 brackets. Each template asks the agent to work in your environment, with your
 installed tools, and to keep OpenSci results and external results apart. The matching
 cases (`interop-optimization`, `interop-diffraction`, `interop-quantum`,
-`interop-metasurface`) run on os-optics 0.12 with os-optics-kit 0.1.
+`interop-metasurface`) run on os-optics 0.13 with os-optics-kit 0.2.
 
 The templates cover simulation and analysis only.
 
 ## Optimization and tolerance (SciPy, Optuna, SALib)
 
 ```text
-Use OS Optics 0.12 and os-optics-kit with SciPy, Optuna or SALib in this Python
+Use OS Optics 0.13 and os-optics-kit with SciPy, Optuna or SALib in this Python
 environment. My design: <Project file or description>. Goal: <metric, e.g. output divergence
 half-angle in rad at plane "output">; variables: <component ids and fields, with ranges and units>;
 tolerances to study: <fields and +/- ranges>.
@@ -41,7 +41,7 @@ tolerances to study: <fields and +/- ranges>.
 ## Diffraction and imaging (prysm, POPPY, LightPipes or Diffractio)
 
 ```text
-Use OS Optics 0.12 and os-optics-kit with <prysm / POPPY / LightPipes / Diffractio> in
+Use OS Optics 0.13 and os-optics-kit with <prysm / POPPY / LightPipes / Diffractio> in
 my environment. Layout: <Project file or description: source, stop or aperture, lens, observation
 planes>. Question: <e.g. focal-plane peak irradiance and encircled power within 50 um>.
 
@@ -69,7 +69,7 @@ planes>. Question: <e.g. focal-plane peak irradiance and encircled power within 
 ## Quantum photonics (Perceval, with Piquasso as cross-check)
 
 ```text
-Use OS Optics 0.12 and os-optics-kit with Perceval in my environment, and Piquasso as an
+Use OS Optics 0.13 and os-optics-kit with Perceval in my environment, and Piquasso as an
 independent cross-check if it is installed. Layout: <Project file or description>. Quantum inputs:
 photons per source <...>, polarization mode <H/V>, wavepacket <shape, rms duration, zero-delay
 indistinguishability>, detectors <type, efficiency, dark-count probability, which planes>.
@@ -98,7 +98,7 @@ indistinguishability>, detectors <type, efficiency, dark-count probability, whic
 ## Metasurface response to a virtual focusing component (grcwa, meent, DFlat or metabox)
 
 ```text
-Use OS Optics 0.12 and os-optics-kit with <grcwa / meent / DFlat / metabox> in my
+Use OS Optics 0.13 and os-optics-kit with <grcwa / meent / DFlat / metabox> in my
 environment to turn a metasurface lens response into an OpenSci TABULATED_THIN_LENS model and use it
 in my layout. Metasurface: <materials, lattice, pillar family, design wavelength, focal length,
 diameter>. Use range: <wavelengths, input beam size, field angles, polarization>.

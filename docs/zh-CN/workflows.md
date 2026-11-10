@@ -13,7 +13,7 @@
 python -m pip install "os-optics[protected]" "os-optics-kit[plot]"
 ```
 
-os-optics-kit 0.1.x 与 os-optics 0.12 配合使用；下文数值来自 os-optics 0.12.0，涉及目录元件的设计采用
+os-optics-kit 0.2.x 与 os-optics 0.13 配合使用；下文数值来自 os-optics 0.13.0，涉及目录元件的设计采用
 目录版本 `2026-10-28.1`。每一节先用 `os-optics-kit cases copy NAME --dest .` 复制一个案例，再在案例
 目录中运行命令。第 1–3 节使用目录元件，需要 `os-optics catalog sync`；第 4、5 节使用无需目录的理想
 元件。每次新运行仍应读取其实际标识与目标判定：引擎或目录改变时，目录内容和结果标识可能不同。

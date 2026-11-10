@@ -31,5 +31,5 @@ python external_focus.py diff
 
 各情形下的透过功率都是精确的。无截断时引擎的焦点峰值与衍射结果一致；出现 `GAUSSIAN_TRUNCATION` 警告后只有功率可靠，
 焦面辐照度由外部计算给出。LightPipes 在三个光阑上都收敛到 Hankel 积分参考值的 1e-3 以内，prysm 与 POPPY 以 4e-7
-复现其轮廓，Diffractio 以 3e-5 复现峰值。已在 Python 3.14.7 上用 os-optics 0.12.0 验证，Diffractio 部分在
+复现其轮廓，Diffractio 以 3e-5 复现峰值。已在 Python 3.14.7 上用 os-optics 0.13.0 验证，Diffractio 部分在
 Python 3.12.14 上验证。

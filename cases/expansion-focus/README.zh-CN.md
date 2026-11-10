@@ -34,4 +34,4 @@ python workflow.py --out wf
 | `waist_radius_mm` | 0.25 … 4 | 3 | 1 | 1（严重截断） |
 
 `studies/` 另含灵敏度研究、波段边缘灵敏度研究、带种子的公差研究（100 个样本中 92 个通过）以及两个计算预算编辑。
-已用 os-optics 0.12.0 验证；运行状态 PASS。
+已用 os-optics 0.13.0 验证；运行状态 PASS。

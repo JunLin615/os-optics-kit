@@ -3,8 +3,9 @@
 Usage: os-optics-kit summary RUN_DIR [--details]   (or: python -m os_optics_kit summary RUN_DIR)
 
 Exit codes follow requirement_outcome: 0 all selected targets met or none declared,
-1 an unmet target, 2 indeterminate, 3 selected target outside its model, 4 invalid
-input/artifact or failed computation. Raw aggregate status is preserved separately.
+1 an unmet target, 2 indeterminate or a calculation that did not complete (PARTIAL),
+3 selected target outside its model, 4 invalid input/artifact or failed computation.
+Raw aggregate status is preserved separately.
 """
 
 from __future__ import annotations
@@ -95,12 +96,10 @@ def summarize_results(results, *, artifacts=None, details=False):
         if "power_upper_bound_W" in quantity:
             row["power_upper_bound_W"] = quantity["power_upper_bound_W"]
         targets.append(row)
-    from .workflow_common import classify
+    from .workflow_common import requirement_outcome as settle
 
-    requirement_outcome = classify(status, compact["model_scope_issues"], targets)
     execution = (compact.get("outcome") or {}).get("execution") or {}
-    if execution.get("outcome") in ("FAILED", "CANCELLED"):
-        requirement_outcome = "ERROR"
+    requirement_outcome = settle(status, execution, compact["model_scope_issues"], targets)
     power = results.power_budget()
     summary = {
         "status": status,

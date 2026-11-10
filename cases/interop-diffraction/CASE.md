@@ -2,7 +2,7 @@
 name: interop-diffraction
 title: Diffraction at a declared stop, handed off to external codes
 summary: A 532 nm TEM00 beam (1 mm waist, 1 mW) passes a 1.2 mm radius stop and an ideal f = 200 mm lens. The engine's transverse-plane handoff feeds LightPipes, prysm, POPPY and Diffractio, which compute the diffracted focus the paraxial Gaussian result cannot give after truncation.
-engine: 0.12.0
+engine: 0.13.0
 catalog: none
 project: project.json
 tools: none
@@ -47,7 +47,7 @@ Diffractio needs numpy < 2: install `requirements-diffractio.txt` in a second en
 
 ## Baseline
 
-os-optics 0.12.0, no catalog: run status WARNING (`expected.json`). External side verified on Python 3.14.7
+os-optics 0.13.0, no catalog: run status WARNING (`expected.json`). External side verified on Python 3.14.7
 (LightPipes, prysm, POPPY) and 3.12.14 (Diffractio) with the pinned requirements.
 
 ## Files
