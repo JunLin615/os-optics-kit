@@ -191,7 +191,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          # One report per job; identical observations share one marker and one issue.
+          # One report per matrix job; identical observations share one marker and one issue.
           shopt -s nullglob
           reports=(reports/alignment-*/report.json)
           if [[ ${#reports[@]} -eq 0 ]]; then

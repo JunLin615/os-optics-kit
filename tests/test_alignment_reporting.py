@@ -261,6 +261,46 @@ class AlignmentReportingTests(unittest.TestCase):
         failed["checks"][0]["error"] = "Exception\n```\nMore diagnostic text"
         self.assertIn("````text\nException\n```\nMore diagnostic text\n````", render_summary(failed))
 
+    def test_publish_failure_does_not_skip_later_markers(self):
+        class FailingFirstCreate(FakeHTTP):
+            def __init__(self):
+                super().__init__(stale_reads=True)
+                self.failed_once = False
+
+            def __call__(self, req, timeout):
+                if req.get_method() == "POST" and not self.failed_once:
+                    self.failed_once = True
+                    self.calls.append(req)
+                    raise error.HTTPError("https://api.github.com", 503, "Unavailable", None, None)
+                return super().__call__(req, timeout)
+
+        with tempfile.TemporaryDirectory() as directory:
+            paths = []
+            for name in ("first", "second"):
+                observation = report("0.7.0", failed=True)
+                observation["checks"][0]["name"] = name
+                source = Path(directory) / (name + ".json")
+                source.write_text(json.dumps(observation), encoding="utf-8")
+                paths.append(str(source))
+            summary = Path(directory) / "summary.md"
+            http = FailingFirstCreate()
+            with patch.dict("os.environ", {"GH_TOKEN": "fake-token"}), \
+                    patch("scripts.report_alignment.request.urlopen", side_effect=http), \
+                    redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+                result = main(paths + ["--summary", str(summary), "--publish",
+                                       "--repository", "example/engine"])
+            self.assertEqual(result, 1)
+            self.assertEqual(len(http.issues), 1)
+            self.assertEqual([request.get_method() for request in http.calls],
+                             ["GET", "POST", "GET", "POST"])
+
+    def test_scheduled_workflow_publishes_all_reports_in_one_invocation(self):
+        workflow = (Path(__file__).resolve().parent.parent / ".github" / "workflows" /
+                    "scheduled.yml").read_text(encoding="utf-8")
+        self.assertEqual(workflow.count("--publish"), 1)
+        self.assertIn('report_alignment.py "${reports[@]}"', workflow)
+        self.assertNotIn('report_alignment.py "$report"', workflow)
+
     def test_cli_appends_summary_without_network_by_default(self):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "report.json"

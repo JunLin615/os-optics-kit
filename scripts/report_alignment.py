@@ -330,13 +330,17 @@ def main(argv=None):
             try:
                 github = GitHubIssues(args.repository, token, os.environ.get(
                     "GITHUB_API_URL", "https://api.github.com"))
-                known = {}
-                for report in publishable:
-                    print(json.dumps(publish_report(report, github, args.run_url,
-                                                    args.artifact_url, known)))
             except (OSError, ValueError, KeyError, TypeError) as exc:
                 print("Could not publish alignment report: " + str(exc), file=sys.stderr)
                 return 1
+            known = {}
+            for report in publishable:
+                try:
+                    print(json.dumps(publish_report(report, github, args.run_url,
+                                                    args.artifact_url, known)))
+                except (OSError, ValueError, KeyError, TypeError) as exc:
+                    print("Could not publish alignment report: " + str(exc), file=sys.stderr)
+                    status = 1
     return status
 
 
