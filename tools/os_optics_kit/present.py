@@ -33,7 +33,9 @@ data, provenance and redraw settings with an offline gallery into a directory or
 
 Needs matplotlib (os-optics-kit[plot]); views and animations need Chrome/Chromium and os-optics-kit[render];
 MP4 needs os-optics-kit[media]. Stdout: one compact JSON document; progress lines on stderr.
-Exit codes: 0 done, 2 some assets have missing inputs (INCOMPLETE), 4 refused input or missing dependency.
+Exit codes: 0 done; 2 INCOMPLETE: some assets were not built (a missing source, target or panel, or a missing
+font, browser or media extra), each named in missing[] with a recovery step; 4 refused specification, setting or
+output directory.
 """
 
 from __future__ import annotations
@@ -58,7 +60,7 @@ VIEW_MARGIN = 0.08
 # --------------------------------------------------------------------------------------------- build context
 
 class BuildContext:
-    """What an asset handler may use (SPEC: handler contract)."""
+    """What an asset handler may use: the specification, theme, sources, its output folder, cache and progress."""
 
     def __init__(self, spec, spec_dir, out_dir, *, browser=None, quiet=False):
         self.spec = spec
@@ -329,7 +331,8 @@ def build_plot_sweep(asset, ctx, theme, out):
     for kind in ("svg", "pdf"):
         if kind in result["out"]:
             files[kind] = Path(result["out"][kind])
-    details = {"y": result["y"], "x": result.get("x"), "points": result["points"], "by_outcome": result["by_outcome"],
+    details = {"y": result.get("y"), "x": result.get("x"), "points": result["points"],
+               "by_outcome": result.get("by_outcome"),
                "without_value": result["without_value"], "bounds": result["bounds"], "unit": unit}
     return {"files": files, "data_files": [data_file], "title": title, "caption": caption, "sources": [source.id],
             "details": details}
@@ -474,11 +477,18 @@ def build_asset(asset, ctx, previous):
                 recovery=f"add or fix asset {asset_id!r}, or remove it from {asset['id']}", asset=asset_id))
     entry: dict[str, Any] = {"id": asset["id"], "kind": asset["kind"]}
     if problems:
+        if pres.asset_dir(ctx.out_dir, asset["id"]).is_dir():  # no file of an earlier build stays behind
+            _clear_previous(pres.asset_dir(ctx.out_dir, asset["id"]), asset, ctx)
+        (ctx.out_dir / pres.PREVIEWS_DIR / f"{asset['id']}.png").unlink(missing_ok=True)
         return {**entry, "status": "missing_input", "title": pres.localized(asset.get("title"), theme.language, ""),
                 "caption": pres.localized(asset.get("caption"), theme.language, ""), "files": {},
                 "sources": source_ids, "depends_on": asset_ids, "error": problems[0].as_dict()}
+    # source labels and the set of sources decide titles and captions; a replayed sequence decides the frames
+    replayed = [wc.sha256_file(ctx.spec_dir / asset[key]) for key in ("sequence",)
+                if isinstance(asset.get(key), str) and (ctx.spec_dir / asset[key]).is_file()]
     fingerprint = pres.fingerprint(asset, theme.summary(), theme.labels, identities,
-                                   [ctx.built(a)["fingerprint"] for a in asset_ids])
+                                   [ctx.built(a)["fingerprint"] for a in asset_ids],
+                                   ctx.spec.get("sources"), replayed)
     if _reusable(previous, fingerprint, ctx.out_dir):
         reused = {**previous, "status": "reused"}
         reused["_abs"] = {role: ctx.out_dir / record["path"] for role, record in previous["files"].items()}
@@ -625,6 +635,8 @@ def build(spec_path, *, settings=(), only=None, out_dir=None, gallery=True, brow
         if wanted is not None and asset["id"] not in wanted:
             if asset["id"] in previous:
                 entry = {**previous[asset["id"]]}
+                if entry.get("status") == "written":
+                    entry["status"] = "reused"  # carried over from the previous build, not drawn now
                 entry["_abs"] = {role: out_dir / record["path"] for role, record in entry.get("files", {}).items()}
             else:
                 entry = {"id": asset["id"], "kind": asset["kind"], "status": "pending", "files": {}}
@@ -661,18 +673,22 @@ def build(spec_path, *, settings=(), only=None, out_dir=None, gallery=True, brow
 
 
 def _remove_stale(out_dir, previous, entries):
-    """Delete the files of assets that the previous build wrote and this build no longer has."""
+    """Delete the files of assets that the previous build wrote and this build no longer has. Only files inside
+    that asset's own folder and its preview are deleted, whatever the previous assets.json lists."""
+    out_dir = Path(out_dir).resolve()
     for asset_id, entry in previous.items():
-        if asset_id in entries:
+        if asset_id in entries or not isinstance(asset_id, str) or not pres.ASSET_ID.fullmatch(asset_id):
             continue
-        for record in [*entry.get("files", {}).values()]:
-            (Path(out_dir) / record["path"]).unlink(missing_ok=True)
-        for key in ("preview", "provenance"):
-            if entry.get(key):
-                (Path(out_dir) / entry[key]).unlink(missing_ok=True)
-        for path in (entry.get("caption_files") or {}).values():
-            (Path(out_dir) / path).unlink(missing_ok=True)
         folder = pres.asset_dir(out_dir, asset_id)
+        preview = out_dir / pres.PREVIEWS_DIR / f"{asset_id}.png"
+        listed = [*(r.get("path") for r in (entry.get("files") or {}).values() if isinstance(r, dict)),
+                  entry.get("preview"), entry.get("provenance"), *(entry.get("caption_files") or {}).values()]
+        for relative in listed:
+            if not isinstance(relative, str):
+                continue
+            path = (out_dir / relative).resolve()
+            if path == preview or path.parent == folder.resolve():
+                path.unlink(missing_ok=True)
         if folder.is_dir() and not any(folder.iterdir()):
             folder.rmdir()
 
@@ -692,10 +708,15 @@ def compact_entry(entry):
 # --------------------------------------------------------------------------------------------- init
 
 def _source_id(path, taken):
-    base = "".join(c if c.isalnum() or c in "_-" else "-" for c in Path(path).resolve().name.lower()).strip("-_")
+    """Source id from the folder name (a folder named "run" takes its parent's name): lower-case ASCII letters,
+    digits, '-' and '_'; a name without any of them (e.g. a Chinese folder name) becomes source, source-2, ..."""
+    def ascii_id(name):
+        return "".join(c if (c.isascii() and c.isalnum()) or c in "_-" else "-" for c in name.lower()).strip("-_")
+
+    base = ascii_id(Path(path).resolve().name)
     if base == "run":  # samples/<id>/run or <name>/run
-        base = "".join(c if c.isalnum() or c in "_-" else "-" for c in Path(path).resolve().parent.name.lower())
-    base = (base or "source")[:48]
+        base = ascii_id(Path(path).resolve().parent.name)
+    base = (base or "source")[:48].strip("-_") or "source"
     candidate, n = base, 2
     while candidate in taken:
         candidate, n = f"{base}-{n}", n + 1
@@ -741,8 +762,12 @@ def init(paths, out_dir, *, labels=None, title=None, theme=None, settings=(), an
             raise pres.PresentationError("OUTPUT_INVALID", f"{Path(path).name} is on another drive than --out",
                                          recovery="choose an output directory on the same drive")
         entry: dict[str, Any] = {"path": relative}
+        folder = Path(path).resolve()
+        name = folder.parent.name if folder.name.lower() == "run" else folder.name
         if labels:
             entry["label"] = labels[index]
+        elif name.lower() != source_id:  # e.g. a Chinese folder name: the id is ASCII, the label keeps the name
+            entry["label"] = name
         spec["sources"][source_id] = entry
         (runs if kind == "run" else studies).append((source_id, Path(path)))
     assets = spec["assets"]

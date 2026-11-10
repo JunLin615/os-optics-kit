@@ -408,8 +408,15 @@ def draw_heatmap(fig, ax, rows, parameters, y, unit, bounds, style, *, color_lim
     style.legend(ax, fontsize=style.fs(6.5), loc="upper left", bbox_to_anchor=(0.0, -0.14), ncol=3, frameon=False)
     if style.legacy:
         fig.subplots_adjust(bottom=0.3)
+    counts = {outcome: sum(1 for r in rows if r["outcome"] == outcome) for outcome in STATUS_STYLE}
     return {"points": len(rows), "with_value": int(np.isfinite(grid).sum()),
-            "without_value": len(rows) - int(np.isfinite(grid).sum()), "bound_lines": drawn}
+            "without_value": len(rows) - int(np.isfinite(grid).sum()), "bound_lines": drawn,
+            "by_outcome": {k: v for k, v in counts.items() if v},
+            "x": {"column": f"param:{px['name']}", "unit": px["unit"] if style.legacy
+                  else style.theme.display_unit(px["unit"])},
+            "y": {"column": y, "unit": unit if style.legacy else style.theme.display_unit(unit)},
+            "second": {"column": f"param:{py['name']}", "unit": py["unit"] if style.legacy
+                       else style.theme.display_unit(py["unit"])}}
 
 
 def plot_bars(labels, values, unit, out_dir, name, *, title, ylabel=None, source=None, engine_build=None,

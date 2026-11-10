@@ -332,6 +332,45 @@ class BuildTests(unittest.TestCase):
         self.assertFalse((out / "assets" / removed["id"]).exists())
         self.assertFalse((out / "previews" / f"{removed['id']}.png").exists())
 
+    def test_two_parameter_study_label_change_crafted_index_and_chinese_folder(self):
+        from os_optics_kit import sweep_parameters as sp
+        from os_optics_kit import workflow_common as wc
+
+        project = wc.read_json(ROOT / "cases" / "ideal-lens-focus" / "project.json")
+        observation = project["observations"][0]["observation_id"]
+        spec = {"parameters": [
+            {"name": "plane_x", "unit": "mm", "values": [109.0, 111.0], "ops": [
+                {"op": "set_observation_pose", "observation_id": observation, "position_mm": ["$value", 0.0, 20.0]}]},
+            {"name": "power", "unit": "W", "values": [0.001, 0.002], "ops": [
+                {"op": "set_source_model", "instance_id": "SRC", "changes": {"power_w": "$value"}}]}],
+            "max_evaluations": 5}
+        study = self.root / "光学方案"  # a Chinese folder name
+        sp.run_sweep(spec, study, base=project)
+        out = self.root / "heatmap"
+        code, plan, err = call(["init", str(study), str(self.runs["nominal"]), "--out", str(out)])
+        self.assertEqual(code, 0, err)
+        saved = wc.read_json(out / "presentation.json")
+        self.assertEqual(saved["sources"]["source"]["label"], "光学方案")
+        saved["assets"] = [a for a in saved["assets"] if a["kind"] == "plot" and a["type"] in ("sweep", "power")]
+        pres.save_spec(saved, out / "presentation.json")
+        code, result, err = call(["build", str(out / "presentation.json"), "--no-gallery", "--quiet"])
+        self.assertEqual(code, 0, err)  # a two-parameter study gives a heatmap
+        heatmap = next(e for e in wc.read_json(out / "assets.json")["assets"] if e["id"].startswith("sweep-"))
+        self.assertEqual(heatmap["details"]["x"]["column"], "param:plane_x")
+        # a changed source label redraws the assets that show it
+        code, result, err = call(["build", str(out / "presentation.json"), "--no-gallery", "--quiet",
+                                  "--set", "sources.nominal.label=Adjusted"])
+        self.assertEqual(result["counts"]["reused"], 0, result)
+        # a crafted asset index never makes a build delete files outside an asset's own folder
+        victim = self.root / "keep-me.txt"
+        victim.write_text("user file", encoding="utf-8")
+        manifest = wc.read_json(out / "assets.json")
+        manifest["assets"].append({"id": "gone", "kind": "plot", "status": "written", "preview": "../keep-me.txt",
+                                   "files": {"image": {"path": "../keep-me.txt", "sha256": "0", "bytes": 1}}})
+        wc.write_json(out / "assets.json", manifest)
+        call(["build", str(out / "presentation.json"), "--no-gallery", "--quiet"])
+        self.assertTrue(victim.is_file())
+
     def test_output_inside_a_source_is_refused(self):
         out = self.root / "inside"
         self.plot_spec(out)
