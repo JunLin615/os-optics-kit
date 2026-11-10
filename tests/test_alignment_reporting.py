@@ -45,8 +45,11 @@ def report(version="0.6.1", failed=False):
 class FakeHTTP:
     """A stateful issue endpoint; every test stays offline, including POSTs."""
 
-    def __init__(self, issues=None):
+    def __init__(self, issues=None, stale_reads=False):
         self.issues = list(issues or [])
+        # A stale listing serves the pre-run snapshot, as GitHub's cached issue list does.
+        self.snapshot = list(self.issues)
+        self.stale_reads = stale_reads
         self.calls = []
 
     def __call__(self, req, timeout):
@@ -65,7 +68,8 @@ class FakeHTTP:
             assert params["state"] == ["all"]
             assert params["per_page"] == ["100"]
             start = (int(params["page"][0]) - 1) * 100
-            result = self.issues[start:start + 100]
+            source = self.snapshot if self.stale_reads else self.issues
+            result = source[start:start + 100]
         return io.BytesIO(json.dumps(result).encode("utf-8"))
 
     def client(self):
@@ -112,6 +116,45 @@ class AlignmentReportingTests(unittest.TestCase):
         self.assertEqual(repeated, {"action": "existing", "url": first["url"]})
         self.assertEqual([req.get_method() for req in http.calls], ["GET", "POST", "GET", "GET"])
         self.assertEqual(http.issues[0]["state"], "closed")
+
+    def test_one_invocation_creates_one_issue_per_marker_with_a_stale_listing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            paths = []
+            for index in range(5):
+                source = Path(directory) / ("report-" + str(index) + ".json")
+                source.write_text(json.dumps(report("0.7.0", failed=True)), encoding="utf-8")
+                paths.append(str(source))
+            summary = Path(directory) / "summary.md"
+            http = FakeHTTP(stale_reads=True)
+            with patch.dict("os.environ", {"GH_TOKEN": "fake-token"}), \
+                    patch("scripts.report_alignment.request.urlopen", side_effect=http), \
+                    redirect_stdout(io.StringIO()):
+                result = main(paths + ["--summary", str(summary), "--publish",
+                                       "--repository", "example/engine"])
+            self.assertEqual(result, 0)
+            self.assertEqual(len(http.issues), 1)
+            self.assertEqual([request.get_method() for request in http.calls], ["GET", "POST"])
+            self.assertEqual(summary.read_text(encoding="utf-8").count("## Engine alignment"), 5)
+
+    def test_one_invocation_still_reports_distinct_markers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            paths = []
+            for name in ("first", "second"):
+                observation = report("0.7.0", failed=True)
+                observation["checks"][0]["name"] = name
+                for index in range(2):
+                    source = Path(directory) / (name + "-" + str(index) + ".json")
+                    source.write_text(json.dumps(observation), encoding="utf-8")
+                    paths.append(str(source))
+            summary = Path(directory) / "summary.md"
+            http = FakeHTTP(stale_reads=True)
+            with patch.dict("os.environ", {"GH_TOKEN": "fake-token"}), \
+                    patch("scripts.report_alignment.request.urlopen", side_effect=http), \
+                    redirect_stdout(io.StringIO()):
+                result = main(paths + ["--summary", str(summary), "--publish",
+                                       "--repository", "example/engine"])
+            self.assertEqual(result, 0)
+            self.assertEqual(len(http.issues), 2)
 
     def test_new_failure_on_same_version_is_reported_once(self):
         http = FakeHTTP()
