@@ -1,0 +1,3 @@
+os-optics[protected]==0.13.0
+numpy==2.5.4
+matplotlib==3.11.2

@@ -86,7 +86,8 @@ class IndexTests(unittest.TestCase):
         self.assertNotIn("\n", out.strip(), "compact JSON")
         code, out, _err = call(["list", "--tag", "interop"])
         self.assertEqual(sorted(c["name"] for c in json.loads(out)["cases"]),
-                         ["interop-diffraction", "interop-metasurface", "interop-optimization", "interop-quantum"])
+                         ["interop-diffraction", "interop-metasurface", "interop-optimization", "interop-quantum",
+                          "phase-only-flat-top"])
         code, out, _err = call(["show", CATALOG_FREE])
         self.assertEqual((code, out), (0, (CASES / CATALOG_FREE / "CASE.md").read_text(encoding="utf-8")))
         code, _out, err = call(["show", "no-such-case"])

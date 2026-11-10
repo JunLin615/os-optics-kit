@@ -67,6 +67,9 @@ recorded outcome. `os-optics-kit <command> --help` describes every command.
 | [interop-diffraction](https://github.com/JunLin615/os-optics-kit/tree/main/cases/interop-diffraction) | Diffraction at a declared stop, handed off to external codes | no |
 | [interop-quantum](https://github.com/JunLin615/os-optics-kit/tree/main/cases/interop-quantum) | Hong-Ou-Mandel interference from the linear optical network export | no |
 | [interop-metasurface](https://github.com/JunLin615/os-optics-kit/tree/main/cases/interop-metasurface) | Metasurface lens as a tabulated virtual component | no |
+| [cylindrical-light-sheet](cases/cylindrical-light-sheet) | Cylindrical focusing: sheet thickness versus propagation range | no |
+| [phase-only-flat-top](cases/phase-only-flat-top) | Circular flat-top phase design and sensitivity to input beam width | no |
+| [bounded-aberration-correction](cases/bounded-aberration-correction) | Intensity-only correction with five bounded phase modes | no |
 
 Each case holds `project.json` (the Project with its targets), `CASE.md` (for agents), an illustrated `README.md`
 and `expected.json` (the verified outcome), plus its own scripts, study specs or data. See the

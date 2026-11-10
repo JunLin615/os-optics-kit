@@ -1,0 +1,238 @@
+{
+  "components": [
+    {
+      "custom_part": {
+        "custom_part_key": "declared-532nm-tem00",
+        "description": "532 nm TEM00 source"
+      },
+      "instance_id": "LASER",
+      "nominal_pose": {
+        "position_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "quaternion_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "optical_role": "source",
+      "retained_dofs": [],
+      "selected_parameters": [],
+      "source_model": {
+        "m2": 1.0,
+        "model_kind": "GAUSSIAN_BEAM",
+        "polarization": {
+          "angle_deg": 0.0,
+          "kind": "LINEAR"
+        },
+        "power_w": 0.01,
+        "waist_position_mm": 0.0,
+        "waist_radius_mm": 0.5,
+        "wavelength_nm": 532.0
+      }
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "declared-NEG",
+        "description": "Ideal thin lens"
+      },
+      "instance_id": "NEG",
+      "nominal_pose": {
+        "position_mm": [
+          0.0,
+          0.0,
+          20.0
+        ],
+        "quaternion_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "optical_model_id": "NEG",
+      "optical_role": "lens",
+      "retained_dofs": [],
+      "selected_parameters": []
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "declared-POS",
+        "description": "Ideal thin lens"
+      },
+      "instance_id": "POS",
+      "nominal_pose": {
+        "position_mm": [
+          0.0,
+          0.0,
+          40.0
+        ],
+        "quaternion_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "optical_model_id": "POS",
+      "optical_role": "lens",
+      "retained_dofs": [],
+      "selected_parameters": []
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "declared-FOCUS",
+        "description": "Ideal thin lens"
+      },
+      "instance_id": "FOCUS",
+      "nominal_pose": {
+        "position_mm": [
+          0.0,
+          0.0,
+          56.0
+        ],
+        "quaternion_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "optical_model_id": "FOCUS",
+      "optical_role": "lens",
+      "retained_dofs": [],
+      "selected_parameters": []
+    }
+  ],
+  "design_intent": "OPTICAL_SYSTEM",
+  "materials": [],
+  "observations": [
+    {
+      "absorbing": false,
+      "aperture": {
+        "center_offset_mm": [
+          0.0,
+          0.0
+        ],
+        "obstruction_radius_mm": 0.0,
+        "radius_mm": 5.0,
+        "shape": "circle"
+      },
+      "medium": "air",
+      "observation_id": "phase_input",
+      "pose": {
+        "position_mm": [
+          0.0,
+          0.0,
+          55.0
+        ],
+        "quaternion_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "absorbing": false,
+      "aperture": {
+        "center_offset_mm": [
+          0.0,
+          0.0
+        ],
+        "obstruction_radius_mm": 0.0,
+        "radius_mm": 5.0,
+        "shape": "circle"
+      },
+      "medium": "air",
+      "observation_id": "unmodulated_focus",
+      "pose": {
+        "position_mm": [
+          0.0,
+          0.0,
+          156.0
+        ],
+        "quaternion_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    }
+  ],
+  "optical_models": [
+    {
+      "model": {
+        "clear_radius_mm": "4",
+        "edge_radius_mm": "5",
+        "focal_length_mm": "-40",
+        "model_kind": "IDEAL_THIN_LENS",
+        "model_version": "1",
+        "plane_z_mm": "0",
+        "status": "SPECIFIED",
+        "transmittance": "1",
+        "valid_band_nm": {
+          "max_nm": "600",
+          "min_nm": "500",
+          "status": "SPECIFIED"
+        }
+      },
+      "model_id": "NEG"
+    },
+    {
+      "model": {
+        "clear_radius_mm": "4",
+        "edge_radius_mm": "5",
+        "focal_length_mm": "60",
+        "model_kind": "IDEAL_THIN_LENS",
+        "model_version": "1",
+        "plane_z_mm": "0",
+        "status": "SPECIFIED",
+        "transmittance": "1",
+        "valid_band_nm": {
+          "max_nm": "600",
+          "min_nm": "500",
+          "status": "SPECIFIED"
+        }
+      },
+      "model_id": "POS"
+    },
+    {
+      "model": {
+        "clear_radius_mm": "4",
+        "edge_radius_mm": "5",
+        "focal_length_mm": "100",
+        "model_kind": "IDEAL_THIN_LENS",
+        "model_version": "1",
+        "plane_z_mm": "0",
+        "status": "SPECIFIED",
+        "transmittance": "1",
+        "valid_band_nm": {
+          "max_nm": "600",
+          "min_nm": "500",
+          "status": "SPECIFIED"
+        }
+      },
+      "model_id": "FOCUS"
+    }
+  ],
+  "project_schema_version": "2.0",
+  "schema": "opensci.project",
+  "targets": [
+    {
+      "maximum": 0.752,
+      "metric": "beam_radius_mm",
+      "minimum": 0.749,
+      "observation_id": "phase_input",
+      "parameters": [],
+      "target_id": "illumination_radius",
+      "unit": "mm"
+    }
+  ]
+}
