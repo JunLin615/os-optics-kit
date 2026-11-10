@@ -40,6 +40,7 @@ from contextlib import contextmanager
 import dataclasses
 import logging
 import math
+import warnings
 from pathlib import Path
 from typing import Any
 
@@ -212,7 +213,7 @@ def _fmt_signed(value):
 
 
 def _denoise(value, scale):
-    """``value`` with round-off noise (below 1e-9 of the panel's scale) shown as 0."""
+    """A difference with round-off noise (below 1e-9 of the panel's scale) shown as 0; values print as recorded."""
     if _number(value) and _number(scale) and scale > 0 and abs(value) < 1e-9 * scale:
         return 0.0
     return value
@@ -237,15 +238,18 @@ def _style(theme):
 
 @contextmanager
 def drawing(theme):
-    """``plot_results.styled`` for ``theme`` without matplotlib's font-weight fallback notices on stderr."""
+    """``plot_results.styled`` for ``theme`` without matplotlib's font fallback notices and layout warnings on stderr
+    (the layout is checked by ``text_overflow`` and reported in the asset details)."""
     from . import plot_results as pr
 
     logger = logging.getLogger("matplotlib.font_manager")
     level = logger.level
     logger.setLevel(logging.ERROR)
     try:
-        with pr.styled(_style(theme)) as plt:
-            yield plt
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            with pr.styled(_style(theme)) as plt:
+                yield plt
     finally:
         logger.setLevel(level)
 
@@ -423,12 +427,11 @@ def _free_spot(ax, legend, renderer, dpi, spots=LEGEND_SPOTS):
     return None
 
 
-def place_legend(fig, ax, *, headroom=True):
-    """Move the legend of ``ax`` to a place inside the axes where it covers no data: a free corner, else (unless the
-    value range is fixed) a free band added above the data; only when neither exists, beside the axes."""
-    legend = ax.get_legend()
-    if legend is None or not legend.get_visible():
-        return None
+LEGEND_SHRINK = (1.0, 0.85, 0.72)  # legend font factors tried before the legend moves below the plot
+
+
+def _inside_spot(fig, ax, legend, headroom):
+    """A free corner of ``ax`` for ``legend``, else (with ``headroom``) a free band added above the data."""
     fig.canvas.draw()
     renderer = fig.canvas.get_renderer()
     spot = _free_spot(ax, legend, renderer, fig.dpi)
@@ -443,12 +446,41 @@ def place_legend(fig, ax, *, headroom=True):
             spot = _free_spot(ax, legend, renderer, fig.dpi, ("upper right", "upper left", "upper center"))
             if spot is None:
                 ax.set_ylim(low, high)
-    if spot is not None:
-        legend.set_loc(spot)
-        return spot
-    legend.set_loc("upper left")
-    legend.set_bbox_to_anchor((1.02, 1.0), transform=ax.transAxes)
-    return "outside"
+    return spot
+
+
+def place_legend(fig, ax, *, headroom=True, container=None):
+    """Keep the legend of ``ax`` and move it where it covers no data: a free corner inside the axes, else (unless
+    the value range is fixed) a free band added above the data, each first at full and then at smaller font size;
+    else below the plot, across the panel (``container``), in as many columns as fit. The legend is never dropped."""
+    legend = ax.get_legend()
+    if legend is None or not legend.get_visible():
+        return None
+    base = legend.prop.get_size_in_points()
+    for factor in LEGEND_SHRINK:
+        for text_item in legend.get_texts():
+            text_item.set_fontsize(base * factor)
+        spot = _inside_spot(fig, ax, legend, headroom)
+        if spot is not None:
+            legend.set_loc(spot)
+            return spot if factor == 1.0 else f"{spot} (font x{factor:g})"
+    handles, labels = ax.get_legend_handles_labels()
+    legend.remove()
+    holder = container if container is not None else fig
+    width = holder.bbox.width
+    for factor in LEGEND_SHRINK:
+        for columns in (min(len(labels), 3), 2, 1):
+            below = holder.legend(handles, labels, loc="outside lower center", ncols=max(1, columns),
+                                  fontsize=base * factor, frameon=False)
+            fig.canvas.draw()
+            if below.get_window_extent(fig.canvas.get_renderer()).width <= 0.98 * width:
+                return "below"
+            below.remove()
+    size = base * LEGEND_SHRINK[-1]  # still too wide: one column with the entries wrapped to the panel width
+    room = 0.9 * width - 3.5 * size * fig.dpi / 72  # minus the handle and its gap
+    wrapped = [_wrap(label, max(room, 1.0), size, fig.dpi) for label in labels]
+    holder.legend(handles, wrapped, loc="outside lower center", ncols=1, fontsize=size, frameon=False)
+    return "below"
 
 
 def save_figure(fig, out_dir, name, theme, *, formats=None):
@@ -726,7 +758,7 @@ def draw_target_panel(ax, panel, runs, theme, *, y_limits=None, fixed=False):
             ax.scatter([index], [value], marker=marker, s=marker_area, zorder=3, linewidths=1.6,
                        facecolors=color if filled else "none", edgecolors=colors["face"] if filled and
                        colors["face"] != "none" else color)
-            lines = [_fmt(_denoise(value, scale))]
+            lines = [_fmt(value)]
             if entry.get("reference"):
                 lines.append(text("label.reference", language))
             elif _number(entry.get("display_delta")):
@@ -1498,7 +1530,7 @@ def _draw_panel_content(container, panel, theme, scales):
     from . import plot_results as pr
 
     style = _style(dataclasses.replace(theme, title=False))
-    facts: dict[str, Any] = {}
+    facts: dict[str, Any] = {"container": container}
     shared_y = bool(scales["y"].get("applied")) and panel.index in scales["y"].get("panels", [])
     axis_range = scales["y"].get("axis_range") if shared_y else None
     y_limits = axis_range or (scales["y"].get("limits") if shared_y else None)
@@ -1549,7 +1581,7 @@ def finish_panel(fig, fact, *, adjust_limits=True):
         settle_target_labels(fig, fact["targets"], adjust_limits=adjust_limits)
         fact["y_limits"] = [i["y_limits"] for i in fact["targets"]]
     for ax in fact.get("legend_axes", []):
-        spot = place_legend(fig, ax, headroom=adjust_limits)
+        spot = place_legend(fig, ax, headroom=adjust_limits, container=fact.get("container"))
         if spot:
             fact.setdefault("legends", []).append(spot)
     if plot_axes and fit_axis_text(fig, plot_axes):
@@ -1625,8 +1657,8 @@ def _compose_texts(asset, panels, ctx, scales, framing, framing_detail, layout):
             title[lang] = text("title.system_plot", lang, view=view.labels[lang], plot=plot.labels[lang])
             first = text("caption.system_plot", lang, view=view.labels[lang], plot=plot.labels[lang])
         else:
-            runs = _run_labels(panels, ctx, lang)
-            title[lang] = text("title.compare", lang, labels=join_names(runs if len(runs) > 1 else labels, lang))
+            views = list(dict.fromkeys(p.labels[lang] for p in panels if p.raster))
+            title[lang] = text("title.compare", lang, labels=join_names(views if len(views) > 1 else labels, lang))
             kind = {"row": "caption.panels_row", "column": "caption.panels_column"}.get(layout, "caption.panels_grid")
             first = text(kind, lang, labels=join_names(labels, lang))
         sentences = [sentence(first, lang)]
@@ -1643,21 +1675,6 @@ def _compose_texts(asset, panels, ctx, scales, framing, framing_detail, layout):
         caption[lang] = (" " if lang == "en" else "").join(s.replace(" 。", "。").replace(" .", ".")
                                                            for s in sentences)
     return title, caption
-
-
-def _run_labels(panels, ctx, language):
-    """Labels of the run sources shown in the panels, in first-seen order."""
-    out = []
-    for panel in panels:
-        for source_id in panel.entry.get("sources") or []:
-            try:
-                source = ctx.source(source_id)
-            except pres.PresentationError:
-                continue
-            label = pres.localized(source.label, language, source.id)
-            if source.kind == "run" and label not in out:
-                out.append(label)
-    return out
 
 
 def _check_compose(asset):
