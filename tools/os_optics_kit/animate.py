@@ -115,7 +115,7 @@ TEXT: dict[str, dict[str, str]] = {
         "pose": "{focus} ({azimuth} deg, {elevation} deg elevation)",
         "label.value": "{name} = {value}",
         "label.no_value": "{name}: no exact value",
-        "label.sample": "sample {index} of {count}",
+        "label.sample": "Sample {index} of {count}",
         "note.no_run": "No saved run for this sample",
     },
     "zh-CN": {
@@ -1211,9 +1211,8 @@ def build_animation(asset: dict, ctx) -> dict:
             sample = order[position]
             label = sample_label(theme, sample, study["parameters"], study["y"])
             note = text("note.no_run", theme.language) if view_rect is not None and not segment["shot"] else None
-            lines = [label, SEPARATOR.join([theme.text("caption.recorded_samples"),
-                                            text("label.sample", theme.language, index=position + 1,
-                                                 count=len(segments))])]
+            lines = [label, SEPARATOR.join([text("label.sample", theme.language, index=position + 1,
+                                                 count=len(segments)), theme.text("caption.recorded_samples")])]
             segment["label"] = label
             segment["values"] = {"parameters": sample["parameters"], "y": sample["y"], "outcome": sample["outcome"]}
             labels.append((position, lines, note))
