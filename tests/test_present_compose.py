@@ -307,6 +307,57 @@ class DrawingTests(unittest.TestCase):
         finally:
             plt.close(fig)
 
+    def test_a_legend_that_fits_nowhere_inside_moves_below_and_is_kept(self):
+        import matplotlib.pyplot as plt
+
+        theme = pres.resolve_theme({"font_scale": 1.4})
+        labels = ["target bounds [1.97616, 2.01609] with a long description", "MET (5)", "UNMET (7)"]
+        with cf.drawing(theme) as pyplot:
+            fig = pyplot.figure(figsize=(3.2, 3.0), dpi=100, layout="constrained")
+            ax = fig.add_subplot()
+            ax.plot([0, 1, 2, 3, 4], [0, 3, 1, 4, 2], label=labels[0])
+            ax.scatter([1, 3], [3, 4], label=labels[1])
+            ax.scatter([2, 4], [1, 2], label=labels[2])
+            ax.legend()
+            try:
+                spot = cf.place_legend(fig, ax, container=fig)
+                fig.canvas.draw()
+                legends = ([ax.get_legend()] if ax.get_legend() else []) + list(fig.legends)
+                self.assertEqual(len(legends), 1, spot)  # never dropped, never doubled
+                shown = [" ".join(t.get_text().split()) for t in legends[0].get_texts()]
+                self.assertEqual(shown, labels)  # every entry kept (long ones wrapped)
+                self.assertFalse(cf.legend_over_data(ax, fig.canvas.get_renderer()))
+                self.assertEqual(cf.text_overflow(fig), [])
+            finally:
+                plt.close(fig)
+
+    def test_drawing_keeps_matplotlib_warnings_off_stderr(self):
+        import warnings
+
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err), cf.drawing(pres.resolve_theme({})):
+            warnings.warn("constrained_layout not applied because axes sizes collapsed to zero", UserWarning)
+        self.assertEqual(err.getvalue(), "")
+
+    def test_values_print_as_recorded_and_only_deltas_drop_round_off(self):
+        import matplotlib.pyplot as plt
+
+        theme = pres.resolve_theme({})
+        data = targets_document(theme)
+        data["reference"] = "a"
+        data["panels"] = [{"target": "leak", "metric": "power_W", "unit": "W", "split_by_unit": False,
+                           "entries": [{**entry("a", "exact", 3e-13, unit="W", bounds=(0, 0.01)), "reference": True},
+                                       entry("b", "exact", 3e-13 + 2e-25, unit="W", bounds=(0, 0.01), delta=2e-25)]}]
+        data["targets"] = ["leak"]
+        cf.add_display_values(data, theme)
+        fig, _info = self.draw(theme, data)
+        try:
+            texts = [t.get_text() for t in fig.get_axes()[0].texts]
+            self.assertIn("3e-13\nreference", texts)  # a small recorded value is not shown as 0
+            self.assertIn("3e-13\nΔ +0 W", texts)  # a difference at round-off level is
+        finally:
+            plt.close(fig)
+
     def test_overflow_check_sees_clipped_axis_labels_and_legends_over_data(self):
         import matplotlib.pyplot as plt
 
@@ -481,6 +532,14 @@ class SyntheticComposeTests(unittest.TestCase):
         _asset, result = self.build(layout="row", wrap=False, panels=[{"asset": "view-a"}, {"asset": "view-b"},
                                                                       {"asset": "view-c"}])
         self.assertIn("side by side", result["caption"]["en"])
+
+    def test_title_uses_the_panel_labels(self):
+        _asset, result = self.build(layout="grid", columns=2, panels=[
+            {"asset": "view-b", "label": {"en": "Final (L2 moved)", "zh-CN": "最终（L2 已移动）"}},
+            {"asset": "view-a", "label": "Start"}, {"asset": "targets", "span": 2}])
+        self.assertEqual(result["title"]["en"], "Comparison: Final (L2 moved) and Start")
+        self.assertIn("Final (L2 moved), Start and Target values", result["caption"]["en"])
+        self.assertIn("最终（L2 已移动）", result["title"]["zh-CN"])
 
     def test_duplicate_default_labels_name_each_plot(self):
         for name in ("targets", "targets-um"):
