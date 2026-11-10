@@ -24,8 +24,8 @@ python workflow.py all --out output
 python workflow.py present --out output --dest figures-zh --language zh-CN --background dark
 ```
 
-Install `os-optics-kit[plot]`. Separate commands: `compute`, `study`, `present`.
-`present` redraws saved results only. A smaller placement-refinement step is `study --out output --resolution-mm 0.005`
+Install `os-optics-kit[plot]`. Separate commands: `compute`, `study`, `report`, `present`.
+`report` and `present` read saved results. A smaller placement-refinement step is `study --out output --resolution-mm 0.005`
 after `compute` in a new output directory.
 
 ## Targets

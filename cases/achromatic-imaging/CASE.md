@@ -26,7 +26,8 @@ python workflow.py present --out output --dest figures-zh --language zh-CN --bac
 ```
 
 Install `os-optics-kit[plot,render]`; views need Chrome/Chromium. Independent entry points: `compute`, `study`,
-`present`. Only `present` reads saved data without new calculations. Variation: `compute --out shifted --image-shift-mm 0.05`.
+`report`, `present`. The latter two read saved results. `workflow.py present` redraws all five gallery assets;
+native `presentation.json` describes the system view. Variation: `compute --out shifted --image-shift-mm 0.05`.
 
 ## Targets
 

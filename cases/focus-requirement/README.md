@@ -37,11 +37,12 @@ python workflow.py all --out output
 os-optics-kit summary output/nominal/run
 ```
 
-The three stages share the same steps used by `all`:
+The computation and presentation stages share the same steps used by `all`; `report` refreshes saved-result tables:
 
 ```bash
 python workflow.py compute --out finer
 python workflow.py study --out finer --resolution-mm 0.005
+python workflow.py report --out finer
 python workflow.py present --out finer --dest finer-zh-dark --language zh-CN --background dark
 ```
 

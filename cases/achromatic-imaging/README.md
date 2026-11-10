@@ -54,12 +54,13 @@ os-optics-kit cases verify achromatic-imaging
 python workflow.py all --out output
 ```
 
-Chrome/Chromium is needed for the system view. Run stages separately with `compute`, `study` and `present`.
+Chrome/Chromium is needed for the system view. Run stages separately with `compute`, `study`, `report` and `present`.
 Choose a new directory for a new scientific run; existing study directories are refused.
 
 ```bash
 python workflow.py compute --out shifted --image-shift-mm 0.05
 python workflow.py study --out shifted
+python workflow.py report --out output
 python workflow.py present --out output --dest figures-zh-dark --language zh-CN --background dark
 os-optics results imaging output/nominal/run --monitor image --request imaging-request.json
 ```
@@ -69,6 +70,10 @@ a dense ray calculation; `workflow.py present` instead reads the saved JSON with
 presentation types cover the system view; `figures.py` adapts the imaging arrays into PSF/MTF/energy and study
 panels using Kit's theme, provenance, gallery and bundle APIs. Use the case's `present` command to redraw the
 complete set. `--language en|zh-CN` and `--background light|dark` provide four variants.
+The native `presentation.json` describes the system view; the full gallery registers all five assets in
+`assets.json`. Rebuild the native view into its own gallery with
+`os-optics-kit present build output/presentation/presentation.json --out native-view`.
+`workflow.py report --out output` refreshes the bilingual case tables from saved results.
 
 ## Baseline and studies
 

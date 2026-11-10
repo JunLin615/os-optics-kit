@@ -39,11 +39,12 @@ os-optics-kit summary output/nominal/run
 ```bash
 python workflow.py compute --out finer
 python workflow.py study --out finer --resolution-mm 0.005
+python workflow.py report --out finer
 python workflow.py present --out finer --dest finer-zh-dark --language zh-CN --background dark
 ```
 
 新计算使用新输出目录。`compute` 创建标称和 +1 mm 运行；`study` 使用保存的 Project 执行粗扫、加密、参考核对，
-并生成比较与报告；`present` 仅读取已保存结果，使用 Kit 原生目标/扫描图、离线图库及打包功能。
+并生成比较与报告；`report` 从保存结果刷新案例表格；`present` 仅读取已保存结果，使用 Kit 原生目标/扫描图、离线图库及打包功能。
 支持两种语言和明暗背景；重绘不移动光学元件、不重新仿真。手动单次变化可先执行
 `os-optics-kit edit project.json --describe --ids LENS`，再沿设计 x 对 `LENS` 做 `transform`，
 保持观测面 `focus` 不变。

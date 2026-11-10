@@ -116,22 +116,46 @@ def report(out):
                  '| --- | --- | --- | --- |']
         table += [f'| {f["wavelength_nm"]:.4f} | {f["spot_rms_um"]:.4f} | {f["ee50_um"]:.4f} | '
                   f'{f["mtf"]["tangential"][-1]:.4f} |' for f in nominal['fields']]
+        names = {'radius1_fraction': ('First-surface radius R1', '第一面曲率半径 R1'),
+                 'radius2_fraction': ('Second-surface radius R2', '第二面曲率半径 R2'),
+                 'crown_thickness': ('Crown centre thickness', '冠玻璃中心厚度'),
+                 'image_plane': ('Image-plane position', '像面位置')}
+        sensitivity = [
+            '| Parameter | Perturbation steps | Maximum absolute RMS-radius change [µm] |'
+            if language == 'en' else '| 参数 | 扰动步长 | RMS 半径最大绝对变化 [µm] |',
+            '| --- | --- | --- |']
+        for row in ranking:
+            radius = row['parameter'].endswith('_fraction')
+            steps = ', '.join(f'±{step * (100 if radius else 1000):g}' for step in row['steps'])
+            scale = steps + (' %' if radius else ' µm')
+            sensitivity.append(f'| {names[row["parameter"]][language == "zh-CN"]} | {scale} | '
+                               f'{row["max_spot_change_um"]:.4f} |')
+        native_pass = fraction['native_counts']['by_outcome']['PASS']
+        tolerance = [
+            '| Random seed | Draws | Native targets passed | Derived imaging checks passed |'
+            if language == 'en' else '| 随机种子 | 样本数 | 原生目标通过数 | 派生成像检查通过数 |',
+            '| --- | --- | --- | --- |',
+            f'| {fraction["seed"]} | {fraction["draws"]} | {native_pass} | {fraction["derived_pass_count"]} |']
         lines = ([
             'On-axis object at infinity; uniform illumination across the 6 mm physical clear pupil.',
             'All common-plane results use x=76.478991 mm, unless the command states an image-plane variation.',
             '486.1327 / 587.5618 / 656.2725 nm have equal incident powers; results are per wavelength.',
-            *table,
+            '', *table, '',
             f'Geometric best-focus span: {focus["best_focus_span_mm"]:.6g} mm; these foci are diagnostic only.',
-            f'Sensitivity ranking for the stated perturbation scales: {ranking}',
-            f'Seeded tolerance: {fraction}',
+            '', 'Sensitivity: largest absolute RMS-radius change across the three wavelengths and stated steps.',
+            '', *sensitivity, '',
+            'Seeded alignment tolerance at the fixed common image plane:', '', *tolerance, '',
+            'Counts describe the finite sample under the declared independent distributions; the nominal run is excluded.',
         ] if language == 'en' else [
             '物体位于无穷远轴上；均匀照明的物理通光口径为 6 mm。',
             '共同像面为 x=76.478991 mm；命令指定的像面变化另行记录。',
             '486.1327 / 587.5618 / 656.2725 nm 的入射功率相等；逐波长报告结果。',
-            *table,
+            '', *table, '',
             f'几何最佳焦点跨度：{focus["best_focus_span_mm"]:.6g} mm；最佳焦点仅用于诊断。',
-            f'给定扰动尺度下的灵敏度排序：{ranking}',
-            f'固定随机种子的公差结果：{fraction}',
+            '', '灵敏度：三个波长及给定扰动步长中，RMS 半径的最大绝对变化。',
+            '', *sensitivity, '',
+            '固定共同像面上的装调公差采样：', '', *tolerance, '',
+            '通过数描述声明的独立分布下的有限样本；标称运行不计入采样。',
         ])
         build_report([out / 'nominal/run', out / 'defocused/run'], out_dir=out / f'report-{language}',
                      project=out / 'project.json',
@@ -142,7 +166,7 @@ def report(out):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['compute', 'study', 'present', 'all'])
+    parser.add_argument('command', choices=['compute', 'study', 'report', 'present', 'all'])
     parser.add_argument('--out', type=Path, required=True)
     parser.add_argument('--dest', type=Path)
     parser.add_argument('--image-shift-mm', type=float, default=0)
@@ -153,6 +177,8 @@ def main(argv=None):
         compute(args.out, args.image_shift_mm)
     if args.command in ('study', 'all'):
         study(args.out)
+    if args.command == 'report':
+        report(args.out)
     if args.command in ('present', 'all'):
         from figures import redraw
         redraw(args.out, args.dest or args.out / 'presentation', args.language, args.background)

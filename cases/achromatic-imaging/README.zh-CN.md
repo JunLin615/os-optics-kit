@@ -48,12 +48,13 @@ os-optics-kit cases verify achromatic-imaging
 python workflow.py all --out output
 ```
 
-系统视图需要 Chrome/Chromium。也可分别执行 `compute`、`study`、`present`。新的科学计算使用新输出目录；
+系统视图需要 Chrome/Chromium。也可分别执行 `compute`、`study`、`report`、`present`。新的科学计算使用新输出目录；
 已有研究目录会被拒绝覆盖。
 
 ```bash
 python workflow.py compute --out shifted --image-shift-mm 0.05
 python workflow.py study --out shifted
+python workflow.py report --out output
 python workflow.py present --out output --dest figures-zh-dark --language zh-CN --background dark
 os-optics results imaging output/nominal/run --monitor image --request imaging-request.json
 ```
@@ -62,6 +63,9 @@ os-optics results imaging output/nominal/run --monitor image --request imaging-r
 不追迹。Kit 原生展示支持系统视图；`figures.py` 使用 Kit 主题、来源记录、图库和打包 API，把成像数组转换成
 PSF/MTF/能量及研究图。完整重绘使用案例的 `present` 命令。`--language en|zh-CN` 和
 `--background light|dark` 组合得到四种展示版本。
+原生 `presentation.json` 描述系统视图；完整图库通过 `assets.json` 登记全部五张图。
+使用 `os-optics-kit present build output/presentation/presentation.json --out native-view`
+可将原生视图重建到独立图库。`workflow.py report --out output` 从保存结果刷新双语案例表格。
 
 ## 基线与研究
 

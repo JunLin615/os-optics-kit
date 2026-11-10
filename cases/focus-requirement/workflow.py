@@ -108,24 +108,41 @@ def study(out, resolution=0.01):
     wc.write_json(out / 'verification.json', answer)
     write_outputs(compare([out / 'before/run', out / 'nominal/run'], labels=['before', 'nominal'],
                           project=out / 'project.json'), out / 'comparison')
+    report(out)
+    return answer
+
+
+def report(out):
+    answer = wc.read_json(out / 'verification.json')
+    interval = answer['sampled_passing_interval_mm']
+    resolution = answer['resolution_mm']
     for language in ('en', 'zh-CN'):
         title = 'Fixed-plane requirement' if language == 'en' else '固定工作面要求'
+        status = {'PASS': 'Pass', 'FAIL': 'Unmet'} if language == 'en' else {'PASS': '通过', 'FAIL': '未通过'}
+        table = [
+            '| Boundary | Left position [mm] | Result | Right position [mm] | Result | Bracket width [mm] |'
+            if language == 'en' else '| 边界 | 左端位置 [mm] | 结果 | 右端位置 [mm] | 结果 | 夹逼宽度 [mm] |',
+            '| --- | --- | --- | --- | --- | --- |']
+        labels = ('Lower', 'Upper') if language == 'en' else ('下边界', '上边界')
+        for label, bracket in zip(labels, answer['boundary_brackets']):
+            table.append(f'| {label} | {bracket["left_mm"]:.4g} | {status[bracket["left_outcome"]]} | '
+                         f'{bracket["right_mm"]:.4g} | {status[bracket["right_outcome"]]} | '
+                         f'{bracket["right_mm"] - bracket["left_mm"]:.4g} |')
         lines = (['Gaussian 1/e² radius ≤20 µm at x=50 mm; the source remains at x=−10 mm.',
-                  f'Sampled passing interval: {interval} mm; boundary resolution ≤{resolution} mm.',
-                  f'Boundary brackets (left/right outcomes): {brackets}.',
+                  f'Sampled passing interval: {interval[0]:.4g} to {interval[1]:.4g} mm; boundary resolution ≤{resolution:g} mm.',
+                  '', *table, '',
                   'The interval describes axial placement alone; every sampled point is retained.',
-                  f'Maximum complex-q reference error: {max(errors):.3g} mm.'] if language == 'en' else
+                  f'Maximum complex-q reference error: {answer["max_reference_error_mm"]:.3g} mm.'] if language == 'en' else
                  ['在 x=50 mm 处，高斯光束的 1/e² 强度半径须≤20 µm；光源固定在 x=−10 mm。',
-                  f'采样通过区间：{interval} mm；边界分辨率≤{resolution} mm。',
-                  f'边界夹逼（左右端点的结果）：{brackets}。',
+                  f'采样通过区间：{interval[0]:.4g} 至 {interval[1]:.4g} mm；边界分辨率≤{resolution:g} mm。',
+                  '', *table, '',
                   '此区间仅描述轴向位置误差；保留全部采样点。',
-                  f'复 q 参数独立参考的最大误差：{max(errors):.3g} mm。'])
+                  f'复 q 参数独立参考的最大误差：{answer["max_reference_error_mm"]:.3g} mm。'])
         build_report([out / 'placement'], out_dir=out / f'report-{language}', project=out / 'project.json',
                      sections=[{'title': title, 'lines': lines}],
                      artifacts=[(out / 'verification.json', 'fixed-plane verification'),
                                 (out / 'comparison/compare.json', 'before and after'),
                                 (out / 'refinement/summary.json', 'boundary refinement')])
-    return answer
 
 
 def redraw(out, dest, language='en', background='light'):
@@ -154,7 +171,7 @@ def redraw(out, dest, language='en', background='light'):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['compute', 'study', 'present', 'all'])
+    parser.add_argument('command', choices=['compute', 'study', 'report', 'present', 'all'])
     parser.add_argument('--out', type=Path, required=True)
     parser.add_argument('--dest', type=Path)
     parser.add_argument('--resolution-mm', type=float, default=0.01)
@@ -165,6 +182,8 @@ def main(argv=None):
         compute(args.out)
     if args.command in ('study', 'all'):
         study(args.out, args.resolution_mm)
+    if args.command == 'report':
+        report(args.out)
     if args.command in ('present', 'all'):
         redraw(args.out, args.dest or args.out / 'presentation', args.language, args.background)
 

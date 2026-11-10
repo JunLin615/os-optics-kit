@@ -134,9 +134,7 @@ def redraw(out, dest, language='en', background='light'):
                                        'caption_files': captions, 'provenance': pr.portable_path(provenance, dest),
                                        'preview': pr.portable_path(preview, dest), 'size_px': list(theme.size),
                                        'sources': ['nominal'], 'depends_on': []})
-            spec['assets'].append(asset)
     manifest['counts']['written'] += len(TEXT)
-    wc.write_json(dest / 'presentation.json', spec)
     manifest['spec_sha256'] = wc.sha256_file(dest / 'presentation.json')
     pr.write_manifest(dest, manifest)
     gallery.write_gallery(dest)
