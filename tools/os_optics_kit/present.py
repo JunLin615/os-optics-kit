@@ -11,7 +11,8 @@ Usage:
   os-optics-kit present gallery DIR
   os-optics-kit present bundle DIR --out DEST[.zip] [--only ID,...] [--overwrite]
 
-SOURCE is a saved run directory (it holds manifest.json) or a sweep study directory (summary.json). init writes
+SOURCE is a saved run directory (it holds manifest.json) or a sweep study directory (summary.json); its id in
+presentation.json is the folder name (a folder named "run" takes its parent's name). init writes
 DIR/presentation.json: the theme, the sources (paths relative to the file) and default assets — a system view and
 the power distribution per run, a target chart for runs with targets, a curve per study target, and with several
 runs a target comparison and a side-by-side view; --animate adds an orbit and a playback of the first study.
@@ -64,11 +65,20 @@ class BuildContext:
         self.spec_dir = Path(spec_dir)
         self.out_dir = Path(out_dir)
         self.theme = pres.resolve_theme(spec.get("theme"))
-        self.browser = browser
+        self._browser = browser
         self.quiet = quiet
         self._sources: dict[str, pres.Source] = {}
         self._built: dict[str, dict] = {}
         self._progress_mark: dict[str, int] = {}
+
+    @property
+    def browser(self):
+        """The Chrome/Chromium of --browser, else one found on this machine (None when there is none)."""
+        if self._browser is None:
+            from .render_views import find_browser
+
+            self._browser = find_browser(None) or ""
+        return self._browser or None
 
     def asset_theme(self, asset):
         return pres.resolve_theme(self.spec.get("theme"), asset.get("theme"))
@@ -466,6 +476,10 @@ def build_asset(asset, ctx, previous):
         return {**entry, "status": status, "title": pres.localized(asset.get("title"), theme.language, ""),
                 "caption": pres.localized(asset.get("caption"), theme.language, ""), "files": {},
                 "sources": source_ids, "depends_on": asset_ids, "error": error.as_dict()}
+    except ImportError as error:  # an optional extra this asset needs
+        return {**entry, "status": "failed", "title": pres.localized(asset.get("title"), theme.language, ""),
+                "caption": "", "files": {}, "sources": source_ids, "depends_on": asset_ids,
+                "error": wc.error_document(error)}
     title = pres.title_text(asset, theme, result.get("title"))
     caption = pres.caption_text(asset, theme, result.get("caption"))
     captions = {lang: pres.localized(asset.get("caption"), lang, "") or pres.localized(result.get("caption"), lang, "")
@@ -514,6 +528,11 @@ MISSING_CODES = {"SOURCE_MISSING", "SOURCE_UNKNOWN", "SOURCE_UNREADABLE", "COLUM
 def rebase_sources(spec, spec_dir, out_dir):
     """Copy of ``spec`` whose source paths are relative to ``out_dir`` instead of ``spec_dir``."""
     rebased = copy.deepcopy(spec)
+    for asset in rebased.get("assets", []):  # files an asset replays (an animation's sequence.json)
+        if isinstance(asset.get("sequence"), str) and not Path(asset["sequence"]).is_absolute():
+            moved = pres.portable_path(Path(spec_dir) / asset["sequence"], out_dir)
+            if moved is not None:
+                asset["sequence"] = moved
     for source_id, entry in rebased.get("sources", {}).items():
         path = Path(entry["path"])
         absolute = path if path.is_absolute() else Path(spec_dir) / path
@@ -578,10 +597,13 @@ def build(spec_path, *, settings=(), only=None, out_dir=None, gallery=True, brow
                                          recovery="run 'os-optics-kit present list DIR' for the asset ids")
     assets = [a for a in ctx_spec["assets"] if a.get("enabled", True)]
     order = build_order(assets)
-    if wanted is not None:  # the selected assets and every asset they use
+    if wanted is not None:  # the selected assets, every asset they use and every composition that uses them
         for asset in reversed(order):
             if asset["id"] in wanted:
                 wanted.update(references(asset)[1])
+        for asset in order:
+            if set(references(asset)[1]) & wanted:
+                wanted.add(asset["id"])
     entries: dict[str, dict] = {}
     for index, asset in enumerate(order):
         if wanted is not None and asset["id"] not in wanted:

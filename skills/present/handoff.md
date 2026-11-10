@@ -26,11 +26,12 @@ os-optics-kit present bundle DIR --out results.zip --only view-final,targets-com
 os-optics-kit present bundle DIR --out results-folder
 ```
 
-The bundle holds the selected assets, the assets they are composed from, their captions, data,
-provenance and redraw settings, a filtered `assets.json`, `presentation.json`, `index.html` and
-`contact-sheet.png`. Links are relative: the recipient extracts it anywhere and opens `index.html`
-without a network connection. Saved runs and studies stay out of the bundle; `presentation.json` keeps
-their relative paths, so a recipient who also has the runs can rebuild from the same settings.
+The bundle holds the selected assets with their captions, data and provenance (a composition
+carries its own panel images), a filtered `assets.json`, `presentation.json` with their redraw
+settings and those of the assets they are composed from, `index.html` and `contact-sheet.png`.
+Links are relative: the recipient extracts it anywhere and opens `index.html` without a network
+connection. Saved runs and studies stay out of the bundle; `presentation.json` keeps their relative
+paths, so a recipient who also has the runs can rebuild from the same settings.
 
 ## Concise and technical handoff
 

@@ -22,7 +22,7 @@ output directory and sha256 prefix), the Engine build and the catalog release. -
 a JSON file holding a theme object or a presentation.json) applies presentation settings: language (en, zh-CN),
 background (light, dark, transparent), font scale, size (slide, 4k, WIDTHxHEIGHT), title on/off, display units and
 labels; --set theme keys such as --set language=zh-CN --set font_scale=1.4. The presentation preset keeps the data
-file and identities out of the figure: they are written to <name>.caption.txt and <name>.provenance.json.
+file and identities out of the figure: they are written to <name>.caption.txt and <name>.provenance.txt.
 Run 'os-optics-kit present settings' for every theme key.
 
 Output (default DIR: "plots" inside a study directory; for a run directory, "plots" next to it, so the run's own

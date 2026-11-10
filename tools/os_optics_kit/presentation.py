@@ -190,6 +190,8 @@ class PresentationError(wc.WorkflowError):
     """A refused presentation request: stable ``code``, a message naming the input and a ``recovery`` step."""
 
     def __init__(self, code, message, *, recovery=None, **details):
+        if recovery is None and code in ("SETTING_INVALID", "SETTING_UNKNOWN"):
+            recovery = "run 'os-optics-kit present settings' for the supported keys and values"
         super().__init__(code, message, **({"recovery": recovery} if recovery else {}), **details)
 
 
@@ -207,10 +209,22 @@ def localized(value, language, default=""):
     return str(value)
 
 
+_CJK = "\u2e80-\u9fff\uf900-\ufaff\uff00-\uffef"
+_CJK_GAP = re.compile(f"(?<=[{_CJK}]) +(?=[{_CJK}])")
+
+
+def tidy(value, language):
+    """Chinese spacing: no space between two Chinese characters (``光斑半径 随 位移`` -> ``光斑半径随位移``), so
+    one template reads well with identifiers and with Chinese labels."""
+    if language != "zh-CN" or not isinstance(value, str):
+        return value
+    return _CJK_GAP.sub("", value)
+
+
 def text(key, language, **values):
     """Fixed figure text ``TEXT[language][key]`` formatted with ``values``."""
     table = TEXT.get(language) or TEXT["en"]
-    return table[key].format(**values)
+    return tidy(table[key].format(**values), language)
 
 
 def fmt_number(value, digits=6):
@@ -458,7 +472,12 @@ _FONT_CACHE: dict[str, Any] = {}
 def _font_index():
     """``{family name: font file}`` of matplotlib's font list (first file per family)."""
     if "index" not in _FONT_CACHE:
+        import logging
+
         from matplotlib import font_manager
+
+        # findfont notices about the weights of installed families do not help the reader of a figure
+        logging.getLogger("matplotlib.font_manager").setLevel(logging.ERROR)
 
         index: dict[str, str] = {}
         for entry in font_manager.fontManager.ttflist:

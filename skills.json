@@ -95,7 +95,7 @@
       "requires": "os-optics>=0.13,<0.14; os-optics-kit[plot]; os-optics-kit[render] for views and animations; os-optics-kit[media] for MP4",
       "path": "skills/present/SKILL.md",
       "tokens": 882,
-      "sha256": "ca32677a1514926860b64247c5f5762f9dec6d75a85212bf963fe0cee321f68a"
+      "sha256": "e7f932ccf2ccbd4111b306ab8abdb06f5d02e63d18b0bc1c8708d4208c37ec33"
     },
     {
       "name": "render",

@@ -44,9 +44,9 @@ Put the user's known preferences (language, background, size) in `theme` from th
 views add an editable text overlay and an annotated PNG. Also `previews/<id>.png`, `assets.json`
 (asset index), `index.html` (offline gallery), `contact-sheet.png` (previews labelled by id).
 Stdout: each asset's id, status and paths. `--set` changes are saved in `presentation.json`;
-unchanged assets are reused. Exit 0 done; 2 `INCOMPLETE`: `missing[]` names each asset whose
-source, target or panel is missing, with a recovery step, and the rest is built; 4 refused input
-(JSON on stderr with `recovery`, e.g. `FONT_MISSING`, `BROWSER_NOT_FOUND`, `MEDIA_EXTRA_MISSING`).
+unchanged assets are reused. Exit 0 done; 2 `INCOMPLETE`: `missing[]` names each asset not built
+(missing source, target or panel; `FONT_MISSING`, `BROWSER_NOT_FOUND`, `MEDIA_EXTRA_MISSING`) with a
+recovery step, and the rest is built; 4 refused specification or setting (JSON on stderr).
 
 ## Minimal example
 

@@ -155,7 +155,7 @@ PATH_LEAKS = (
 def gtext(key, locale, **values):
     """Gallery text ``GALLERY_TEXT[locale][key]`` formatted with ``values``."""
     table = GALLERY_TEXT.get(locale) or GALLERY_TEXT["en"]
-    return table[key].format(**values)
+    return pr.tidy(table[key].format(**values), locale)
 
 
 def count_text(count, language):

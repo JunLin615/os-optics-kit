@@ -159,7 +159,7 @@ def settings() -> dict:
 
 def text(key, language, **values):
     table = TEXT.get(language) or TEXT["en"]
-    return table[key].format(**values)
+    return pr.tidy(table[key].format(**values), language)
 
 
 # --------------------------------------------------------------------------------------------- settings

@@ -118,7 +118,7 @@ def text(key, language, **values):
     """Text of this module (``TEXT``), else of ``presentation.TEXT``, formatted with ``values``."""
     table = TEXT.get(language) or TEXT["en"]
     if key in table:
-        return table[key].format(**values)
+        return pres.tidy(table[key].format(**values), language)
     return pres.text(key, language, **values)
 
 
