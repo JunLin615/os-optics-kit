@@ -201,15 +201,14 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          # One report per job; identical observations share one marker and one issue.
+          # One report per matrix job; identical observations share one marker and one issue.
           shopt -s nullglob
-          status=0
           reports=(reports/alignment-*/report.json)
           if [[ ${#reports[@]} -eq 0 ]]; then
             echo "No alignment reports in this run." >> "$GITHUB_STEP_SUMMARY"
+          else
+            # One invocation groups reports by marker, so a cached issue list cannot make
+            # one run create the same observation twice.
+            python3 scripts/report_alignment.py "${reports[@]}" \
+              --summary "$GITHUB_STEP_SUMMARY" --publish --run-url "$RUN_URL"
           fi
-          for report in "${reports[@]}"; do
-            python3 scripts/report_alignment.py "$report" \
-              --summary "$GITHUB_STEP_SUMMARY" --publish --run-url "$RUN_URL" || status=1
-          done
-          exit "$status"

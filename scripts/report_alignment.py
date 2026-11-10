@@ -254,12 +254,16 @@ class GitHubIssues:
         return self.send(self.url, {"title": title, "body": body})
 
 
-def publish_report(report, github, run_url="", artifact_url=""):
+def publish_report(report, github, run_url="", artifact_url="", known=None):
     if not needs_issue(report):
         return {"action": "none", "url": None}
     marker = observation_marker(report)
+    if known is not None and marker in known:
+        return {"action": "existing", "url": known[marker]}
     existing = github.find(marker)
     if existing:
+        if known is not None:
+            known[marker] = existing["html_url"]
         return {"action": "existing", "url": existing["html_url"]}
     version = observed_version(report) or "unresolved " + report.get(
         "requested_version", "baseline")
@@ -272,51 +276,72 @@ def publish_report(report, github, run_url="", artifact_url=""):
         render_summary(report, run_url, artifact_url),
     ])
     created = github.create(title, body)
+    if known is not None:
+        known[marker] = created["html_url"]
     return {"action": "created", "url": created["html_url"]}
+
+
+def write_summary(text, destination):
+    if destination:
+        with destination.open("a", encoding="utf-8") as target:
+            target.write(text)
+    else:
+        print(text)
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("report", type=Path)
+    parser.add_argument("reports", type=Path, nargs="+")
     parser.add_argument("--summary", type=Path, help="Append Markdown to this file")
     parser.add_argument("--run-url", default="")
     parser.add_argument("--artifact-url", default="")
     parser.add_argument("--publish", action="store_true", help="Create a novel observation issue")
     parser.add_argument("--repository", default=os.environ.get("GITHUB_REPOSITORY", ""))
     args = parser.parse_args(argv)
-    try:
-        report = read_report(args.report)
-        summary = render_summary(report, args.run_url, args.artifact_url)
-    except (OSError, ValueError, KeyError, TypeError) as exc:
-        summary = "## Engine alignment report unavailable\n\n" + code_block(exc) + "\n"
-        if args.run_url:
-            summary += "\n[Inspect the Actions run](" + args.run_url + ")\n"
-        if args.summary:
-            with args.summary.open("a", encoding="utf-8") as target:
-                target.write(summary)
-        print(summary, file=sys.stderr)
-        return 1
-    if args.summary:
-        with args.summary.open("a", encoding="utf-8") as target:
-            target.write(summary)
-    else:
-        print(summary)
-    if args.publish:
-        if (report.get("engine_source") or {}).get("mode") == "local-wheel":
-            print("Local-wheel reports are not release observations; publish from a PyPI check.", file=sys.stderr)
-            return 1
+    status = 0
+    loaded = []
+    for path in args.reports:
+        try:
+            report = read_report(path)
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            summary = "## Engine alignment report unavailable\n\n" + code_block(exc) + "\n"
+            if args.run_url:
+                summary += "\n[Inspect the Actions run](" + args.run_url + ")\n"
+            write_summary(summary, args.summary)
+            print(summary, file=sys.stderr)
+            status = 1
+            continue
+        write_summary(render_summary(report, args.run_url, args.artifact_url), args.summary)
+        loaded.append(report)
+    if args.publish and loaded:
+        publishable = []
+        for report in loaded:
+            if (report.get("engine_source") or {}).get("mode") == "local-wheel":
+                print("Local-wheel reports are not release observations; publish from a PyPI check.",
+                      file=sys.stderr)
+                status = 1
+            else:
+                publishable.append(report)
         token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
-        if not token:
+        if publishable and not token:
             print("Publishing requires GH_TOKEN or GITHUB_TOKEN", file=sys.stderr)
             return 1
-        try:
-            github = GitHubIssues(args.repository, token, os.environ.get(
-                "GITHUB_API_URL", "https://api.github.com"))
-            print(json.dumps(publish_report(report, github, args.run_url, args.artifact_url)))
-        except (OSError, ValueError, KeyError, TypeError) as exc:
-            print("Could not publish alignment report: " + str(exc), file=sys.stderr)
-            return 1
-    return 0
+        if publishable:
+            try:
+                github = GitHubIssues(args.repository, token, os.environ.get(
+                    "GITHUB_API_URL", "https://api.github.com"))
+            except (OSError, ValueError, KeyError, TypeError) as exc:
+                print("Could not publish alignment report: " + str(exc), file=sys.stderr)
+                return 1
+            known = {}
+            for report in publishable:
+                try:
+                    print(json.dumps(publish_report(report, github, args.run_url,
+                                                    args.artifact_url, known)))
+                except (OSError, ValueError, KeyError, TypeError) as exc:
+                    print("Could not publish alignment report: " + str(exc), file=sys.stderr)
+                    status = 1
+    return status
 
 
 if __name__ == "__main__":
