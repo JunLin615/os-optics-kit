@@ -148,7 +148,10 @@ def view_box(asset, ctx, view):
     elif asset.get("framing_sources"):
         boxes = []
         for source_id in asset["framing_sources"]:
-            source = ctx.source(source_id)
+            try:
+                source = ctx.source(source_id)
+            except pres.PresentationError:
+                continue  # reported with the view of that run; the others keep their shared framing
             boxes.append(view.box(focus) if source.path == ctx.source(asset["source"]).path
                          else ViewScene(source.path).box(focus))
         box = union_box(boxes)
@@ -318,13 +321,11 @@ def build_plot_sweep(asset, ctx, theme, out):
                       or key.startswith(f"{y}:") or key.startswith("param:")} for row in rows]}
     data_file = wc.write_json(out / "data.json", data)
     style = _plot_style(theme, out, data_file, source.identity, theme.language, asset)
-    passed = sum(1 for row in rows if row["outcome"] == "PASS")
     names = {lang: (pres.resolve_theme({**ctx.spec.get("theme", {}), "language": lang}).label(y),
                     pres.resolve_theme({**ctx.spec.get("theme", {}), "language": lang}).label(
                         f"param:{parameters[0]['name']}")) for lang in pres.LANGUAGES}
     title = {lang: pres.text("title.sweep", lang, y=names[lang][0], x=names[lang][1]) for lang in pres.LANGUAGES}
-    caption = {lang: pres.text("caption.sweep", lang, y=names[lang][0], x=names[lang][1], count=len(rows),
-                               passed=passed) for lang in pres.LANGUAGES}
+    caption = {lang: pr.sweep_caption(lang, rows, y, names[lang][0], names[lang][1]) for lang in pres.LANGUAGES}
     result = pr.plot_sweep(source.path, y, out_dir=out, name=asset["id"], style=style,
                            caption_text=pres.caption_text(asset, theme, caption))
     files = {"image": Path(result["out"]["png"])}
@@ -463,12 +464,14 @@ def build_asset(asset, ctx, previous):
     """Draw one asset (or reuse it) and return its asset-index entry."""
     theme = ctx.asset_theme(asset)
     source_ids, asset_ids = references(asset)
+    optional = set(asset.get("framing_sources") or []) - {asset.get("source")}
     identities, problems = {}, []
     for source_id in source_ids:
         try:
             identities[source_id] = ctx.source(source_id).identity
         except pres.PresentationError as error:
-            problems.append(error)
+            if source_id not in optional:  # a missing framing source only narrows the shared framing
+                problems.append(error)
     for asset_id in asset_ids:
         dependency = ctx.built(asset_id)
         if dependency is None or dependency["status"] not in ("written", "reused"):
@@ -742,6 +745,11 @@ def init(paths, out_dir, *, labels=None, title=None, theme=None, settings=(), an
     if spec_path.exists() and not overwrite:
         raise pres.PresentationError("OUTPUT_EXISTS", f"{pres.SPEC_FILE} already exists in {out_dir.name}",
                                      recovery="edit it and run 'present build', or choose a new --out directory")
+    for path in paths:
+        root = Path(path).resolve()
+        if root == out_dir.resolve() or root in out_dir.resolve().parents:
+            raise pres.PresentationError("OUTPUT_INVALID", f"--out is inside the source {Path(path).name}",
+                                         recovery="choose an output directory outside the saved runs and studies")
     if labels is not None and len(labels) != len(paths):
         raise pres.PresentationError("BAD_ARGUMENT", f"{len(labels)} labels for {len(paths)} sources")
     spec = pres.default_spec()
@@ -818,7 +826,19 @@ def init(paths, out_dir, *, labels=None, title=None, theme=None, settings=(), an
             "assets": [{"id": a["id"], "kind": a["kind"], **({"type": a["type"]} if "type" in a else {}),
                         **({"layout": a["layout"]} if "layout" in a else {}),
                         **({"mode": a["mode"]} if "mode" in a else {})} for a in assets],
+            "label_keys": _label_keys(runs, studies),
             "next": f"os-optics-kit present build {spec_path.as_posix()}"}
+
+
+def _label_keys(runs, studies):
+    """Identifiers shown in the figures (targets, swept parameters): theme.labels gives them display names."""
+    keys = []
+    for _source_id, path in runs:
+        keys += [f"target:{t}" for t in _run_targets(path)]
+    for _source_id, path in studies:
+        summary = wc.read_json(Path(path) / "summary.json")
+        keys += _study_targets(path) + [f"param:{p['name']}" for p in summary.get("parameters", [])]
+    return list(dict.fromkeys(keys))
 
 
 # --------------------------------------------------------------------------------------------- settings / list

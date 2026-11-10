@@ -107,7 +107,7 @@ TEXT: dict[str, dict[str, str]] = {
         "legend.minimum": "target minimum {value}",
         "legend.maximum": "target maximum {value}",
         "legend.total_input": "total input {value} W",
-        "legend.bounded": "bounded",
+        "legend.bounded": "range",
         "legend.lower_bound": "lower bound",
         "note.no_exact_row": "samples without an exact value",
         "note.empty_cell": "empty cell: no exact value",
@@ -119,7 +119,7 @@ TEXT: dict[str, dict[str, str]] = {
         "title.power_of": "Received power: {source}",
         "title.power_planes": "Observation planes",
         "title.power_planes_note": "solid: known; hatched: lower bound",
-        "title.power_sinks": "Power ledger sinks",
+        "title.power_sinks": "Where the input power goes",
         "title.view": "System view",
         "title.view_of": "System view: {source}",
         "title.targets": "Target values",
@@ -132,8 +132,9 @@ TEXT: dict[str, dict[str, str]] = {
         "caption.catalog": "catalog {version}",
         "caption.no_catalog": "catalog none (catalog-free run)",
         "caption.view": "{subject}, {angle}° from the optical axis at {elevation}° elevation.",
-        "caption.sweep": "{y} across {count} samples of {x}; {passed} PASS.",
-        "caption.power": "Power received by each observation plane and the power-ledger sinks.",
+        "caption.sweep": "{y} across {count} samples of {x}; {passed} meet the target.",
+        "caption.sweep_plain": "{y} across {count} samples of {x}.",
+        "caption.power": "Power received by each observation plane and where the input power goes.",
         "caption.targets": "Target values of {runs} with their bounds.",
         "caption.recorded_samples": "Recorded samples, not a time evolution.",
         "gallery.title": "Result gallery",
@@ -152,7 +153,7 @@ TEXT: dict[str, dict[str, str]] = {
         "legend.minimum": "目标下限 {value}",
         "legend.maximum": "目标上限 {value}",
         "legend.total_input": "总输入 {value} W",
-        "legend.bounded": "有界",
+        "legend.bounded": "范围",
         "legend.lower_bound": "下界",
         "note.no_exact_row": "无精确值的样本",
         "note.empty_cell": "空单元格：无精确值",
@@ -164,7 +165,7 @@ TEXT: dict[str, dict[str, str]] = {
         "title.power_of": "接收功率：{source}",
         "title.power_planes": "观测面",
         "title.power_planes_note": "实心：已知；斜线：下界",
-        "title.power_sinks": "功率账目去向",
+        "title.power_sinks": "输入功率去向",
         "title.view": "系统视图",
         "title.view_of": "系统视图：{source}",
         "title.targets": "目标值",
@@ -177,8 +178,9 @@ TEXT: dict[str, dict[str, str]] = {
         "caption.catalog": "目录 {version}",
         "caption.no_catalog": "无目录（不依赖目录的运行）",
         "caption.view": "{subject}，与光轴夹角 {angle}°，仰角 {elevation}°。",
-        "caption.sweep": "{y} 在 {x} 的 {count} 个样本上的取值；{passed} 个 PASS。",
-        "caption.power": "各观测面接收的功率与功率账目去向。",
+        "caption.sweep": "{y} 在 {x} 的 {count} 个样本上的取值，其中 {passed} 个满足目标。",
+        "caption.sweep_plain": "{y} 在 {x} 的 {count} 个样本上的取值。",
+        "caption.power": "各观测面接收的功率与输入功率去向。",
         "caption.targets": "{runs} 的目标值及其范围。",
         "caption.recorded_samples": "按记录的样本播放，并非时间演化。",
         "gallery.title": "结果图库",
@@ -190,8 +192,12 @@ class PresentationError(wc.WorkflowError):
     """A refused presentation request: stable ``code``, a message naming the input and a ``recovery`` step."""
 
     def __init__(self, code, message, *, recovery=None, **details):
-        if recovery is None and code in ("SETTING_INVALID", "SETTING_UNKNOWN"):
-            recovery = "run 'os-optics-kit present settings' for the supported keys and values"
+        if recovery is None:
+            recovery = {
+                "SETTING_INVALID": "run 'os-optics-kit present settings' for the supported keys and values",
+                "SETTING_UNKNOWN": "run 'os-optics-kit present settings' for the supported keys and values",
+                "SPEC_INVALID": "correct presentation.json; 'os-optics-kit present settings' lists every field",
+                "ASSET_UNKNOWN": "run 'os-optics-kit present list DIR' for the asset ids"}.get(code)
         super().__init__(code, message, **({"recovery": recovery} if recovery else {}), **details)
 
 
@@ -627,10 +633,15 @@ def find_asset(spec, asset_id):
 
 
 def parse_value(text_value):
-    """``--set`` value: JSON when it parses (numbers, true/false, lists, objects, quoted strings), else the text."""
+    """``--set`` value: JSON when it parses (numbers, true/false, lists, objects, quoted strings), else the text.
+    A value that starts like a JSON list, object or string but does not parse is refused."""
     try:
         return json.loads(text_value)
     except ValueError:
+        if text_value.lstrip()[:1] in ("[", "{", '"'):
+            raise PresentationError("SETTING_INVALID", f"--set value {text_value!r} is not valid JSON",
+                                    recovery="quote the whole KEY=VALUE for the shell, e.g. "
+                                             "--set 'assets.view.camera=[30, 15]'") from None
         return text_value
 
 

@@ -273,6 +273,14 @@ def study_column(summary, y):
     return rows, unit, summary["parameters"]
 
 
+def sweep_caption(language, rows, y, y_name, x_name):
+    """Automatic caption of a sweep curve: samples, and for a target how many meet it."""
+    if y.startswith("target:") and any(f"{y}:assessment" in row for row in rows):
+        met = sum(1 for row in rows if row.get(f"{y}:assessment") == "MET")
+        return pres.text("caption.sweep", language, y=y_name, x=x_name, count=len(rows), passed=met)
+    return pres.text("caption.sweep_plain", language, y=y_name, x=x_name, count=len(rows))
+
+
 def plot_sweep(study_dir, y, *, out_dir=None, name=None, theme=None, size=None, caption_text=None, style=None):
     """Curve (1 parameter) or heatmap (2 parameters) of column ``y`` from a study's summary.json."""
     summary_path, summary = _study(study_dir)
@@ -285,8 +293,8 @@ def plot_sweep(study_dir, y, *, out_dir=None, name=None, theme=None, size=None, 
     stem = name or ("sweep_" if len(parameters) == 1 else "heatmap_") + y.replace(":", "_")
     bounds = _bounds(study_dir, rows, y.split(":", 1)[1]) if y.startswith("target:") else None
     if caption_text is None and not style.legacy and len(parameters) == 1:
-        caption_text = style.t("caption.sweep", y=style.name(y), x=style.name(f"param:{parameters[0]['name']}"),
-                               count=len(rows), passed=sum(1 for row in rows if row["outcome"] == "PASS"))
+        caption_text = sweep_caption(style.language, rows, y, style.name(y),
+                                     style.name(f"param:{parameters[0]['name']}"))
     with styled(style) as plt:
         if len(parameters) == 1:
             fig, ax = style.figure(plt, (6.4, 4.2))
@@ -296,6 +304,28 @@ def plot_sweep(study_dir, y, *, out_dir=None, name=None, theme=None, size=None, 
             info = draw_heatmap(fig, ax, rows, parameters, y, unit, bounds, style)
         return {**info, "bounds": bounds, "unit": unit,
                 "out": finish(fig, out_dir, stem, style, text, caption_text)}
+
+
+#: a target's own assessment -> the marker class it is drawn with (themed figures of a target column)
+ASSESSMENT_CLASS = {"MET": "PASS", "UNMET": "FAIL", "INDETERMINATE": "UNKNOWN", "NOT_APPLICABLE": "NOT_APPLICABLE"}
+ASSESSMENT_LABEL = {"PASS": "MET", "FAIL": "UNMET", "UNKNOWN": "INDETERMINATE", "NOT_APPLICABLE": "NOT_APPLICABLE"}
+
+
+def marker_class(row, column, style):
+    """How a sample is marked: by its outcome; in a themed figure of a target column, by that target's own
+    assessment (a sample can meet this target while another target fails)."""
+    if style.legacy or not column.startswith("target:") or row.get("outcome") == "ERROR" \
+            or f"{column}:assessment" not in row:
+        return row["outcome"]
+    if row.get(f"{column}:applicability_issue_codes"):
+        return "OUT_OF_MODEL"
+    return ASSESSMENT_CLASS.get(row.get(f"{column}:assessment"), "UNKNOWN")
+
+
+def class_label(code, column, style):
+    if not style.legacy and column.startswith("target:") and code in ASSESSMENT_LABEL:
+        return ASSESSMENT_LABEL[code]
+    return style.outcome(code)
 
 
 def _has_exact_plot_value(row, column):
@@ -318,18 +348,22 @@ def draw_curve(ax, rows, parameter, y, unit, bounds, style, *, y_limits=None):
     values = [v for _x, v in valued]
     if y_limits is not None:
         low, high = y_limits
+    elif values:
+        # the drawn range (values and target band): nearly equal values must not squeeze the no-value row onto them
+        bottom, top = ax.get_ylim()
+        low, high = min(min(values), bottom), max(max(values), top)
     else:
-        low, high = (min(values), max(values)) if values else (0.0, 1.0)
+        low, high = 0.0, 1.0
     span = (high - low) or abs(high) or 1.0
     lower = low - 0.12 * span  # position of the valueless samples: below every value, never on a real point
     marker_size = 46 if style.legacy else 46 * style.theme.font_scale * (style.theme.base_font_pt / 9.0)
     counts = {}
     for outcome, (marker, color, _label) in STATUS_STYLE.items():
-        pts = [r for r in rows if r["outcome"] == outcome]
+        pts = [r for r in rows if marker_class(r, y, style) == outcome]
         if not pts:
             continue
         counts[outcome] = len(pts)
-        label = style.outcome(outcome)
+        label = class_label(outcome, y, style)
         with_value = [(style.value(r[x_col], x_unit), style.value(r[y], unit)) for r in pts
                       if _has_exact_plot_value(r, y)]
         without = [style.value(r[x_col], x_unit) for r in pts if not _has_exact_plot_value(r, y)]
@@ -349,6 +383,11 @@ def draw_curve(ax, rows, parameter, y, unit, bounds, style, *, y_limits=None):
     if y_limits is not None:
         pad = 0.05 * span
         ax.set_ylim(min(low, lower if missing else low) - pad, high + pad)
+    if missing and values:
+        # the row of samples without a value lies below every value: no tick there, so it never reads as a value
+        bottom, top = ax.get_ylim()
+        ax.set_yticks([t for t in ax.get_yticks() if low - 0.02 * span <= t <= top])
+        ax.set_ylim(bottom, top)
     ax.set_xlabel(style.label(x_col, x_unit))
     ax.set_ylabel(style.label(y, unit))
     style.title(ax, style.t("title.sweep", y=style.name(y), x=style.name(x_col)))
@@ -389,12 +428,12 @@ def draw_heatmap(fig, ax, rows, parameters, y, unit, bounds, style, *, color_lim
             bar.ax.axhline(shown, color="#d03b3b", linewidth=1.4, linestyle="--")
             drawn.append(style.t(key, value=f"{shown:.6g}"))
     for outcome, (marker, color, _label) in STATUS_STYLE.items():
-        pts = [r for r in rows if r["outcome"] == outcome]
+        pts = [r for r in rows if marker_class(r, y, style) == outcome]
         if pts:
             ax.scatter([xs.index(r[f"param:{px['name']}"]) for r in pts],
                        [ys.index(r[f"param:{py['name']}"]) for r in pts], marker=marker, s=30, color=color,
                        edgecolors="white", linewidths=0.6,
-                       label=style.t("legend.count", label=style.outcome(outcome), count=len(pts)))
+                       label=style.t("legend.count", label=class_label(outcome, y, style), count=len(pts)))
     ax.set_xticks(range(len(xs)), [f"{style.value(v, px['unit']):.6g}" for v in xs])
     ax.set_yticks(range(len(ys)), [f"{style.value(v, py['unit']):.6g}" for v in ys])
     ax.set_xlabel(style.label(f"param:{px['name']}", px["unit"]))
@@ -408,7 +447,7 @@ def draw_heatmap(fig, ax, rows, parameters, y, unit, bounds, style, *, color_lim
     style.legend(ax, fontsize=style.fs(6.5), loc="upper left", bbox_to_anchor=(0.0, -0.14), ncol=3, frameon=False)
     if style.legacy:
         fig.subplots_adjust(bottom=0.3)
-    counts = {outcome: sum(1 for r in rows if r["outcome"] == outcome) for outcome in STATUS_STYLE}
+    counts = {outcome: sum(1 for r in rows if marker_class(r, y, style) == outcome) for outcome in STATUS_STYLE}
     return {"points": len(rows), "with_value": int(np.isfinite(grid).sum()),
             "without_value": len(rows) - int(np.isfinite(grid).sum()), "bound_lines": drawn,
             "by_outcome": {k: v for k, v in counts.items() if v},

@@ -610,7 +610,7 @@ class BrowserSession:
         self.browser = find_browser(browser)
         if not self.browser:
             raise RenderError("BROWSER_NOT_FOUND", "no Chrome/Chromium found; install Chrome or Chromium, or pass "
-                              "its executable as the browser setting")
+                              "its executable with --browser PATH")
         self.api = playwright_api()
         self.page = None
         self._playwright = None
@@ -667,7 +667,7 @@ def render_shots(run_dir, shots, out_dir, *, size=DEFAULT_SIZE, background="stud
         browser = find_browser(browser)
         if not browser:
             raise RenderError("BROWSER_NOT_FOUND", "no Chrome/Chromium found; install Chrome or Chromium, or pass "
-                              "its executable as the browser setting")
+                              "its executable with --browser PATH")
         api = playwright_api()
     else:
         api = session.api
