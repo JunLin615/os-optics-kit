@@ -443,7 +443,7 @@ class BundleTests(unittest.TestCase):
         self.assertIn("contact-sheet.png" if result["contact_sheet"] else "index.html", names)
         manifest = json.loads((root / "assets.json").read_text(encoding="utf-8"))
         self.assertEqual([a["id"] for a in manifest["assets"]], ["before-after"])
-        self.assertEqual(manifest["counts"], {"written": 1, "reused": 0, "missing_input": 0, "failed": 0,
+        self.assertEqual(manifest["counts"], {"written": 1, "reused": 0, "stale": 0, "missing_input": 0, "failed": 0,
                                               "pending": 0})
         spec = json.loads((root / "presentation.json").read_text(encoding="utf-8"))
         self.assertEqual([a["id"] for a in spec["assets"]], ["system-view", "sweep-waist", "before-after"])
