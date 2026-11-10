@@ -40,6 +40,65 @@
       "project_sha256": "6aac4d2bbf4ca24ddc039b919a78d15d4df4ab84288e6b47cee840f42926744f"
     },
     {
+      "name": "bounded-aberration-correction",
+      "title": "Intensity-only correction with five bounded phase modes",
+      "summary": "Feed a Gaussian relay handoff into a scalar pupil model. Five bounded phase controls improve on-axis focal intensity while an uncontrolled spherical mode sets the residual.",
+      "path": "cases/bounded-aberration-correction",
+      "engine": "0.13.0",
+      "catalog": null,
+      "tools": [
+        "present"
+      ],
+      "tags": [
+        "catalog-free",
+        "aberration",
+        "optimization",
+        "handoff"
+      ],
+      "files": [
+        "CASE.md",
+        "README.md",
+        "README.zh-CN.md",
+        "expected.json",
+        "images/layout.png",
+        "present_case.py",
+        "project.json",
+        "requirements-aberration.txt",
+        "workflow.py"
+      ],
+      "project_sha256": "655777ea54666127863d3431660ac16cd7df5c70bd99b2193c968a4bb80611f3"
+    },
+    {
+      "name": "cylindrical-light-sheet",
+      "title": "Cylindrical light-sheet thickness and range",
+      "summary": "A two-surface cylindrical lens focuses a 488 nm Gaussian beam along y. Compare 50 and 40 mm focal lengths to measure the tradeoff between waist FWHM and the propagation range within sqrt(2) of that thickness.",
+      "path": "cases/cylindrical-light-sheet",
+      "engine": "0.13.0",
+      "catalog": null,
+      "tools": [
+        "summary",
+        "present"
+      ],
+      "tags": [
+        "catalog-free",
+        "light-sheet",
+        "cylindrical-lens",
+        "gaussian-beam"
+      ],
+      "files": [
+        "CASE.md",
+        "README.md",
+        "README.zh-CN.md",
+        "expected.json",
+        "images/layout.png",
+        "present_case.py",
+        "project.json",
+        "requirements-light-sheet.txt",
+        "workflow.py"
+      ],
+      "project_sha256": "872d4ded8208d216be1e8c76c1f8a4e4986c5c55a40c960a14090d0d3c8cadcd"
+    },
+    {
       "name": "detector-measurements",
       "title": "Detector linearity and reference-channel normalization",
       "summary": "A 1 mW, 532 nm beam is split 50:50 onto a signal and a reference detector, each with a 2.5 mm radius active area. Two synthetic data sets with known answers calibrate the signal detector's linearity and normalize slow source drift by the reference channel.",
@@ -304,6 +363,36 @@
         "workflow.py"
       ],
       "project_sha256": "136629b24714052338cf06d5031b7a3481723cc4626cebf84a03c17b0962622a"
+    },
+    {
+      "name": "phase-only-flat-top",
+      "title": "Circular flat-top shaping and input-width sensitivity",
+      "summary": "Design a phase-only mask for a circular flat top, then change the Gaussian input width while keeping the mask fixed. Measure core intensity variation and target-region power.",
+      "path": "cases/phase-only-flat-top",
+      "engine": "0.13.0",
+      "catalog": null,
+      "tools": [
+        "present"
+      ],
+      "tags": [
+        "catalog-free",
+        "beam-shaping",
+        "phase-mask",
+        "fourier-optics",
+        "interop"
+      ],
+      "files": [
+        "CASE.md",
+        "README.md",
+        "README.zh-CN.md",
+        "expected.json",
+        "images/layout.png",
+        "present_case.py",
+        "project.json",
+        "requirements-flat-top.txt",
+        "workflow.py"
+      ],
+      "project_sha256": "2541855982cb68a98cc77c089500dfcfecf6199b2acba6492eb1bf053b448131"
     },
     {
       "name": "polarization-control",

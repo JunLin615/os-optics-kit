@@ -3,6 +3,56 @@
   "default_requirements": ["scripts/requirements-alignment.txt"],
   "checks": [
     {
+      "name": "cylindrical-light-sheet",
+      "description": "Cylindrical sheet thickness and range with independent ABCD and power checks",
+      "argv": ["{python}", "cases/cylindrical-light-sheet/workflow.py", "--out", "{runs}/cylindrical-light-sheet"],
+      "requirements": "cases/cylindrical-light-sheet/requirements-light-sheet.txt",
+      "optional": true,
+      "requires_python": "3.12",
+      "expected_status": "PASS",
+      "timeout": 180
+    },
+    {
+      "name": "cylindrical-light-sheet-f40",
+      "description": "A shorter focal length trades propagation range for a thinner sheet",
+      "argv": ["{python}", "cases/cylindrical-light-sheet/workflow.py", "--out", "{runs}/cylindrical-light-sheet-f40", "--focal-length-mm", "40"],
+      "requirements": "cases/cylindrical-light-sheet/requirements-light-sheet.txt",
+      "optional": true,
+      "requires_python": "3.12",
+      "expected_status": "PASS",
+      "timeout": 180
+    },
+    {
+      "name": "phase-only-flat-top",
+      "description": "Circular flat top and changed input width with a fixed phase mask",
+      "argv": ["{python}", "cases/phase-only-flat-top/workflow.py", "--out", "{runs}/phase-only-flat-top"],
+      "requirements": "cases/phase-only-flat-top/requirements-flat-top.txt",
+      "optional": true,
+      "requires_python": "3.12",
+      "expected_status": "PASS",
+      "timeout": 180
+    },
+    {
+      "name": "bounded-aberration-correction",
+      "description": "Intensity-only five-mode correction with independent polar quadrature",
+      "argv": ["{python}", "cases/bounded-aberration-correction/workflow.py", "--out", "{runs}/bounded-aberration-correction"],
+      "requirements": "cases/bounded-aberration-correction/requirements-aberration.txt",
+      "optional": true,
+      "requires_python": "3.12",
+      "expected_status": "PASS",
+      "timeout": 180
+    },
+    {
+      "name": "bounded-aberration-correction-stronger",
+      "description": "Stronger uncontrolled spherical aberration reduces recovered on-axis intensity",
+      "argv": ["{python}", "cases/bounded-aberration-correction/workflow.py", "--out", "{runs}/bounded-aberration-correction-stronger", "--spherical-waves", "0.1"],
+      "requirements": "cases/bounded-aberration-correction/requirements-aberration.txt",
+      "optional": true,
+      "requires_python": "3.12",
+      "expected_status": "PASS",
+      "timeout": 180
+    },
+    {
       "name": "kit-cli",
       "description": "Installed command lists its subcommands",
       "argv": ["{python}", "-m", "os_optics_kit", "--help"]

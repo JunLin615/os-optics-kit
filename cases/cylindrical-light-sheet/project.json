@@ -1,0 +1,253 @@
+{
+  "components": [
+    {
+      "custom_part": {
+        "custom_part_key": "LASER",
+        "description": "488 nm Gaussian source"
+      },
+      "instance_id": "LASER",
+      "nominal_pose": {
+        "position_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "quaternion_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "optical_role": "source",
+      "retained_dofs": [],
+      "selected_parameters": [],
+      "source_model": {
+        "m2": 1.0,
+        "model_kind": "GAUSSIAN_BEAM",
+        "polarization": {
+          "angle_deg": 0.0,
+          "kind": "LINEAR"
+        },
+        "power_w": 0.01,
+        "waist_position_mm": 0.0,
+        "waist_radius_mm": 1.0,
+        "wavelength_nm": 488.0
+      }
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "CYL",
+        "description": "Singlet INDEX-1.52 f = 50 mm (native component lens.singlet)"
+      },
+      "instance_id": "CYL",
+      "nominal_pose": {
+        "position_mm": [
+          0.0,
+          0.0,
+          20.0
+        ],
+        "quaternion_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "optical_model_id": "CYL",
+      "optical_role": "lens",
+      "retained_dofs": [],
+      "selected_parameters": []
+    }
+  ],
+  "materials": [],
+  "model_coatings": [
+    {
+      "aoi_reference": "AIR_EQUIVALENT",
+      "bands": [
+        {
+          "max_nm": "650",
+          "min_nm": "450",
+          "reflectance": "0.005",
+          "status": "DESIGN_BASIS",
+          "transmittance": "0.995"
+        }
+      ],
+      "basis": "Declared anti-reflection coating (lossless: T = 1 - R)",
+      "coating_id": "NATIVE-AR_450-650R0.005T0.995_AOI0-20",
+      "display_name": "Declared anti reflection R=0.005",
+      "kind": "ANTI_REFLECTION",
+      "valid_aoi_deg": {
+        "max_deg": "20",
+        "min_deg": "0",
+        "status": "DESIGN_BASIS"
+      }
+    }
+  ],
+  "model_materials": [
+    {
+      "basis": "Declared constant refractive index",
+      "dispersion": {
+        "kind": "CONSTANT_INDEX",
+        "refractive_index": "1.52"
+      },
+      "display_name": "Constant index 1.52",
+      "material_id": "INDEX-1.52",
+      "valid_band_nm": {
+        "max_nm": "650",
+        "min_nm": "450",
+        "status": "DESIGN_BASIS"
+      }
+    }
+  ],
+  "observations": [
+    {
+      "absorbing": false,
+      "aperture": {
+        "center_offset_mm": [
+          0.0,
+          0.0
+        ],
+        "obstruction_radius_mm": 0.0,
+        "radius_mm": 10.0,
+        "shape": "circle"
+      },
+      "medium": "air",
+      "observation_id": "after",
+      "pose": {
+        "position_mm": [
+          0.0,
+          0.0,
+          23.0
+        ],
+        "quaternion_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "absorbing": false,
+      "aperture": {
+        "center_offset_mm": [
+          0.0,
+          0.0
+        ],
+        "obstruction_radius_mm": 0.0,
+        "radius_mm": 10.0,
+        "shape": "circle"
+      },
+      "medium": "air",
+      "observation_id": "nominal-focus",
+      "pose": {
+        "position_mm": [
+          0.0,
+          0.0,
+          70.0
+        ],
+        "quaternion_wxyz": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    }
+  ],
+  "optical_models": [
+    {
+      "design_geometry": {
+        "diameter_mm": "12",
+        "kind": "CYLINDER",
+        "status": "NOMINAL",
+        "z_max_mm": "2",
+        "z_min_mm": "0"
+      },
+      "display_name": "Singlet INDEX-1.52 f = 50 mm",
+      "frame": {
+        "nominal_propagation": "+Z",
+        "optical_axis": "+Z",
+        "origin": "FIRST_SURFACE_VERTEX",
+        "symmetry": "NONE"
+      },
+      "model": {
+        "approximations": [
+          "COATING_AT_SPECIFIED_BOUND",
+          "COATING_PHASE_NOT_MODELLED",
+          "EDGE_AS_OPAQUE_RIM",
+          "GHOST_REFLECTIONS_NOT_TRACED",
+          "IDEAL_SURFACE_FIGURE",
+          "LOSSLESS_COATING",
+          "NOMINAL_PRESCRIPTION",
+          "POLARIZATION_INDEPENDENT_COATING"
+        ],
+        "edge_radius_mm": "6",
+        "fidelity": "SURFACE_PRESCRIPTION",
+        "media": [
+          "INDEX-1.52"
+        ],
+        "model_kind": "SURFACE_SEQUENCE",
+        "model_version": "2",
+        "paraxial": {
+          "axis": "Y",
+          "back_focal_length_mm": "48.684211",
+          "effective_focal_length_mm": "50",
+          "front_focal_length_mm": "50",
+          "front_principal_plane_z_mm": "0",
+          "rear_principal_plane_z_mm": "0.684211",
+          "status": "DERIVED",
+          "wavelength_nm": "488"
+        },
+        "status": "DERIVED",
+        "surfaces": [
+          {
+            "clear_radius_mm": "5",
+            "coating_id": "NATIVE-AR_450-650R0.005T0.995_AOI0-20",
+            "cylinder_axis": "X",
+            "radius_mm": "26",
+            "status": "DERIVED",
+            "surface_id": "S1",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "0"
+          },
+          {
+            "clear_radius_mm": "5",
+            "coating_id": "NATIVE-AR_450-650R0.005T0.995_AOI0-20",
+            "status": "DERIVED",
+            "surface_id": "S2",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "2"
+          }
+        ],
+        "valid_band_nm": {
+          "max_nm": "650",
+          "min_nm": "450",
+          "status": "DERIVED"
+        }
+      },
+      "model_id": "CYL"
+    }
+  ],
+  "project_schema_version": "2.0",
+  "schema": "opensci.project",
+  "targets": [
+    {
+      "maximum": 0.008493218002880191,
+      "metric": "waist_radius_y_mm",
+      "observation_id": "after",
+      "parameters": [],
+      "target_id": "thin-waist",
+      "unit": "mm"
+    },
+    {
+      "metric": "rayleigh_range_y_mm",
+      "minimum": 0.225,
+      "observation_id": "after",
+      "parameters": [],
+      "target_id": "sheet-range",
+      "unit": "mm"
+    }
+  ]
+}

@@ -81,6 +81,9 @@ os-optics-kit present bundle talk-zh --out talk-zh.zip
 | [interop-diffraction](cases/interop-diffraction) | 声明光阑处的衍射，交给外部程序计算 | 否 |
 | [interop-quantum](cases/interop-quantum) | 基于线性光学网络导出的 Hong-Ou-Mandel 干涉 | 否 |
 | [interop-metasurface](cases/interop-metasurface) | 作为表格化虚拟元件的超表面透镜 | 否 |
+| [cylindrical-light-sheet](cases/cylindrical-light-sheet) | 柱面聚焦：光片厚度与传播范围的权衡 | 否 |
+| [phase-only-flat-top](cases/phase-only-flat-top) | 圆形平顶相位设计及其对入射光束宽度的敏感性 | 否 |
+| [bounded-aberration-correction](cases/bounded-aberration-correction) | 仅用强度反馈校正五个有界相位模式 | 否 |
 
 每个案例包含 `project.json`（带目标的 Project）、`CASE.md`（供 Agent 阅读）、带插图的 `README.md`
 和 `expected.json`（验证结果），以及案例自己的脚本、研究规格或数据。见[案例格式（英文）](docs/case-format.md)。
