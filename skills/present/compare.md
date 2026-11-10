@@ -26,12 +26,14 @@ is not exact "no value"; neither is drawn as zero.
 
 ```json
 {"id": "before-after", "kind": "compose", "layout": "before-after",
- "panels": [{"asset": "view-before"}, {"asset": "view-after"}, {"asset": "targets-compare"}],
- "shared": {"y": "auto", "framing": true}, "panel_letters": true, "spacing": 0.03}
+ "panels": [{"asset": "view-before"}, {"asset": "view-after"}], "shared": {"framing": true}}
+{"id": "fix-and-result", "kind": "compose", "layout": "row", "panel_letters": true,
+ "panels": [{"asset": "view-before"}, {"asset": "view-after"}, {"asset": "targets-compare"}]}
 ```
 
-- `layout`: `row`, `column`, `grid` (`columns`, per-panel `span`, `heights`), `before-after` (arrow,
-  "Before"/"After" unless `label` is given), `system-plot` (a view and a plot, the view wider).
+- `layout`: `row`, `column`, `grid` (`columns`, per-panel `span`, `heights`), `before-after` (exactly
+  two panels with an arrow, "Before"/"After" unless `label` is given), `system-plot` (a view and a
+  plot, the view wider).
 - `panels`: assets of the same build in display order; `label` text or `{"en": ..., "zh-CN": ...}`
   (default: the panel's source label). Reorder or relabel here and rebuild.
 - `shared.y` / `shared.color`: `auto` shares one value axis or colour scale only for the same quantity
