@@ -28,6 +28,11 @@ DIR, the skills directory of your agent host; it never overwrites a different fi
 | Explain what an edit changed | `compare RUN_A RUN_B --project CURRENT.json --out CMP` |
 | Plots and a report | `plot sweep STUDY --y target:ID`; `report STUDY --project CURRENT.json` |
 | Reproducible 3D figures | `render RUN --out FIGURES --camera 55,22 --background transparent` |
+| Presentation material | `present` skill: `present init RUN STUDY --out DIR`; `present build DIR/presentation.json` |
+| Restyle without rerunning | `present build DIR/presentation.json --set theme.language=zh-CN --set theme.font_scale=1.3` |
+| Compare saved alternatives | `present init RUN_A RUN_B --labels A,B --out DIR` (target chart, shared-framing views) |
+| Gallery or bundle handoff | `present list DIR`; `present bundle DIR --out X.zip --only ID,...` |
+| Orbit, detail move, sample playback | `present init ... --animate`; fields: `present settings` |
 | Sensitivity, tolerance | `sensitivity SPEC.json --out DIR`; `tolerance SPEC.json --out DIR` |
 | Catalog parts | `candidates --category ... --wavelength-nm ...` |
 | Detector CSV data | `measurements DATA.csv --x ... --signal ... --out DIR` |
