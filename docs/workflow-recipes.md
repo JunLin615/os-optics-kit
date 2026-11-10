@@ -36,6 +36,7 @@ walkthrough: [English](en/workflows.md) · [简体中文](zh-CN/workflows.md).
 | `sensitivity` | `COMPLETED` | | `INCOMPLETE` (a derivative unavailable) | | refused |
 | `tolerance` | `COMPLETED` (at least one PASS), `DRAWN`, `REPRODUCED` | `NO_FEASIBLE` (no PASS), `MISMATCH` | | | refused |
 | `compare`, `plot`, `report` | `COMPLETED` | | | | invalid input |
+| `present build` | `COMPLETED` | | `INCOMPLETE` (an asset has a missing input or could not be drawn) | | refused |
 | `candidates` | `COMPLETED` | `NO_MATCH` | | | invalid input, no catalog |
 | `measurements` | `PASS`, `WARNING` | `FAIL` (RMSE bound exceeded) | `UNKNOWN` (no fit) | | error |
 | `cases verify` | every case matches `expected.json` | a case differs | | | usage error, unknown case, no engine |
@@ -311,6 +312,83 @@ the edit record, outcomes with units, diagnostics (model-scope issues, target is
 codes, warnings and refusals of every run or sample), freshness (the best sample of a
 study is labelled `HISTORICAL` like its row), plot links and every artifact's relative
 path and sha256.
+
+`plot sweep` and `plot power` take `--theme presentation|report|THEME.json` and `--set KEY=VALUE`
+with the theme keys below (`--set language=zh-CN --set font_scale=1.3`); the presentation theme
+writes the caption to `<name>.caption.txt` and the provenance to a separate file.
+
+## Presentation material
+
+```bash
+os-optics-kit present init RUN_DIR STUDY_DIR --out DIR [--labels A,B] [--title T] [--animate]
+os-optics-kit present build DIR/presentation.json [--set KEY=VALUE]... [--only ID,...] [--out DIR2]
+os-optics-kit present list DIR
+os-optics-kit present settings
+os-optics-kit present gallery DIR
+os-optics-kit present bundle DIR --out DEST[.zip] [--only ID,...] [--overwrite]
+```
+
+Needs the plot extra; views and animations need the render extra and Chrome or Chromium
+(`--browser PATH` selects one); MP4 needs the media extra. Nothing is simulated and sources
+are never written. Guide: [English](en/presentation.md) · [简体中文](zh-CN/presentation.md).
+
+`presentation.json` (schema `os-optics-kit.presentation` v1; paths relative to the file):
+
+- `title`, `theme`, `sources` (`{id: {"path", "label"?}}`; a run directory holds
+  `manifest.json`, a study directory `summary.json`) and `assets`.
+- Theme keys: `preset` (`presentation`, `report`), `language` (`en`, `zh-CN`), `background`
+  (`light`, `dark`, `transparent`, `#rrggbb`), `palette`, `font_family`, `font_scale`
+  (0.5–3), `base_font_pt`, `title`, `legend` (`auto`, `outside`, `none`), `size` (`slide`
+  1920x1080, `4k` 3840x2160, `half`, `square`, `report`, `thumbnail`, `WxH`), `formats`
+  (`png`, `svg`, `pdf`), `captions` (`separate`, `figure`), `provenance_in_figure`, `grid`,
+  `units` (`{"mm": "um"}`), `labels` (`{"target:ID": {"en", "zh-CN"}}`).
+- Asset keys: `id` (`[a-z0-9][a-z0-9_-]{0,63}`, the output folder name), `kind`, `title`,
+  `caption` (text or `{"en", "zh-CN"}`), `theme` (per-asset overrides), `enabled`.
+- `view`: `source` (run), `camera` `[angle to axis, elevation, roll?]` deg, `focus`
+  (`optics`, `scene`, `element:ID`), `beams`, `framing_sources`, `box`, `interactive`.
+- `plot`: `type` `sweep` (`source` study, `y` column), `power` (`source` run), `targets`
+  (`sources` runs, `targets`).
+- `compose`: `layout` (`row`, `column`, `grid`, `before-after`, `system-plot`), `panels`
+  (`[{"asset", "label"?}]` in display order).
+- `animation`: `mode` `orbit` | `transition` (`source` run, `to` `{"camera", "focus"}`) |
+  `playback` (`source` study, `y`, `panels` `view`/`plot`/`view+plot`); `formats` (`mp4`,
+  `gif`), `fps`, `duration_s`, `hold_s`, `sequence` (a saved `sequence.json` to replay).
+
+`present settings` prints every key with its values and defaults. `--set` takes dotted keys
+(`theme.size=4k`, `assets.ID.camera=[30,15]`, `assets.ID.caption={"en": "...", "zh-CN": "..."}`)
+and saves them in the built `presentation.json`. `--out DIR2` builds a variant with its own
+`presentation.json`. An asset whose definition, theme, source identities and files are
+unchanged is `reused`, not redrawn; `--only` builds the listed assets and the assets they use.
+
+Output in DIR: `assets.json` (asset index: per asset `status` `written`, `reused`,
+`missing_input` or `failed`, `files` with path, sha256 and bytes, `preview`, `size_px`,
+`captions`, `sources`, `depends_on`, `details`, `error`), `index.html` (offline gallery),
+`contact-sheet.png` (previews labelled by id), `previews/<id>.png` and `assets/<id>/` (image,
+vector formats or media, `data.json`, `caption.<lang>.txt`, `provenance.json`; views add
+`<id>.overlay.svg`, `<id>.annotated.png`, `camera.json`; animations `sequence.json`). Every
+path is relative to DIR. Stdout: `status`, `counts`, per asset `id`, `kind`, `status`,
+`title`, `preview`, `image` (and `svg`, `mp4`, `gif`), and `missing[]`.
+
+`bundle` copies the selected assets' files and previews, a filtered `assets.json`,
+`presentation.json`, `index.html` and `contact-sheet.png`; a `.zip` holds one folder named
+after the archive. Saved runs, studies and the render cache are not included; a file with an
+absolute path is refused (`BUNDLE_PATH_LEAK`).
+
+Exit 0 `COMPLETED`. Exit 2 `INCOMPLETE`: some assets have status `missing_input` or `failed`;
+`missing[]` lists `asset`, `code`, `message`, `recovery`, and the other assets are built and in
+the gallery. Exit 4: the command was refused (JSON error on stderr), e.g. `SPEC_INVALID`,
+`SETTING_INVALID`, `ASSET_UNKNOWN`, `NOT_BUILT`, `OUTPUT_EXISTS`, `OUTPUT_INVALID`.
+
+| Code | Cause | Next step |
+| --- | --- | --- |
+| `SOURCE_MISSING` | a source path is not a run or study directory, or a `sequence` file is missing | point `sources.ID.path` (or `sequence`) at it, relative to `presentation.json` |
+| `FONT_MISSING` | the installed fonts cannot draw a label; `characters` lists them | install Noto Sans CJK SC, Microsoft YaHei or PingFang SC, or set `theme.font_family` |
+| `BROWSER_NOT_FOUND` | no Chrome or Chromium for views or animation frames | install one, or pass `--browser PATH` |
+| `MEDIA_EXTRA_MISSING` | MP4 requested without imageio-ffmpeg | `python -m pip install "os-optics-kit[media]"`, or `"formats": ["gif"]` |
+| `OUTPUT_EXISTS` | `init` finds a `presentation.json`; `build --out` or `bundle` finds other files | new `--out`; `bundle --overwrite` replaces an earlier bundle |
+| `OUTPUT_INVALID` | output inside a source, or on another drive than the sources | build elsewhere on the same drive |
+| `PANEL_MISSING` | a composition or animation uses an asset that was not built | fix or add that asset, or remove the panel |
+| `COLUMN_UNKNOWN`, `TARGET_UNKNOWN` | `y` or `targets` not in the source | use a column listed in the message |
 
 ## Catalog candidates
 

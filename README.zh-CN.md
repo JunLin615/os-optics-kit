@@ -9,7 +9,7 @@
 
 os-optics-kit 基于 [OS Optics](https://github.com/JunLin615/os-optics) 引擎，提供一个命令 `os-optics-kit`：
 其中的工具可以按标识修改 Project、扫描参数、比较已保存的运行、绘图、生成报告、渲染三维图、估计灵敏度和公差、
-挑选目录元件以及分析探测器测量数据；一组案例，即可在引擎上重新运行并与记录结果比较的设计；以及每个工具
+挑选目录元件、分析探测器测量数据以及制作演示材料；一组案例，即可在引擎上重新运行并与记录结果比较的设计；以及每个工具
 对应的一份与厂商无关的技能说明，任何编程 Agent 都可以加载。
 
 | 名称 | 位置 | 内容 |
@@ -19,7 +19,7 @@ os-optics-kit 基于 [OS Optics](https://github.com/JunLin615/os-optics) 引擎�
 | [`os-optics`](https://github.com/JunLin615/os-optics) | GitHub | 产品文档与问题反馈 |
 | [`os-optics-kit`](https://github.com/JunLin615/os-optics-kit) | GitHub | 本仓库：工具、案例、技能与贡献 |
 
-**[Agent 指南（英文）](AGENT_GUIDE.md) · [设计研究](docs/zh-CN/workflows.md) · [测量数据](docs/zh-CN/measurements.md) · [外部工具](docs/zh-CN/interop.md) · [工作流程步骤（英文）](docs/workflow-recipes.md) · [参与贡献（英文）](CONTRIBUTING.md)**
+**[Agent 指南（英文）](AGENT_GUIDE.md) · [设计研究](docs/zh-CN/workflows.md) · [测量数据](docs/zh-CN/measurements.md) · [演示材料](docs/zh-CN/presentation.md) · [外部工具](docs/zh-CN/interop.md) · [工作流程步骤（英文）](docs/workflow-recipes.md) · [参与贡献（英文）](CONTRIBUTING.md)**
 
 ## 安装
 
@@ -29,7 +29,7 @@ os-optics doctor
 ```
 
 需要 Python 3.11 及以上版本。绘图需要 `plot` 扩展：`python -m pip install "os-optics-kit[plot]"`；
-截取三维图需要 `render` 扩展和 Chrome 或 Chromium。
+截取三维图需要 `render` 扩展和 Chrome 或 Chromium；MP4 动画需要 `media` 扩展。
 使用目录元件的案例需要光学元件目录：`os-optics catalog sync`。虚拟环境和升级方法见引擎的
 [安装指南](https://github.com/JunLin615/os-optics/blob/main/docs/zh-CN/installation.md)。
 
@@ -49,6 +49,23 @@ os-optics-kit summary run
 `skills list` 以紧凑 JSON 输出技能索引；`skills install` 把技能说明复制到 Agent 宿主的技能目录
 （`SKILLS_DIR`）。案例随软件包一起安装，因此 `cases copy` 和 `cases verify` 无需克隆仓库；`verify`
 重新运行案例，并将运行状态和每个目标判定与记录结果比较。`os-optics-kit <命令> --help` 说明每个命令。
+
+## 演示材料
+
+`os-optics-kit present` 把已保存的运行和研究整理成可直接用于幻灯片的材料：系统视图、结果图、比较图和动画，
+并生成离线图库和可移植的材料包。所有内容都依据一份保存的 `presentation.json` 绘制，因此更换语言、背景、字号或
+图片尺寸只需重新构建，无需重新仿真。
+
+```bash
+python -m pip install "os-optics-kit[plot,render,media]"
+os-optics-kit present init run --out talk --title "Focusing lens"
+os-optics-kit present build talk/presentation.json
+os-optics-kit present build talk/presentation.json --out talk-zh \
+    --set theme.language=zh-CN --set theme.background=light --set theme.font_scale=1.3
+os-optics-kit present bundle talk-zh --out talk-zh.zip
+```
+
+尺寸、字体、方案比较、动画和交付方式见[演示材料指南](docs/zh-CN/presentation.md)。
 
 ## 案例
 
@@ -79,6 +96,7 @@ os-optics-kit summary run
 | `plot` | `os-optics-kit plot` | 绘制扫描曲线、热图、功率分布、条形图和直方图 |
 | `report` | `os-optics-kit report` | 生成 Markdown 和 JSON 报告，含计数、诊断信息和产物哈希 |
 | `render` | `os-optics-kit render` | 按指定相机角度渲染运行的三维图，可对准单个元件，并输出清单文件 |
+| `present` | `os-optics-kit present` | 依据已保存的结果生成带主题的视图、结果图、比较图和动画，附图库和材料包 |
 | `sensitivity` | `os-optics-kit sensitivity` | 以两种步长的有限差分灵敏度对设计参数排序 |
 | `tolerance` | `os-optics-kit tolerance` | 在声明的分布下运行带种子的公差研究 |
 | `candidates` | `os-optics-kit candidates` | 列出满足明确筛选条件的目录产品，按与给定值的接近程度排序 |
