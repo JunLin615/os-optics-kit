@@ -388,7 +388,7 @@ class DrawingTests(unittest.TestCase):
         fig, info = self.draw(theme, data, y_limits=[0.0, 2500.0], fixed=True)
         try:
             self.assertEqual(info[0]["y_limits"], [0.0, 2500.0])  # an explicit range is drawn exactly
-            self.assertEqual(fig.get_axes()[0].get_ylabel(), "value [00b5m]")
+            self.assertEqual(fig.get_axes()[0].get_ylabel(), "value [µm]")
         finally:
             plt.close(fig)
 
