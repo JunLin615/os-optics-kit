@@ -158,6 +158,24 @@ class TextAndCameraTests(unittest.TestCase):
         self.assertIn("PAGE_UNKNOWN", err.getvalue())
 
 
+@needs(HAS_MATPLOTLIB, 'needs "os-optics-kit[plot]"')
+class LegacyPlotTests(unittest.TestCase):
+    def test_plot_without_a_theme_places_valueless_samples_below_the_lowest_value(self):
+        from os_optics_kit import plot_results as pr
+        from os_optics_kit import workflow_common as wc
+
+        rows = [{"sample_id": f"s{i}", "outcome": "PASS" if v else "UNKNOWN", "param:x": float(i),
+                 "target:t": v, "target:t:unit": "mm"} for i, v in enumerate([0.733, 0.9, None, 1.2])]
+        with tempfile.TemporaryDirectory() as tmp:
+            study = Path(tmp) / "study"
+            wc.write_json(study / "summary.json", {
+                "rows": rows, "columns": ["param:x", "target:t", "target:t:unit"],
+                "parameters": [{"name": "x", "unit": "mm"}], "identity": {"engine": {"engine_build_id": "b"}}})
+            result = pr.plot_sweep(study, "target:t", out_dir=Path(tmp) / "plots")
+        # as in os-optics-kit 0.2: 12 % of the value span below the lowest value
+        self.assertAlmostEqual(result["no_value_position"], 0.733 - 0.12 * (1.2 - 0.733))
+
+
 class SpecificationTests(unittest.TestCase):
     def spec(self):
         spec = pres.default_spec()

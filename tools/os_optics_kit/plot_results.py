@@ -352,6 +352,8 @@ def draw_curve(ax, rows, parameter, y, unit, bounds, style, *, y_limits=None):
         # the drawn range (values and target band): nearly equal values must not squeeze the no-value row onto them
         bottom, top = ax.get_ylim()
         low, high = min(min(values), bottom), max(max(values), top)
+    elif values:
+        low, high = min(values), max(values)
     else:
         low, high = 0.0, 1.0
     span = (high - low) or abs(high) or 1.0

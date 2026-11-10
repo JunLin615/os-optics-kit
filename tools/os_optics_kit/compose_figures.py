@@ -669,7 +669,7 @@ def _common_bounds(entries):
 
 def _bounds_text(bounds, unit, language):
     low, high = bounds.get("minimum"), bounds.get("maximum")
-    suffix = f" {unit}" if unit and unit not in wc.UNITLESS else ""
+    suffix = f" {pres.unit_text(unit)}" if unit and unit not in wc.UNITLESS else ""
     if low is not None and high is not None:
         return text("legend.bounds", language, low=_fmt(low), high=_fmt(high)) + suffix
     if low is not None:
@@ -702,7 +702,7 @@ def draw_target_panel(ax, panel, runs, theme, *, y_limits=None, fixed=False):
     shared_bounds, same = _common_bounds(entries)
     band_color = theme.colors["muted"]  # neutral: the series colours identify runs
     title_lines = [text("title.targets_unit", language, target=theme.label(f"target:{panel['target']}"),
-                        unit=unit) if panel.get("split_by_unit") else theme.label(f"target:{panel['target']}")]
+                        unit=pres.unit_text(unit)) if panel.get("split_by_unit") else theme.label(f"target:{panel['target']}")]
     if shared_bounds:
         low, high = shared_bounds.get("minimum"), shared_bounds.get("maximum")
         if low is not None and high is not None:
@@ -762,7 +762,7 @@ def draw_target_panel(ax, panel, runs, theme, *, y_limits=None, fixed=False):
             if entry.get("reference"):
                 lines.append(text("label.reference", language))
             elif _number(entry.get("display_delta")):
-                suffix = f" {unit}" if unit and unit not in wc.UNITLESS else ""
+                suffix = f" {pres.unit_text(unit)}" if unit and unit not in wc.UNITLESS else ""
                 lines.append(f"Δ {_fmt_signed(_denoise(entry['display_delta'], scale))}{suffix}")
             upper = ax.annotate("\n".join(lines), (index, value), xytext=(0.75 * body, 0.15 * body),
                                 textcoords="offset points", ha="left", va="bottom", fontsize=small,
@@ -797,7 +797,7 @@ def draw_target_panel(ax, panel, runs, theme, *, y_limits=None, fixed=False):
     ax.set_xlim(-0.6, len(entries) - 0.25)
     ax.grid(axis="x", visible=False)
     if unit and unit not in wc.UNITLESS:
-        ax.set_ylabel(f"{text('axis.value', language)} [{unit}]")
+        ax.set_ylabel(f"{text('axis.value', language)} [{pres.unit_text(unit)}]")
     else:
         ax.set_ylabel(text("axis.value", language))
     ax.set_title("\n".join(line for line in title_lines if line), fontsize=theme.font_pt("body"),
@@ -1217,7 +1217,7 @@ def resolve_panels(asset, ctx, theme):
             raise _fail("SPEC_INVALID", f"asset {asset['id']}: panels[{position}] needs \"asset\": <asset id>",
                         key=f"assets.{asset['id']}.panels")
         entry = ctx.built(spec["asset"])
-        if entry is None or entry.get("status") not in ("written", "reused"):
+        if entry is None or entry.get("status") not in ("written", "reused", "stale"):
             raise _fail("PANEL_MISSING", f"asset {asset['id']} uses asset {spec['asset']!r}, which is not available",
                         recovery=f"add or fix asset {spec['asset']!r}, or remove it from {asset['id']}",
                         asset=spec["asset"])
