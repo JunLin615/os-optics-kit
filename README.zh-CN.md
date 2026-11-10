@@ -92,7 +92,7 @@ os-optics-kit summary run
 
 ## 版本对应
 
-os-optics-kit 0.2.x 需要 `os-optics>=0.13,<0.14`，已在 os-optics 0.13.0 和目录版本 2026-10-28.1 上验证
+os-optics-kit 0.3.x 需要 `os-optics>=0.13,<0.14`，已在 os-optics 0.13.0 和目录版本 2026-10-28.1 上验证
 （[`baseline.json`](baseline.json)）。每个案例记录验证时使用的引擎和目录版本。见
 [案例格式（英文）](docs/case-format.md)和[引擎对齐（英文）](docs/engine-alignment.md)。
 

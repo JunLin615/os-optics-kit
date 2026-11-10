@@ -4,7 +4,7 @@ python scripts/check_alignment.py --out run-alignment
 python scripts/check_alignment.py --engine latest --out run-latest
 python scripts/check_alignment.py --engine-wheel os_optics-X.Y.Z-py3-none-any.whl --catalog-file RELEASE.json \
     --out run-local
-python scripts/check_alignment.py --kit-wheel dist/os_optics_kit-0.2.0-py3-none-any.whl --out run-kit-wheel
+python scripts/check_alignment.py --kit-wheel dist/os_optics_kit-0.3.0-py3-none-any.whl --out run-kit-wheel
 python scripts/check_alignment.py --optional all --out run-alignment-full
 
 The engine comes from PyPI (the verified version in baseline.json, an exact version, or latest) or from a local wheel;

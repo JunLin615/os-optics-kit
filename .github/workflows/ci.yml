@@ -228,6 +228,17 @@ jobs:
           run-alignment/.venv/bin/python -m pip install 'playwright>=1.50,<2'
           run-alignment/.venv/bin/python -c "from os_optics_kit.render_views import find_browser; assert find_browser(None), 'Chrome/Chromium is required'"
           run-alignment/.venv/bin/python -m pytest tests/test_render_browser.py --basetemp=run-alignment/render-proof --junitxml=run-alignment/render-tests.xml
+      - name: Presentation with published engine, Chrome, Chinese fonts and MP4 encoder
+        if: steps.gate.outputs.run == 'true'
+        env:
+          # missing fonts, browser or media encoder fail these tests instead of skipping them
+          OS_OPTICS_KIT_REQUIRE_PRESENTATION: "1"
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends fonts-noto-cjk
+          rm -rf ~/.cache/matplotlib
+          run-alignment/.venv/bin/python -m pip install 'imageio-ffmpeg>=0.5,<1'
+          run-alignment/.venv/bin/python -m pytest tests/test_present.py tests/test_present_gallery.py             tests/test_present_compose.py tests/test_present_animate.py             --basetemp=run-alignment/present-proof --junitxml=run-alignment/present-tests.xml
       - name: Verify the changed cases
         if: >-
           ${{ !cancelled() && steps.gate.outputs.run == 'true' && github.event_name == 'pull_request'
