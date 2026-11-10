@@ -16,7 +16,7 @@ What it provides:
 * ``check`` (``json_api.check_project``) and ``run_sample``: one in-process run into a sample directory, returned as
   a sample record whatever happens (an Engine refusal at load or at run is recorded, never raised);
 * selected-requirement shorthand: ERROR (no result), OUT_OF_MODEL (selected target applicability),
-  UNKNOWN (indeterminate, or a calculation that did not complete), FAIL (unmet), PASS (all selected targets met),
+  UNKNOWN (indeterminate, or a partial run), FAIL (unmet), PASS (all selected targets met),
   NOT_APPLICABLE (no selected requirements); full execution, quantity states and target assessments are retained
   independently;
 * ``freshness`` delegates to the Engine's CURRENT / HISTORICAL / UNDETERMINED decision with its reasons;
@@ -388,8 +388,9 @@ def classify(status, model_scope_issues, targets, selected=None, out_of_model_is
 
 def requirement_outcome(status, execution, model_scope_issues, targets, selected=None, out_of_model_issues=()):
     """``classify`` with the execution applied: a FAILED or CANCELLED calculation is ERROR, and a PARTIAL one (a
-    budget reached, e.g. RETURN_ANALYSIS_BUDGET) is never PASS or NOT_APPLICABLE but UNKNOWN, as the Engine's
-    aggregate status contract reports it; an unmet or out-of-model selected target keeps FAIL / OUT_OF_MODEL."""
+    budget reached, e.g. RETURN_ANALYSIS_BUDGET) is never PASS or NOT_APPLICABLE but UNKNOWN (for
+    RETURN_ANALYSIS_BUDGET the code of the Engine's aggregate status contract); an unmet or out-of-model selected
+    target keeps FAIL / OUT_OF_MODEL."""
     state = (execution or {}).get("outcome")
     if state in ("FAILED", "CANCELLED"):
         return "ERROR"

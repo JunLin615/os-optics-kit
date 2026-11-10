@@ -57,7 +57,7 @@ Saved results keep their identities after edits. `compare` and `os-optics result
 the edited one.
 
 Exit codes: 0 completed or PASS; 1 FAIL, `NO_FEASIBLE`, `NO_MATCH` or a case mismatch; 2 UNKNOWN (also
-a run whose calculation did not complete) or `INCOMPLETE`; 3 OUT_OF_MODEL; 4 refused input, with a JSON
+a partial run, `PARTIAL`) or `INCOMPLETE`; 3 OUT_OF_MODEL; 4 refused input, with a JSON
 error on stderr. Stdout is compact JSON;
 details stay in files.
 

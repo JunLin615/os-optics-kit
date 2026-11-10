@@ -40,8 +40,8 @@ engine and the kit there, prepares the catalog and runs the checks in `alignment
 ```bash
 python scripts/check_alignment.py --out run-alignment                     # verified engine from PyPI
 python scripts/check_alignment.py --engine latest --out run-latest        # newest engine release
-python scripts/check_alignment.py --engine 0.13.1 --out run-0131          # an exact release
-python scripts/check_alignment.py --engine-wheel os_optics-0.13.1-py3-none-any.whl \
+python scripts/check_alignment.py --engine 0.13.0 --out run-0130          # an exact release
+python scripts/check_alignment.py --engine-wheel os_optics-X.Y.Z-py3-none-any.whl \
   --catalog-file public_optical_catalog.json --out run-local              # before a release is on PyPI
 python scripts/check_alignment.py --kit-wheel dist/os_optics_kit-0.2.0-py3-none-any.whl --out run-kit-wheel
 python scripts/check_alignment.py --optional all --out run-full           # include the optional checks

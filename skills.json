@@ -92,10 +92,10 @@
       "description": "Render reproducible 3D figures with camera angles, roll, element framing and a manifest.",
       "version": "0.1.0",
       "command": "os-optics-kit render",
-      "requires": "os-optics>=0.13,<0.14",
+      "requires": "os-optics>=0.13,<0.14; os-optics-kit[render]",
       "path": "skills/render/SKILL.md",
-      "tokens": 888,
-      "sha256": "e2e8a8cc03350ac4596ac71709b52cf2a67855a2abd83cfe0ae619566133d330"
+      "tokens": 893,
+      "sha256": "b41934c287d05832eccaa296539309d6323f482426bbac42ebfc805b56cd0a45"
     },
     {
       "name": "report",
@@ -138,8 +138,8 @@
       "command": "os-optics-kit summary",
       "requires": "os-optics>=0.13,<0.14",
       "path": "skills/summary/SKILL.md",
-      "tokens": 565,
-      "sha256": "a708c6ea9ec6c3786d8e88708545a1a7d6f36fee92551c57b274be85a9ba779e"
+      "tokens": 560,
+      "sha256": "8508a89fc3f41b661d3f8cccb96ad3de23a9a02d092327bfca66227c65720c64"
     },
     {
       "name": "sweep",

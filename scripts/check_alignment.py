@@ -2,9 +2,9 @@
 
 python scripts/check_alignment.py --out run-alignment
 python scripts/check_alignment.py --engine latest --out run-latest
-python scripts/check_alignment.py --engine-wheel os_optics-0.12.0-py3-none-any.whl --catalog-file RELEASE.json \
+python scripts/check_alignment.py --engine-wheel os_optics-X.Y.Z-py3-none-any.whl --catalog-file RELEASE.json \
     --out run-local
-python scripts/check_alignment.py --kit-wheel dist/os_optics_kit-0.1.0-py3-none-any.whl --out run-kit-wheel
+python scripts/check_alignment.py --kit-wheel dist/os_optics_kit-0.2.0-py3-none-any.whl --out run-kit-wheel
 python scripts/check_alignment.py --optional all --out run-alignment-full
 
 The engine comes from PyPI (the verified version in baseline.json, an exact version, or latest) or from a local wheel;
@@ -89,7 +89,7 @@ def sha256_file(path):
 
 
 def wheel_version(path, distribution):
-    """Version from a wheel filename (``os_optics-0.12.0-py3-none-any.whl``) of the expected distribution."""
+    """Version from a wheel filename (``os_optics-0.13.0-py3-none-any.whl``) of the expected distribution."""
     path = Path(path)
     parts = path.name.split("-")
     if path.suffix != ".whl" or len(parts) < 5 or parts[0] != distribution.replace("-", "_"):

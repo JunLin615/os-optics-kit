@@ -3,7 +3,7 @@ name: render
 description: Render reproducible 3D figures with camera angles, roll, element framing and a manifest.
 version: 0.1.0
 command: os-optics-kit render
-requires: os-optics>=0.13,<0.14
+requires: os-optics>=0.13,<0.14; os-optics-kit[render]
 kind: tool
 ---
 
