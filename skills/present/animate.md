@@ -19,8 +19,8 @@ Read this page when the user asks for a short animation. Add an asset of kind `a
 - `transition`: a smooth move between two camera poses, e.g. into one element (`element:<id>`).
 - `playback`: one segment per saved sample of a sweep study, ordered by the swept parameter
   (`order_by`). Every frame shows the recorded parameter value, the `y` value with units and the
-  outcome; views share one camera and framing, plots fixed axes. Values are never interpolated
-  between samples, and the frames are labelled as recorded samples, not a time evolution.
+  outcome; views share one camera and framing, plots fixed axes. Each segment shows one saved
+  sample with its recorded values, and the frames carry the label "Recorded parameter samples".
 
 Common fields: `formats` (`["mp4", "gif"]`), `fps` (24), `gif_fps` (at most 15), `duration_s`,
 `hold_s`, `beams`, `easing`. Size, language and background come from the theme

@@ -136,7 +136,7 @@ TEXT: dict[str, dict[str, str]] = {
         "caption.sweep_plain": "{y} across {count} samples of {x}.",
         "caption.power": "Power received by each observation plane and where the input power goes.",
         "caption.targets": "Target values of {runs} with their bounds.",
-        "caption.recorded_samples": "Recorded samples, not a time evolution.",
+        "caption.recorded_samples": "Recorded parameter samples",
         "gallery.title": "Result gallery",
     },
     "zh-CN": {
@@ -182,7 +182,7 @@ TEXT: dict[str, dict[str, str]] = {
         "caption.sweep_plain": "{y} 在 {x} 的 {count} 个样本上的取值。",
         "caption.power": "各观测面接收的功率与输入功率去向。",
         "caption.targets": "{runs} 的目标值及其范围。",
-        "caption.recorded_samples": "按记录的样本播放，并非时间演化。",
+        "caption.recorded_samples": "参数样本回放",
         "gallery.title": "结果图库",
     },
 }

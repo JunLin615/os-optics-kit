@@ -17,8 +17,8 @@ Modes (the asset's ``mode``):
   first parameter; ties keep the recorded order), each held for ``hold_s``. ``panels``: ``view`` (the sample's
   saved run), ``plot`` (the study curve of ``y`` with the current sample marked) or ``view+plot``. All views share
   one camera and one framing box (the union over the samples), all plots one set of axis ranges. Every frame names
-  the parameter value and the ``y`` value with units and the sample's outcome, and states that the frames are
-  recorded samples. Samples without a saved run or without an exact value stay in the sequence, labelled so.
+  the parameter value and the ``y`` value with units and the sample's outcome, with the label "Recorded parameter
+  samples". Samples without a saved run or without an exact value stay in the sequence, labelled so.
 
 Common fields: ``source``, ``formats`` (``["mp4", "gif"]``; MP4 needs the ``media`` extra and an even width and
 height), ``fps`` (24), ``gif_fps`` (at most 15), ``duration_s``, ``hold_s``, ``beams`` (true), ``up_axis``
@@ -1266,7 +1266,7 @@ def _texts(cfg, theme, source, study=None, order=None):
                        passed=passed)]
         if missing:
             pieces.append(text("caption.playback_missing", lang, count=missing))
-        pieces.append(pr.text("caption.recorded_samples", lang))
+        pieces.append(pr.text("caption.recorded_samples", lang) + ("。" if lang == "zh-CN" else "."))
         return ("" if lang == "zh-CN" else " ").join(pieces)
 
     title = _both(lambda lang: text("title.playback", lang,

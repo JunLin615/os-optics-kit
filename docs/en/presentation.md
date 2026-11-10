@@ -192,9 +192,8 @@ Add other animations to `assets` in `presentation.json`:
 ```
 
 A playback shows the saved run and recorded values of each sample: every frame names the parameter value,
-the plotted value with its unit and the sample's outcome, and states that the frames are recorded samples.
-Values are never interpolated between samples, so a playback is not a computed time evolution; only camera
-motion is interpolated.
+the plotted value with its unit and the sample's outcome, and carries the label "Recorded parameter samples".
+Each segment shows one saved sample with its recorded values; only camera motion is interpolated.
 
 Each animation writes `<id>.mp4`, `<id>.gif`, a representative still `<id>.png` and `sequence.json` (camera
 poses, sample order and timing); a playback also writes `data.json` with the values shown. The defaults are
