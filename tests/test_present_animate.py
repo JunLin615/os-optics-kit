@@ -36,6 +36,19 @@ AXIS = [1.0, 0.0, 0.0]
 UP = [0.0, 0.0, 1.0]
 
 
+def mp4_frames(path):
+    """Decoded frames of an MP4 as numpy arrays (height, width, 3), read with imageio-ffmpeg (the media extra)."""
+    import imageio_ffmpeg
+    import numpy
+
+    reader = imageio_ffmpeg.read_frames(str(path))
+    meta = next(reader)
+    width, height = meta["size"]
+    frames = [numpy.frombuffer(chunk, dtype=numpy.uint8).reshape(height, width, 3) for chunk in reader]
+    reader.close()
+    return frames
+
+
 def require(test, available, what):
     """Skip without ``what`` (fail instead under OS_OPTICS_KIT_REQUIRE_PRESENTATION=1)."""
     if available:
@@ -357,7 +370,6 @@ class PlotPlaybackMediaTests(unittest.TestCase):
                       "y": "target:waist", "panels": "plot", "hold_s": 0.5, "fps": 8}
 
     def test_frames_media_and_saved_sequence(self):
-        import imageio
         from PIL import Image
 
         result = an.build_animation(self.asset, self.ctx)
@@ -372,9 +384,7 @@ class PlotPlaybackMediaTests(unittest.TestCase):
         self.assertNotIn(str(self.dir), files["sequence"].read_text(encoding="utf-8"))
         data = json.loads(result["data_files"][0].read_text(encoding="utf-8"))
         self.assertEqual([s["y"]["value"] for s in data["samples"]], [None, 1.2, 1.5])
-        reader = imageio.get_reader(files["mp4"], "ffmpeg")
-        frames = [frame.shape for frame in reader]
-        reader.close()
+        frames = [frame.shape for frame in mp4_frames(files["mp4"])]
         self.assertEqual(len(frames), 12)
         self.assertEqual(frames[0][:2], (180, 320))
         with Image.open(files["gif"]) as gif:
@@ -407,7 +417,6 @@ class PlotPlaybackMediaTests(unittest.TestCase):
         self.assertEqual(set(again["files"]), {"image", "gif", "sequence"})
 
     def test_short_holds_keep_every_sample_in_every_format(self):
-        import imageio
         from PIL import Image
 
         asset = {**self.asset, "hold_s": 0.1, "fps": 4, "gif_fps": 2}  # 0.1 s is shorter than one frame at 4 fps
@@ -418,9 +427,7 @@ class PlotPlaybackMediaTests(unittest.TestCase):
         self.assertEqual(sequence["hold_s_applied"], 0.25)
         self.assertEqual((result["details"]["hold_s"], result["details"]["hold_s_applied"]), (0.1, 0.25))
         self.assertIn("0.25 s", result["caption"]["en"])
-        reader = imageio.get_reader(result["files"]["mp4"], "ffmpeg")
-        frames = [frame for frame in reader]
-        reader.close()
+        frames = mp4_frames(result["files"]["mp4"])
         self.assertEqual(len(frames), 3)
         self.assertEqual(len({frame.tobytes() for frame in frames}), 3)  # three different samples
         with Image.open(result["files"]["gif"]) as gif:
@@ -540,12 +547,9 @@ class SavedRunAnimationTests(unittest.TestCase):
         require(self, self.ready, "the engine, Playwright, Chrome/Chromium, matplotlib and imageio-ffmpeg")
 
     def read_media(self, files):
-        import imageio
         from PIL import Image
 
-        reader = imageio.get_reader(files["mp4"], "ffmpeg")
-        shapes = [frame.shape for frame in reader]
-        reader.close()
+        shapes = [frame.shape for frame in mp4_frames(files["mp4"])]
         with Image.open(files["gif"]) as gif:
             gif_facts = (gif.size, gif.n_frames)
         with Image.open(files["image"]) as still:
