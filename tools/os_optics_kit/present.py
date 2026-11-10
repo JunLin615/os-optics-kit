@@ -448,10 +448,9 @@ def build_asset(asset, ctx, previous):
                 recovery=f"add or fix asset {asset_id!r}, or remove it from {asset['id']}", asset=asset_id))
     entry: dict[str, Any] = {"id": asset["id"], "kind": asset["kind"]}
     if problems:
-        error = problems[0]
         return {**entry, "status": "missing_input", "title": pres.localized(asset.get("title"), theme.language, ""),
                 "caption": pres.localized(asset.get("caption"), theme.language, ""), "files": {},
-                "sources": source_ids, "depends_on": asset_ids, "error": error.as_dict()}
+                "sources": source_ids, "depends_on": asset_ids, "error": problems[0].as_dict()}
     fingerprint = pres.fingerprint(asset, theme.summary(), theme.labels, identities,
                                    [ctx.built(a)["fingerprint"] for a in asset_ids])
     if _reusable(previous, fingerprint, ctx.out_dir):

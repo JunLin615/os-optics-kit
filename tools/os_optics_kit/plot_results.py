@@ -265,6 +265,9 @@ def plot_sweep(study_dir, y, *, out_dir=None, name=None, theme=None, size=None, 
                    catalog_version=", ".join(releases) or None, language=style.language)
     stem = name or ("sweep_" if len(parameters) == 1 else "heatmap_") + y.replace(":", "_")
     bounds = _bounds(study_dir, rows, y.split(":", 1)[1]) if y.startswith("target:") else None
+    if caption_text is None and not style.legacy and len(parameters) == 1:
+        caption_text = style.t("caption.sweep", y=style.name(y), x=style.name(f"param:{parameters[0]['name']}"),
+                               count=len(rows), passed=sum(1 for row in rows if row["outcome"] == "PASS"))
     with styled(style) as plt:
         if len(parameters) == 1:
             fig, ax = style.figure(plt, (6.4, 4.2))
@@ -503,6 +506,8 @@ def plot_power(run_dir, *, out_dir=None, name="power_distribution", theme=None, 
     monitors, budget, identity = power_data(run_dir)
     out_dir = Path(out_dir) if out_dir else run_dir.parent / "plots"
     style = style or Style(theme, size)
+    if caption_text is None and not style.legacy:
+        caption_text = style.t("caption.power")
     with styled(style) as plt:
         fig, (left, right) = style.figure(plt, (8.0, 3.8), ncols=2, gridspec_kw={"width_ratios": [3, 2]})
         sinks = draw_power(left, right, monitors, budget, style)
