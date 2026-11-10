@@ -1,4 +1,5 @@
 {
+  "description": "Seeded independent objective decentre and tilt errors evaluated at the unchanged common image plane.",
   "max_evaluations": 17,
   "parameters": [
     {

@@ -1,4 +1,5 @@
 {
+  "description": "Compare declared curvature, crown-thickness and image-plane perturbations without re-solving the objective.",
   "max_evaluations": 17,
   "parameters": [
     {

@@ -76,7 +76,7 @@ def analyse_samples(folder, grid=24):
 
 def study(out):
     doc = wc.read_json(out / 'project.json')
-    sensitivity = wc.read_json(HERE / 'studies/sensitivity.json')
+    sensitivity = wc.read_json(HERE / 'studies/sensitivity_imaging.json')
     run_sensitivity(sensitivity, out / 'sensitivity', build=lambda values: perturbed(doc, values),
                     plots=False, report=False)
     rows = analyse_samples(out / 'sensitivity')
@@ -91,7 +91,7 @@ def study(out):
     rankings.sort(key=lambda row: row['max_spot_change_um'], reverse=True)
     wc.write_json(out / 'sensitivity/ranking.json', {'basis': 'largest absolute full-pupil spot RMS change across wavelengths and declared steps',
                                                   'ranking': rankings})
-    tolerance = wc.read_json(HERE / 'studies/tolerance.json')
+    tolerance = wc.read_json(HERE / 'studies/tolerance_imaging.json')
     native = run_tolerance(tolerance, out / 'tolerance', base=doc, plots=False, report=False)
     rows = analyse_samples(out / 'tolerance')
     # The nominal evaluation is not a random draw.

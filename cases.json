@@ -40,8 +40,8 @@
         "images/objective.png",
         "imaging-request.json",
         "project.json",
-        "studies/sensitivity.json",
-        "studies/tolerance.json",
+        "studies/sensitivity_imaging.json",
+        "studies/tolerance_imaging.json",
         "workflow.py"
       ],
       "project_sha256": "550295a34c371b2a95bac180eddaa6870ee8772044a3313cfb77634352948069"
