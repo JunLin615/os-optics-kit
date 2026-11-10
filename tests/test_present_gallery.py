@@ -71,6 +71,7 @@ def make_presentation(root, *, language="en", background="light", bilingual=True
                 {"id": "orbit", "kind": "animation", "mode": "orbit", "source": "nominal"},
                 {"id": "power", "kind": "plot", "type": "power", "source": "nominal"},
             ]}
+    spec["assets"].append({"id": "spot-map", "kind": "plot", "type": "power", "source": "nominal"})
     for index in range(extra_assets):
         spec["assets"].append({"id": f"extra-{index:02d}", "kind": "plot", "type": "power", "source": "nominal"})
     out.mkdir(parents=True)
@@ -79,6 +80,9 @@ def make_presentation(root, *, language="en", background="light", bilingual=True
     entries = []
     for asset in spec["assets"]:
         asset_id = asset["id"]
+        if asset_id == "spot-map":  # not built by a 'present build --only' run
+            entries.append({"id": asset_id, "kind": asset["kind"], "status": "pending", "files": {}})
+            continue
         folder = pr.asset_dir(out, asset_id)
         folder.mkdir(parents=True)
         captions = dict(CAPTIONS.get(asset_id) or {"en": f"Power at plane {asset_id}.",
@@ -88,6 +92,7 @@ def make_presentation(root, *, language="en", background="light", bilingual=True
         source = asset.get("source")
         entry = {"id": asset_id, "kind": asset["kind"], "status": "written",
                  "title": pr.localized(TITLES.get(asset_id, asset_id), language),
+                 "titles": TITLES.get(asset_id, {"en": asset_id, "zh-CN": asset_id}),
                  "caption": pr.localized(captions, language), "captions": captions, "files": {},
                  "sources": [source] if source else ["nominal", "l2"],
                  "depends_on": [p["asset"] for p in asset.get("panels", [])], "details": {"frames": 1},
@@ -133,7 +138,8 @@ def make_presentation(root, *, language="en", background="light", bilingual=True
                 "language": language, "theme": theme.summary(), "spec": pr.SPEC_FILE,
                 "spec_sha256": pr.sha256_text(pr.spec_text(spec)), "assets": entries,
                 "gallery": {"index": "index.html", "contact_sheet": "contact-sheet.png"},
-                "counts": {"written": len(entries) - 1, "reused": 0, "missing_input": 1, "failed": 0}}
+                "counts": {"written": len(entries) - 2, "reused": 0, "missing_input": 1, "failed": 0,
+                           "pending": 1}}
     pr.write_manifest(out, manifest)
     # material a bundle must never carry: build cache, unlisted files, a run directory and its log
     (out / ".cache").mkdir()
@@ -255,6 +261,37 @@ class GalleryPageTests(unittest.TestCase):
         orbit = {a["id"]: a for a in data["assets"]}["orbit"]
         self.assertEqual(orbit["media"]["src"], "assets/orbit/orbit.gif")
 
+    def test_compose_files_in_panel_order(self):
+        from PIL import Image
+
+        out = make_presentation(self.tmp / "p")
+        manifest = gallery.read_manifest(out)
+        entry = {a["id"]: a for a in manifest["assets"]}["before-after"]
+        folder = out / "assets" / "before-after"
+        for name in ("panel-10.png", "panel-2.png", "panel-2.svg", "layout.json"):
+            if name.endswith(".png"):
+                Image.new("RGB", (8, 8)).save(folder / name)
+            else:
+                (folder / name).write_text("{}" if name.endswith(".json") else "<svg/>", encoding="utf-8")
+        entry["files"].update({"panel-10": {"path": "assets/before-after/panel-10.png"},
+                               "panel-2-svg": {"path": "assets/before-after/panel-2.svg"},
+                               "panel-2": {"path": "assets/before-after/panel-2.png"},
+                               "layout": {"path": "assets/before-after/layout.json"}})
+        view = gallery.asset_view(out, entry, None)
+        self.assertEqual([item["label"]["en"] for item in view["files"]][:5],
+                         ["Image (PNG)", "Panel layout (JSON)", "Panel 2 (PNG)", "Panel 2 (SVG)", "Panel 10 (PNG)"])
+        captions = [item["label"] for item in view["files"] if "caption" in item["path"]]
+        self.assertEqual(captions, [{"en": "Caption, English (TXT)", "zh-CN": "英文图注（TXT）"},
+                                    {"en": "Caption, Chinese (TXT)", "zh-CN": "中文图注（TXT）"}])
+
+    def test_pending_asset_is_not_shown_as_broken(self):
+        out, _ = self.write()
+        text_value, data = page_data(out / "index.html")
+        pending = {a["id"]: a for a in data["assets"]}["spot-map"]
+        self.assertEqual((pending["status"], pending["built"], pending["error"]), ("pending", False, None))
+        self.assertEqual(data["text"]["en"]["status.pending"], "Not built yet")
+        self.assertEqual(data["text"]["zh-CN"]["status.pending"], "尚未生成")
+
     def test_asset_without_image_shows_its_error(self):
         out, _ = self.write()
         _, data = page_data(out / "index.html")
@@ -277,6 +314,42 @@ class GalleryPageTests(unittest.TestCase):
         with self.assertRaises(pr.PresentationError) as caught:
             gallery.write_gallery(self.tmp)
         self.assertEqual(caught.exception.code, "MANIFEST_NOT_FOUND")
+
+
+class TextTests(unittest.TestCase):
+    def test_both_languages_carry_every_key(self):
+        self.assertEqual(set(gallery.GALLERY_TEXT["en"]), set(gallery.GALLERY_TEXT["zh-CN"]))
+        for status in gallery.STATUSES:
+            self.assertIn(f"status.{status}", gallery.GALLERY_TEXT["en"])
+        for value in gallery.GALLERY_TEXT["zh-CN"].values():
+            self.assertNotIn("资产", value)
+
+    def test_file_labels_follow_role_and_extension(self):
+        cases = {
+            ("image", "a/v.png"): ("Image (PNG)", "图像（PNG）"),
+            ("svg", "a/v.svg"): ("Vector image (SVG)", "矢量图（SVG）"),
+            ("pdf", "a/v.pdf"): ("Vector image (PDF)", "矢量图（PDF）"),
+            ("clean", "a/v.clean.png"): ("Image without annotations (PNG)", "无标注图像（PNG）"),
+            ("overlay", "a/v.overlay.svg"): ("Editable text layer (SVG)", "可编辑文字层（SVG）"),
+            ("annotated", "a/v.annotated.png"): ("Annotated image (PNG)", "带标注图像（PNG）"),
+            ("viewer", "a/viewer.html"): ("Interactive 3D view (HTML)", "交互式三维视图（HTML）"),
+            ("mp4", "a/o.mp4"): ("Video (MP4)", "视频（MP4）"),
+            ("gif", "a/o.gif"): ("Animation (GIF)", "动画（GIF）"),
+            ("sequence", "a/sequence.json"): ("Replayable sequence (JSON)", "可重放序列（JSON）"),
+            ("data", "a/data.csv"): ("Data (CSV)", "数据（CSV）"),
+            ("data", "a/camera.json"): ("Camera settings (JSON)", "相机参数（JSON）"),
+            ("camera", "a/camera.json"): ("Camera settings (JSON)", "相机参数（JSON）"),
+            ("layout", "a/layout.json"): ("Panel layout (JSON)", "面板布局（JSON）"),
+            ("panel-2", "a/panel-2.png"): ("Panel 2 (PNG)", "面板 2（PNG）"),
+            ("panel-2-svg", "a/panel-2.svg"): ("Panel 2 (SVG)", "面板 2（SVG）"),
+            ("provenance", "a/provenance.json"): ("Provenance record (JSON)", "来源记录（JSON）"),
+            ("thumbnail", "a/t.webp"): ("Thumbnail (WEBP)", "Thumbnail（WEBP）"),
+            ("depth_map", "a/depth.exr"): ("Depth map (EXR)", "Depth map（EXR）"),
+        }
+        for (role, path), expected in cases.items():
+            with self.subTest(role=role, path=path):
+                self.assertEqual((gallery.file_label(role, path, "en"), gallery.file_label(role, path, "zh-CN")),
+                                 expected)
 
 
 class ContactSheetTests(unittest.TestCase):
@@ -370,7 +443,8 @@ class BundleTests(unittest.TestCase):
         self.assertIn("contact-sheet.png" if result["contact_sheet"] else "index.html", names)
         manifest = json.loads((root / "assets.json").read_text(encoding="utf-8"))
         self.assertEqual([a["id"] for a in manifest["assets"]], ["before-after"])
-        self.assertEqual(manifest["counts"]["written"], 1)
+        self.assertEqual(manifest["counts"], {"written": 1, "reused": 0, "missing_input": 0, "failed": 0,
+                                              "pending": 0})
         spec = json.loads((root / "presentation.json").read_text(encoding="utf-8"))
         self.assertEqual([a["id"] for a in spec["assets"]], ["system-view", "sweep-waist", "before-after"])
         self.assertEqual(sorted(spec["sources"]), ["l2", "nominal"])
@@ -426,6 +500,29 @@ class BundleTests(unittest.TestCase):
         with self.assertRaises(pr.PresentationError):
             gallery.write_bundle(self.out, zipped, only=["orbit"])
         gallery.write_bundle(self.out, zipped, only=["orbit"], overwrite=True)
+
+    def test_destination_inside_a_saved_source_is_refused(self):
+        run = self.out.parent / "run"
+        for dest in (run / "share.zip", run / "deep" / "share"):
+            with self.subTest(dest=dest.name), self.assertRaises(pr.PresentationError) as caught:
+                gallery.write_bundle(self.out, dest, only=["system-view"])
+            self.assertEqual(caught.exception.code, "OUTPUT_INVALID")
+            self.assertEqual(caught.exception.details["recovery"],
+                             "choose a destination outside the saved runs and studies")
+            self.assertFalse(dest.exists())
+        # sources that do not exist (l2-sweep) are skipped; a sibling of the run is fine
+        gallery.write_bundle(self.out, self.out.parent / "l2-sweep" / "share.zip", only=["system-view"])
+
+    def test_every_refusal_has_a_recovery(self):
+        attempts = [lambda: gallery.write_bundle(self.out, self.tmp / "x.zip", only=["nope"]),
+                    lambda: gallery.write_bundle(self.out, self.tmp / "x", archive="tar"),
+                    lambda: gallery.write_bundle(self.out, self.out.parent),
+                    lambda: gallery.write_bundle(self.tmp / "missing", self.tmp / "y"),
+                    lambda: gallery.write_gallery(self.tmp / "missing")]
+        for attempt in attempts:
+            with self.assertRaises(pr.PresentationError) as caught:
+                attempt()
+            self.assertTrue(caught.exception.details.get("recovery"), caught.exception.code)
 
     def test_unknown_asset(self):
         with self.assertRaises(pr.PresentationError) as caught:
@@ -546,6 +643,11 @@ class GalleryBrowserTests(unittest.TestCase):
                 self.assertEqual(page.inner_text("#viewer-id"), "system-view")
                 page.keyboard.press("Escape")
                 page.wait_for_selector("#viewer", state="hidden")
+                gallery.write_gallery(out)  # the built directory also lists an asset not built yet
+                page.goto((out / "index.html").resolve().as_uri())
+                tile = page.locator('a[data-asset="spot-map"] .problem.calm')
+                self.assertEqual(tile.locator("strong").inner_text(), "Not built yet")
+                self.assertEqual(page.locator('a[data-asset="power"] .problem.calm').count(), 0)
             finally:
                 browser.close()
         self.assertEqual(aborted, [])

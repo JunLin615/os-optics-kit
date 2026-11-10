@@ -54,6 +54,7 @@ GALLERY_TEXT: dict[str, dict[str, str]] = {
         "settings": "Asset settings",
         "values": "Result values",
         "kind": "Kind",
+        "status": "Status",
         "size": "Size",
         "engine": "Engine",
         "catalog": "Catalog",
@@ -66,45 +67,57 @@ GALLERY_TEXT: dict[str, dict[str, str]] = {
         "close": "Close",
         "open": "Open {id}",
         "position": "{index} of {count}",
+        "status.written": "Drawn",
+        "status.reused": "Up to date",
         "status.missing_input": "Missing input",
         "status.failed": "Not drawn",
+        "status.pending": "Not built yet",
+        "pending_hint": "Run 'os-optics-kit present build' to draw it.",
         "no_preview": "No preview",
         "next_step": "Next step: {recovery}",
         "kind.view": "3D view",
         "kind.plot": "Plot",
         "kind.compose": "Composite figure",
         "kind.animation": "Animation",
-        "file.image": "Image (PNG)",
-        "file.svg": "Vector image (SVG)",
-        "file.pdf": "Document (PDF)",
-        "file.clean": "Image without annotations (PNG)",
-        "file.overlay": "Annotation layer (PNG)",
-        "file.mp4": "Video (MP4)",
-        "file.gif": "Animation (GIF)",
+        "file.format": "{label} ({format})",
+        "file.image": "Image",
+        "file.svg": "Vector image",
+        "file.pdf": "Vector image",
+        "file.clean": "Image without annotations",
+        "file.overlay": "Editable text layer",
+        "file.annotated": "Annotated image",
         "file.viewer": "Interactive 3D view",
-        "file.sequence": "Frames",
-        "file.caption": "Caption ({language})",
+        "file.mp4": "Video",
+        "file.gif": "Animation",
+        "file.sequence": "Replayable sequence",
+        "file.data": "Data",
+        "file.layout": "Panel layout",
+        "file.panel": "Panel {number}",
+        "file.camera": "Camera settings",
+        "file.caption": "Caption, {language}",
         "file.provenance": "Provenance record",
-        "file.data": "Data: {name}",
         "language.en": "English",
         "language.zh-CN": "中文",
+        "caption.en": "English",
+        "caption.zh-CN": "Chinese",
         "empty": "No assets yet.",
     },
     "zh-CN": {
-        "assets": "{count} 项资产",
-        "asset": "1 项资产",
+        "assets": "共 {count} 项素材",
+        "asset": "共 1 项素材",
         "contact_sheet": "缩略图总览",
-        "asset_index": "资产索引",
+        "asset_index": "素材索引",
         "redraw": "重绘设置",
         "language": "语言",
         "files": "文件",
         "sources": "来源",
-        "settings": "资产设置",
+        "settings": "素材设置",
         "values": "结果数值",
         "kind": "类型",
+        "status": "状态",
         "size": "尺寸",
         "engine": "引擎",
-        "catalog": "目录",
+        "catalog": "器件目录",
         "catalog_none": "无",
         "project": "项目",
         "result": "结果",
@@ -113,33 +126,47 @@ GALLERY_TEXT: dict[str, dict[str, str]] = {
         "next": "下一项",
         "close": "关闭",
         "open": "打开 {id}",
-        "position": "第 {index} 项，共 {count} 项",
+        "position": "{index} / {count}",
+        "status.written": "已绘制",
+        "status.reused": "已是最新",
         "status.missing_input": "缺少输入",
-        "status.failed": "未绘制",
+        "status.failed": "未能绘制",
+        "status.pending": "尚未生成",
+        "pending_hint": "运行 os-optics-kit present build 即可生成。",
         "no_preview": "无预览",
         "next_step": "下一步：{recovery}",
         "kind.view": "三维视图",
         "kind.plot": "图表",
         "kind.compose": "组合图",
         "kind.animation": "动画",
-        "file.image": "图像（PNG）",
-        "file.svg": "矢量图（SVG）",
-        "file.pdf": "文档（PDF）",
-        "file.clean": "无标注图像（PNG）",
-        "file.overlay": "标注图层（PNG）",
-        "file.mp4": "视频（MP4）",
-        "file.gif": "动画（GIF）",
+        "file.format": "{label}（{format}）",
+        "file.image": "图像",
+        "file.svg": "矢量图",
+        "file.pdf": "矢量图",
+        "file.clean": "无标注图像",
+        "file.overlay": "可编辑文字层",
+        "file.annotated": "带标注图像",
         "file.viewer": "交互式三维视图",
-        "file.sequence": "帧序列",
-        "file.caption": "图注（{language}）",
+        "file.mp4": "视频",
+        "file.gif": "动画",
+        "file.sequence": "可重放序列",
+        "file.data": "数据",
+        "file.layout": "面板布局",
+        "file.panel": "面板 {number}",
+        "file.camera": "相机参数",
+        "file.caption": "{language}图注",
         "file.provenance": "来源记录",
-        "file.data": "数据：{name}",
         "language.en": "English",
         "language.zh-CN": "中文",
-        "empty": "暂无资产。",
+        "caption.en": "英文",
+        "caption.zh-CN": "中文",
+        "empty": "暂无素材。",
     },
 }
-FILE_ROLES = ("image", "svg", "pdf", "clean", "overlay", "mp4", "gif", "viewer", "sequence")
+FILE_ROLES = ("image", "annotated", "clean", "svg", "pdf", "overlay", "mp4", "gif", "viewer", "sequence", "layout",
+              "camera", "data")
+PANEL_ROLE = re.compile(r"panel-(\d+)(?:-[a-z0-9]+)?")
+STATUSES = ("written", "reused", "missing_input", "failed", "pending")
 #: asset settings the page shows elsewhere (id, kind, title, caption)
 SHOWN_KEYS = ("id", "kind", "title", "caption")
 
@@ -260,8 +287,7 @@ def _data_paths(entry, provenance):
 def listed_paths(entry, provenance):
     """Every path an asset entry lists (files, preview, provenance, captions, data), in a stable order."""
     files = entry.get("files") if isinstance(entry.get("files"), dict) else {}
-    roles = [role for role in FILE_ROLES if role in files] + sorted(set(files) - set(FILE_ROLES))
-    values = [_record_path(files[role]) for role in roles]
+    values = [_record_path(files[role]) for role in _role_order(files)]
     values.append(entry.get("preview"))
     values.append(entry.get("provenance"))
     captions = entry.get("caption_files") if isinstance(entry.get("caption_files"), dict) else {}
@@ -308,7 +334,7 @@ def _titles(entry, spec_asset):
     title = spec_asset.get("title") if spec_asset else None
     if _has_both(title):
         return title
-    return entry.get("title") or entry.get("id", "")
+    return entry.get("title") or ""
 
 
 def _compact(value, limit=240):
@@ -350,10 +376,36 @@ def _sources(entry, provenance, spec):
     return result
 
 
-def _file_label(role, relative, language):
-    if role in FILE_ROLES:
-        return gtext(f"file.{role}", language)
-    return f"{role} ({PurePosixPath(relative).suffix.lstrip('.').upper() or role})"
+def file_format(relative):
+    """Format shown next to a file label, from its extension (``PNG``, ``SVG``, ``JSON``)."""
+    return PurePosixPath(relative).suffix.lstrip(".").upper()
+
+
+def file_label(role, relative, language):
+    """Label of a listed file: what it is (from its role) and its format (from its extension)."""
+    panel = PANEL_ROLE.fullmatch(role)
+    if panel:
+        label = gtext("file.panel", language, number=int(panel.group(1)))
+    elif role == "data" and PurePosixPath(relative).name == "camera.json":
+        label = gtext("file.camera", language)
+    elif f"file.{role}" in GALLERY_TEXT["en"]:
+        label = gtext(f"file.{role}", language)
+    else:
+        label = role.replace("-", " ").replace("_", " ").strip().capitalize() or role
+    shown = file_format(relative)
+    return gtext("file.format", language, label=label, format=shown) if shown else label
+
+
+def _role_order(roles):
+    def key(role):
+        panel = PANEL_ROLE.fullmatch(role)
+        if role in FILE_ROLES:
+            return (0, FILE_ROLES.index(role), 0, role)
+        if panel:
+            return (1, 0, int(panel.group(1)), role)
+        return (2, 0, 0, role)
+
+    return sorted(roles, key=key)
 
 
 def _file_items(root, entry, provenance_path, provenance):
@@ -368,22 +420,27 @@ def _file_items(root, entry, provenance_path, provenance):
         items.append({"path": relative, "href": _href(relative), "bytes": size, "label": labels})
 
     files = entry.get("files") if isinstance(entry.get("files"), dict) else {}
-    roles = [role for role in FILE_ROLES if role in files] + sorted(set(files) - set(FILE_ROLES))
-    for role in roles:
+    for role in _role_order(files):
         relative = _record_path(files[role])
         if relative:
-            add(relative, {lang: _file_label(role, relative, lang) for lang in pr.LANGUAGES})
+            add(relative, {lang: file_label(role, relative, lang) for lang in pr.LANGUAGES})
     captions = entry.get("caption_files") if isinstance(entry.get("caption_files"), dict) else {}
     for language in sorted(captions):
-        name = {lang: gtext(f"language.{language}", lang) if language in pr.LANGUAGES else language
-                for lang in pr.LANGUAGES}
-        add(_record_path(captions[language]), {lang: gtext("file.caption", lang, language=name[lang])
-                                               for lang in pr.LANGUAGES})
+        relative = _record_path(captions[language])
+        if relative:
+            add(relative, {lang: gtext("file.format", lang, format=file_format(relative), label=gtext(
+                "file.caption", lang, language=gtext(f"caption.{language}", lang)
+                if language in pr.LANGUAGES else language)) for lang in pr.LANGUAGES})
     if provenance_path:
-        add(provenance_path, {lang: gtext("file.provenance", lang) for lang in pr.LANGUAGES})
+        add(provenance_path, {lang: file_label("provenance", provenance_path, lang) for lang in pr.LANGUAGES})
     for relative in _data_paths(entry, provenance):
-        name = PurePosixPath(relative).name
-        add(relative, {lang: gtext("file.data", lang, name=name) for lang in pr.LANGUAGES})
+        add(relative, {lang: file_label("data", relative, lang) for lang in pr.LANGUAGES})
+    # two data files of one format would read alike: name them
+    for lang in pr.LANGUAGES:
+        labels = [item["label"][lang] for item in items]
+        for item in items:
+            if labels.count(item["label"][lang]) > 1:
+                item["label"][lang] = f"{item['label'][lang]} · {PurePosixPath(item['path']).name}"
     return items
 
 
@@ -531,7 +588,8 @@ def write_contact_sheet(out_dir, manifest, theme) -> Path:
     heading = pr.localized((spec or {}).get("title") or manifest.get("title"), language, "") \
         or pr.text("gallery.title", language)
     count = count_text(len(entries), language)
-    status_texts = {status: gtext(f"status.{status}", language) for status in ("missing_input", "failed")}
+    status_texts = {status: gtext(f"status.{status}", language) for status in STATUSES
+                    if status not in BUILT_STATUSES}
     strings = [heading, count, "…", gtext("no_preview", language), *status_texts.values(), *titles,
                *(str(entry.get("id")) for entry in entries)]
     pr.check_glyphs(strings, theme)
@@ -661,6 +719,22 @@ def _source_ids(spec_asset, entry):
     return ids
 
 
+def source_dirs(out_dir, spec, spec_path):
+    """``[(source id, resolved directory)]`` of the specification's sources that exist (paths relative to it)."""
+    if not spec:
+        return []
+    base = (Path(out_dir) / (spec_path or pr.SPEC_FILE)).parent
+    found = []
+    for source_id, source in (spec.get("sources") or {}).items():
+        path = source.get("path") if isinstance(source, dict) else None
+        if not isinstance(path, str) or not path:
+            continue
+        directory = (base / path).resolve()
+        if directory.is_dir():
+            found.append((source_id, directory))
+    return found
+
+
 def _filtered_spec(spec, keep, entries):
     keep_set = set(keep)
     assets = [a for a in spec.get("assets") or [] if isinstance(a, dict) and a.get("id") in keep_set]
@@ -770,7 +844,7 @@ def _write_zip(staging, target, stem):
 
 
 def _counts(entries):
-    counts = {status: 0 for status in ("written", "reused", "missing_input", "failed")}
+    counts = {status: 0 for status in STATUSES}
     for entry in entries:
         status = entry.get("status")
         counts[status] = counts.get(status, 0) + 1
@@ -784,7 +858,8 @@ def _archive_mode(dest, archive):
         return archive
     if archive in ("zip", "directory"):
         return archive == "zip"
-    raise pr.PresentationError("SETTING_INVALID", f"archive {archive!r}: use zip or directory")
+    raise pr.PresentationError("SETTING_INVALID", f"archive {archive!r}: use zip or directory",
+                               recovery="end the destination in .zip for an archive, or pass archive=\"directory\"")
 
 
 def write_bundle(out_dir, dest, *, only=None, archive=None, overwrite=False) -> dict:
@@ -817,6 +892,12 @@ def write_bundle(out_dir, dest, *, only=None, archive=None, overwrite=False) -> 
     if dest == out_dir or out_dir.is_relative_to(dest):
         raise pr.PresentationError("OUTPUT_EXISTS", "the bundle destination contains the presentation directory",
                                    recovery="choose a destination outside the presentation directory")
+    spec, spec_path = read_spec(out_dir, manifest)
+    for source_id, source_dir in source_dirs(out_dir, spec, spec_path):
+        if dest == source_dir or dest.is_relative_to(source_dir):
+            raise pr.PresentationError(
+                "OUTPUT_INVALID", f"{dest_given.name} is inside the saved source {source_id!r}",
+                recovery="choose a destination outside the saved runs and studies", source=source_id)
     if dest.exists():
         recognized = _is_previous_zip(dest, stem) if zipped else dest.is_dir() and _is_previous_bundle(dest)
         if not overwrite or not recognized:
@@ -825,7 +906,6 @@ def write_bundle(out_dir, dest, *, only=None, archive=None, overwrite=False) -> 
                                                                         " and is not a presentation bundle"),
                 recovery="choose a new destination" + (" or pass --overwrite" if recognized else ""))
 
-    spec, _spec_path = read_spec(out_dir, manifest)
     spec_assets = {a.get("id"): a for a in (spec or {}).get("assets") or [] if isinstance(a, dict)}
     keep = _closure(selected, entries, spec_assets)
     files: list[str] = []
@@ -942,6 +1022,8 @@ overflow:hidden}
 .problem{padding:16px 18px;color:var(--error);background:var(--error-bg);width:100%;height:100%;font-size:13.5px;
 overflow:auto}
 .problem strong{display:block;margin-bottom:4px}
+.problem.calm{color:var(--muted);background:var(--surface);display:flex;flex-direction:column;
+justify-content:center;align-items:center;text-align:center}
 .problem p{margin:4px 0;color:var(--text)}
 .empty{color:var(--muted)}
 #viewer{position:fixed;inset:0;background:var(--overlay);display:flex;flex-direction:column;z-index:10}
@@ -1028,8 +1110,12 @@ aside{width:auto;border-left:0;border-top:1px solid var(--line)}
   }
   function problem(a) {
     var e = a.error || {};
+    var label = t("status." + a.status) || a.status;
+    if (a.status === "pending" && !e.message) {
+      return el("div", {cls: "problem calm"}, [el("strong", {text: label}), el("p", {text: t("pending_hint")})]);
+    }
     return el("div", {cls: "problem"}, [
-      el("strong", {text: t("status." + a.status) || a.status}),
+      el("strong", {text: label}),
       e.message ? el("p", {text: e.message}) : null,
       e.recovery ? el("p", {text: t("next_step", {recovery: e.recovery})}) : null]);
   }
@@ -1065,10 +1151,11 @@ aside{width:auto;border-left:0;border-top:1px solid var(--line)}
     if (!data.assets.length) { grid.appendChild(el("p", {cls: "empty", text: t("empty")})); }
     data.assets.forEach(function (a, i) {
       var thumb = el("div", {cls: "thumb"}, [
-        a.built && a.preview ? el("img", {src: a.preview, alt: loc(a.title), decoding: "async"}) :
+        a.built && a.preview ? el("img", {src: a.preview, alt: loc(a.title) || a.id, decoding: "async"}) :
           (a.built ? el("span", {cls: "empty", text: t("no_preview")}) : problem(a))]);
       var card = el("a", {cls: "card", href: "#" + a.id, "data-asset": a.id, "aria-label": t("open", {id: a.id})}, [
-        thumb, el("div", {cls: "meta"}, [el("div", {cls: "id", text: a.id}), el("div", {cls: "title", text: loc(a.title)}),
+        thumb, el("div", {cls: "meta"}, [el("div", {cls: "id", text: a.id}),
+          loc(a.title) ? el("div", {cls: "title", text: loc(a.title)}) : null,
           loc(a.caption) ? el("p", {cls: "caption", text: loc(a.caption)}) : null])]);
       card.addEventListener("click", function (ev) { ev.preventDefault(); show(i); });
       grid.appendChild(card);
@@ -1099,14 +1186,14 @@ aside{width:auto;border-left:0;border-top:1px solid var(--line)}
       stage.appendChild(el("video", {id: "full-video", src: a.media.src, poster: a.media.poster, controls: "",
                                      playsinline: "", preload: "metadata", "aria-label": loc(a.title)}));
     } else if (a.built && a.media) {
-      stage.appendChild(el("img", {id: "full-image", src: a.media.src, alt: loc(a.title)}));
+      stage.appendChild(el("img", {id: "full-image", src: a.media.src, alt: loc(a.title) || a.id}));
     } else if (!a.built) {
       stage.appendChild(problem(a));
     }
     var panel = document.getElementById("panel");
     panel.textContent = "";
     if (loc(a.caption)) { panel.appendChild(el("p", {cls: "lead", text: loc(a.caption)})); }
-    var facts = [[t("kind"), t("kind." + a.kind) || a.kind]];
+    var facts = [[t("kind"), t("kind." + a.kind) || a.kind], [t("status"), t("status." + a.status) || a.status]];
     if (a.size) { facts.push([t("size"), a.size]); }
     panel.appendChild(kv(facts));
     if (a.files.length) {
