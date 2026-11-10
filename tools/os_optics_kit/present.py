@@ -512,7 +512,10 @@ def build_asset(asset, ctx, previous):
         reused = {**previous, "status": "reused"}
         reused["_abs"] = {role: ctx.out_dir / record["path"] for role, record in previous["files"].items()}
         return reused
-    return _draw(asset, ctx, theme, source_ids, asset_ids, entry, fingerprint)
+    drawn = _draw(asset, ctx, theme, source_ids, asset_ids, entry, fingerprint)
+    if drawn.get("status") == "written" and any((ctx.built(a) or {}).get("status") == "stale" for a in asset_ids):
+        drawn["status"] = "stale"  # composed from panels drawn with earlier settings
+    return drawn
 
 
 def asset_fingerprint(asset, ctx, theme, identities, source_ids, asset_ids):

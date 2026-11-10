@@ -268,7 +268,9 @@ jobs:
           mkdir -p "$demo/results" && cp -r cases/beam-expander/project.json cases/beam-expander/studies "$demo/results/"
           cd "$demo/results"
           "$engine" project run project.json --out-dir run > /dev/null
-          "$kit" edit project.json --edits studies/beam_expander_swap_l2.json --out swapped.json --run swapped-run > /dev/null
+          # the swapped lens misses its target (exit 1): that run is the "before" of the demo
+          "$kit" edit project.json --edits studies/beam_expander_swap_l2.json --out swapped.json --run swapped-run \
+            > /dev/null || test $? -eq 1
           "$kit" sweep studies/beam_expander_l2_sweep.json --base swapped.json --out l2-sweep > /dev/null
           "$kit" edit swapped.json --edits studies/beam_expander_move_l2.json --out final.json --run final-run > /dev/null
           cd ..
