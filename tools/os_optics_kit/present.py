@@ -484,7 +484,10 @@ def build_asset(asset, ctx, previous):
     for index, path in enumerate(result.get("data_files", [])):
         files.setdefault("data" if index == 0 else f"data{index + 1}", Path(path))
     preview = pres.write_preview(files["image"], ctx.out_dir / pres.PREVIEWS_DIR / f"{asset['id']}.png")
+    titles = {lang: pres.localized(asset.get("title"), lang, "") or pres.localized(result.get("title"), lang, "")
+              for lang in pres.LANGUAGES}
     return {**entry, "status": "written", "title": title, "caption": caption,
+            "titles": {lang: value for lang, value in titles.items() if value},
             "captions": {lang: value for lang, value in captions.items() if value},
             "files": _entry_files(files, ctx.out_dir), "preview": pres.portable_path(preview, ctx.out_dir),
             "size_px": pres.image_size(files["image"]), "provenance": pres.portable_path(provenance, ctx.out_dir),

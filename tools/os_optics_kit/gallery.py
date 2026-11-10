@@ -148,6 +148,7 @@ PATH_LEAKS = (
     re.compile(r"(?<![A-Za-z0-9])[A-Za-z]:[\\/]"),
     re.compile(r"(?<![\w.~-])/(?:home|Users|root)/"),
     re.compile(r"file://", re.I),
+    re.compile(r"(?<![\w\\])\\\\[A-Za-z0-9][\w.$-]*\\[\w.$-]+"),  # a network share \\host\share
 )
 
 
