@@ -93,7 +93,7 @@ def compact_generic(summary, limit=TOP_ROWS):
     return {"status": summary["status"], "kind": summary["kind"], "counts": summary["counts"],
             "states": summary["states"], "samples_with_warnings": wc.warning_summary(summary["rows"]),
             "targets": summary["targets"], "rows": rows, "rows_omitted": max(0, len(summary["rows"]) - limit),
-            "execution": opts.execution_brief(summary["paths"]["study_dir"]), "paths": summary["paths"]}
+            "execution": opts.execution_brief((summary.get("paths") or {}).get("study_dir")), "paths": summary["paths"]}
 
 
 # --------------------------------------------------------------------------------------------- candidates

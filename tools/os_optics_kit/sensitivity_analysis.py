@@ -928,7 +928,8 @@ def compact(summary, limit=TOP_UNUSABLE):
             "identity": {"engine_version": summary["identity"]["engine"]["engine_version"],
                          "engine_build_id": summary["identity"]["engine"]["engine_build_id"],
                          "catalog_version": summary["identity"]["catalog_version"]},
-            "seconds": summary["seconds"], "execution": opts.execution_brief(summary["paths"]["study_dir"]),
+            "seconds": summary["seconds"],
+            "execution": opts.execution_brief((summary.get("paths") or {}).get("study_dir")),
             "paths": summary["paths"]}
 
 

@@ -87,6 +87,8 @@ def cancelled_summary(study_dir, kind, execution):
 
 def execution_brief(study_dir):
     """``study.json`` ``execution`` in short (for a tool's stdout), or None."""
+    if study_dir is None:
+        return None
     try:
         execution = wc.read_json(Path(study_dir) / store.STUDY_FILE).get("execution") or {}
     except (OSError, ValueError):

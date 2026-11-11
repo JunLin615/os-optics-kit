@@ -487,7 +487,7 @@ def compact(summary, limit=TOP_ROWS):
             "units": {"parameters": {p["name"]: p["unit"] for p in summary["parameters"]},
                       "targets": summary["targets"]},
             "top_rows": top, "rows_omitted": max(0, len(rows) - limit),
-            "execution": opts.execution_brief(summary["paths"]["study_dir"]), "paths": summary["paths"]}
+            "execution": opts.execution_brief((summary.get("paths") or {}).get("study_dir")), "paths": summary["paths"]}
 
 
 def main(argv=None):
