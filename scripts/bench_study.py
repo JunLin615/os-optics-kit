@@ -23,7 +23,7 @@ import sys
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--out", type=Path, default=Path("run-bench-study"), help="output directory")
-    parser.add_argument("--workers", default="1,2,4", help="comma-separated worker counts (default 1,2,4)")
+    parser.add_argument("--workers", help="comma-separated worker counts (default 1,2,4 up to the logical CPUs)")
     parser.add_argument("--samples", type=int, default=24, help="samples per study (default 24)")
     parser.add_argument("--design", choices=("expander", "relay", "both"), default="both")
     parser.add_argument("--repeat", type=int, default=1, help="runs per worker count; the median is reported")
@@ -31,7 +31,8 @@ def main(argv=None):
     args = parser.parse_args(argv)
     from os_optics_kit.study import bench
 
-    document = bench.run_benchmark(args.out, workers=[int(w) for w in args.workers.split(",") if w.strip()],
+    counts = None if args.workers is None else [bench.count_value(w) for w in args.workers.split(",") if w.strip()]
+    document = bench.run_benchmark(args.out, workers=counts,
                                    samples=args.samples, designs=args.design, repeat=args.repeat, keep=args.keep)
     print(json.dumps({"status": document["status"], "runs": [
         {k: r[k] for k in ("design", "workers", "elapsed_s", "execute_s", "throughput", "speedup",

@@ -1,6 +1,7 @@
 """Benchmark of study execution: one catalog-free sweep run with several worker counts, each in a fresh process.
 
-``run_benchmark(out_dir, workers=(1, 2, 4), samples=24, designs="both")`` runs, for every design and worker count,
+``run_benchmark(out_dir, workers=None, samples=24, designs="both")`` runs, for every design and worker count (default
+1, 2 and 4 up to the logical CPUs),
 ``os-optics-kit sweep``'s Python entry in a child process (``python -m os_optics_kit.study.bench --child ...``) on a
 new study directory and reports per run:
 
@@ -34,6 +35,8 @@ from .. import workflow_common as wc
 from .._version import __version__
 
 DESIGNS = ("expander", "relay")
+#: Worker counts measured by default (those above the logical CPUs are skipped).
+DEFAULT_WORKERS = (1, 2, 4)
 MIB = 1024 * 1024
 
 
@@ -144,15 +147,47 @@ def environment():
             "start_method": "spawn"}
 
 
-def run_benchmark(out_dir=None, *, workers=(1, 2, 4), samples=24, designs="both", repeat=1, keep=False):
-    """Run the benchmark (module docstring); returns the result document (also ``bench.json`` / ``bench.md``)."""
+def count_value(text):
+    """One worker count of ``--workers 1,2,4``: a positive integer."""
+    try:
+        value = int(str(text).strip())
+    except ValueError:
+        value = 0
+    if value < 1:
+        raise wc.WorkflowError("BAD_ARGUMENT", f"--workers: give comma-separated positive integers, not {text!r}")
+    return value
+
+
+def worker_counts(workers=None, cpus=None):
+    """``(counts, skipped)``: the default counts 1, 2, 4 up to the logical CPUs (the others listed in ``skipped``),
+    or the given counts, refused (``BUDGET_INVALID``) before any run when one exceeds the CPUs."""
+    from .resources import cpu_count
+
+    cpus = cpus or cpu_count()
+    if workers is None:
+        counts = [w for w in DEFAULT_WORKERS if w <= cpus]
+        skipped = [{"workers": w, "reason": f"above the {cpus} logical CPUs"} for w in DEFAULT_WORKERS if w > cpus]
+        return counts, skipped
+    counts = sorted({w for w in workers})
+    if not counts or any(isinstance(w, bool) or not isinstance(w, int) or w < 1 for w in counts):
+        raise wc.WorkflowError("BAD_ARGUMENT", "worker counts must be positive integers")
+    above = [w for w in counts if w > cpus]
+    if above:
+        raise wc.WorkflowError("BUDGET_INVALID", f"worker counts {above} exceed the {cpus} logical CPUs of this "
+                               "machine; give counts up to that number", workers=above, cpus=cpus)
+    return counts, []
+
+
+def run_benchmark(out_dir=None, *, workers=None, samples=24, designs="both", repeat=1, keep=False):
+    """Run the benchmark (module docstring); returns the result document (also ``bench.json`` / ``bench.md``).
+    ``workers``: worker counts (default 1, 2, 4 up to the logical CPUs; a count above them is refused)."""
     designs = list(DESIGNS) if designs == "both" else [designs]
     for design in designs:
         if design not in BUILDERS:
             raise wc.WorkflowError("BAD_ARGUMENT", f"design {design!r}: choose {', '.join(DESIGNS)} or both")
-    workers = sorted({int(w) for w in workers if w != "auto"})
-    if not workers or workers[0] < 1 or samples < 1 or repeat < 1:
-        raise wc.WorkflowError("BAD_ARGUMENT", "workers, samples and repeat must be positive")
+    workers, skipped = worker_counts(workers)
+    if samples < 1 or repeat < 1:
+        raise wc.WorkflowError("BAD_ARGUMENT", "samples and repeat must be positive")
     temporary = out_dir is None
     out_dir = Path(tempfile.mkdtemp(prefix="os-optics-kit-bench-")) if temporary else Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -182,6 +217,7 @@ def run_benchmark(out_dir=None, *, workers=(1, 2, 4), samples=24, designs="both"
         _compare(runs)
         document = {"status": "BENCHMARKED", "kind": "os-optics-kit.study-benchmark", "schema_version": 1,
                     "environment": environment(), "samples": samples, "repeat": repeat, "runs": runs,
+                    "workers_skipped": skipped,
                     "parallel_not_faster": [{"design": r["design"], "workers": r["workers"], "speedup": r["speedup"]}
                                             for r in runs if r["workers"] > 1 and (r["speedup"] or 0) <= 1.0]}
         wc.write_json(out_dir / "bench.json", document)
@@ -238,6 +274,8 @@ def markdown(document):
     lines += ["", "Parallel runs that were not faster than one worker: " + (
         "; ".join(f"{s['design']} with {s['workers']} workers (speed-up {s['speedup']})" for s in slow)
         if slow else "none") + "."]
+    for item in document.get("workers_skipped") or []:
+        lines += ["", f"Not run: {item['workers']} workers ({item['reason']})."]
     lines += ["", "Reproduce: `python scripts/bench_study.py --workers "
               + ",".join(str(w) for w in sorted({r['workers'] for r in document['runs']}))
               + f" --samples {document['samples']}`.", ""]
