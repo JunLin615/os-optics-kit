@@ -182,13 +182,33 @@ class NoCasePathsTests(unittest.TestCase):
 
     def test_tool_sources_do_not_reference_cases(self):
         package = ROOT / "tools" / "os_optics_kit"
-        for path in sorted(package.glob("*.py")):
+        scanned = []
+        for path in sorted(package.rglob("*.py")):
+            relative = path.relative_to(package)
             if path.name in ("cases.py", "_resources.py"):
                 continue  # the cases command and the data locator serve the case collection itself
+            if relative.parts[0] == "contrib":
+                continue  # "contrib case" writes a new case into cases/NAME by design
+            scanned.append(relative.as_posix())
             text = path.read_text(encoding="utf-8")
-            with self.subTest(module=path.name):
+            with self.subTest(module=relative.as_posix()):
                 self.assertNotRegex(text, r"examples[/.]")
                 self.assertNotRegex(text, r"cases/|cases_dir|\"cases\"\s*/")
+        self.assertIn("study/execute.py", scanned)
+
+
+class StudyMessageTests(unittest.TestCase):
+    """Messages of the study commands name options that exist on the command that prints them."""
+
+    def test_worker_budget_refusal_names_the_option(self):
+        from os_optics_kit import workflow_common as wc
+        from os_optics_kit.study.resources import ResourceBudget
+
+        with self.assertRaises(wc.WorkflowError) as caught:
+            ResourceBudget.resolve(4, cpus=2)
+        self.assertEqual(caught.exception.code, "BUDGET_INVALID")
+        self.assertIn("4 workers x 1 thread(s) each exceed the 2 logical CPUs", str(caught.exception))
+        self.assertIn("give fewer --workers", str(caught.exception))
 
 
 if __name__ == "__main__":
