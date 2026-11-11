@@ -34,7 +34,7 @@ import time
 
 from .. import workflow_common as wc
 from . import evaluators, schedulers, store
-from .resources import ResourceBudget
+from .resources import ResourceBudget, suggest_workers
 
 FINAL_STATES = ("COMPLETED", "REFUSED")
 #: How a job without a result is recorded: scheduler error code -> state.
@@ -191,7 +191,8 @@ def execute_study(study_dir, *, workers=1, scheduler=None, evaluator=None, limit
                   on_progress=None, blas_threads=None):
     """Run the planned study in ``study_dir`` (module docstring) and return an ``ExecutionSummary``.
 
-    ``workers``: worker count (1 = serial in this process unless ``scheduler`` says otherwise); ``scheduler``:
+    ``workers``: worker count (1 = serial in this process unless ``scheduler`` says otherwise; ``"auto"``:
+    ``resources.suggest_workers`` for the samples still to run); ``scheduler``:
     ``"serial"``, ``"process"`` or a scheduler object (not closed here, so one pool can serve several studies);
     ``evaluator``: ``"module:function"`` or a function (default ``evaluators.run_project``; a worker process needs an
     importable one); ``limits``: ``{"time_limit_s", "max_memory_mib"}`` per evaluation; ``stop_on``: outcome classes
@@ -212,6 +213,10 @@ def execute_study(study_dir, *, workers=1, scheduler=None, evaluator=None, limit
         raise wc.WorkflowError("STUDY_STARTED", f"{study_dir.as_posix()} already holds sample results; resume it "
                                "(--resume) or plan it again (--overwrite)", study_dir=study_dir.as_posix())
     evaluator_name, evaluator_function = _evaluator_choice(evaluator)
+    choice = None
+    if workers == "auto":
+        to_run = len(store.resume_selection(study_dir, entries)[2]) if resume else len(entries)
+        workers, choice = suggest_workers(to_run)
     owned = scheduler is None or isinstance(scheduler, str)
     if owned:
         budget = ResourceBudget.resolve(workers, blas_threads=blas_threads, max_memory_mib=limits["max_memory_mib"],
@@ -234,7 +239,8 @@ def execute_study(study_dir, *, workers=1, scheduler=None, evaluator=None, limit
     started = wc.utc_now()
     study["execution"] = {"scheduler": summary.scheduler, "workers": summary.workers,
                           "blas_threads": summary.blas_threads, "limits": limits, "evaluator": evaluator_name,
-                          "resumed": bool(resume), "started": started, "finished": None, "state": "RUNNING"}
+                          "workers_choice": choice, "resumed": bool(resume), "started": started, "finished": None,
+                          "state": "RUNNING"}
     store.write_study(study_dir, study)
     store.append_journal(study_dir, "execution_started", scheduler=summary.scheduler, workers=summary.workers,
                          resume=bool(resume))
