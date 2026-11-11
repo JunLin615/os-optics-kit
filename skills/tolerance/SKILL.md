@@ -30,8 +30,8 @@ kind: tool
   (offsets from nominal, parameter unit).
 
 Options: `--out STUDY_DIR`, `--seed N`, `--samples N`, `--zero-tolerance` (all offsets 0),
-`--draw-only` (write the sample set and stop), `--verify-seed STUDY_DIR`, `--overwrite`, `--no-plots`,
-`--no-report`.
+`--draw-only` (write the sample set and stop; not with `--plan-only`), `--verify-seed STUDY_DIR`,
+`--overwrite`, `--no-plots`, `--no-report`.
 Execution (`study` skill): `--workers N|auto` (worker processes, same results as one), `--resume`
 (continue a planned or interrupted study), `--plan-only` (then `os-optics-kit study run DIR`),
 `--time-limit-s`, `--max-memory-mib` (per evaluation), `--ray-data summary`. A larger `--samples` with `--resume` keeps

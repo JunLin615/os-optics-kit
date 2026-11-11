@@ -64,9 +64,10 @@ os-optics-kit plot sweep study --y target:spot_radius
   plan (31 samples or fewer stay serial) and the measured median on `--resume`; at most 4.
 - Time and memory limits act at Engine checkpoints; a worker busy 5 s past its time limit is
   terminated. Workers use one BLAS thread each.
-- `study run` refuses a changed Engine build or catalog release (plan again with `--overwrite`);
-  resume reruns a changed request, or one another evaluator produced, and nothing else.
-- One execution per study directory: a second one is refused (`STUDY_RUNNING`) while the first runs.
+- `study run` refuses a changed Engine build or catalog release (plan again with `--overwrite`).
+  A resume keeps `COMPLETED` / `REFUSED` samples of the same request and named evaluator and runs
+  the rest.
+- While an execution runs, another one, planning and `study aggregate` are refused (`STUDY_RUNNING`).
 
 ## Version
 

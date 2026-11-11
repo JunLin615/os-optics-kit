@@ -50,8 +50,9 @@ os-optics-kit study status coarse
 Read `summary.json` counts and every non-PASS sample (`ERROR`, `UNKNOWN`, `OUT_OF_MODEL` stay in the
 table). Plan a finer study around the promising samples (narrower `range`, more samples, a higher
 `compute_budget`) in a new directory. A failed or cancelled sample is explicit (`state`); the others
-stay usable. After an interruption, `study run DIR --resume` runs only what is missing; a larger
-tolerance `--samples` with the same seed keeps the samples already run.
+stay usable. `study run DIR --resume` keeps the `COMPLETED` / `REFUSED` samples and runs the rest
+(failed, cancelled, not run); a larger tolerance `--samples` with the same seed keeps the samples
+already run.
 
 For an external optimiser, hand each independent batch (finite differences, a Sobol or multistart set)
 to `os_optics_kit.study`: `make_request` per design, `plan_study`, `execute_study(dir, workers=N)`,
