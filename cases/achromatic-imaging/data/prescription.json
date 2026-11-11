@@ -1,0 +1,56 @@
+{
+  "abbe_numbers": [
+    "64.167336237499",
+    "36.430934774098"
+  ],
+  "axial_focus_shift_long_minus_short_mm": "0",
+  "bfl_long_mm": "71.516656",
+  "bfl_short_mm": "71.516656",
+  "center_thicknesses_mm": [
+    "3",
+    "2"
+  ],
+  "crown_indices": [
+    "1.522376289731",
+    "1.516800034501",
+    "1.514322347261"
+  ],
+  "crown_shape_factor": "0",
+  "edge_thicknesses_mm": [
+    "1.756292",
+    "2.601365"
+  ],
+  "efl_difference_long_minus_short_mm": "-0.010504",
+  "efl_long_mm": "75.035418",
+  "efl_short_mm": "75.045922",
+  "equations": "thin-lens achromat phi1 = phi V1/(V1-V2), phi2 = -phi V2/(V1-V2); then exact thick-lens re-solve of EFL(l_c) = f and BFL(l_s) = BFL(l_l) (coincident foci of a collimated beam)",
+  "flint_indices": [
+    "1.632077863635",
+    "1.620053137303",
+    "1.61505790131"
+  ],
+  "paraxial": {
+    "axis": "ROTATIONAL",
+    "back_focal_length_mm": "71.478991",
+    "effective_focal_length_mm": "74.999999",
+    "front_focal_length_mm": "75.315753",
+    "front_principal_plane_z_mm": "-0.315754",
+    "rear_principal_plane_z_mm": "1.478992",
+    "status": "DERIVED",
+    "wavelength_nm": "587.5618"
+  },
+  "radii_mm": [
+    "32.73212",
+    "-32.73212",
+    "-984.019095"
+  ],
+  "thin_lens_element_focal_lengths_mm": [
+    "32.418832",
+    "-57.100651"
+  ],
+  "wavelengths_nm": [
+    "486.1327",
+    "587.5618",
+    "656.2725"
+  ]
+}

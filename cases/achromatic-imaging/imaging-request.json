@@ -1,0 +1,12 @@
+{
+  "frequencies_cyc_per_mm": [
+    0,
+    10,
+    20,
+    40
+  ],
+  "include_psf_map": true,
+  "launch_grid": 48,
+  "psf_half_width_um": 80,
+  "psf_samples": 128
+}

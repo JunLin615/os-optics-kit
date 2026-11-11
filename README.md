@@ -77,6 +77,8 @@ fonts, comparisons, animations and handoff.
 | Case | What it shows | Catalog |
 | --- | --- | --- |
 | [beam-expander](https://github.com/JunLin615/os-optics-kit/tree/main/cases/beam-expander) | Catalog beam expander: swap a lens, sweep its spacing, restore collimation | yes |
+| [achromatic-imaging](cases/achromatic-imaging/README.md) | Three-colour native PSF/MTF, chromatic focus and alignment tolerances | no |
+| [focus-requirement](cases/focus-requirement/README.md) | Fixed-plane focusing requirement, refined placement tolerance and report | no |
 | [ideal-lens-focus](https://github.com/JunLin615/os-optics-kit/tree/main/cases/ideal-lens-focus) | Gaussian focus of an ideal thin lens | no |
 | [expansion-focus](https://github.com/JunLin615/os-optics-kit/tree/main/cases/expansion-focus) | Beam expansion and focusing workflow with sensitivity and tolerance studies | no |
 | [polarization-control](https://github.com/JunLin615/os-optics-kit/tree/main/cases/polarization-control) | Polarization control with a half-wave plate and a polarizer | no |

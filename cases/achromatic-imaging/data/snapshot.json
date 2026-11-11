@@ -1,0 +1,319 @@
+{
+  "catalog": null,
+  "common_plane_x_mm": 76.478991,
+  "engine": "0.13.0",
+  "engine_build_id": "0.13.0+3d35df1120bed843",
+  "fields": [
+    {
+      "circular_ee_radii_um": {
+        "50": 3.2515813842670567,
+        "80": 5.453075802994079
+      },
+      "derived_checks": {
+        "ee50_at_most_5_um": true,
+        "full_pupil_spot_at_most_2_um": true,
+        "mtf_10_20_40_at_least_0.85_0.75_0.55": true
+      },
+      "diffraction_mtf": {
+        "sagittal": [
+          0.986410621,
+          0.92159623,
+          0.845420667,
+          0.694271738
+        ],
+        "tangential": [
+          0.986410621,
+          0.921570195,
+          0.845386892,
+          0.694256071
+        ]
+      },
+      "ee50_um": 3.26847752,
+      "ee80_over_native_diffraction_reference": 1.02187262239617,
+      "ee80_um": 5.55848643,
+      "geometric_pupil_area_fraction": 1.001905935639576,
+      "mtf": {
+        "sagittal": [
+          0.986408426,
+          0.920970563,
+          0.843366045,
+          0.689111799
+        ],
+        "tangential": [
+          0.986408426,
+          0.920944298,
+          0.843331606,
+          0.689094688
+        ]
+      },
+      "na": 0.0399804534,
+      "reference_ee80_um": 5.43951008,
+      "spot_rms_um": 0.868992842,
+      "strehl": 0.990716192,
+      "wavelength_nm": 486.1327
+    },
+    {
+      "circular_ee_radii_um": {
+        "50": 3.9271545932698895,
+        "80": 6.5860481889812155
+      },
+      "derived_checks": {
+        "ee50_at_most_5_um": true,
+        "full_pupil_spot_at_most_2_um": true,
+        "mtf_10_20_40_at_least_0.85_0.75_0.55": true
+      },
+      "diffraction_mtf": {
+        "sagittal": [
+          0.983504164,
+          0.905392006,
+          0.813602753,
+          0.632683613
+        ],
+        "tangential": [
+          0.983504164,
+          0.905363308,
+          0.813569881,
+          0.632684169
+        ]
+      },
+      "ee50_um": 3.92173284,
+      "ee80_over_native_diffraction_reference": 1.0014605616300483,
+      "ee80_um": 6.57864973,
+      "geometric_pupil_area_fraction": 1.001905935639576,
+      "mtf": {
+        "sagittal": [
+          0.983502699,
+          0.905283614,
+          0.81333661,
+          0.632267943
+        ],
+        "tangential": [
+          0.983502699,
+          0.905254872,
+          0.813303653,
+          0.632268406
+        ]
+      },
+      "na": 0.0400094944,
+      "reference_ee80_um": 6.56905522,
+      "spot_rms_um": 0.421420845,
+      "strehl": 0.999252226,
+      "wavelength_nm": 587.5618
+    },
+    {
+      "circular_ee_radii_um": {
+        "50": 4.38828115342919,
+        "80": 7.359382081065048
+      },
+      "derived_checks": {
+        "ee50_at_most_5_um": true,
+        "full_pupil_spot_at_most_2_um": true,
+        "mtf_10_20_40_at_least_0.85_0.75_0.55": true
+      },
+      "diffraction_mtf": {
+        "sagittal": [
+          0.981524546,
+          0.894316508,
+          0.791910717,
+          0.591108955
+        ],
+        "tangential": [
+          0.981524546,
+          0.894286294,
+          0.791879462,
+          0.59112186
+        ]
+      },
+      "ee50_um": 4.39013691,
+      "ee80_over_native_diffraction_reference": 1.0073441173970625,
+      "ee80_um": 7.39401532,
+      "geometric_pupil_area_fraction": 1.001905935639576,
+      "mtf": {
+        "sagittal": [
+          0.981523884,
+          0.89399117,
+          0.790849973,
+          0.588854156
+        ],
+        "tangential": [
+          0.981523884,
+          0.893960854,
+          0.790818417,
+          0.58886642
+        ]
+      },
+      "na": 0.0399923818,
+      "reference_ee80_um": 7.3401087,
+      "spot_rms_um": 0.613768683,
+      "strehl": 0.996888883,
+      "wavelength_nm": 656.2725
+    }
+  ],
+  "focus": {
+    "best_focus_span_mm": 0.04462223748949157,
+    "criterion": "minimum full-pupil geometric RMS radius",
+    "derived_checks": {
+      "centre_efl_75_mm_within_1_percent": true,
+      "focus_span_at_most_0.06_mm": true
+    },
+    "fit_planes_offset_mm": [
+      -0.1,
+      0,
+      0.1
+    ],
+    "launch_grid": 24,
+    "rows": [
+      {
+        "best_focus_offset_mm": 0.03062277714553724,
+        "best_focus_x_mm": 76.50961377714553,
+        "best_geometric_spot_um": 0.0646182787,
+        "bfl_mm": 71.51665587004553,
+        "common_plane_spot_um": 0.868992842,
+        "efl_mm": 75.04592200898763,
+        "quadratic_prediction_error_um": 4.069770492831637e-08,
+        "wavelength_nm": 486.1327
+      },
+      {
+        "best_focus_offset_mm": -0.013999460343957508,
+        "best_focus_x_mm": 76.46499153965604,
+        "best_geometric_spot_um": 0.134570018,
+        "bfl_mm": 71.47899071806498,
+        "common_plane_spot_um": 0.421420845,
+        "efl_mm": 74.99999893397153,
+        "quadratic_prediction_error_um": 9.900767927728538e-09,
+        "wavelength_nm": 587.5618
+      },
+      {
+        "best_focus_offset_mm": 0.020973289270350328,
+        "best_focus_x_mm": 76.49996428927034,
+        "best_geometric_spot_um": 0.161556686,
+        "bfl_mm": 71.51665586960102,
+        "common_plane_spot_um": 0.613768683,
+        "efl_mm": 75.03541819338655,
+        "quadratic_prediction_error_um": 2.131259335680369e-09,
+        "wavelength_nm": 656.2725
+      }
+    ]
+  },
+  "imaging_request": {
+    "crossing_index": null,
+    "fields": null,
+    "frequencies_cyc_per_mm": [
+      0.0,
+      10.0,
+      20.0,
+      40.0
+    ],
+    "include_psf_map": true,
+    "launch_grid": 48,
+    "launch_radius_beam_radii": null,
+    "psf_half_width_um": 80.0,
+    "psf_samples": 128,
+    "reference": "CENTROID",
+    "wavelengths_nm": null
+  },
+  "native_outcome": "PASS",
+  "native_targets": [
+    {
+      "assessment": "MET",
+      "id": "pupil_spot_F",
+      "unit": "mm",
+      "value": 0.00033704489030420085
+    },
+    {
+      "assessment": "MET",
+      "id": "pupil_spot_d",
+      "unit": "mm",
+      "value": 2.1860702113511635e-05
+    },
+    {
+      "assessment": "MET",
+      "id": "pupil_spot_C",
+      "unit": "mm",
+      "value": 0.0003247212175678088
+    },
+    {
+      "assessment": "MET",
+      "id": "centroid_u",
+      "unit": "mm",
+      "value": 1.5233040523421337e-17
+    },
+    {
+      "assessment": "MET",
+      "id": "centroid_v",
+      "unit": "mm",
+      "value": -1.8973538018496328e-18
+    }
+  ],
+  "project_sha256": "550295a34c371b2a95bac180eddaa6870ee8772044a3313cfb77634352948069",
+  "sensitivity": {
+    "basis": "largest absolute full-pupil spot RMS change across wavelengths and declared steps",
+    "ranking": [
+      {
+        "max_spot_change_um": 2.5419239210000004,
+        "parameter": "radius1_fraction",
+        "steps": [
+          0.0005,
+          0.001
+        ],
+        "unit": "1"
+      },
+      {
+        "max_spot_change_um": 1.4110085010000002,
+        "parameter": "image_plane",
+        "steps": [
+          0.025,
+          0.05
+        ],
+        "unit": "mm"
+      },
+      {
+        "max_spot_change_um": 0.5074996710000002,
+        "parameter": "radius2_fraction",
+        "steps": [
+          0.0005,
+          0.001
+        ],
+        "unit": "1"
+      },
+      {
+        "max_spot_change_um": 0.04305485100000006,
+        "parameter": "crown_thickness",
+        "steps": [
+          0.01,
+          0.02
+        ],
+        "unit": "mm"
+      }
+    ]
+  },
+  "tolerance": {
+    "derived_pass_count": 16,
+    "draws": 16,
+    "meaning": "finite simulated sample under the declared independent distributions",
+    "native_counts": {
+      "by_outcome": {
+        "ERROR": 0,
+        "FAIL": 0,
+        "NOT_APPLICABLE": 0,
+        "OUT_OF_MODEL": 0,
+        "PASS": 16,
+        "UNKNOWN": 0
+      },
+      "pass_fraction": {
+        "definition": "PASS samples / all requested samples: fraction of the simulated samples, drawn from the stated independent distributions, in which every selected target passed",
+        "denominator": 16,
+        "numerator": 16,
+        "value": 1.0
+      },
+      "pass_fraction_among_evaluable": {
+        "definition": "PASS / (PASS + FAIL)",
+        "denominator": 16,
+        "numerator": 16,
+        "value": 1.0
+      },
+      "requested": 16
+    },
+    "seed": 20261111
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "catalog": null,
+  "engine": "0.13.0",
+  "engine_build_id": "0.13.0+3d35df1120bed843",
+  "native_outcome": "PASS",
+  "native_targets": [
+    {
+      "assessment": "MET",
+      "id": "spot_radius",
+      "unit": "mm",
+      "value": 0.012414085561167836
+    }
+  ],
+  "placement": {
+    "boundary_brackets": [
+      {
+        "left_mm": -0.78,
+        "left_outcome": "FAIL",
+        "right_mm": -0.77,
+        "right_outcome": "PASS"
+      },
+      {
+        "left_mm": 0.79,
+        "left_outcome": "PASS",
+        "right_mm": 0.8,
+        "right_outcome": "FAIL"
+      }
+    ],
+    "evaluations": 53,
+    "geometry": {
+      "fixed_work_plane_x_mm": 50,
+      "nominal_lens_x_mm": 0,
+      "source_x_mm": -10
+    },
+    "identity": {
+      "base_project_hash": "0ae70e1143f5b3a9cad46247c422d1c0d3dc47fb4f29248770c2ad28777a9836",
+      "catalog_version": null,
+      "catalog_versions": [
+        null
+      ],
+      "engine": {
+        "engine_build_id": "0.13.0+3d35df1120bed843",
+        "engine_version": "0.13.0"
+      }
+    },
+    "max_reference_error_mm": 1.700029006457271e-16,
+    "requirement": {
+      "convention": "Gaussian 1/e^2 intensity radius at the fixed work plane",
+      "maximum_mm": 0.02,
+      "metric": "beam_radius_mm"
+    },
+    "resolution_mm": 0.01,
+    "sampled_passing_interval_mm": [
+      -0.77,
+      0.79
+    ],
+    "schema": "focus-requirement.verification"
+  },
+  "project_sha256": "063bdce7a0b21eac9a4e720a2aa056b5351e13168cf6d1c8bbcd344ee1016712"
+}

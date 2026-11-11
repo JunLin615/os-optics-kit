@@ -1,0 +1,49 @@
+{
+  "description": "Compare declared curvature, crown-thickness and image-plane perturbations without re-solving the objective.",
+  "max_evaluations": 17,
+  "parameters": [
+    {
+      "name": "radius1_fraction",
+      "nominal": 0,
+      "scale": 0.001,
+      "steps": [
+        0.0005,
+        0.001
+      ],
+      "unit": "1"
+    },
+    {
+      "name": "radius2_fraction",
+      "nominal": 0,
+      "scale": 0.001,
+      "steps": [
+        0.0005,
+        0.001
+      ],
+      "unit": "1"
+    },
+    {
+      "name": "crown_thickness",
+      "nominal": 0,
+      "scale": 0.02,
+      "steps": [
+        0.01,
+        0.02
+      ],
+      "unit": "mm"
+    },
+    {
+      "name": "image_plane",
+      "nominal": 0,
+      "scale": 0.05,
+      "steps": [
+        0.025,
+        0.05
+      ],
+      "unit": "mm"
+    }
+  ],
+  "targets": [
+    "pupil_spot_d"
+  ]
+}
