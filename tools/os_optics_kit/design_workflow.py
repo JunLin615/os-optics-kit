@@ -162,9 +162,10 @@ def add_study_options(parser, default_studies, max_evaluations):
                        help=f"upper bound on Engine runs (nominal + all samples), checked before running "
                             f"(default {max_evaluations})")
     group.add_argument("--max-plots", type=int, default=3, help="plots per study (targets that change; default 3)")
-    group.add_argument("--workers", type=opts.workers_value, default=1, metavar="N|auto",
+    group.add_argument("--workers", type=opts.workers_argument, default=1, metavar="N|auto",
                        help="worker processes for the study samples (default 1: serial; one pool serves every study; "
-                            "auto: from the number of samples)")
+                            "auto: from the number of samples, 0.2 s each assumed, serial unless workers save time, "
+                            "at most 4)")
     group.add_argument("--out", type=Path, default=None, help="output directory (new or empty)")
     group.add_argument("--overwrite", action="store_true", help="replace this workflow's files in --out")
     group.add_argument("--list-parameters", action="store_true",

@@ -9,6 +9,7 @@ Usage:
                                  [--overwrite] [--workers N|auto] [--resume] [--plan-only] [--time-limit-s S]
                                  [--max-memory-mib M] [--ray-data full|summary]
   os-optics-kit study bench [--out DIR] [--workers 1,2,4] [--samples N] [--design expander|relay|both]
+                            [--repeat N]
 
 A study directory holds a plan (study.json, plan.jsonl, requests/<id>.json: one request per independent Engine
 evaluation), the sample records (samples/<id>/sample.json, with project.json and the run directory) and a journal.
@@ -17,16 +18,22 @@ evaluation), the sample records (samples/<id>/sample.json, with project.json and
 run        executes the samples that still need a result and aggregates the study as the planning tool would
            (sweep: best sample; sensitivity: finite differences; tolerance: distributions; plots and report as
            chosen when planning). --workers N runs N worker processes (spawned once, each imports the Engine once);
-           1 runs serially in this process; auto chooses from the plan size (serial below the break-even of about
-           4 s worker start-up). --resume keeps every sample whose record has the plan's request hash and state
-           COMPLETED or REFUSED, reads back a complete run directory without a record, and runs the rest; the
-           study's Engine build and catalog release must be the installed ones (STUDY_IDENTITY_CHANGED names the
-           field). --time-limit-s and --max-memory-mib apply per evaluation and stop it at the Engine's next
-           checkpoint (state CANCELLED; a worker process still busy 5 s after its time limit is terminated);
-           there is no other preemption. --evaluator replaces the Engine call by a function
-           f(request, sample_dir, limits) -> sample record. Ctrl-C stops handing out samples, records the rest
-           NOT_RUN / CANCELLED and exits 130; run --resume continues.
-status     plan size, record states, execution block, last journal events; never runs the Engine.
+           1 runs serially in this process; auto chooses from the number of samples to run and their run time
+           (the median of the study's completed samples with --resume, else 0.2 s assumed): serial unless worker
+           processes, which start in about 4 s, save time; at most 4. --resume keeps every sample whose record has
+           the plan's request hash, state COMPLETED or REFUSED and was produced by the same evaluator, reads back a
+           complete run directory without a record, and runs the rest. With or without --resume, the study's
+           Engine build and catalog release must be the installed ones (STUDY_IDENTITY_CHANGED names the field;
+           plan it again with its planning command and --overwrite). One execution at a time: a second one on the
+           same directory is refused (STUDY_RUNNING) while the first one's process runs. --time-limit-s and
+           --max-memory-mib apply per evaluation and stop it at the Engine's next checkpoint (state CANCELLED,
+           error code RUN_STOPPED, problem code TIME_LIMIT / MEMORY_LIMIT; a worker process still busy 5 s after
+           its time limit is terminated and recorded the same way); there is no other preemption. --evaluator
+           replaces the Engine call by a function f(request, sample_dir, limits) -> sample record. Ctrl-C (or a
+           cancellation through the Python API) cancels the running sample, starts no other, records the rest
+           NOT_RUN and exits 130; the printed "next" command (run --resume) continues.
+status     plan size, record states, execution block (state RUNNING only while the executing process runs;
+           INTERRUPTED when it ended without finishing), last journal events; never runs the Engine.
 aggregate  rewrites table.csv and summary.json (and the planning tool's analysis, plots and report) from the
            saved records; never runs the Engine.
 candidates plans (and unless --plan-only runs) one sample per Project file, in the order given: parameter
@@ -34,6 +41,7 @@ candidates plans (and unless --plan-only runs) one sample per Project file, in t
            result like any study.
 bench      times a catalog-free study with each worker count (fresh study directory each): elapsed, throughput,
            worker start-up, first-result latency, peak memory, and whether the results equal the one-worker run.
+           The default counts 1,2,4 stop at the logical CPUs; a larger count given with --workers is refused.
 
 Every sample record carries state (COMPLETED, REFUSED, FAILED, CANCELLED, NOT_RUN; distinct from the requirement
 outcome), attempts, timing (queued_s, run_s, phase_seconds from the Engine's run monitor), peak_memory_bytes and
@@ -50,7 +58,7 @@ import argparse
 from pathlib import Path
 
 from . import workflow_common as wc
-from .study import aggregate as agg, execute as ex, options as opts, requests as rq, store
+from .study import aggregate as agg, evaluators, execute as ex, options as opts, requests as rq, store
 
 PROG = "os-optics-kit study"
 CANDIDATE_KIND = "os-optics-kit.candidate-study"
@@ -166,12 +174,18 @@ def status(study_dir, events=8):
             continue
         states[record.get("state")] = states.get(record.get("state"), 0) + 1
         outcomes[record.get("outcome")] = outcomes.get(record.get("outcome"), 0) + 1
+    evaluator = (study.get("execution") or {}).get("evaluator") or evaluators.DEFAULT_EVALUATOR
     rerun = [e["sample_id"] for e in entries if e["sample_id"] not in missing
-             and (store.read_record(study_dir, e["sample_id"]) or {}).get("state") not in store.REUSABLE_STATES]
+             and store.reusable_record(study_dir, e, evaluator) is None]
     journal = store.read_journal(study_dir)
     summary_path = study_dir / "summary.json"
+    execution = dict(study.get("execution") or {})
+    owner = store.read_owner(study_dir)
+    running = owner is not None and store.owner_alive(owner)
+    if execution.get("state") == "RUNNING" and not running:
+        execution["state"] = "INTERRUPTED"  # its process ended without finishing: resume it with run --resume
     return {"status": "DESCRIBED", "kind": study.get("kind"), "samples": len(entries),
-            "execution": study.get("execution"), "states": states, "outcomes": outcomes,
+            "execution": execution, "owner": owner if running else None, "states": states, "outcomes": outcomes,
             "without_record": wc.bounded(missing, TOP_ROWS), "to_run_on_resume": wc.bounded(missing + rerun, TOP_ROWS),
             "identity": study["identity"], "aggregated": summary_path.is_file(),
             "journal": journal[-events:], "paths": {"study_dir": study_dir.as_posix(), "study": store.STUDY_FILE,
@@ -191,7 +205,8 @@ def _parser():
     run.add_argument("--scheduler", choices=("serial", "process"),
                      help="serial (this process) or process (worker pool); default: serial for one worker")
     run.add_argument("--evaluator", metavar="module:function",
-                     help="evaluate each request with this function instead of one Engine run")
+                     help="evaluate each request with this function instead of one Engine run (--resume keeps only "
+                          "the samples this evaluator produced)")
     show = commands.add_parser("status", help="plan, record states, execution and journal of a study (no Engine run)")
     show.add_argument("study_dir", type=Path, metavar="STUDY_DIR")
     again = commands.add_parser("aggregate", help="table, summary and the tool's analysis from saved records "
@@ -208,7 +223,7 @@ def _parser():
     bench = commands.add_parser("bench", help="time a catalog-free study with several worker counts")
     bench.add_argument("--out", type=Path, help="directory for the benchmark studies and results (default: a "
                                                 "temporary directory, removed afterwards)")
-    bench.add_argument("--workers", default="1,2,4", help="comma-separated worker counts (default 1,2,4)")
+    bench.add_argument("--workers", help="comma-separated worker counts (default 1,2,4 up to the logical CPUs)")
     bench.add_argument("--samples", type=int, default=24, help="samples per study (default 24)")
     bench.add_argument("--design", choices=("expander", "relay", "both"), default="both",
                        help="expander: three thin lenses; relay: a 12-lens relay with 13 planes (heavier)")
@@ -228,7 +243,9 @@ def main(argv=None):
         if args.command == "bench":
             from .study import bench
 
-            counts = [opts.workers_value(item) for item in str(args.workers).split(",") if item.strip()]
+            counts = None
+            if args.workers is not None:
+                counts = [bench.count_value(item) for item in str(args.workers).split(",") if item.strip()]
             return bench.run_benchmark(args.out, workers=counts, samples=args.samples, designs=args.design,
                                        repeat=args.repeat)
         if args.command == "candidates":

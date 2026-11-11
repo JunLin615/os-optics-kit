@@ -1,7 +1,8 @@
 """The execution options every study tool shares, and the documents a tool prints when it plans or is cancelled.
 
 CLI (``add_execution_options``): ``--workers N|auto`` (default 1: serial in this process; ``auto`` picks a count from
-the plan size, see ``resources.suggest_workers``), ``--resume`` (continue a planned or interrupted study in --out),
+the samples to run and their measured or assumed run time, see ``resources.suggest_workers``), ``--resume``
+(continue a planned or interrupted study in --out),
 ``--plan-only`` (write the plan and stop; ``os-optics-kit study run`` executes it), ``--time-limit-s S`` and
 ``--max-memory-mib M`` (per evaluation, enforced at Engine checkpoints), ``--ray-data full|summary`` (requested
 outputs: ``summary`` keeps chief rays only).
@@ -9,14 +10,20 @@ outputs: ``summary`` keeps chief rays only).
 
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 
 from .. import workflow_common as wc
-from . import store
+from . import evaluators, store
 
 #: Exit code of a study that was cancelled (Ctrl-C or the API): the study stays resumable.
 CANCELLED_EXIT = 130
 EXIT_CODES = {"PLANNED": 0, "CANCELLED": CANCELLED_EXIT}
+
+
+#: What ``--workers auto`` does, for help texts.
+AUTO_HELP = ("auto: from the number of samples to run and their run time (the median of the study's completed "
+             "samples on --resume, else 0.2 s assumed), serial unless workers save time, at most 4")
 
 
 def workers_value(text):
@@ -26,19 +33,27 @@ def workers_value(text):
     try:
         value = int(text)
     except ValueError:
-        raise ValueError(f"--workers: give a positive integer or auto, not {text!r}") from None
+        raise ValueError(f"give a positive integer or auto, not {text!r}") from None
     if value < 1:
-        raise ValueError("--workers must be at least 1")
+        raise ValueError(f"give at least 1 worker, not {value}")
     return value
+
+
+def workers_argument(text):
+    """``workers_value`` for argparse (its message reaches the user as ``argument --workers: ...``)."""
+    try:
+        return workers_value(text)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(str(exc)) from None
 
 
 def add_execution_options(parser, *, plan_only=True, outputs=True):
     group = parser.add_argument_group("execution (the samples are independent; results do not depend on these)")
-    group.add_argument("--workers", type=workers_value, default=1, metavar="N|auto",
-                       help="worker processes (default 1: serial in this process; auto: from the plan size, at most 4)")
+    group.add_argument("--workers", type=workers_argument, default=1, metavar="N|auto",
+                       help=f"worker processes (default 1: serial in this process; {AUTO_HELP})")
     group.add_argument("--resume", action="store_true",
                        help="continue a planned or interrupted study: samples whose request is unchanged and that "
-                            "completed are kept, the rest run")
+                            "completed with the same evaluator are kept, the rest run")
     if plan_only:
         group.add_argument("--plan-only", action="store_true",
                            help="write the plan (study.json, plan.jsonl, requests/) and stop; run it with "
@@ -71,7 +86,7 @@ def planned_summary(study_dir, kind, extra=None):
     study = store.read_study(study_dir)
     return {"status": "PLANNED", "kind": f"{kind}-plan", "samples": len(entries),
             "identity": study["identity"], **(extra or {}),
-            "next": f"os-optics-kit study run {study_dir.as_posix()} --workers N",
+            "next": f"os-optics-kit study run {study_dir.as_posix()}",
             "paths": {"study_dir": study_dir.as_posix(), "study": store.STUDY_FILE, "plan": store.PLAN_FILE,
                       "requests": store.REQUESTS_DIR}}
 
@@ -79,8 +94,11 @@ def planned_summary(study_dir, kind, extra=None):
 def cancelled_summary(study_dir, kind, execution):
     """The document of a cancelled execution (exit 130): what ran, and how to continue."""
     study_dir = Path(study_dir)
+    command = f"os-optics-kit study run {study_dir.as_posix()} --resume"
+    if execution.evaluator is not None and execution.evaluator != evaluators.DEFAULT_EVALUATOR:
+        command += f" --evaluator {execution.evaluator}"
     return {"status": "CANCELLED", "kind": f"{kind}-execution", "execution": execution.as_dict(),
-            "next": f"os-optics-kit study run {study_dir.as_posix()} --resume",
+            "next": command,
             "paths": {"study_dir": study_dir.as_posix(), "study": store.STUDY_FILE,
                       "journal": store.JOURNAL_FILE, "samples": store.SAMPLES_DIR}}
 
