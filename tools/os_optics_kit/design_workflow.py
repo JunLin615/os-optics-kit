@@ -5,7 +5,8 @@ physics code:
 
 1. runs the nominal design once (``workflow_common.run_sample``: saved Project and native run directory);
 2. runs bounded one-parameter studies with ``sweep_parameters.run_sweep`` (one saved Project and run per sample,
-   every outcome class kept);
+   every outcome class kept); the sample Projects are built here and handed over as documents, and with
+   ``--workers N`` one pool of N worker processes runs the samples of every study;
 3. compares each study with the nominal run by target and plane ID (``compare_runs.compare``);
 4. plots the targets whose values change across the study (``plot_results.plot_sweep``) and the nominal power
    distribution (``plot_results.plot_power``);
@@ -47,6 +48,7 @@ from . import workflow_common as wc
 from . import sweep_parameters as sp
 from . import compare_runs as cr
 from . import build_report as br
+from .study import aggregate as agg, options as opts, resources, schedulers
 
 #: exit code of a workflow = outcome class of its nominal run
 EXIT_CODES = {"PASS": 0, "FAIL": 1, "UNKNOWN": 2, "OUT_OF_MODEL": 3, "ERROR": 4, "NOT_APPLICABLE": 0, "DESCRIBED": 0}
@@ -160,6 +162,9 @@ def add_study_options(parser, default_studies, max_evaluations):
                        help=f"upper bound on Engine runs (nominal + all samples), checked before running "
                             f"(default {max_evaluations})")
     group.add_argument("--max-plots", type=int, default=3, help="plots per study (targets that change; default 3)")
+    group.add_argument("--workers", type=opts.workers_value, default=1, metavar="N|auto",
+                       help="worker processes for the study samples (default 1: serial; one pool serves every study; "
+                            "auto: from the number of samples)")
     group.add_argument("--out", type=Path, default=None, help="output directory (new or empty)")
     group.add_argument("--overwrite", action="store_true", help="replace this workflow's files in --out")
     group.add_argument("--list-parameters", action="store_true",
@@ -346,13 +351,14 @@ def _plot_sweep(study_dir, target_ids, out_dir):
     return written, None
 
 
-def run_workflow(config, inputs, studies, out_dir, *, max_evaluations, max_plots=3, overwrite=False):
+def run_workflow(config, inputs, studies, out_dir, *, max_evaluations, max_plots=3, overwrite=False, workers=1):
     """Run the nominal design and the studies; write every artifact; return the full workflow summary.
 
     ``config``: ``workflow`` (script name), ``design`` (DESIGN_INFO key), ``info`` (its DESIGN_INFO entry),
     ``builder`` (keyword builder of optical_designs), ``checks(params, record) -> {"rows", "analysis"}`` (independent
     reference rows, optional analysis dict), ``reference_method`` (text), ``analysis_keys`` (analysis fields shown
-    for notable samples), ``default_studies``."""
+    for notable samples), ``default_studies``. ``workers``: worker processes for the study samples (one pool for
+    every study; ``"auto"`` from the number of samples)."""
     started = time.perf_counter()
     target_order = list(config["info"]["targets"])
     total = 1 + sum(len(s["values"]) for s in studies) + int(config.get("planned_extra_evaluations", 0))
@@ -369,7 +375,20 @@ def run_workflow(config, inputs, studies, out_dir, *, max_evaluations, max_plots
             docs[value] = (_build(config["builder"], params, f"{study['name']}={value!r}"), params)
         planned.append((study, docs))
     out_dir = _prepare(out_dir, overwrite)
+    samples = sum(len(s["values"]) for s in studies)
+    if workers == "auto":
+        workers = resources.suggest_workers(samples)[0]
+    scheduler = schedulers.make_scheduler(None, workers) if workers > 1 and samples > 1 else None
+    try:
+        return _run(config, inputs, planned, out_dir, record_inputs=(nominal_doc, started, target_order),
+                    max_plots=max_plots, scheduler=scheduler)
+    finally:
+        if scheduler is not None:
+            scheduler.close()
 
+
+def _run(config, inputs, planned, out_dir, *, record_inputs, max_plots, scheduler):
+    nominal_doc, started, target_order = record_inputs
     nominal_dir = out_dir / "nominal"
     record = wc.run_sample(nominal_doc, nominal_dir)
     record["parameters"] = {name: value for name, value in inputs.items()}
@@ -395,11 +414,14 @@ def run_workflow(config, inputs, studies, out_dir, *, max_evaluations, max_plots
                 "parameters": [{"name": study["name"], "unit": unit, "values": values}],
                 "max_evaluations": len(values)}
         summary = sp.run_sweep(spec, study_dir, base=nominal_doc, base_path=nominal_dir / "project.json",
-                               build=lambda p, docs=docs, name=study["name"]: docs[p[name]][0])
+                               documents=[docs[value][0] for value in values], scheduler=scheduler)
+        if summary["status"] == "CANCELLED":
+            raise KeyboardInterrupt(f"the study {study['name']} was cancelled")
         evaluations += len(values)
         cf_rows, notable, analyses = [], [], {}
         for row in summary["rows"]:
-            sample = wc.read_json(study_dir / "samples" / row["sample_id"] / "sample.json")
+            sample = agg.resolve_paths(wc.read_json(study_dir / "samples" / row["sample_id"] / "sample.json"),
+                                       study_dir)
             value = row[f"param:{study['name']}"]
             result = config["checks"](docs[value][1], sample)
             analyses[row["sample_id"]] = result.get("analysis")
@@ -601,7 +623,7 @@ def main(config, defaults, argv=None, *, description, extra_options=None):
             run_config = config["configure"](run_config, args)
         summary = run_workflow(run_config, inputs_from_args(args, config["info"]), studies, args.out,
                                max_evaluations=args.max_evaluations, max_plots=args.max_plots,
-                               overwrite=args.overwrite)
+                               overwrite=args.overwrite, workers=args.workers)
         return compact(summary)
 
     return wc.emit(workflow, EXIT_CODES)

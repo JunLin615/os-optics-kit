@@ -86,6 +86,17 @@ def run_dir_of(record, study_dir):
     return wc.relative(path, study_dir)
 
 
+def resolve_paths(record, study_dir):
+    """A copy of a record whose ``sample_dir``, ``project_file`` and ``run_dir`` are paths a reader can open (the saved
+    record keeps them study-relative)."""
+    out = dict(record)
+    for key in ("sample_dir", "project_file", "run_dir"):
+        value = out.get(key)
+        if value is not None and not Path(value).is_absolute():
+            out[key] = (Path(study_dir) / value).as_posix()
+    return out
+
+
 def rows_from_records(study_dir, pairs, parameters, *, field="value"):
     """Rows of ``collect_records`` pairs; ``param:`` columns from the record's ``parameters`` label ``field``."""
     return [row_from_record(entry["sample_id"], parameter_values(record, parameters, field), parameters, record,
