@@ -14,7 +14,7 @@ from os_optics_kit import _engine, cli, interop
 from tests.workflow_fixtures import KIT, ROOT, TempDir
 
 TOOLS = ("summary", "edit", "sweep", "compare", "plot", "report", "sensitivity", "tolerance", "candidates",
-         "measurements")
+         "measurements", "study")
 # Runs a kit command in a child process in which the engine (and optionally matplotlib) cannot be imported, even
 # when it is installed: any attempt raises ModuleNotFoundError, like a missing distribution.
 BLOCKED_RUN = """import sys

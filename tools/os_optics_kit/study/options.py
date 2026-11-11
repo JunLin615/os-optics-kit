@@ -37,8 +37,8 @@ def add_execution_options(parser, *, plan_only=True, outputs=True):
     group.add_argument("--workers", type=workers_value, default=1, metavar="N|auto",
                        help="worker processes (default 1: serial in this process; auto: from the plan size)")
     group.add_argument("--resume", action="store_true",
-                       help="continue the planned or interrupted study in --out: samples whose request is unchanged "
-                            "and that completed are kept, the rest run")
+                       help="continue a planned or interrupted study: samples whose request is unchanged and that "
+                            "completed are kept, the rest run")
     if plan_only:
         group.add_argument("--plan-only", action="store_true",
                            help="write the plan (study.json, plan.jsonl, requests/) and stop; run it with "
