@@ -156,11 +156,10 @@ def _not_run_record(request, study_dir, state, code, message, *, stage="not_run"
 
 
 def _clear_sample(study_dir, sample_id):
-    """Remove a sample's evaluation files (project, run directory, attempt marker); keep the directory."""
+    """Remove every file of a sample directory (an evaluation's outputs, record, attempt marker); keep the
+    directory."""
     folder = store.sample_dir(study_dir, sample_id)
-    shutil.rmtree(folder / "run", ignore_errors=True)
-    for name in ("project.json", store.ATTEMPT_FILE, store.SAMPLE_FILE):
-        (folder / name).unlink(missing_ok=True)
+    shutil.rmtree(folder, ignore_errors=True)
     folder.mkdir(parents=True, exist_ok=True)
 
 
