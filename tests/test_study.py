@@ -9,10 +9,13 @@ import json
 import multiprocessing
 import os
 from pathlib import Path
+import shutil
 import socket
 import subprocess
 import sys
+import threading
 import time
+from types import SimpleNamespace
 import unittest
 from unittest import mock
 
@@ -500,6 +503,44 @@ class DefaultEvaluatorTests(unittest.TestCase):
         self.assertTrue(fetched)  # the fake evaluator never calls the Engine: these are the parent's own requests
         self.assertEqual(set(fetched), {("2026-10-28.1", os.getpid())})
 
+    def test_a_first_project_refused_before_the_catalog_does_not_skip_its_pins(self):
+        """The first Project of a set of pins is refused when it is loaded (before the catalog binding): the next
+        Project with the same pins obtains the release, once (the fetch is replaced: it stores nothing, so every
+        later check would try again)."""
+        from os_optics.catalog import service
+
+        project = wc.read_json(REPO / "cases" / "beam-expander" / "project.json")
+        refused = json.loads(json.dumps(project))
+        refused["components"][0]["source_model"]["waist_radius_mm"] = -1.0
+        saved = {name: os.environ.get(name) for name in ("OPENSCI_CATALOG_DIR", "OPENSCI_CATALOG_URL",
+                                                         "OPENSCI_CATALOG_CHECK_INTERVAL")}
+        fetched = []
+
+        def fetch_release(catalog_version, *, store, environ, timeout, automatic=False):
+            fetched.append((catalog_version, os.getpid()))
+            return store.read_state()
+
+        with TempDir() as tmp:
+            try:
+                (tmp / "catalog").mkdir()
+                os.environ["OPENSCI_CATALOG_DIR"] = str(tmp / "catalog")
+                os.environ["OPENSCI_CATALOG_URL"] = "http://127.0.0.1:9/api/v1/catalog"
+                os.environ.pop("OPENSCI_CATALOG_CHECK_INTERVAL", None)
+                requests = [rq.make_request(sample_id, document, labels={"fake": {"x": 1.0}})
+                            for sample_id, document in (("s0001", refused), ("s0002", project), ("s0003", project))]
+                with mock.patch.object(service, "fetch_release", fetch_release):
+                    self.assertFalse(wc.check(refused)["ok"])
+                    self.assertEqual(fetched, [])  # refused before the catalog binding
+                    pins = execute.resolve_catalog(requests)
+            finally:
+                for name, value in saved.items():
+                    if value is None:
+                        os.environ.pop(name, None)
+                    else:
+                        os.environ[name] = value
+        self.assertEqual(pins, [("2026-10-28.1",)])
+        self.assertEqual(fetched, [("2026-10-28.1", os.getpid())])
+
 
 class FakeProcessScheduler:
     """Runs the jobs in this process but presents itself as a worker pool (``in_process`` False); ``report(job)``
@@ -871,6 +912,438 @@ class ProcessFailureTests(unittest.TestCase):
             self.assertEqual(done.returncode, 0, done.stderr)
             self.assertEqual(json.loads(done.stdout)["status"], "COMPLETED")
             self.assertIn("evaluating s0001", done.stderr)
+
+
+class StubProcess:
+    """A worker process stand-in for the scheduler's bookkeeping (nothing is started)."""
+
+    pid = 0
+
+    def __init__(self, alive=True, exitcode=None):
+        self.alive, self.exitcode = alive, exitcode
+
+    def is_alive(self):
+        return self.alive
+
+    def join(self, timeout=None):
+        pass
+
+    def terminate(self):
+        pass
+
+
+class OutOfOrderCancelScheduler:
+    """Runs every job but the first in this process, then is cancelled and reports the first job as stopped by the
+    cancellation (a pool where an earlier plan-ordered sample was still running when the study was cancelled)."""
+
+    name = "out-of-order"
+    in_process = True
+    workers = 1
+
+    def __init__(self):
+        self.cancelled = False
+
+    def run(self, jobs, worker, *, on_result):
+        jobs = list(jobs)
+        for job in jobs[1:]:
+            on_result(job, worker(job), None)
+        self.cancel()
+        on_result(jobs[0], None, {"code": "CANCELLED", "message": "cancelled while running"})
+
+    def cancel(self):
+        self.cancelled = True
+
+
+def closure_evaluator(factor):
+    """An evaluator without an importable name: the fake one with ``factor`` times the target value."""
+    def evaluate(request, sample_dir, limits=None):
+        record = fake_evaluator(request, sample_dir, limits)
+        for target in record["targets"]:
+            target["value"] *= factor
+        return record
+    return evaluate
+
+
+class CancellationAndStopRuleTests(unittest.TestCase):
+    """A cancellation is never taken for the stop rule, never recorded as a lost worker, and does not stay with a
+    scheduler after ``reset()``."""
+
+    def plan(self, root, requests):
+        store.plan_study(root, header(parameters=[{"name": "x", "unit": "mm"}]), requests)
+        return root
+
+    def test_a_starting_worker_lost_after_a_cancel_records_a_cancellation(self):
+        got = []
+        for cancel in (True, False):
+            pool = schedulers.ProcessScheduler(1)
+            parent, child = multiprocessing.Pipe()
+            worker = schedulers._Worker(1, StubProcess(alive=False, exitcode=3221225786), parent)  # Ctrl-C exit
+            worker.job = {"sample_id": "s0001"}
+            if cancel:
+                pool.cancel()
+            try:
+                pool._lost(worker, lambda job, result, error: got.append(error))
+            finally:
+                child.close()
+        cancelled, lost = got
+        self.assertEqual(cancelled["code"], "CANCELLED")
+        self.assertNotIn("__main__", cancelled["message"])
+        self.assertEqual(lost["code"], "WORKER_LOST")
+        self.assertIn('if __name__ == "__main__"', lost["message"])
+        self.assertEqual(execute.STOP_CAUSES[cancelled["code"]], "STUDY_CANCELLED")  # recorded CANCELLED/RUN_STOPPED
+
+    def test_ctrl_c_with_stop_on_error_keeps_the_completed_samples(self):
+        with TempDir() as tmp:
+            study_dir = self.plan(tmp / "study", fake_requests([1.0, 2.0, 3.0, 4.0],
+                                                               extra={"s0002": {"interrupt": True}}))
+            summary = execute.execute_study(study_dir, evaluator=INTERRUPTING, stop_on=["ERROR"])
+            self.assertEqual((summary.state, summary.stopped_by), ("CANCELLED", None))
+            self.assertIsNone(store.read_study(study_dir)["execution"]["stopped_by"])
+            self.assertEqual(store.read_record(study_dir, "s0001")["state"], "COMPLETED")
+            for sample_id in ("s0003", "s0004"):
+                record = store.read_record(study_dir, sample_id)
+                self.assertEqual((record["state"], record["error"]["code"]), ("NOT_RUN", "CANCELLED"))
+            self.assertEqual(events(study_dir, "stopped"), [])
+            summary = execute.execute_study(study_dir, evaluator=INTERRUPTING, stop_on=["ERROR"], resume=True)
+            self.assertEqual((summary.state, summary.reused, summary.ran), ("COMPLETED", 1, 3))
+
+    def test_a_cancelled_earlier_sample_does_not_clear_later_completed_ones(self):
+        with TempDir() as tmp:
+            study_dir = self.plan(tmp / "study", fake_requests([1.0, 2.0, 3.0, 4.0]))
+            summary = execute.execute_study(study_dir, evaluator=FAKE, scheduler=OutOfOrderCancelScheduler(),
+                                            stop_on=["ERROR"])
+            self.assertEqual((summary.state, summary.stopped_by), ("CANCELLED", None))
+            self.assertEqual(summary.states, {"CANCELLED": 1, "COMPLETED": 3})
+            for sample_id in ("s0002", "s0003", "s0004"):
+                self.assertEqual(store.read_record(study_dir, sample_id)["state"], "COMPLETED")
+                self.assertTrue((study_dir / "samples" / sample_id / "output.txt").is_file())
+            summary = execute.execute_study(study_dir, evaluator=FAKE, stop_on=["ERROR"], resume=True)
+            self.assertEqual((summary.state, summary.reused, summary.ran), ("COMPLETED", 3, 1))
+
+    def test_a_failed_sample_still_stops_on_error(self):
+        with TempDir() as tmp:
+            study_dir = self.plan(tmp / "study", fake_requests([1.0, 2.0, 3.0], fail=("s0002",)))
+            summary = execute.execute_study(study_dir, evaluator=FAKE, stop_on=["ERROR"])
+            self.assertEqual((summary.state, summary.stopped_by), ("COMPLETED", "s0002"))
+            record = store.read_record(study_dir, "s0003")
+            self.assertEqual((record["state"], record["error"]["code"]), ("NOT_RUN", "STOPPED"))
+
+    @requires_engine
+    def test_a_sweep_aggregated_after_a_cancel_names_no_stop_sample(self):
+        from os_optics_kit import sweep_parameters as sp
+
+        with TempDir() as tmp:
+            spec = {"parameters": [{"name": "x", "unit": "mm", "values": [1.0, 2.0, 3.0]}], "max_evaluations": 3,
+                    "stop_on": ["ERROR"]}
+            scheduler = schedulers.SerialScheduler()
+            summary = sp.run_sweep(spec, tmp / "sweep", documents=[{"x": 1.0}, {"x": 2.0}, {"x": 3.0}],
+                                   evaluator=FAKE, scheduler=scheduler, on_progress=lambda event: scheduler.cancel())
+            self.assertEqual(summary["status"], "CANCELLED")
+            aggregated = sp.aggregate_sweep(tmp / "sweep")
+            self.assertEqual([r["outcome"] for r in aggregated["rows"]], ["PASS", "ERROR", "ERROR"])
+            self.assertIsNone(aggregated["stopped_by"])
+
+    def test_a_cancelled_scheduler_runs_again_after_reset(self):
+        with TempDir() as tmp:
+            study_dir = self.plan(tmp / "study", fake_requests([1.0, 2.0, 3.0]))
+            scheduler = schedulers.SerialScheduler()
+
+            def stop_after_one(event):
+                if event["done"] == 1:
+                    scheduler.cancel()
+
+            summary = execute.execute_study(study_dir, evaluator=FAKE, scheduler=scheduler,
+                                            on_progress=stop_after_one)
+            self.assertEqual(summary.states, {"COMPLETED": 1, "NOT_RUN": 2})
+            summary = execute.execute_study(study_dir, evaluator=FAKE, scheduler=scheduler, resume=True)
+            self.assertEqual((summary.state, summary.ran), ("CANCELLED", 0))  # the cancellation stays in force
+            scheduler.reset()
+            summary = execute.execute_study(study_dir, evaluator=FAKE, scheduler=scheduler, resume=True)
+            self.assertEqual((summary.state, summary.reused, summary.ran), ("COMPLETED", 1, 2))
+            pool = schedulers.ProcessScheduler(1)  # no worker is started by cancel() or reset()
+            pool.cancel()
+            pool.reset()
+            self.assertFalse(pool.cancelled or pool._event.is_set())
+
+    def test_auto_with_the_serial_scheduler_runs_serially(self):
+        with TempDir() as tmp:
+            study_dir = self.plan(tmp / "study", fake_requests([1.0, 2.0, 3.0]))
+            with mock.patch.object(execute, "suggest_workers", return_value=(4, {"workers": 4})) as suggest:
+                summary = execute.execute_study(study_dir, evaluator=FAKE, workers="auto", scheduler="serial")
+            suggest.assert_not_called()
+            self.assertEqual((summary.state, summary.scheduler, summary.workers), ("COMPLETED", "serial", 1))
+            self.assertIsNone(store.read_study(study_dir)["execution"]["workers_choice"])
+
+
+class OwnershipTests(unittest.TestCase):
+    """Every writer of study-level files holds the ownership; taking it over from a gone process is atomic."""
+
+    def plan(self, root, requests):
+        store.plan_study(root, header(parameters=[{"name": "x", "unit": "mm"}]), requests)
+        return root
+
+    def stale_owner(self, study_dir):
+        done = subprocess.run([sys.executable, "-c", "import os; print(os.getpid())"], capture_output=True,
+                              text=True, timeout=60)  # a process that has ended
+        stale = {"pid": int(done.stdout), "host": socket.gethostname(), "process_started": None, "started": "x",
+                 "id": "gone"}
+        wc.write_json(study_dir / store.OWNER_FILE, stale)
+        return store.read_owner(study_dir)
+
+    def test_aggregation_during_an_execution_is_refused_and_writes_nothing(self):
+        with TempDir() as tmp:
+            study_dir = self.plan(tmp / "study", fake_requests([1.0, 2.0]))
+            seen = {}
+
+            def evaluator(request, sample_dir, limits=None):
+                if request["sample_id"] == "s0001":
+                    before = (study_dir / store.STUDY_FILE).read_bytes()
+                    with self.assertRaises(wc.WorkflowError) as caught:
+                        study_tool.aggregate_study(study_dir)
+                    seen["code"] = caught.exception.code
+                    seen["study_unchanged"] = (study_dir / store.STUDY_FILE).read_bytes() == before
+                    seen["files"] = [(study_dir / name).exists() for name in ("table.csv", "summary.json")]
+                return fake_evaluator(request, sample_dir, limits)
+
+            summary = execute.execute_study(study_dir, evaluator=evaluator)
+            self.assertEqual(seen, {"code": "STUDY_RUNNING", "study_unchanged": True, "files": [False, False]})
+            self.assertEqual((summary.state, store.read_study(study_dir)["execution"]["state"]),
+                             ("COMPLETED", "COMPLETED"))
+            study_tool.aggregate_study(study_dir)  # after the execution: accepted, and the ownership is released
+            self.assertTrue((study_dir / "summary.json").is_file())
+            self.assertFalse((study_dir / store.OWNER_FILE).exists())
+            self.assertEqual(store.read_study(study_dir)["execution"]["state"], "COMPLETED")
+
+    def test_planning_holds_the_ownership_while_it_writes(self):
+        with TempDir() as tmp:
+            study_dir = self.plan(tmp / "study", fake_requests([1.0, 2.0]))
+            real, refused = store.write_plan, []
+
+            def write_plan(folder, requests):  # an execution starts while the plan is being written
+                with self.assertRaises(wc.WorkflowError) as caught:
+                    execute.execute_study(folder, evaluator=FAKE)
+                refused.append(caught.exception.code)
+                return real(folder, requests)
+
+            with mock.patch.object(store, "write_plan", write_plan):
+                store.plan_study(study_dir, header(), fake_requests([1.0]), resume=True)
+            self.assertEqual(refused, ["STUDY_RUNNING"])
+            self.assertFalse((study_dir / store.OWNER_FILE).exists())
+            self.assertEqual(len(store.read_plan(study_dir)), 1)
+            self.assertFalse(store.has_results(study_dir))
+
+    def test_two_callers_taking_over_a_gone_owner_give_one_owner(self):
+        """The interleaving that gave two owners when the take-over was check-then-remove: caller B has found the
+        gone owner's record still in place and is about to remove it when caller A takes ownership."""
+        with TempDir() as tmp:
+            study_dir = self.plan(tmp / "study", fake_requests([1.0]))
+            stale = self.stale_owner(study_dir)
+            real_read, b_checked, a_done, reads = store.read_owner, threading.Event(), threading.Event(), []
+            results = {}
+
+            def read_owner(folder):
+                found = real_read(folder)
+                if threading.current_thread().name == "B" and found == stale:
+                    reads.append(found)
+                    if len(reads) == 2:  # B's second look at the gone owner, right before it would remove it
+                        b_checked.set()
+                        a_done.wait(1.0)
+                return found
+
+            def caller(name):
+                if name == "A":
+                    b_checked.wait(1.0)
+                try:
+                    results[name] = store.acquire_execution(study_dir)
+                except wc.WorkflowError as exc:
+                    results[name] = exc.code
+                except Exception as exc:  # noqa: BLE001 - reported by the assertion below
+                    results[name] = repr(exc)
+                finally:
+                    if name == "A":
+                        a_done.set()
+
+            with mock.patch.object(store, "read_owner", read_owner):
+                threads = [threading.Thread(target=caller, args=(name,), name=name) for name in ("B", "A")]
+                for thread in threads:
+                    thread.start()
+                for thread in threads:
+                    thread.join(30)
+            owners = [value for value in results.values() if isinstance(value, dict)]
+            self.assertEqual(len(owners), 1, results)
+            self.assertEqual([value for value in results.values() if not isinstance(value, dict)], ["STUDY_RUNNING"])
+            self.assertEqual(store.read_owner(study_dir)["id"], owners[0]["id"])
+            store.release_execution(study_dir, owners[0])
+            self.assertFalse((study_dir / store.OWNER_FILE).exists())
+
+    def test_take_over_and_release_with_concurrent_callers_and_readers(self):
+        with TempDir() as tmp:
+            study_dir = self.plan(tmp / "study", fake_requests([1.0]))
+            problems, stop = [], threading.Event()
+
+            def reader():  # what study status and the planners' checks do
+                while not stop.is_set():
+                    try:
+                        store.read_owner(study_dir)
+                    except Exception as exc:  # noqa: BLE001
+                        problems.append(repr(exc))
+
+            readers = [threading.Thread(target=reader) for _ in range(2)]
+            for thread in readers:
+                thread.start()
+            try:
+                for round_number in range(40):
+                    if round_number % 4 == 0:
+                        self.stale_owner(study_dir)
+                    results = []
+
+                    def caller():
+                        try:
+                            results.append(store.acquire_execution(study_dir))
+                        except wc.WorkflowError as exc:
+                            results.append(exc.code)
+                        except Exception as exc:  # noqa: BLE001
+                            results.append(repr(exc))
+
+                    callers = [threading.Thread(target=caller) for _ in range(4)]
+                    for thread in callers:
+                        thread.start()
+                    for thread in callers:
+                        thread.join(30)
+                    owners = [r for r in results if isinstance(r, dict)]
+                    self.assertEqual(len(owners), 1, results)
+                    self.assertEqual(sorted(r for r in results if not isinstance(r, dict)), ["STUDY_RUNNING"] * 3)
+                    try:
+                        store.release_execution(study_dir, owners[0])
+                    except Exception as exc:  # noqa: BLE001
+                        problems.append(repr(exc))
+            finally:
+                stop.set()
+                for thread in readers:
+                    thread.join(30)
+            self.assertEqual(problems, [])
+            self.assertFalse((study_dir / store.OWNER_FILE).exists())
+
+
+class EvaluatorRecordTests(unittest.TestCase):
+    """What a resume makes of an evaluator without a name, an evaluator that empties its directory, and damaged
+    study files."""
+
+    def plan(self, root, requests):
+        store.plan_study(root, header(parameters=[{"name": "x", "unit": "mm"}]), requests)
+        return root
+
+    def test_an_evaluator_without_a_name_has_no_records_to_reuse(self):
+        with TempDir() as tmp:
+            study_dir = self.plan(tmp / "study", fake_requests([1.0, 2.0]))
+            execute.execute_study(study_dir, evaluator=closure_evaluator(1.0))
+            self.assertIsNone(store.read_study(study_dir)["execution"]["evaluator"])
+            status = study_tool.status(study_dir)
+            self.assertEqual(status["to_run_on_resume"]["shown"], ["s0001", "s0002"])
+            self.assertIn("no importable module:function name", status["resume_note"])
+            summary = execute.execute_study(study_dir, evaluator=closure_evaluator(10.0), resume=True)
+            self.assertEqual((summary.reused, summary.ran), (0, 2))
+            self.assertEqual(store.read_record(study_dir, "s0001")["targets"][0]["value"], 20.0)
+            summary = execute.execute_study(study_dir, evaluator=FAKE, resume=True)
+            self.assertEqual((summary.reused, summary.ran), (0, 2))
+            self.assertNotIn("resume_note", study_tool.status(study_dir))
+            self.assertEqual(study_tool.status(study_dir)["to_run_on_resume"]["total"], 0)
+
+    def test_an_evaluator_that_empties_its_directory_completes(self):
+        def clearing(request, sample_dir, limits=None):
+            shutil.rmtree(sample_dir)
+            Path(sample_dir).mkdir()
+            return fake_evaluator(request, sample_dir, limits)
+
+        with TempDir() as tmp:
+            study_dir = self.plan(tmp / "study", fake_requests([1.0, 2.0]))
+            summary = execute.execute_study(study_dir, evaluator=clearing)
+            self.assertEqual(summary.states, {"COMPLETED": 2})
+            self.assertTrue((study_dir / "samples" / "s0001" / "output.txt").is_file())
+
+    def test_a_sample_another_execution_finished_keeps_its_record(self):
+        with TempDir() as tmp:
+            study_dir = self.plan(tmp / "study", fake_requests([1.0]))
+            request = store.read_request(study_dir, "s0001")
+            other = {"request_hash": request["request_hash"], "state": "COMPLETED", "outcome": "PASS",
+                     "worker": "another", "evaluator": FAKE}
+
+            def finished_by_another(request, sample_dir, limits=None):  # its record written, its marker removed
+                wc.write_json(Path(sample_dir) / store.SAMPLE_FILE, other)
+                (Path(sample_dir) / store.ATTEMPT_FILE).unlink()
+                return fake_evaluator(request, sample_dir, limits)
+
+            job = {"study_dir": study_dir.as_posix(), "sample_id": "s0001", "request_hash": request["request_hash"],
+                   "evaluator": FAKE, "limits": None, "attempt": 1, "execution": "mine"}
+            with self.assertRaises(wc.WorkflowError) as caught:
+                execute.run_job(job, evaluator=finished_by_another)
+            self.assertEqual(caught.exception.code, "SAMPLE_TAKEN_OVER")
+            self.assertEqual(store.read_record(study_dir, "s0001"), other)
+
+    def test_damaged_plan_request_and_records_are_refused_or_run_again(self):
+        with TempDir() as tmp:
+            study_dir = self.plan(tmp / "study", fake_requests([1.0, 2.0, 3.0]))
+            plan_path = study_dir / store.PLAN_FILE
+            good_plan = plan_path.read_bytes()
+            for damaged in (b"\xff\xfe\x00garbage\n", good_plan.decode("utf-8").encode("utf-16")):
+                plan_path.write_bytes(damaged)
+                for attempt in (lambda: execute.execute_study(study_dir, evaluator=FAKE),
+                                lambda: study_tool.status(study_dir)):
+                    with self.assertRaises(wc.WorkflowError) as caught:
+                        attempt()
+                    self.assertEqual(caught.exception.code, "PLAN_INVALID")
+                    self.assertIn("--overwrite", str(caught.exception))
+            plan_path.write_bytes(good_plan)
+            request_path = store.request_path(study_dir, "s0003")
+            good_request = request_path.read_bytes()
+            request_path.write_text("{not json", encoding="utf-8")
+            with self.assertRaises(wc.WorkflowError) as caught:
+                execute.execute_study(study_dir, evaluator=FAKE)
+            self.assertEqual(caught.exception.code, "REQUEST_INVALID")
+            self.assertIn("--overwrite", str(caught.exception))
+            request_path.write_bytes(good_request)
+            execute.execute_study(study_dir, evaluator=FAKE)
+            for sample_id, outcome in (("s0001", None), ("s0002", "weird")):
+                record = store.read_record(study_dir, sample_id)
+                damaged = {"request_hash": record["request_hash"], "state": "COMPLETED", "evaluator": FAKE}
+                if outcome is not None:
+                    damaged["outcome"] = outcome
+                wc.write_json(store.sample_path(study_dir, sample_id), damaged)
+            rows = aggregate.aggregate_generic(study_dir)["rows"]  # a damaged record aggregates as not run
+            self.assertEqual([r["error_code"] for r in rows[:2]], ["NOT_RUN", "NOT_RUN"])
+            self.assertEqual(study_tool.status(study_dir)["to_run_on_resume"]["shown"], ["s0001", "s0002"])
+            summary = execute.execute_study(study_dir, evaluator=FAKE, resume=True)
+            self.assertEqual((summary.state, summary.reused, summary.ran), ("COMPLETED", 1, 2))
+            self.assertEqual(summary.states, {"COMPLETED": 3})
+
+
+class BenchmarkSlowParallelTests(unittest.TestCase):
+    """The benchmark records the parallel runs that were not faster than one worker (measurements replaced)."""
+
+    def run_benchmark(self, execute_s):
+        def child(command, **kwargs):
+            workers = int(command[-2])
+            result = {"design": command[-4], "samples": 2, "workers": workers, "scheduler": "serial"
+                      if workers == 1 else "process", "blas_threads": None, "build_s": 0.0,
+                      "execute_s": execute_s[workers], "study_s": execute_s[workers],
+                      "throughput": round(2 / execute_s[workers], 3), "startup_s": [0.5] * workers if workers > 1 else [],
+                      "first_result_s": [0.1], "peak_memory_mib": 100.0, "parent_peak_mib": 50.0,
+                      "states": {"COMPLETED": 2}, "basis_sha256": "same"}
+            return SimpleNamespace(returncode=0, stdout=json.dumps(result) + "\n", stderr="")
+
+        with TempDir() as tmp, mock.patch.object(bench.subprocess, "run", child), \
+                mock.patch.object(resources, "cpu_count", return_value=2):
+            result = bench.run_benchmark(tmp / "bench", workers=[1, 2], samples=2, designs="expander")
+            return result, (tmp / "bench" / "bench.md").read_text(encoding="utf-8")
+
+    def test_a_slower_parallel_run_is_recorded(self):
+        result, text = self.run_benchmark({1: 1.0, 2: 2.0})
+        self.assertEqual(result["parallel_not_faster"], [{"design": "expander", "workers": 2, "speedup": 0.5}])
+        self.assertIn("expander with 2 workers (speed-up 0.5)", text)
+        self.assertTrue(all(r["equal_to_one_worker"] for r in result["runs"]))
+        result, text = self.run_benchmark({1: 1.0, 2: 0.5})
+        self.assertEqual(result["parallel_not_faster"], [])
+        self.assertIn("not faster than one worker: none.", text)
 
 
 if __name__ == "__main__":

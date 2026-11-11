@@ -19,6 +19,7 @@ from tests.workflow_fixtures import (HAS_MATPLOTLIB, TempDir, expander, invoke, 
 quiet_environment()
 
 from os_optics_kit import build_report as br  # noqa: E402
+from os_optics_kit import compare_runs as cr  # noqa: E402
 from os_optics_kit import sensitivity_analysis as sa  # noqa: E402
 from os_optics_kit import study_tool as st  # noqa: E402
 from os_optics_kit import sweep_parameters as sp  # noqa: E402
@@ -44,6 +45,10 @@ TOLERANCE_SPEC = {
                     "ops": [{"op": "transform", "selector": {"ids": ["L2"]}, "frame": {"component": "L2"},
                              "translation_mm": [0, 0, "$value"]}],
                     "distribution": {"kind": "uniform", "low": -1.0, "high": 1.0}}]}
+SENSITIVITY_SPEC = {"targets": ["spot_radius"], "max_evaluations": 5,
+                    "parameters": [{"name": "L2_axial", "unit": "mm", "steps": [0.01, 0.1],
+                                    "ops": [{"op": "transform", "selector": {"ids": ["L2"]},
+                                             "frame": {"component": "L2"}, "translation_mm": [0, 0, "$value"]}]}]}
 #: fields that may differ between two executions of one plan (timing, workers, paths of two directories)
 VOLATILE = ("seconds", "study_dir")
 
@@ -71,7 +76,8 @@ def candidate_files(folder):
 
 @requires_engine
 class SerialParallelEquivalenceTests(unittest.TestCase):
-    """Sweep, tolerance and candidate studies: serial and two workers give the same tables and summaries."""
+    """Sweep, sensitivity, tolerance and candidate studies: serial and two workers give the same tables and
+    summaries; a candidate study with summary ray data gives the same results and hashes."""
 
     @classmethod
     def setUpClass(cls):
@@ -89,6 +95,12 @@ class SerialParallelEquivalenceTests(unittest.TestCase):
                                                                  scheduler=scheduler)
             cls.studies[("candidates", label)] = st.run_candidates(files, cls.dir / f"cand-{label}",
                                                                    targets=["spot_radius"], scheduler=scheduler)
+            cls.studies[("sensitivity", label)] = sa.run_sensitivity(SENSITIVITY_SPEC, cls.dir / f"sens-{label}",
+                                                                     base=expander(), plots=False, report=False,
+                                                                     scheduler=scheduler)
+        cls.studies[("candidates", "summary")] = st.run_candidates(files, cls.dir / "cand-summary",
+                                                                   targets=["spot_radius"],
+                                                                   outputs={"ray_data": "summary"})
 
     @classmethod
     def tearDownClass(cls):
@@ -128,6 +140,23 @@ class SerialParallelEquivalenceTests(unittest.TestCase):
                          [("s0001", "short", 1), ("s0002", "nominal", 2), ("s0003", "long", 3)])
         self.assertEqual(summary["parameters"], [{"name": "candidate", "unit": "", "count": 3}])
         self.assertEqual(len({r["result_hash"] for r in summary["rows"]}), 3)
+        keys = ("sample_id", "outcome", "result_hash", "input_hash", "project_hash", "target:spot_radius")
+        light = self.studies[("candidates", "summary")]  # --ray-data summary: the same results and hashes
+        self.assertEqual([{k: r[k] for k in keys} for r in light["rows"]],
+                         [{k: r[k] for k in keys} for r in summary["rows"]])
+        self.assertEqual(store.read_request(self.dir / "cand-summary", "s0001")["outputs"]["ray_data"], "summary")
+        study = self.dir / "cand-serial"  # compare and report read a candidate study like any study
+        saved = {p: p.stat().st_mtime_ns for p in (study / "samples").rglob("*") if p.is_file()}
+        compared = cr.compare([study])
+        self.assertEqual((compared["status"], len(compared["runs"])), ("COMPLETED", 3))
+        br.build_report([study], out_dir=self.dir / "cand-report")
+        self.assertTrue((self.dir / "cand-report" / "report.md").is_file())
+        self.assertEqual(saved, {p: p.stat().st_mtime_ns for p in (study / "samples").rglob("*") if p.is_file()})
+
+    def test_sensitivity(self):
+        summary = self.assert_equivalent("sensitivity", "sens")
+        self.assertEqual(summary["status"], "COMPLETED")
+        self.assertEqual(summary["counts"]["requested"], 5)
 
     def test_parallel_records_are_isolated_per_sample(self):
         folder = self.dir / "sweep-parallel"
@@ -278,6 +307,11 @@ class ToolResumeTests(unittest.TestCase):
             code, out, err = invoke(ts.main, [str(tmp / "spec.json"), "--out", str(tmp / "d"), "--draw-only",
                                               "--resume"])
             self.assertEqual((code, json.loads(err)["error"]["code"]), (4, "BAD_ARGUMENT"))
+            code, out, err = invoke(ts.main, [str(tmp / "spec.json"), "--out", str(tmp / "dp"), "--draw-only",
+                                              "--plan-only"])
+            self.assertEqual((code, json.loads(err)["error"]["code"]), (4, "BAD_ARGUMENT"))
+            self.assertIn("--plan-only alone", json.loads(err)["error"]["message"])
+            self.assertFalse((tmp / "dp").exists())
 
     def test_benchmark_runs_and_reports(self):
         from os_optics_kit.study import bench

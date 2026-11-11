@@ -71,6 +71,11 @@ class BenchmarkWorkerTests(unittest.TestCase):
             self.assertEqual(runs[2]["states"], {"COMPLETED": 4})
             self.assertEqual(len(runs[2]["startup_s"]), 2)
             self.assertIn("| expander | 2 |", (tmp / "bench" / "bench.md").read_text(encoding="utf-8"))
+            self.assertEqual(result["parallel_not_faster"],  # whatever the timing, the record lists exactly these
+                             [{"design": r["design"], "workers": r["workers"], "speedup": r["speedup"]}
+                              for r in result["runs"] if r["workers"] > 1 and r["speedup"] <= 1.0])
+            for run in result["runs"]:
+                self.assertTrue(run["elapsed_s"] > 0 and run["throughput"] > 0 and run["peak_memory_mib"] > 0, run)
 
 
 if __name__ == "__main__":
