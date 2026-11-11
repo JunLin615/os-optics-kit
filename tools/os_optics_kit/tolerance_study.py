@@ -3,6 +3,8 @@
 Usage:
   os-optics-kit tolerance SPEC.json --out STUDY_DIR [--base BASE.json] [--seed N] [--samples N]
                           [--zero-tolerance] [--draw-only] [--overwrite] [--no-plots] [--no-report]
+                          [--workers N|auto] [--resume] [--plan-only] [--time-limit-s S] [--max-memory-mib M]
+                          [--ray-data full|summary]
   os-optics-kit tolerance --verify-seed STUDY_DIR
 
 SPEC.json (keys; quantities are a bare number in the parameter's unit or {"value": x, "unit": "u"}):
@@ -41,7 +43,12 @@ hash and result exactly (the Engine run is deterministic; numerical tolerance 0)
 Before any run: the spec, units and every sample's ops are validated, the base Project must pass
 json_api.check_project, the ops at zero offset must reproduce the base Project hash (NOMINAL_MISMATCH otherwise), and
 STUDY_DIR/sampling.json (normalized distributions, bounds, seed, generator, numpy version, samples.csv sha256) and
-STUDY_DIR/samples.csv (sample_id, offset and applied value of every parameter) are written. --draw-only stops there.
+STUDY_DIR/samples.csv (sample_id, offset and applied value of every parameter) are written, with the plan
+(study.json, plan.jsonl, requests/: s0000 nominal and one request per sample). --draw-only stops there.
+Execution: the samples are independent; every value is drawn before any run, so --workers N (N worker processes)
+gives the same samples and results as one. --plan-only stops after planning (os-optics-kit study run executes the
+plan, with the plots and report chosen here); --resume continues a planned or interrupted study, and a larger
+--samples with the same seed keeps the samples already run (the first n samples are identical).
 
 Each sample retains execution, quantity evidence and target assessments. Its shorthand is ERROR (not run),
 OUT_OF_MODEL (selected target applicability), UNKNOWN (indeterminate), FAIL (unmet), PASS (all selected targets met),
@@ -50,8 +57,9 @@ among evaluable samples (PASS + FAIL) is listed separately. These are simulated 
 independent distributions. Per-target statistics use finite exact values with applicable dependencies; bounded
 or unavailable values and unrelated diagnostics remain visible in the sample records.
 Stdout: one compact JSON document (counts with denominators, target distributions, samples whose runs carry
-warnings, unsuccessful samples). Exit 0 completed with at least one PASS sample, 1 no PASS sample (or a
---verify-seed mismatch), 4 refused spec or invalid input.
+warnings, unsuccessful samples, execution). Exit 0 completed with at least one PASS sample (or drawn, planned), 1
+no PASS sample (or a --verify-seed mismatch), 4 refused spec or invalid input, 130 cancelled (the study can be
+resumed).
 """
 
 from __future__ import annotations
@@ -65,10 +73,11 @@ from . import workflow_common as wc
 from . import sweep_parameters as sweep
 from . import sensitivity_analysis as sa
 from .edit_project import normalize_ops
+from .study import aggregate as agg, options as opts, store
 
 PROG = "os-optics-kit tolerance"
 KIND = "opensci-example.tolerance-study"
-EXIT_CODES = {**wc.WORKFLOW_EXIT_CODES, "DRAWN": 0, "REPRODUCED": 0, "MISMATCH": 1}
+EXIT_CODES = {**wc.WORKFLOW_EXIT_CODES, "DRAWN": 0, "REPRODUCED": 0, "MISMATCH": 1, **opts.EXIT_CODES}
 GENERATOR = "numpy.random.Generator(numpy.random.PCG64(seed))"
 PERCENTILES = (5, 25, 50, 75, 95)
 ASSUMPTIONS = ("parameters are sampled independently", "each distribution describes the offset from the "
@@ -333,13 +342,11 @@ def zero_offset_check(rows, nominal_row, targets):
 
 # --------------------------------------------------------------------------------------------- study
 
-def run_tolerance(spec, study_dir, *, base=None, build=None, base_path=None, spec_dir=None, overwrite=False,
-                  seed=None, samples=None, zero_tolerance=False, draw_only=False, plots=True, report=True):
-    """Draw, save and run the tolerance samples of ``spec`` (module docstring); returns the summary.
-
-    ``base`` / ``build`` as in sensitivity_analysis.run_sensitivity (``build(values)`` gets nominal + offset of
-    every parameter). ``seed`` / ``samples`` override the spec; ``draw_only`` writes the sample set and stops."""
-    t_start = time.perf_counter()
+def plan_tolerance(spec, study_dir, *, base=None, build=None, base_path=None, spec_dir=None, overwrite=False,
+                   seed=None, samples=None, zero_tolerance=False, resume=False, plots=True, report=True,
+                   outputs=None):
+    """Validate ``spec``, draw the samples and write the planned study: samples.csv and sampling.json, then s0000
+    nominal and one request per drawn sample, all before any run. Returns ``(study_dir, normalized, digest)``."""
     normalized = normalize_spec(spec, build=build, seed=seed, samples=samples, zero_tolerance=zero_tolerance)
     parameters = normalized["parameters"]
     document, base_info = sa.resolve_base(spec, spec_dir=spec_dir, base=base, base_path=base_path, build=build)
@@ -352,59 +359,91 @@ def run_tolerance(spec, study_dir, *, base=None, build=None, base_path=None, spe
     if build is None:  # unit and op errors in any sample are spec errors: refuse before running anything
         for _sid, offsets in drawn:
             normalize_ops(document, [op for p in parameters for op in sa.parameter_ops(p, offsets[p["name"]])])
-    study_dir = sa.prepare_dir(study_dir, overwrite)
-    study = {
-        "kind": KIND, "spec": spec,
-        "options": {"seed": normalized["seed"], "samples": normalized["samples"],
-                    "zero_tolerance": normalized["zero_tolerance"], "build_function": base_info.get("build_function")},
-        "normalized": {**normalized, "targets": targets,
-                       "parameters": [{**p, "values": [p["description"]]} for p in parameters]},
-        "base_project": {**base_info, "project_hash": checked["project_hash"],
-                         "engine_input_hash": checked["engine_input_hash"],
-                         "document_sha256": wc.canonical_digest(document)},
-        "engine": wc.engine_identity(), "installed_catalog": wc.catalog_identity(),
-        "catalog": wc.run_catalog_identity([]), "environment": wc.environment(),
-        "seed": normalized["seed"], "sampling": GENERATOR, "assumptions": list(ASSUMPTIONS),
-        "budget": {"max_evaluations": normalized["max_evaluations"], "samples": normalized["samples"] + 1},
-        "stop_on": [], "started": wc.utc_now(),
-    }
-    wc.write_json(study_dir / "study.json", study)
+    requests = [sa.offset_request("s0000", document, parameters, {}, build=None, targets=targets,
+                                  labels={"role": "nominal"}, outputs=outputs)]
+    for sample_id, offsets in drawn:
+        requests.append(sa.offset_request(sample_id, document, parameters, offsets, build=build, targets=targets,
+                                          labels={"role": "sample"}, outputs=outputs))
+    study_dir, resuming = sa.prepare_dir(study_dir, overwrite, resume)
+    header = store.study_header(
+        KIND, spec=spec,
+        options={"seed": normalized["seed"], "samples": normalized["samples"],
+                 "zero_tolerance": normalized["zero_tolerance"], "build_function": base_info.get("build_function")},
+        normalized={**normalized, "targets": targets,
+                    "parameters": [{**p, "values": [p["description"]]} for p in parameters]},
+        base_project={**base_info, "project_hash": checked["project_hash"],
+                      "engine_input_hash": checked["engine_input_hash"],
+                      "document_sha256": wc.canonical_digest(document)},
+        seed=normalized["seed"], sampling=GENERATOR, assumptions=list(ASSUMPTIONS),
+        budget={"max_evaluations": normalized["max_evaluations"], "samples": normalized["samples"] + 1},
+        stop_on=[], analysis={"target_units": units}, present={"plots": bool(plots), "report": bool(report)})
+    store.plan_study(study_dir, header, requests, resume=resuming)
     digest = write_samples(study_dir, normalized, drawn)
+    return study_dir, normalized, digest
+
+
+def run_tolerance(spec, study_dir, *, base=None, build=None, base_path=None, spec_dir=None, overwrite=False,
+                  seed=None, samples=None, zero_tolerance=False, draw_only=False, plots=True, report=True,
+                  workers=1, scheduler=None, evaluator=None, limits=None, resume=False, plan_only=False, outputs=None,
+                  on_progress=None):
+    """Draw, save, run and analyse the tolerance samples of ``spec`` (module docstring); returns the summary.
+
+    ``base`` / ``build`` as in sensitivity_analysis.run_sensitivity (``build(values)`` gets nominal + offset of
+    every parameter). ``seed`` / ``samples`` override the spec; ``draw_only`` writes the sample set (and the plan)
+    and stops. Execution arguments as in ``sweep_parameters.run_sweep``."""
+    study_dir, normalized, digest = plan_tolerance(
+        spec, study_dir, base=base, build=build, base_path=base_path, spec_dir=spec_dir, overwrite=overwrite,
+        seed=seed, samples=samples, zero_tolerance=zero_tolerance, resume=resume, plots=plots, report=report,
+        outputs=outputs)
     if draw_only:
         return {"status": "DRAWN", "kind": f"{KIND}-summary", "seed": normalized["seed"],
                 "samples": normalized["samples"], "samples_csv_sha256": digest,
                 "parameters": [{"name": p["name"], "unit": p["unit"], "distribution": p["description"]}
-                               for p in parameters],
+                               for p in normalized["parameters"]],
                 "paths": {"study_dir": study_dir.as_posix(), "samples": "samples.csv", "sampling": "sampling.json",
                           "study": "study.json"}}
+    if plan_only:
+        return opts.planned_summary(study_dir, KIND, {"samples_csv_sha256": digest})
+    return sa.execute(study_dir, KIND, aggregate=aggregate_tolerance, workers=workers, scheduler=scheduler,
+                      evaluator=evaluator, limits=limits, resume=resume, on_progress=on_progress)
+
+
+def aggregate_tolerance(study_dir, *, plots=None, report=None):
+    """Counts, target distributions, ``table.csv``, ``summary.json`` and (as planned, or as given) plots and report
+    from the saved samples of a tolerance study; no Engine run."""
+    t_start = time.perf_counter()
+    study_dir = Path(study_dir)
+    study = store.read_study(study_dir)
+    plots, report = sa.presentation_choice(study, plots, report)
+    normalized = study["normalized"]
+    parameters = normalized["parameters"]
+    targets = normalized["targets"]
+    units = study["analysis"]["target_units"]
+    digest = wc.read_json(study_dir / "sampling.json").get("samples_csv_sha256")
     zero = {p["name"]: 0.0 for p in parameters}
-    nominal = sa.run_one(document, parameters, {}, study_dir / "samples" / "s0000", build=None, targets=targets)
-    nominal.update({"sample_id": "s0000", "role": "nominal"})
-    wc.write_json(study_dir / "samples" / "s0000" / "sample.json", nominal)
-    nominal_row = sweep.row_from_record("s0000", zero, parameters, nominal, study_dir)
-    rows = []
-    for sample_id, offsets in drawn:
-        sample_dir = study_dir / "samples" / sample_id
-        record = sa.run_one(document, parameters, offsets, sample_dir, build=build, targets=targets)
-        record.update({"sample_id": sample_id, "role": "sample"})
-        wc.write_json(sample_dir / "sample.json", record)
-        row = sweep.row_from_record(sample_id, offsets, parameters, record, study_dir)
+    nominal, nominal_row, rows, offsets_by_sample = None, None, [], []
+    for entry, record in agg.collect_records(study_dir):
+        sample_id = entry["sample_id"]
+        if record.get("role") == "nominal":
+            nominal = record
+            nominal_row = agg.row_from_record(sample_id, zero, parameters, record, study_dir)
+            continue
+        offsets = agg.parameter_values(record, parameters, "offset")
+        offsets_by_sample.append(offsets)
+        row = agg.row_from_record(sample_id, offsets, parameters, record, study_dir)
         for p in parameters:
             row[f"param:{p['name']}:value"] = p["nominal"] + offsets[p["name"]]
         rows.append(row)
     sweep.select_best(rows, [{"outcome": ["PASS"]}], None)
-    counts = sweep.counts(rows)
+    counts = agg.counts(rows)
     counts["pass_fraction"]["definition"] = (
         "PASS samples / all requested samples: fraction of the simulated samples, drawn from the stated independent "
         "distributions, in which every selected target passed")
     status = "COMPLETED" if counts["by_outcome"]["PASS"] else "NO_FEASIBLE"
     all_rows = [{**nominal_row, "role": "nominal", "feasible": None, "constraint_failures": []}] + \
         [{**r, "role": "sample"} for r in rows]
-    columns = sweep._columns(all_rows)
-    wc.write_csv(study_dir / "table.csv", all_rows, columns)
-    study["catalog"] = wc.run_catalog_identity([nominal_row, *rows])
-    study["finished"] = wc.utc_now()
-    wc.write_json(study_dir / "study.json", study)
+    columns = agg.write_table(study_dir, all_rows)
+    study = agg.finish_study(study_dir, [nominal_row, *rows])
     summary = {
         "status": status, "kind": f"{KIND}-summary",
         "sampling": {"generator": GENERATOR, "seed": normalized["seed"], "samples": normalized["samples"],
@@ -412,7 +451,7 @@ def run_tolerance(spec, study_dir, *, base=None, build=None, base_path=None, spe
                      "assumptions": list(ASSUMPTIONS)},
         "parameters": [{"name": p["name"], "unit": p["unit"], "nominal": p["nominal"],
                         "distribution": p["distribution"], "description": p["description"],
-                        "sampled": _sampled_range([o[p["name"]] for _s, o in drawn])} for p in parameters],
+                        "sampled": _sampled_range([o[p["name"]] for o in offsets_by_sample])} for p in parameters],
         "selected_targets": targets,
         "nominal": {"sample_id": "s0000", "outcome": nominal["outcome"], "status": nominal["status"],
                     "model_scope_issues": nominal["model_scope_issues"],
@@ -425,15 +464,14 @@ def run_tolerance(spec, study_dir, *, base=None, build=None, base_path=None, spe
         "best": None, "no_feasible": None if status == "COMPLETED" else {
             "message": "no sample passed every selected target",
             "failed_constraints": {f"outcome {k}": v for k, v in counts["by_outcome"].items() if k != "PASS" and v}},
-        "stopped_by": None, "targets": sweep._target_units(rows), "columns": columns, "rows": rows,
-        "identity": {"engine": study["engine"], **study["catalog"],
-                     "base_project_hash": checked["project_hash"]},
+        "stopped_by": None, "targets": agg.target_units(rows), "columns": columns, "rows": rows,
+        "identity": agg.identity(study, [nominal_row, *rows], study["base_project"]["project_hash"]),
         "paths": {"study_dir": study_dir.as_posix(), "study": "study.json", "sampling": "sampling.json",
                   "samples_table": "samples.csv", "table": "table.csv", "summary": "summary.json",
                   "samples": "samples"},
         "seconds": None,
     }
-    wc.write_json(study_dir / "summary.json", summary)
+    agg.write_summary(study_dir, summary)
     skipped = sa.matplotlib_missing() if plots else "plots disabled"
     if skipped is None:
         summary["plots"] = plot_tolerance(study_dir, summary)
@@ -448,8 +486,8 @@ def run_tolerance(spec, study_dir, *, base=None, build=None, base_path=None, spe
             artifacts=[(study_dir / "samples.csv", "sampled offsets"),
                        (study_dir / "sampling.json", "sampling record")])
         summary["paths"]["report"] = "report/report.md"
-    summary["seconds"] = round(time.perf_counter() - t_start, 3)
-    wc.write_json(study_dir / "summary.json", summary)
+    summary["seconds"] = round(sa.execution_seconds(study) + time.perf_counter() - t_start, 3)
+    agg.write_summary(study_dir, summary)
     return summary
 
 
@@ -475,8 +513,7 @@ def plot_tolerance(study_dir, summary):
         values = [r.get(f"target:{target_id}") if r.get(f"target:{target_id}:exact") else None
                   for r in summary["rows"]]
         bounds = None
-        for sample_dir in sorted((study_dir / "samples").iterdir()):
-            record = wc.read_json(sample_dir / "sample.json") if (sample_dir / "sample.json").is_file() else {}
+        for _entry, record in agg.collect_records(study_dir):
             target = next((t for t in record.get("targets") or [] if t["id"] == target_id), None)
             if target and target.get("bounds"):
                 bounds = wc.target_bounds(target)
@@ -555,7 +592,8 @@ def compact(summary, limit=5):
             "identity": {"engine_version": summary["identity"]["engine"]["engine_version"],
                          "engine_build_id": summary["identity"]["engine"]["engine_build_id"],
                          "catalog_version": summary["identity"]["catalog_version"]},
-            "seconds": summary["seconds"], "paths": summary["paths"]}
+            "seconds": summary["seconds"], "execution": opts.execution_brief(summary["paths"]["study_dir"]),
+            "paths": summary["paths"]}
 
 
 def main(argv=None):
@@ -574,6 +612,7 @@ def main(argv=None):
         parser.add_argument("--overwrite", action="store_true", help="Replace the files this command writes in --out")
         parser.add_argument("--no-plots", action="store_true", help="Do not write plots")
         parser.add_argument("--no-report", action="store_true", help="Do not write report/")
+        opts.add_execution_options(parser)
         args = parser.parse_args(argv)
         if args.verify_seed is not None:
             return verify_samples(args.verify_seed)
@@ -584,8 +623,8 @@ def main(argv=None):
         summary = run_tolerance(spec, args.out, base=base, base_path=args.base, spec_dir=args.spec.parent,
                                 overwrite=args.overwrite, seed=args.seed, samples=args.samples,
                                 zero_tolerance=args.zero_tolerance, draw_only=args.draw_only,
-                                plots=not args.no_plots, report=not args.no_report)
-        return summary if summary["status"] == "DRAWN" else compact(summary)
+                                plots=not args.no_plots, report=not args.no_report, **opts.execution_arguments(args))
+        return summary if summary["status"] in ("DRAWN", *opts.EXIT_CODES) else compact(summary)
 
     return wc.emit(workflow, EXIT_CODES)
 
