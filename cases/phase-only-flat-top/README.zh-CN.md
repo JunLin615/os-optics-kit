@@ -8,7 +8,7 @@
 
 ## 运行与修改参数
 
-固定版本的科学计算依赖需要 **Python 3.12 或更新版本**，本例已在 Python 3.14.8 验证。安装 os-optics 0.13.0 与 os-optics-kit 0.3.0，复制本案例，然后在复制后的目录内运行：
+固定版本的科学计算依赖需要 **Python 3.12 或更新版本**，本例已在 Python 3.14.8 验证。安装 os-optics 0.13.0 与 os-optics-kit 0.4.0，复制本案例，然后在复制后的目录内运行：
 
 ```bash
 python -m pip install -r requirements-flat-top.txt

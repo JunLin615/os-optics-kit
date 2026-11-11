@@ -47,7 +47,7 @@ Parseval error <7e-16. Independent polar quadrature differs by <0.00073
 for the two documented runs. Sensor is noiseless; scalar paraxial optics,
 continuous phase controls, fixed compensation of nominal curvature.
 
-Presentation uses kit 0.3.0. Add `--language zh-CN`, `--background dark`, or
+Presentation uses kit 0.4.0. Add `--language zh-CN`, `--background dark`, or
 `--size 1920x1080` with a new `--out`. The case helper redraws saved external PSFs
 and ratios alongside the relay view and radius target.
 Open `talk/en/index.html`; see the bilingual README for fonts and redraw commands.
