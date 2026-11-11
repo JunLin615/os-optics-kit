@@ -43,8 +43,8 @@ hash and result exactly (the Engine run is deterministic; numerical tolerance 0)
 Before any run: the spec, units and every sample's ops are validated, the base Project must pass
 json_api.check_project, the ops at zero offset must reproduce the base Project hash (NOMINAL_MISMATCH otherwise), and
 STUDY_DIR/sampling.json (normalized distributions, bounds, seed, generator, numpy version, samples.csv sha256) and
-STUDY_DIR/samples.csv (sample_id, offset and applied value of every parameter) are written, with the plan
-(study.json, plan.jsonl, requests/: s0000 nominal and one request per sample). --draw-only stops there.
+STUDY_DIR/samples.csv (sample_id, offset and applied value of every parameter) are written with study.json;
+--draw-only stops there. Then the plan is written (plan.jsonl, requests/: s0000 nominal and one request per sample).
 Execution: the samples are independent; every value is drawn before any run, so --workers N (N worker processes)
 gives the same samples and results as one. --plan-only stops after planning (os-optics-kit study run executes the
 plan, with the plots and report chosen here); --resume continues a planned or interrupted study, and a larger
@@ -342,11 +342,8 @@ def zero_offset_check(rows, nominal_row, targets):
 
 # --------------------------------------------------------------------------------------------- study
 
-def plan_tolerance(spec, study_dir, *, base=None, build=None, base_path=None, spec_dir=None, overwrite=False,
-                   seed=None, samples=None, zero_tolerance=False, resume=False, plots=True, report=True,
-                   outputs=None):
-    """Validate ``spec``, draw the samples and write the planned study: samples.csv and sampling.json, then s0000
-    nominal and one request per drawn sample, all before any run. Returns ``(study_dir, normalized, digest)``."""
+def _draw(spec, *, base, build, base_path, spec_dir, seed, samples, zero_tolerance, plots, report):
+    """Validate ``spec`` and draw its samples: ``(normalized, document, header, targets, drawn)``."""
     normalized = normalize_spec(spec, build=build, seed=seed, samples=samples, zero_tolerance=zero_tolerance)
     parameters = normalized["parameters"]
     document, base_info = sa.resolve_base(spec, spec_dir=spec_dir, base=base, base_path=base_path, build=build)
@@ -359,12 +356,6 @@ def plan_tolerance(spec, study_dir, *, base=None, build=None, base_path=None, sp
     if build is None:  # unit and op errors in any sample are spec errors: refuse before running anything
         for _sid, offsets in drawn:
             normalize_ops(document, [op for p in parameters for op in sa.parameter_ops(p, offsets[p["name"]])])
-    requests = [sa.offset_request("s0000", document, parameters, {}, build=None, targets=targets,
-                                  labels={"role": "nominal"}, outputs=outputs)]
-    for sample_id, offsets in drawn:
-        requests.append(sa.offset_request(sample_id, document, parameters, offsets, build=build, targets=targets,
-                                          labels={"role": "sample"}, outputs=outputs))
-    study_dir, resuming = sa.prepare_dir(study_dir, overwrite, resume)
     header = store.study_header(
         KIND, spec=spec,
         options={"seed": normalized["seed"], "samples": normalized["samples"],
@@ -377,9 +368,46 @@ def plan_tolerance(spec, study_dir, *, base=None, build=None, base_path=None, sp
         seed=normalized["seed"], sampling=GENERATOR, assumptions=list(ASSUMPTIONS),
         budget={"max_evaluations": normalized["max_evaluations"], "samples": normalized["samples"] + 1},
         stop_on=[], analysis={"target_units": units}, present={"plots": bool(plots), "report": bool(report)})
+    return normalized, document, header, targets, drawn
+
+
+def plan_tolerance(spec, study_dir, *, base=None, build=None, base_path=None, spec_dir=None, overwrite=False,
+                   seed=None, samples=None, zero_tolerance=False, resume=False, plots=True, report=True,
+                   outputs=None):
+    """Validate ``spec``, draw the samples and write the planned study: samples.csv and sampling.json, then s0000
+    nominal and one request per drawn sample, all before any run. Returns ``(study_dir, normalized, digest)``."""
+    normalized, document, header, targets, drawn = _draw(
+        spec, base=base, build=build, base_path=base_path, spec_dir=spec_dir, seed=seed, samples=samples,
+        zero_tolerance=zero_tolerance, plots=plots, report=report)
+    parameters = normalized["parameters"]
+    requests = [sa.offset_request("s0000", document, parameters, {}, build=None, targets=targets,
+                                  labels={"role": "nominal"}, outputs=outputs)]
+    for sample_id, offsets in drawn:
+        requests.append(sa.offset_request(sample_id, document, parameters, offsets, build=build, targets=targets,
+                                          labels={"role": "sample"}, outputs=outputs))
+    study_dir, resuming = sa.prepare_dir(study_dir, overwrite, resume)
     store.plan_study(study_dir, header, requests, resume=resuming)
     digest = write_samples(study_dir, normalized, drawn)
     return study_dir, normalized, digest
+
+
+def draw_tolerance(spec, study_dir, *, base=None, build=None, base_path=None, spec_dir=None, overwrite=False,
+                   seed=None, samples=None, zero_tolerance=False):
+    """Validate ``spec``, draw the samples and write only study.json, samples.csv and sampling.json (no requests:
+    ``--plan-only`` writes the plan). Returns the DRAWN document."""
+    normalized, _document, header, _targets, drawn = _draw(
+        spec, base=base, build=build, base_path=base_path, spec_dir=spec_dir, seed=seed, samples=samples,
+        zero_tolerance=zero_tolerance, plots=False, report=False)
+    header.pop("present", None)
+    study_dir, _resuming = sa.prepare_dir(study_dir, overwrite)
+    wc.write_json(study_dir / store.STUDY_FILE, header)
+    digest = write_samples(study_dir, normalized, drawn)
+    return {"status": "DRAWN", "kind": f"{KIND}-summary", "seed": normalized["seed"],
+            "samples": normalized["samples"], "samples_csv_sha256": digest,
+            "parameters": [{"name": p["name"], "unit": p["unit"], "distribution": p["description"]}
+                           for p in normalized["parameters"]],
+            "paths": {"study_dir": study_dir.as_posix(), "samples": "samples.csv", "sampling": "sampling.json",
+                      "study": "study.json"}}
 
 
 def run_tolerance(spec, study_dir, *, base=None, build=None, base_path=None, spec_dir=None, overwrite=False,
@@ -389,19 +417,18 @@ def run_tolerance(spec, study_dir, *, base=None, build=None, base_path=None, spe
     """Draw, save, run and analyse the tolerance samples of ``spec`` (module docstring); returns the summary.
 
     ``base`` / ``build`` as in sensitivity_analysis.run_sensitivity (``build(values)`` gets nominal + offset of
-    every parameter). ``seed`` / ``samples`` override the spec; ``draw_only`` writes the sample set (and the plan)
-    and stops. Execution arguments as in ``sweep_parameters.run_sweep``."""
+    every parameter). ``seed`` / ``samples`` override the spec; ``draw_only`` writes the sample set (study.json,
+    samples.csv, sampling.json) and stops. Execution arguments as in ``sweep_parameters.run_sweep``."""
+    if draw_only:
+        if resume:
+            raise wc.WorkflowError("BAD_ARGUMENT", "--draw-only writes a new sample set and does not take --resume; "
+                                   "use --plan-only --resume to extend a planned study")
+        return draw_tolerance(spec, study_dir, base=base, build=build, base_path=base_path, spec_dir=spec_dir,
+                              overwrite=overwrite, seed=seed, samples=samples, zero_tolerance=zero_tolerance)
     study_dir, normalized, digest = plan_tolerance(
         spec, study_dir, base=base, build=build, base_path=base_path, spec_dir=spec_dir, overwrite=overwrite,
         seed=seed, samples=samples, zero_tolerance=zero_tolerance, resume=resume, plots=plots, report=report,
         outputs=outputs)
-    if draw_only:
-        return {"status": "DRAWN", "kind": f"{KIND}-summary", "seed": normalized["seed"],
-                "samples": normalized["samples"], "samples_csv_sha256": digest,
-                "parameters": [{"name": p["name"], "unit": p["unit"], "distribution": p["description"]}
-                               for p in normalized["parameters"]],
-                "paths": {"study_dir": study_dir.as_posix(), "samples": "samples.csv", "sampling": "sampling.json",
-                          "study": "study.json"}}
     if plan_only:
         return opts.planned_summary(study_dir, KIND, {"samples_csv_sha256": digest})
     return sa.execute(study_dir, KIND, aggregate=aggregate_tolerance, workers=workers, scheduler=scheduler,
@@ -607,7 +634,8 @@ def main(argv=None):
         parser.add_argument("--seed", type=int, help="Random seed (overrides the spec)")
         parser.add_argument("--samples", type=int, help="Number of samples (overrides the spec)")
         parser.add_argument("--zero-tolerance", action="store_true", help="Sample every parameter at offset 0")
-        parser.add_argument("--draw-only", action="store_true", help="Write the sample set and stop")
+        parser.add_argument("--draw-only", action="store_true", help="Write the sample set (study.json, samples.csv, sampling.json) and stop; "
+                                 "--plan-only also writes the requests")
         parser.add_argument("--verify-seed", type=Path, metavar="STUDY_DIR",
                             help="Redraw a study's samples from its spec and seed and compare with samples.csv")
         parser.add_argument("--overwrite", action="store_true", help="Replace the files this command writes in --out")
