@@ -119,7 +119,7 @@ importable (`import os_optics_kit`), and `python -m os_optics_kit <command>` run
 
 ## Version alignment
 
-os-optics-kit 0.3.x requires `os-optics>=0.13,<0.14` and was verified with os-optics 0.13.0 and catalog release
+os-optics-kit 0.4.x requires `os-optics>=0.13,<0.14` and was verified with os-optics 0.13.0 and catalog release
 2026-10-28.1 ([`baseline.json`](https://github.com/JunLin615/os-optics-kit/blob/main/baseline.json)). Each case records the engine and catalog release it was verified
 with. See [case format](https://github.com/JunLin615/os-optics-kit/blob/main/docs/case-format.md) and [engine alignment](https://github.com/JunLin615/os-optics-kit/blob/main/docs/engine-alignment.md).
 

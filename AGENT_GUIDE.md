@@ -1,7 +1,7 @@
 # Agent guide
 
 os-optics-kit: tools, engine-reproducible cases and skills for the OS Optics engine (`os-optics`).
-Install with `python -m pip install "os-optics[protected]" os-optics-kit` (Python 3.11+); kit 0.3.x
+Install with `python -m pip install "os-optics[protected]" os-optics-kit` (Python 3.11+); kit 0.4.x
 requires `os-optics>=0.13,<0.14`. Engine guide:
 [os-optics AGENT_GUIDE](https://github.com/JunLin615/os-optics/blob/main/AGENT_GUIDE.md).
 

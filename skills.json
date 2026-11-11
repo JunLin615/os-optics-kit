@@ -1,7 +1,7 @@
 {
   "schema": "os-optics-kit.skills",
   "schema_version": 1,
-  "kit_version": "0.3.0",
+  "kit_version": "0.4.0",
   "token_estimate": "ceil(characters/4)",
   "budgets": {
     "SKILL.md": 900,
@@ -134,12 +134,23 @@
       "name": "sensitivity",
       "kind": "tool",
       "description": "Finite-difference sensitivity of selected targets to explicit design parameters, with two step sizes checked against each other and every sample saved; ranks parameters per target. Use it to find which positions, angles or values a target depends on most.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "command": "os-optics-kit sensitivity",
       "requires": "os-optics>=0.13,<0.14",
       "path": "skills/sensitivity/SKILL.md",
-      "tokens": 669,
-      "sha256": "3415d3db4447df0463fc4bd44a1abc5570c64fbfe4aa127c13183e73f4a027fb"
+      "tokens": 763,
+      "sha256": "0186eb6ba59ee92649bb00178067d53bf47761b71c22c2bd73e8141c8e0aedc4"
+    },
+    {
+      "name": "study",
+      "kind": "tool",
+      "description": "Run independent Engine evaluations as a resumable study, serially or in worker processes; plan, execute, aggregate and present as separate steps. Use it for sweeps, tolerance samples, candidate Projects and batches handed over by your own search code.",
+      "version": "0.1.0",
+      "command": "os-optics-kit study",
+      "requires": "os-optics>=0.13,<0.14",
+      "path": "skills/study/SKILL.md",
+      "tokens": 767,
+      "sha256": "b8a2239f01e16e380396174909e6bb19fba62e127e80265c36780dd09c713006"
     },
     {
       "name": "summary",
@@ -156,23 +167,23 @@
       "name": "sweep",
       "kind": "tool",
       "description": "Run a bounded one- or two-parameter sweep of a Project from a JSON spec; every sample's Project and run are saved, counted by outcome, and ranked by an optional objective under constraints. Use it to explore a design parameter.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "command": "os-optics-kit sweep",
       "requires": "os-optics>=0.13,<0.14",
       "path": "skills/sweep/SKILL.md",
-      "tokens": 597,
-      "sha256": "f5927339dcd03db69d1cc2885fa4e4b58f6e6a3f223cf876508194bd7bbb08c9"
+      "tokens": 716,
+      "sha256": "394081c13fd94772499bb4ec0f8d4d85f718df907512c8d09c230db3ea8f5700"
     },
     {
       "name": "tolerance",
       "kind": "tool",
       "description": "Seeded tolerance study - draw independent offsets from declared uniform or truncated-normal distributions, save the sample set before any run, run and count every sample, and report target distributions. Use it to estimate how often a design meets its targets.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "command": "os-optics-kit tolerance",
       "requires": "os-optics>=0.13,<0.14",
       "path": "skills/tolerance/SKILL.md",
-      "tokens": 654,
-      "sha256": "cf47fa92dbfa93db025f84b29453012df3f0dd698042ad5e7c7245a7d177d1ae"
+      "tokens": 751,
+      "sha256": "1cc8ae28f378d7a700c83baf22bb0b8fd327c80ce9c9723edeeba18ac4be42a2"
     }
   ]
 }

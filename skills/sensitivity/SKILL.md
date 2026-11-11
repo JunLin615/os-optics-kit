@@ -1,7 +1,7 @@
 ---
 name: sensitivity
 description: Finite-difference sensitivity of selected targets to explicit design parameters, with two step sizes checked against each other and every sample saved; ranks parameters per target. Use it to find which positions, angles or values a target depends on most.
-version: 0.2.0
+version: 0.3.0
 command: os-optics-kit sensitivity
 requires: os-optics>=0.13,<0.14
 kind: tool
@@ -31,6 +31,9 @@ kind: tool
 - Optional `consistency_threshold`, `resolution` per target.
 
 Options: `--out STUDY_DIR`, `--overwrite`, `--no-plots`, `--no-report`.
+Execution (`study` skill): `--workers N|auto` (worker processes, same results as one), `--resume`
+(continue a planned or interrupted study), `--plan-only` (then `os-optics-kit study run DIR`),
+`--time-limit-s`, `--max-memory-mib` (per evaluation), `--ray-data summary`.
 
 ## Outputs
 
@@ -38,7 +41,8 @@ Options: `--out STUDY_DIR`, `--overwrite`, `--no-plots`, `--no-report`.
 per target; skipped with a recorded reason without matplotlib), `report/`. Stdout: per target the ranked
 parameters with derivative, unit, method (central / forward / backward), step ratio, second difference
 and flags (STEP_DEPENDENT, NEAR_EXTREMUM, ONE_SIDED, NO_CHANGE, ...).
-Exit 0 every derivative has a value, 2 some unavailable, 4 refused spec or invalid input.
+Derivatives, plots and report are computed from the saved samples. Exit 0 every derivative has a value
+(or planned), 2 some unavailable, 4 refused spec or invalid input, 130 cancelled (resumable).
 
 ## Minimal example
 
@@ -63,4 +67,4 @@ os-optics-kit sensitivity sensitivity.json --out sens
 
 ## Version
 
-0.2.0 (os-optics-kit 0.2.0), verified with os-optics 0.13.0 and catalog release 2026-10-28.1.
+0.3.0 (os-optics-kit 0.4.0), verified with os-optics 0.13.0 and catalog release 2026-10-28.1.
