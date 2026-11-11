@@ -47,6 +47,41 @@
       "project_sha256": "550295a34c371b2a95bac180eddaa6870ee8772044a3313cfb77634352948069"
     },
     {
+      "name": "aspheric-lens",
+      "title": "Even aspheres carry a five-element f/3.5 lens to 25 degree half field",
+      "summary": "Five elements at f/3.5 reach 25 deg half field with even aspheres on four surfaces; a spherical control reaches only 20 deg. The engine reports a scalar diffraction MTF at every field and wavelength.",
+      "path": "cases/aspheric-lens",
+      "engine": "0.13.0",
+      "catalog": null,
+      "tools": [
+        "summary"
+      ],
+      "tags": [
+        "aspheric",
+        "refractive-imaging",
+        "wide-field",
+        "comparison"
+      ],
+      "files": [
+        "CASE.md",
+        "README.md",
+        "README.zh-CN.md",
+        "data/engine-aspheric.json",
+        "expected.json",
+        "images/mtf.png",
+        "images/spot.png",
+        "images/strehl.png",
+        "images/system.png",
+        "imaging-request.json",
+        "input_prescription.csv",
+        "prescription.csv",
+        "project.json",
+        "studies/aspheric.csv",
+        "studies/spherical-control.csv"
+      ],
+      "project_sha256": "582e3640681a7bb3db4d4a60a4e3b314e4b8f655ee872765d6e5a2750f6df851"
+    },
+    {
       "name": "beam-expander",
       "title": "Catalog beam expander: swap a lens, sweep its spacing, restore collimation",
       "summary": "A Keplerian beam expander of two catalog plano-convex lenses (f = 50 mm and 100 mm, 780 nm, 1 mm waist) reaches its 1.9961 mm output waist. The studies swap L2 for a 100.3 mm fused-silica lens, sweep L2 along the beam and apply the best shift.",
@@ -403,6 +438,38 @@
       "project_sha256": "87cc76b4b9428d83c606cd2c5f82a14692f3c86364d4b999731542efa4ed8303"
     },
     {
+      "name": "midwave-infrared-imager",
+      "title": "A five-element 3-5 um imager with manufacturable element thicknesses",
+      "summary": "Five-element F/2 imager for 3-5 um, EFL 100 mm, half field 3 deg, every element held to a 2-12 mm centre and 1.5-3 mm edge. The engine reports a scalar diffraction MTF at every field and wavelength.",
+      "path": "cases/midwave-infrared-imager",
+      "engine": "0.13.0",
+      "catalog": null,
+      "tools": [
+        "summary"
+      ],
+      "tags": [
+        "midwave-infrared",
+        "refractive-imaging",
+        "thickness-constrained"
+      ],
+      "files": [
+        "CASE.md",
+        "README.md",
+        "README.zh-CN.md",
+        "data/engine-midwave.json",
+        "expected.json",
+        "images/mtf.png",
+        "images/spot.png",
+        "images/system.png",
+        "images/wavefront.png",
+        "imaging-request.json",
+        "input_prescription.csv",
+        "prescription.csv",
+        "project.json"
+      ],
+      "project_sha256": "ce8142ad2b2da5a3b0b4d50d7e7dad28be04c2f107aea10361d47ec8321ae67a"
+    },
+    {
       "name": "mirror-alignment",
       "title": "Beam position and pointing after a fold mirror",
       "summary": "A 633 nm beam folds 90 deg at a flat mirror onto planes 100 mm and 400 mm away; positions must stay within 0.1 mm and pointing within 0.5 mrad. The workflow studies mirror tilt and source offset against exact reflection geometry and the 2-theta law.",
@@ -509,6 +576,36 @@
         "workflow.py"
       ],
       "project_sha256": "11c5eafdddba0c2aa4599b2d4c2ad9d9d5754e2b19a22d0d9f8bc72d44dbf4cd"
+    },
+    {
+      "name": "sonnar-telephoto-lens",
+      "title": "Six-element Sonnar at f/2.4, measured across the full entrance pupil",
+      "summary": "A six-element Sonnar (EFL 85 mm, f/2.4, half field 14 deg) run at its stated aperture rather than in its paraxial core. 4.05 um RMS on axis, 9.29 um at 14 deg, power ledger conserved.",
+      "path": "cases/sonnar-telephoto-lens",
+      "engine": "0.13.0",
+      "catalog": null,
+      "tools": [],
+      "tags": [
+        "lens-design",
+        "imaging",
+        "mtf",
+        "sonnar",
+        "catalog-free"
+      ],
+      "files": [
+        "CASE.md",
+        "README.md",
+        "README.zh-CN.md",
+        "expected.json",
+        "images/mtf.png",
+        "images/results.png",
+        "images/spot.png",
+        "imaging-request.json",
+        "input_prescription.csv",
+        "prescription.csv",
+        "project.json"
+      ],
+      "project_sha256": "431b260d9f2eb7f5debc0a5273509eba113c02df8067435c85cad3439d604e0a"
     }
   ]
 }

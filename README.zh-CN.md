@@ -73,6 +73,9 @@ os-optics-kit present bundle talk-zh --out talk-zh.zip
 | --- | --- | --- |
 | [beam-expander](cases/beam-expander) | 目录元件扩束器：更换透镜、扫描间距、恢复准直 | 是 |
 | [achromatic-imaging](cases/achromatic-imaging/README.zh-CN.md) | 三色原生 PSF/MTF、色焦移与装调公差 | 否 |
+| [sonnar-telephoto-lens](cases/sonnar-telephoto-lens/README.zh-CN.md) | 六片式 85 mm f/2.4 Sonnar，在标称口径下测量原生 PSF、MTF、Strehl 与色焦移 | 否 |
+| [midwave-infrared-imager](cases/midwave-infrared-imager/README.zh-CN.md) | 五片式 3–5 µm 成像镜头，元件厚度可制造：九个视场的原生 PSF、MTF 与 Strehl | 否 |
+| [aspheric-lens](cases/aspheric-lens/README.zh-CN.md) | 非球面使五片式 f/3.5 镜头达到 25° 半视场，并与球面版本对照 | 否 |
 | [focus-requirement](cases/focus-requirement/README.zh-CN.md) | 固定工作面聚焦要求、加密位置公差与报告 | 否 |
 | [ideal-lens-focus](cases/ideal-lens-focus) | 理想薄透镜的高斯聚焦 | 否 |
 | [expansion-focus](cases/expansion-focus) | 扩束与聚焦工作流程，含灵敏度和公差研究 | 否 |

@@ -78,6 +78,9 @@ fonts, comparisons, animations and handoff.
 | --- | --- | --- |
 | [beam-expander](https://github.com/JunLin615/os-optics-kit/tree/main/cases/beam-expander) | Catalog beam expander: swap a lens, sweep its spacing, restore collimation | yes |
 | [achromatic-imaging](cases/achromatic-imaging/README.md) | Three-colour native PSF/MTF, chromatic focus and alignment tolerances | no |
+| [sonnar-telephoto-lens](cases/sonnar-telephoto-lens/README.md) | Six-element 85 mm f/2.4 Sonnar measured at its full entrance pupil, with native PSF, MTF, Strehl and chromatic focus | no |
+| [midwave-infrared-imager](cases/midwave-infrared-imager/README.md) | Five-element 3–5 µm imager with manufacturable thicknesses: native PSF, MTF and Strehl at nine fields | no |
+| [aspheric-lens](cases/aspheric-lens/README.md) | Even aspheres carry a five-element f/3.5 lens to 25° half field, paired with a spherical control | no |
 | [focus-requirement](cases/focus-requirement/README.md) | Fixed-plane focusing requirement, refined placement tolerance and report | no |
 | [ideal-lens-focus](https://github.com/JunLin615/os-optics-kit/tree/main/cases/ideal-lens-focus) | Gaussian focus of an ideal thin lens | no |
 | [expansion-focus](https://github.com/JunLin615/os-optics-kit/tree/main/cases/expansion-focus) | Beam expansion and focusing workflow with sensitivity and tolerance studies | no |
