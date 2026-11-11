@@ -2,6 +2,8 @@
 
 Usage:
   os-optics-kit sweep SPEC.json --out STUDY_DIR [--base BASE.json] [--overwrite]
+                      [--workers N|auto] [--resume] [--plan-only] [--time-limit-s S] [--max-memory-mib M]
+                      [--ray-data full|summary]
 
 SPEC.json (keys; units as in os-optics-kit edit):
   {
@@ -44,15 +46,19 @@ objective must have a finite value with applicable dependencies; bounded values 
 ranked as exact. Unrelated diagnostics do not invalidate an otherwise usable objective. The best feasible
 sample optimizes the stated objective (ties: lowest sample id).
 
-Writes STUDY_DIR/study.json (spec as given and normalized, base project hash, engine / catalog identity,
-environment, budget, timestamps), samples/<id>/project.json, samples/<id>/run/ (run directory),
-samples/<id>/sample.json (full record), table.csv and summary.json. The study directory must be new or empty
-(--overwrite replaces the files this command writes there and removes the study's plots/ and report/ directories,
-which describe the previous samples).
+Steps (each one reads and writes files of STUDY_DIR): plan (study.json with the spec as given and normalized, base
+project hash, Engine / catalog identity, environment, budget; plan.jsonl and requests/<id>.json, one request per
+sample, before any run), execute (samples/<id>/project.json, run/ and sample.json; journal.jsonl), aggregate
+(table.csv and summary.json, rows in sample order). The samples are independent: --workers N runs them in N worker
+processes with the same results as one; --plan-only stops after planning (os-optics-kit study run executes the
+plan); --resume continues a planned or interrupted study (samples whose request is unchanged and that completed with
+the same evaluator are kept). stop_on acts in sample order: every sample after the first one with a listed outcome
+is recorded STOPPED. The study directory must be new or empty (--overwrite replaces the files this command writes
+there and removes the study's plots/ and report/ directories, which describe the previous samples).
 
 Stdout: one compact JSON document (counts per outcome with denominators, best sample or no-feasible outcome, the
-samples whose runs carry warnings, at most five rows with their warnings, paths). Exit 0 completed, 1 no feasible
-sample, 4 refused spec or invalid input.
+samples whose runs carry warnings, at most five rows with their warnings, execution, paths). Exit 0 completed (or
+planned), 1 no feasible sample, 4 refused spec or invalid input, 130 cancelled (the study can be resumed).
 """
 
 from __future__ import annotations
@@ -62,19 +68,21 @@ import copy
 import itertools
 import math
 from pathlib import Path
-import shutil
-import time
 
 from . import workflow_common as wc
 from .edit_project import EditError, apply_edits, normalize_ops
+from .study import aggregate as agg, execute as ex, options as opts, requests as rq, store
 
 PROG = "os-optics-kit sweep"
+KIND = "opensci-example.parameter-sweep"
 PLACEHOLDER = "$value"
 KNOWN_UNITS = ("nm", "um", "µm", "mm", "m", "deg", "rad", "mrad", "urad", "W", "mW", "uW")
 DERIVED_OPS = ("add", "sub", "mul", "div", "abs", "abs_diff")
 TOP_ROWS = 5
-#: Directories removed by --overwrite: the samples and the default plot and report output of the study.
+#: Removed by --overwrite: the study's files and its samples, plot and report output.
+STUDY_FILES = ("study.json", "table.csv", "summary.json")
 STUDY_DIRS = ("samples", "plots", "report")
+EXIT_CODES = {**wc.WORKFLOW_EXIT_CODES, **opts.EXIT_CODES}
 
 
 # --------------------------------------------------------------------------------------------- spec
@@ -216,10 +224,11 @@ def validate_columns(normalized, target_ids):
 
 
 def sample_points(parameters):
-    """Grid points in sample order: ``[(sample_id, {name: value}), ...]``."""
-    grid = itertools.product(*[p["values"] for p in parameters])
-    return [(f"s{index:04d}", dict(zip([p["name"] for p in parameters], values)))
-            for index, values in enumerate(grid, start=1)]
+    """Grid points in sample order: ``[(sample_id, {name: value}), ...]`` (ids ``s0001``..., first parameter
+    outermost)."""
+    grid = list(itertools.product(*[p["values"] for p in parameters]))
+    names = [p["name"] for p in parameters]
+    return [(sample_id, dict(zip(names, values))) for sample_id, values in zip(rq.sample_ids(len(grid)), grid)]
 
 
 def sample_ops(parameters, values):
@@ -231,31 +240,8 @@ def sample_ops(parameters, values):
 
 # --------------------------------------------------------------------------------------------- columns
 
-def row_from_record(sample_id, values, parameters, record, study_dir):
-    row = {"sample_id": sample_id, "outcome": record["outcome"], "status": record["status"],
-           "in_model_scope": record["in_model_scope"],
-           "execution": record.get("execution"), "requirements": record.get("requirements"),
-           "model_scope_issues": sorted({i.get("code") for i in record["model_scope_issues"]}),
-           "out_of_model_issues": sorted({i.get("code") for i in record.get("out_of_model_issues") or []}),
-           "warnings": record["warnings"],
-           "error_stage": (record["error"] or {}).get("stage"), "error_code": (record["error"] or {}).get("code"),
-           "error_problems": sorted({p.get("code") for p in (record["error"] or {}).get("problems", [])})}
-    for parameter in parameters:
-        row[f"param:{parameter['name']}"] = values[parameter["name"]]
-        row[f"param:{parameter['name']}:unit"] = parameter["unit"]
-    for target in record["targets"]:
-        row[f"target:{target['id']}"] = target["value"]
-        row[f"target:{target['id']}:status"] = target["status"]
-        row[f"target:{target['id']}:unit"] = target["unit"]
-        row[f"target:{target['id']}:assessment"] = target.get("assessment")
-        row[f"target:{target['id']}:quantity_state"] = target.get("quantity_state")
-        row[f"target:{target['id']}:exact"] = wc.target_value_is_exact(target)
-        row[f"target:{target['id']}:applicability_issue_codes"] = target.get("applicability_issue_codes")
-    row.update({key: record["identity"].get(key) for key in (
-        "project_hash", "input_hash", "result_hash", "engine_build_id", "catalog_version")})
-    row["run_dir"] = None if record["run_dir"] is None else wc.relative(record["run_dir"], study_dir)
-    row["seconds"] = round(record["seconds"], 4)
-    return row
+row_from_record = agg.row_from_record
+counts = agg.counts
 
 
 def _operand(row, item):
@@ -332,21 +318,6 @@ def constraint_failures(row, constraints):
     return failed
 
 
-def counts(rows):
-    by = {outcome: 0 for outcome in wc.OUTCOMES}
-    for row in rows:
-        by[row["outcome"]] += 1
-    total = len(rows)
-    evaluable = by["PASS"] + by["FAIL"]
-    return {"requested": total, "by_outcome": by,
-            "pass_fraction": {"numerator": by["PASS"], "denominator": total,
-                              "value": by["PASS"] / total if total else None,
-                              "definition": "PASS samples / all requested samples"},
-            "pass_fraction_among_evaluable": {"numerator": by["PASS"], "denominator": evaluable,
-                                              "value": by["PASS"] / evaluable if evaluable else None,
-                                              "definition": "PASS / (PASS + FAIL)"}}
-
-
 def select_best(rows, constraints, objective):
     """Mark ``feasible`` / ``constraint_failures`` on every row; return (best row or None, feasible count)."""
     feasible = []
@@ -368,128 +339,114 @@ def select_best(rows, constraints, objective):
 
 # --------------------------------------------------------------------------------------------- sweep
 
-def _prepare_dir(study_dir, overwrite):
-    study_dir = Path(study_dir)
-    if study_dir.exists() and any(study_dir.iterdir()):
-        if not overwrite:
-            raise wc.WorkflowError("OUTPUT_EXISTS", f"{study_dir} is not empty; choose a new directory or use "
-                                   "--overwrite", out=study_dir.as_posix())
-        for name in STUDY_DIRS:
-            shutil.rmtree(study_dir / name, ignore_errors=True)
-        for name in ("study.json", "table.csv", "summary.json"):
-            (study_dir / name).unlink(missing_ok=True)
-    study_dir.mkdir(parents=True, exist_ok=True)
-    return study_dir
+def plan_sweep(spec, study_dir, *, base=None, build=None, documents=None, base_path=None, overwrite=False,
+               resume=False, outputs=None):
+    """Validate ``spec`` and write the planned study (``study.json``, ``plan.jsonl``, ``requests/``); nothing runs.
 
-
-def run_sweep(spec, study_dir, *, base=None, build=None, base_path=None, overwrite=False):
-    """Run the sweep described by ``spec`` (module docstring) and write the study directory.
-
-    ``base``: the base Project document (needed unless ``build`` is given). ``build(params) -> ProjectDocumentV2``:
-    Python alternative to op templates; ``params`` maps each parameter name to its value in the parameter's unit.
-    Returns the summary dict (also written to ``summary.json``)."""
-    normalized = normalize_spec(spec, build=build)
-    if build is None and base is None:
+    ``documents``: the Project of every grid point in sample order, built by the caller (an alternative to ops and
+    ``build``). A sample whose ops the Engine refuses becomes a refused request (recorded ERROR, never run).
+    Returns ``(study_dir, normalized spec)``."""
+    normalized = normalize_spec(spec, build=build if build is not None else documents)
+    if build is None and documents is None and base is None:
         raise wc.WorkflowError("SPEC_INVALID", "a base Project is required unless a build function is given")
     parameters = normalized["parameters"]
     points = sample_points(parameters)
-    if build is None:  # unit and op errors are spec errors: refuse before running anything
+    if documents is not None and len(documents) != len(points):
+        raise wc.WorkflowError("SPEC_INVALID", f"{len(documents)} documents for {len(points)} grid points")
+    if build is None and documents is None:  # unit and op errors are spec errors: refuse before running anything
         for _sample_id, values in points:
             normalize_ops(base, sample_ops(parameters, values))
+    requests = []
+    for index, (sample_id, values) in enumerate(points):
+        labels = {"parameters": {p["name"]: {"value": values[p["name"]], "unit": p["unit"]} for p in parameters}}
+        try:
+            if documents is not None:
+                document = documents[index]
+            elif build is not None:
+                document = build(dict(values))
+            else:
+                document = apply_edits(base, sample_ops(parameters, values), validate=False)["project"]
+        except EditError as exc:
+            requests.append(rq.make_request(sample_id, None, labels=labels, selected_targets=normalized["targets"],
+                                            outputs=outputs, refusal={"stage": "edit", "code": exc.code,
+                                                                      "problems": [exc.as_dict()]}))
+            continue
+        requests.append(rq.make_request(sample_id, document, labels=labels, selected_targets=normalized["targets"],
+                                        outputs=outputs))
     # target ids and columns must exist: a misspelt id would make every sample UNKNOWN or infeasible
-    first = points[0][1]
-    try:
-        reference = build(dict(first)) if build is not None else \
-            apply_edits(base, sample_ops(parameters, first), validate=False)["project"]
-    except EditError:
-        reference = base
+    reference = requests[0]["project"] or base
     validate_columns(normalized, {t["target_id"] for doc in (base, reference) if doc for t in doc.get("targets", [])})
-    started = wc.utc_now()
-    study_dir = _prepare_dir(study_dir, overwrite)
+    study_dir, resuming = store.prepare_study_dir(study_dir, overwrite=overwrite, resume=resume, files=STUDY_FILES,
+                                                  dirs=STUDY_DIRS)
     base_check = wc.check(base) if base is not None else None
-    study = {
-        "kind": "opensci-example.parameter-sweep", "spec": spec,
-        "normalized": {**normalized, "parameters": parameters},
-        "base_project": None if base is None else {
+    header = store.study_header(
+        KIND, spec=spec, normalized={**normalized, "parameters": parameters},
+        base_project=None if base is None else {
             "file": None if base_path is None else Path(base_path).as_posix(),
             "project_hash": base_check.get("project_hash"), "engine_input_hash": base_check.get("engine_input_hash"),
             "document_sha256": wc.canonical_digest(base)},
-        "build_function": None if build is None else getattr(build, "__qualname__", repr(build)),
-        "engine": wc.engine_identity(), "installed_catalog": wc.catalog_identity(),
-        "catalog": wc.run_catalog_identity([]), "environment": wc.environment(),
-        "seed": None, "sampling": "deterministic grid", "budget": {"max_evaluations": normalized["max_evaluations"],
-                                                                    "samples": normalized["samples"]},
-        "stop_on": normalized["stop_on"], "started": started,
-    }
-    wc.write_json(study_dir / "study.json", study)
-    rows = []
-    stopped_by = None
-    for sample_id, values in points:
-        sample_dir = study_dir / "samples" / sample_id
-        t0 = time.perf_counter()
-        if stopped_by is not None:
-            record = wc.error_record("not_run", "STOPPED", [{"code": "STOPPED", "message": f"stop_on rule after "
-                                     f"sample {stopped_by}"}], sample_dir=sample_dir, selected=normalized["targets"])
-        else:
-            try:
-                if build is not None:
-                    document = build(dict(values))
-                else:
-                    document = apply_edits(base, sample_ops(parameters, values), validate=False)["project"]
-            except EditError as exc:
-                sample_dir.mkdir(parents=True, exist_ok=True)
-                record = wc.error_record("edit", exc.code, [exc.as_dict()], sample_dir=sample_dir,
-                                         seconds=time.perf_counter() - t0, selected=normalized["targets"])
-            else:
-                record = wc.run_sample(document, sample_dir, targets=normalized["targets"])
-        record["sample_id"] = sample_id
-        record["parameters"] = {p["name"]: {"value": values[p["name"]], "unit": p["unit"]} for p in parameters}
-        wc.write_json(sample_dir / "sample.json", record)
-        row = add_derived(row_from_record(sample_id, values, parameters, record, study_dir), normalized["derived"])
-        rows.append(row)
-        if stopped_by is None and record["outcome"] in normalized["stop_on"]:
-            stopped_by = sample_id
+        build_function=getattr(build, "__qualname__", repr(build)) if build is not None
+        else ("documents supplied by the caller" if documents is not None else None),
+        seed=None, sampling="deterministic grid",
+        budget={"max_evaluations": normalized["max_evaluations"], "samples": normalized["samples"]},
+        stop_on=normalized["stop_on"])
+    store.plan_study(study_dir, header, requests, resume=resuming)
+    return study_dir, normalized
+
+
+def aggregate_sweep(study_dir):
+    """``table.csv`` and ``summary.json`` of a sweep from its saved samples (no Engine run); returns the summary."""
+    study_dir = Path(study_dir)
+    study = store.read_study(study_dir)
+    normalized = study["normalized"]
+    parameters = normalized["parameters"]
+    pairs = agg.collect_records(study_dir)
+    rows = [add_derived(row, normalized["derived"]) for row in agg.rows_from_records(study_dir, pairs, parameters)]
+    stopped_by = (study.get("execution") or {}).get("stopped_by")  # what the execution's stop rule decided
     best, feasible = select_best(rows, normalized["constraints"], normalized["objective"])
     restricted = bool(normalized["constraints"]) or normalized["objective"] is not None
     status = "NO_FEASIBLE" if restricted and feasible == 0 else "COMPLETED"
-    columns = _columns(rows)
-    wc.write_csv(study_dir / "table.csv", rows, columns)
-    study["catalog"] = wc.run_catalog_identity(rows)
-    study["finished"] = wc.utc_now()
-    wc.write_json(study_dir / "study.json", study)
+    study = agg.finish_study(study_dir, rows)
+    columns = agg.write_table(study_dir, rows)
     summary = {
-        "status": status, "kind": "opensci-example.parameter-sweep-summary", "counts": counts(rows),
+        "status": status, "kind": f"{KIND}-summary", "counts": counts(rows),
         "feasible": feasible, "stopped_by": stopped_by,
         "objective": normalized["objective"], "constraints": normalized["constraints"],
         "best": None if best is None else _best(best, parameters, normalized["objective"]),
         "no_feasible": None if status != "NO_FEASIBLE" else _no_feasible(rows),
         "parameters": [{"name": p["name"], "unit": p["unit"], "count": len(p["values"])} for p in parameters],
-        "targets": _target_units(rows), "columns": columns, "rows": rows,
-        "identity": {"engine": study["engine"], **study["catalog"],
-                     "base_project_hash": None if base_check is None else base_check.get("project_hash")},
+        "targets": agg.target_units(rows), "columns": columns, "rows": rows,
+        "identity": agg.identity(study, rows, (study.get("base_project") or {}).get("project_hash")),
         "paths": {"study_dir": study_dir.as_posix(), "study": "study.json", "table": "table.csv",
                   "summary": "summary.json", "samples": "samples"},
     }
-    wc.write_json(study_dir / "summary.json", summary)
+    agg.write_summary(study_dir, summary)
     return summary
 
 
-def _columns(rows):
-    columns = []
-    for row in rows:
-        for key in row:
-            if key not in columns:
-                columns.append(key)
-    return columns
+def run_sweep(spec, study_dir, *, base=None, build=None, documents=None, base_path=None, overwrite=False,
+              workers=1, scheduler=None, evaluator=None, limits=None, resume=False, plan_only=False, outputs=None,
+              on_progress=None):
+    """Plan, execute and aggregate the sweep described by ``spec`` (module docstring); returns the summary.
+
+    ``base``: the base Project document (needed unless ``build`` or ``documents`` is given).
+    ``build(params) -> ProjectDocumentV2``: Python alternative to op templates; ``params`` maps each parameter name
+    to its value in the parameter's unit. ``documents``: prebuilt Projects in sample order. ``workers``,
+    ``scheduler``, ``evaluator``, ``limits``, ``resume``, ``on_progress``: see ``study.execute_study``;
+    ``plan_only``: stop after planning (status ``PLANNED``); a cancelled execution returns status ``CANCELLED``."""
+    study_dir, normalized = plan_sweep(spec, study_dir, base=base, build=build, documents=documents,
+                                       base_path=base_path, overwrite=overwrite, resume=resume, outputs=outputs)
+    if plan_only:
+        return opts.planned_summary(study_dir, KIND)
+    execution = ex.execute_study(study_dir, workers=workers, scheduler=scheduler, evaluator=evaluator, limits=limits,
+                                 resume=resume, stop_on=normalized["stop_on"], on_progress=on_progress)
+    if execution.state == "CANCELLED":
+        return opts.cancelled_summary(study_dir, KIND, execution)
+    return aggregate_sweep(study_dir)
 
 
-def _target_units(rows):
-    units = {}
-    for row in rows:
-        for key, value in row.items():
-            if key.startswith("target:") and key.endswith(":unit") and value is not None:
-                units.setdefault(key[len("target:"):-len(":unit")], value)
-    return units
+_columns = agg.columns
+_target_units = agg.target_units
 
 
 def _best(row, parameters, objective):
@@ -529,7 +486,8 @@ def compact(summary, limit=TOP_ROWS):
             "best": summary["best"], "no_feasible": summary["no_feasible"], "stopped_by": summary["stopped_by"],
             "units": {"parameters": {p["name"]: p["unit"] for p in summary["parameters"]},
                       "targets": summary["targets"]},
-            "top_rows": top, "rows_omitted": max(0, len(rows) - limit), "paths": summary["paths"]}
+            "top_rows": top, "rows_omitted": max(0, len(rows) - limit),
+            "execution": opts.execution_brief((summary.get("paths") or {}).get("study_dir")), "paths": summary["paths"]}
 
 
 def main(argv=None):
@@ -540,16 +498,17 @@ def main(argv=None):
         parser.add_argument("--out", type=Path, required=True, help="Study directory to create")
         parser.add_argument("--base", type=Path, help="Base Project JSON (overrides spec base_project)")
         parser.add_argument("--overwrite", action="store_true", help="Replace the files this command writes in --out")
+        opts.add_execution_options(parser)
         args = parser.parse_args(argv)
         spec = wc.read_json(args.spec)
         base_path = args.base or (args.spec.parent / spec["base_project"] if spec.get("base_project") else None)
         if base_path is None:
             raise wc.WorkflowError("SPEC_INVALID", "give base_project in the spec or --base")
         summary = run_sweep(spec, args.out, base=wc.read_json(base_path), base_path=base_path,
-                            overwrite=args.overwrite)
-        return compact(summary)
+                            overwrite=args.overwrite, **opts.execution_arguments(args))
+        return summary if summary["status"] in opts.EXIT_CODES else compact(summary)
 
-    return wc.emit(workflow)
+    return wc.emit(workflow, EXIT_CODES)
 
 
 if __name__ == "__main__":

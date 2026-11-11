@@ -45,6 +45,8 @@ from .result_summary import EXIT_CODES, ERROR_EXIT, error_document, exit_status,
 OUTCOMES = ("ERROR", "OUT_OF_MODEL", "UNKNOWN", "FAIL", "PASS", "NOT_APPLICABLE")
 #: Exit codes of the workflow tools: the run statuses of result_summary plus the study / edit outcomes.
 WORKFLOW_EXIT_CODES = {**EXIT_CODES, "COMPLETED": 0, "EDITED": 0, "ALREADY_APPLIED": 0, "NO_FEASIBLE": 1}
+#: Exit code of a command stopped by Ctrl-C.
+INTERRUPTED_EXIT = 130
 
 
 class WorkflowError(Exception):
@@ -437,13 +439,16 @@ def _empty_record(sample_dir, project_file, selected):
     }
 
 
-def run_sample(document, sample_dir, *, targets=None, write_run=True):
+def run_sample(document, sample_dir, *, targets=None, write_run=True, monitor=None, ray_data="full"):
     """Save ``document`` as ``sample_dir/project.json``, run it in-process into ``sample_dir/run`` and return the
     sample record. Never raises for an Engine refusal: a refusal at load (``stage: "load"``) or at run (``stage:
     "run"``) gives an ``ERROR`` record with the Engine's problem codes. ``targets``: the target ids that decide the
-    outcome (default: all targets of the run)."""
+    outcome (default: all targets of the run). ``monitor``: an ``os_optics.run_monitor.RunMonitor`` passed to the
+    run; a run it stops gives an ``ERROR`` record with code ``RUN_STOPPED`` (problem code = the stop cause:
+    ``CALLER``, ``MEMORY_LIMIT``, ``ARTIFACT_LIMIT``). ``ray_data``: ``full`` or ``summary`` (chief rays only)."""
     from os_optics.local import LocalRunError, load_project, run_optical_project
     from os_optics.results import load_run
+    from os_optics.run_control import RunStopped
 
     sample_dir = Path(sample_dir)
     sample_dir.mkdir(parents=True, exist_ok=True)
@@ -458,8 +463,14 @@ def run_sample(document, sample_dir, *, targets=None, write_run=True):
                             project_file=project_file, seconds=time.perf_counter() - started, selected=targets)
     record["identity"]["project_hash"] = project.content_hash()
     try:
-        run = run_optical_project(project, output_dir=run_dir if write_run else None)
+        run = run_optical_project(project, output_dir=run_dir if write_run else None, monitor=monitor,
+                                  ray_data=ray_data)
         summary = summarize_results(load_run(run))
+    except RunStopped as exc:
+        problem = {"code": exc.cause, "message": exc.message, "phase": exc.phase}
+        record.update({"error": {"stage": "run", "code": "RUN_STOPPED", "problems": [problem]},
+                       "seconds": time.perf_counter() - started})
+        return record
     except LocalRunError as exc:
         record.update({"error": {"stage": "run", "code": "RUN_REFUSED", "problems": _problems(exc)},
                        "seconds": time.perf_counter() - started})
@@ -564,6 +575,9 @@ def emit(workflow, exit_codes=None):
         output = json.dumps(json_safe(summary), ensure_ascii=True, allow_nan=False, separators=(",", ":"))
     except SystemExit as exc:  # --help
         return exit_status(exc)
+    except KeyboardInterrupt:  # Ctrl-C outside a study execution (which handles it itself)
+        print(json.dumps({"error": {"code": "INTERRUPTED", "message": "interrupted (Ctrl-C)"}}), file=sys.stderr)
+        return INTERRUPTED_EXIT
     except Exception as exc:  # noqa: BLE001 - every failure becomes a JSON error
         error = exc.as_dict() if isinstance(exc, WorkflowError) else error_document(exc)
         print(json.dumps({"error": json_safe(error)}, ensure_ascii=True), file=sys.stderr)

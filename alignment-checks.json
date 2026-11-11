@@ -175,6 +175,21 @@
       "timeout": 300
     },
     {
+      "name": "tolerance-polarization-workers",
+      "description": "The same tolerance study in two worker processes completes",
+      "argv": ["{python}", "-m", "os_optics_kit", "tolerance", "cases/polarization-control/studies/tolerance_polarization.json", "--out", "{runs}/tolerance-polarization-workers", "--samples", "20", "--no-plots", "--no-report", "--workers", "2"],
+      "expected_status": "COMPLETED",
+      "timeout": 300
+    },
+    {
+      "name": "study-resume",
+      "description": "study run --resume of the completed tolerance study completes",
+      "argv": ["{python}", "-m", "os_optics_kit", "study", "run", "{runs}/tolerance-polarization", "--resume"],
+      "needs": ["tolerance-polarization"],
+      "expected_status": "COMPLETED",
+      "timeout": 300
+    },
+    {
       "name": "catalog-candidates",
       "description": "Bounded candidate table of plano-convex lenses at 780 nm",
       "argv": ["{python}", "-m", "os_optics_kit", "candidates", "--category", "LENS", "--form", "PLANO_CONVEX_LENS", "--wavelength-nm", "780", "--range", "focal_length_mm=95..105", "--near", "focal_length_mm=100", "--limit", "5"],

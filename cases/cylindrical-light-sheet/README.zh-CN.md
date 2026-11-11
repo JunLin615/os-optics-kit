@@ -40,7 +40,7 @@ python workflow.py --out ../sheet-default --plot-only
 
 ## 从保存结果制作展示素材
 
-使用 kit 0.3.0、Chrome/Chromium，中文绘图需微软雅黑或 Noto Sans CJK SC 字体。
+使用 kit 0.4.0、Chrome/Chromium，中文绘图需微软雅黑或 Noto Sans CJK SC 字体。
 输入为已完成的 `workflow.py` 结果目录。首个输入提供参考纵截面和系统视图；
 加入 65 mm 结果可比较超过束腰厚度上限的设计。
 

@@ -1,7 +1,7 @@
 # Agent guide
 
 os-optics-kit: tools, engine-reproducible cases and skills for the OS Optics engine (`os-optics`).
-Install with `python -m pip install "os-optics[protected]" os-optics-kit` (Python 3.11+); kit 0.3.x
+Install with `python -m pip install "os-optics[protected]" os-optics-kit` (Python 3.11+); kit 0.4.x
 requires `os-optics>=0.13,<0.14`. Engine guide:
 [os-optics AGENT_GUIDE](https://github.com/JunLin615/os-optics/blob/main/AGENT_GUIDE.md).
 
@@ -34,6 +34,7 @@ DIR, the skills directory of your agent host; it never overwrites a different fi
 | Gallery or bundle handoff | `present list DIR`; `present bundle DIR --out X.zip --only ID,...` |
 | Orbit, detail move, sample playback | `present init ... --animate`; fields: `present settings` |
 | Sensitivity, tolerance | `sensitivity SPEC.json --out DIR`; `tolerance SPEC.json --out DIR` |
+| Many independent runs, in parallel, resumable | `study` skill: `sweep SPEC.json --out S --workers 4`; `study run S --resume`; `study candidates P1.json P2.json --out C` |
 | Catalog parts | `candidates --category ... --wavelength-nm ...` |
 | Detector CSV data | `measurements DATA.csv --x ... --signal ... --out DIR` |
 | Share a design or helper | `contrib-case`, `contrib-tool` |
@@ -63,7 +64,7 @@ the edited one.
 
 Exit codes: 0 completed or PASS; 1 FAIL, `NO_FEASIBLE`, `NO_MATCH` or a case mismatch; 2 UNKNOWN (also
 a partial run, `PARTIAL`) or `INCOMPLETE`; 3 OUT_OF_MODEL; 4 refused input, with a JSON
-error on stderr. Stdout is compact JSON;
+error on stderr; 130 a cancelled study or Ctrl-C (`study run DIR --resume` continues a study). Stdout is compact JSON;
 details stay in files.
 
 ## Inputs and recovery
@@ -75,7 +76,10 @@ poses and the user's actual target bounds. Coordinates are right-handed; quatern
 Inputs are never modified; an existing output is refused (`OUTPUT_EXISTS`) unless `--overwrite`.
 Invalid edits are refused atomically. Repeating an identical `edit` returns `already_applied`;
 `--expect-base-hash` refuses a changed base. Set both a study's `max_evaluations` and the Project's
-compute budget, and inspect limited or partial results before raising a limit. Report commands,
+compute budget, and inspect limited or partial results before raising a limit. Time a pilot before a
+large study and choose a worker budget from it (`skills show study recipe.md`): one study per batch,
+`--workers N` (`auto` assumes 0.2 s per sample of a new plan; give N for heavier samples),
+`--time-limit-s` / `--max-memory-mib` per evaluation, workers x threads within the CPUs. Report commands,
 versions, units, selected assessments, freshness and artifact paths.
 
 ## Contribute

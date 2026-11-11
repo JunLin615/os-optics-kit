@@ -43,7 +43,7 @@ python scripts/check_alignment.py --engine latest --out run-latest        # newe
 python scripts/check_alignment.py --engine 0.13.0 --out run-0130          # an exact release
 python scripts/check_alignment.py --engine-wheel os_optics-X.Y.Z-py3-none-any.whl \
   --catalog-file public_optical_catalog.json --out run-local              # before a release is on PyPI
-python scripts/check_alignment.py --kit-wheel dist/os_optics_kit-0.3.0-py3-none-any.whl --out run-kit-wheel
+python scripts/check_alignment.py --kit-wheel dist/os_optics_kit-0.4.0-py3-none-any.whl --out run-kit-wheel
 python scripts/check_alignment.py --optional all --out run-full           # include the optional checks
 python scripts/check_alignment.py --only spec-be-report --out run-flow    # one check and what it needs
 python scripts/check_alignment.py --skip cases-verify --out run-no-cases  # leave a check out
@@ -60,6 +60,9 @@ the kit works with that build, not that the release on PyPI does.
 
 ### Default checks
 
+- `achromatic-imaging-compute`, `achromatic-imaging-study`: the native three-colour imaging run of the
+  achromatic-imaging case, then its sensitivity and tolerance studies; `focus-requirement-compute`,
+  `focus-requirement-study`: the two lens placements of the focus-requirement case, then its placement sweeps.
 - `kit-cli`, `summary-missing-run`: the installed command and its JSON error contract.
 - `offline-tests`: the whole test suite before the catalog is prepared (catalog tests skip themselves).
 - `beam-summary`, `saved-run-summary`: a catalog beam expander run and its saved-result summary.
@@ -69,10 +72,16 @@ the kit works with that build, not that the release on PyPI does.
 - The design workflows of the expansion-focus, polarization-control and mirror-alignment cases, one parameter
   sweep, one sensitivity and one tolerance study, and the catalog tool chain (candidates, edit, sweep, move,
   compare, plot, report) of the beam-expander studies.
+- `tolerance-polarization-workers`: the tolerance study in two worker processes; `study-resume`: `study run
+  --resume` of the completed tolerance study. Both checks assert that the command completes; equality with the
+  serial study, sample reuse, design workflows and the benchmark with two workers are asserted by
+  `tests/test_study.py`, `tests/test_study_tools.py` and `tests/test_study_workers.py` in `offline-tests`.
 
 Optional checks (full workflow studies, seed verification, external-tool cases with their own pinned
 requirements) run with `--optional NAME` or `--optional all`. A check with a `requirements` file runs in its own
-environment with the engine, the kit and that file.
+environment with the engine, the kit and that file. pip resolves an `os-optics-kit` requirement of that file from
+PyPI before the kit under test replaces it, so a case that pins the kit version being prepared runs once that
+version is published.
 
 ### Add a check
 

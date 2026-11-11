@@ -9,8 +9,8 @@ English · [简体中文](https://github.com/JunLin615/os-optics-kit/blob/main/R
 
 os-optics-kit builds on the [OS Optics](https://github.com/JunLin615/os-optics) engine. It provides one command,
 `os-optics-kit`, with tools that edit Projects by ID, sweep parameters, compare saved runs, plot, report, render 3D
-figures, estimate sensitivity and tolerance, select catalog parts, analyze detector measurements and prepare presentation
-material; a collection of cases, designs
+figures, estimate sensitivity and tolerance, run independent evaluations as resumable studies in parallel worker
+processes, select catalog parts, analyze detector measurements and prepare presentation material; a collection of cases, designs
 that rerun on the engine and compare with their recorded outcome; and a vendor-neutral skill page for each tool,
 which any coding agent can load.
 
@@ -113,6 +113,7 @@ and `expected.json` (the verified outcome), plus its own scripts, study specs or
 | `present` | `os-optics-kit present` | Build themed views, plots, comparisons and animations from saved results, with a gallery and bundle |
 | `sensitivity` | `os-optics-kit sensitivity` | Rank design parameters by finite-difference sensitivity at two step sizes |
 | `tolerance` | `os-optics-kit tolerance` | Run a seeded tolerance study under declared distributions |
+| `study` | `os-optics-kit study` | Run, resume, inspect and aggregate a planned study, serially or in worker processes; plan candidate Projects |
 | `candidates` | `os-optics-kit candidates` | List catalog products that pass explicit filters, sorted by closeness to a value |
 | `measurements` | `os-optics-kit measurements` | Subtract backgrounds, normalize by a reference channel and fit detector CSV data |
 | `run-case` | `os-optics-kit cases` | Find, copy, run, check and adapt a case |
@@ -122,9 +123,14 @@ and `expected.json` (the verified outcome), plus its own scripts, study specs or
 `os-optics-kit skills show NAME` prints a skill page; [`skills.json`](https://github.com/JunLin615/os-optics-kit/blob/main/skills.json) indexes them. Tools are also
 importable (`import os_optics_kit`), and `python -m os_optics_kit <command>` runs the same commands.
 
+`sweep`, `sensitivity`, `tolerance` and `study candidates` plan every evaluation before running it, take
+`--workers N` (worker processes; the results equal one worker's), `--resume` and `--plan-only`, and write files that
+`plot`, `report`, `compare` and `present` read without running the Engine again. See
+[studies](https://github.com/JunLin615/os-optics-kit/blob/main/docs/en/studies.md).
+
 ## Version alignment
 
-os-optics-kit 0.3.x requires `os-optics>=0.13,<0.14` and was verified with os-optics 0.13.0 and catalog release
+os-optics-kit 0.4.x requires `os-optics>=0.13,<0.14` and was verified with os-optics 0.13.0 and catalog release
 2026-10-28.1 ([`baseline.json`](https://github.com/JunLin615/os-optics-kit/blob/main/baseline.json)). Each case records the engine and catalog release it was verified
 with. See [case format](https://github.com/JunLin615/os-optics-kit/blob/main/docs/case-format.md) and [engine alignment](https://github.com/JunLin615/os-optics-kit/blob/main/docs/engine-alignment.md).
 

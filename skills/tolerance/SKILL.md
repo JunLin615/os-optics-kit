@@ -1,7 +1,7 @@
 ---
 name: tolerance
 description: Seeded tolerance study - draw independent offsets from declared uniform or truncated-normal distributions, save the sample set before any run, run and count every sample, and report target distributions. Use it to estimate how often a design meets its targets.
-version: 0.2.0
+version: 0.3.0
 command: os-optics-kit tolerance
 requires: os-optics>=0.13,<0.14
 kind: tool
@@ -30,15 +30,19 @@ kind: tool
   (offsets from nominal, parameter unit).
 
 Options: `--out STUDY_DIR`, `--seed N`, `--samples N`, `--zero-tolerance` (all offsets 0),
-`--draw-only` (write the sample set and stop), `--verify-seed STUDY_DIR`, `--overwrite`, `--no-plots`,
-`--no-report`.
+`--draw-only` (write the sample set and stop; not with `--plan-only`), `--verify-seed STUDY_DIR`,
+`--overwrite`, `--no-plots`, `--no-report`.
+Execution (`study` skill): `--workers N|auto` (worker processes, same results as one), `--resume`
+(continue a planned or interrupted study), `--plan-only` (then `os-optics-kit study run DIR`),
+`--time-limit-s`, `--max-memory-mib` (per evaluation), `--ray-data summary`. A larger `--samples` with `--resume` keeps
+the samples already run.
 
 ## Outputs
 
 `sampling.json` and `samples.csv` (written before any run), `samples/`, `table.csv`, `summary.json`,
 `plots/`, `report/`. Stdout: counts per outcome with denominators, PASS fraction, per-target percentiles,
-unsuccessful samples. Exit 0 at least one PASS sample, 1 no PASS sample or a `--verify-seed` mismatch,
-4 refused spec or invalid input.
+unsuccessful samples. Exit 0 at least one PASS sample (or drawn, planned), 1 no PASS sample or a
+`--verify-seed` mismatch, 4 refused spec or invalid input, 130 cancelled (resumable).
 
 ## Minimal example
 
@@ -65,4 +69,4 @@ os-optics-kit tolerance --verify-seed tol
 
 ## Version
 
-0.2.0 (os-optics-kit 0.2.0), verified with os-optics 0.13.0 and catalog release 2026-10-28.1.
+0.3.0 (os-optics-kit 0.4.0), verified with os-optics 0.13.0 and catalog release 2026-10-28.1.

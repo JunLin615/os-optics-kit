@@ -6,6 +6,8 @@ The kit's tools take a design from a first run to a documented study: edit compo
 parameters, compare saved runs, plot and report the results, and estimate sensitivities and tolerances. Every step
 saves its projects and runs, prints a compact JSON summary and keeps the complete data in files. Three cases with
 parameterized workflows apply the same steps to beam expansion and focusing, polarization control and alignment.
+Sweeps, sensitivity and tolerance studies can run in parallel worker processes and be resumed; see
+[studies](studies.md).
 
 ## Before you start
 
@@ -13,7 +15,7 @@ parameterized workflows apply the same steps to beam expansion and focusing, pol
 python -m pip install "os-optics[protected]" "os-optics-kit[plot]"
 ```
 
-os-optics-kit 0.3.x works with os-optics 0.13; the numbers below come from os-optics 0.13.0 and, for catalog
+os-optics-kit 0.4.x works with os-optics 0.13; the numbers below come from os-optics 0.13.0 and, for catalog
 designs, catalog release `2026-10-28.1`. Each section copies a case with `os-optics-kit cases copy NAME --dest .`
 and runs its commands inside the case directory. Sections 1–3 use catalog components and need
 `os-optics catalog sync`; sections 4 and 5 use catalog-free ideal elements. Read each new run's own identities and

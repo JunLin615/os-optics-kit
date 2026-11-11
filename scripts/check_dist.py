@@ -1,6 +1,6 @@
 """Check built os-optics-kit distributions before they are installed or published.
 
-python scripts/check_dist.py dist [--version 0.3.0]
+python scripts/check_dist.py dist [--version 0.4.0]
 
 For every wheel and source archive in the directory: the version matches (default: tools/os_optics_kit/_version.py),
 the wheel carries the package, the skills, the cases, their indexes, the contributor templates and baseline.json, it declares the os-optics

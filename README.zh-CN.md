@@ -9,7 +9,7 @@
 
 os-optics-kit 基于 [OS Optics](https://github.com/JunLin615/os-optics) 引擎，提供一个命令 `os-optics-kit`：
 其中的工具可以按标识修改 Project、扫描参数、比较已保存的运行、绘图、生成报告、渲染三维图、估计灵敏度和公差、
-挑选目录元件、分析探测器测量数据以及制作演示材料；一组案例，即可在引擎上重新运行并与记录结果比较的设计；以及每个工具
+以可续跑的研究形式在并行工作进程中运行相互独立的评估、挑选目录元件、分析探测器测量数据以及制作演示材料；一组案例，即可在引擎上重新运行并与记录结果比较的设计；以及每个工具
 对应的一份与厂商无关的技能说明，任何编程 Agent 都可以加载。
 
 | 名称 | 位置 | 内容 |
@@ -107,6 +107,7 @@ os-optics-kit present bundle talk-zh --out talk-zh.zip
 | `present` | `os-optics-kit present` | 依据已保存的结果生成带主题的视图、结果图、比较图和动画，附图库和材料包 |
 | `sensitivity` | `os-optics-kit sensitivity` | 以两种步长的有限差分灵敏度对设计参数排序 |
 | `tolerance` | `os-optics-kit tolerance` | 在声明的分布下运行带种子的公差研究 |
+| `study` | `os-optics-kit study` | 串行或在工作进程中运行、续跑、查看和汇总已规划的研究；规划候选 Project 研究 |
 | `candidates` | `os-optics-kit candidates` | 列出满足明确筛选条件的目录产品，按与给定值的接近程度排序 |
 | `measurements` | `os-optics-kit measurements` | 扣除背景、按参考通道归一化并拟合探测器 CSV 数据 |
 | `run-case` | `os-optics-kit cases` | 查找、复制、运行、核对并修改案例 |
@@ -116,9 +117,13 @@ os-optics-kit present bundle talk-zh --out talk-zh.zip
 `os-optics-kit skills show NAME` 输出一份技能说明；[`skills.json`](skills.json) 是技能索引。工具也可以
 在 Python 中导入（`import os_optics_kit`），`python -m os_optics_kit <命令>` 运行同样的命令。
 
+`sweep`、`sensitivity`、`tolerance` 和 `study candidates` 在运行前先规划全部评估，支持 `--workers N`（工作进程，结果与
+单进程相同）、`--resume` 和 `--plan-only`；它们写出的文件可由 `plot`、`report`、`compare` 和 `present` 直接读取，
+无需再次运行引擎。见[研究](docs/zh-CN/studies.md)。
+
 ## 版本对应
 
-os-optics-kit 0.3.x 需要 `os-optics>=0.13,<0.14`，已在 os-optics 0.13.0 和目录版本 2026-10-28.1 上验证
+os-optics-kit 0.4.x 需要 `os-optics>=0.13,<0.14`，已在 os-optics 0.13.0 和目录版本 2026-10-28.1 上验证
 （[`baseline.json`](baseline.json)）。每个案例记录验证时使用的引擎和目录版本。见
 [案例格式（英文）](docs/case-format.md)和[引擎对齐（英文）](docs/engine-alignment.md)。
 

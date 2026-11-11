@@ -8,7 +8,7 @@ The native optical system uses a 532 nm, 10 mW TEM00 source with a 0.5 mm waist,
 
 ## Run and change a parameter
 
-Use **Python 3.12 or newer** for the pinned scientific dependencies (verified with Python 3.14.8). Install os-optics 0.13.0 and os-optics-kit 0.3.0, copy this case, then run inside the copied directory:
+Use **Python 3.12 or newer** for the pinned scientific dependencies (verified with Python 3.14.8). Install os-optics 0.13.0 and os-optics-kit 0.4.0, copy this case, then run inside the copied directory:
 
 ```bash
 python -m pip install -r requirements-flat-top.txt

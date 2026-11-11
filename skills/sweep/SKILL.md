@@ -1,7 +1,7 @@
 ---
 name: sweep
 description: Run a bounded one- or two-parameter sweep of a Project from a JSON spec; every sample's Project and run are saved, counted by outcome, and ranked by an optional objective under constraints. Use it to explore a design parameter.
-version: 0.2.0
+version: 0.3.0
 command: os-optics-kit sweep
 requires: os-optics>=0.13,<0.14
 kind: tool
@@ -31,12 +31,17 @@ kind: tool
   `stop_on`. Columns: `param:<name>`, `target:<id>`, `derived:<name>`.
 
 Options: `--out STUDY_DIR` (new or empty), `--overwrite`.
+Execution (`study` skill): `--workers N|auto` (worker processes, same results as one), `--resume`
+(continue a planned or interrupted study), `--plan-only` (then `os-optics-kit study run DIR`),
+`--time-limit-s`, `--max-memory-mib` (per evaluation), `--ray-data summary`.
 
 ## Outputs
 
-`STUDY_DIR/study.json`, `samples/<id>/{project.json, run/, sample.json}`, `table.csv`, `summary.json`.
+`STUDY_DIR/study.json`, `plan.jsonl`, `requests/`, `samples/<id>/{project.json, run/, sample.json}`,
+`journal.jsonl`, `table.csv`, `summary.json` (rows in sample order).
 Stdout: counts per outcome with denominators, feasible count, best sample or `no_feasible`, samples with
-warnings, top rows, paths. Exit 0 completed, 1 no feasible sample, 4 refused spec or invalid input.
+warnings, top rows, execution, paths. Exit 0 completed or planned, 1 no feasible sample, 4 refused spec or
+invalid input, 130 cancelled (resumable).
 
 ## Minimal example
 
@@ -60,7 +65,8 @@ os-optics-kit sweep sweep.json --out study
 - At most two parameters; every sample is one full engine run.
 - Unknown target ids or columns refuse the spec before any run.
 - No sample is dropped: ERROR, UNKNOWN and OUT_OF_MODEL samples stay in the table.
+- `stop_on` acts in sample order: every sample after the first listed outcome is `STOPPED`.
 
 ## Version
 
-0.2.0 (os-optics-kit 0.2.0), verified with os-optics 0.13.0 and catalog release 2026-10-28.1.
+0.3.0 (os-optics-kit 0.4.0), verified with os-optics 0.13.0 and catalog release 2026-10-28.1.

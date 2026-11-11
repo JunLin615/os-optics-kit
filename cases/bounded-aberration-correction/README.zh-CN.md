@@ -78,7 +78,7 @@ Powell 搜索只使用标量传感器读数，调整前五项，每项范围为 
 傅里叶计算采用 6 mm 光瞳窗口，将 512² 网格补零至 2048² 以细化焦面采样。
 若需其它视野，可从保存的复数光瞳重建完整焦场。生成结果保存在版本控制之外。
 
-## 从保存结果制作展示素材（kit 0.3.0）
+## 从保存结果制作展示素材（kit 0.4.0）
 
 ```bash
 python present_case.py out/default out/stronger --out talk/zh --language zh-CN --background light --size 1920x1080 --bundle talk/aberration-zh.zip

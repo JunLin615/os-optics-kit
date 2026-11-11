@@ -2,6 +2,8 @@
 
 Usage:
   os-optics-kit sensitivity SPEC.json --out STUDY_DIR [--base BASE.json] [--overwrite] [--no-plots] [--no-report]
+                            [--workers N|auto] [--resume] [--plan-only] [--time-limit-s S] [--max-memory-mib M]
+                            [--ray-data full|summary]
 
 SPEC.json (keys; quantities are a bare number in the stated unit or {"value": x, "unit": "u"}):
   {
@@ -59,9 +61,14 @@ step), summary.json, plots/ (sensitivity bars and tornado per target, PNG + SVG;
 os-optics-kit[plot] extra, otherwise summary.json records why no plot was written) and report/ (report.md,
 report.json as written by os-optics-kit report).
 
+Execution: the samples are planned (study.json, plan.jsonl, requests/) before any run and are independent:
+--workers N runs them in N worker processes with the same results as one; --plan-only stops after planning
+(os-optics-kit study run executes the plan, with the plots and report chosen here); --resume continues a planned or
+interrupted study. The finite differences, plots and report are computed from the saved samples.
+
 Stdout: one compact JSON document (nominal values, per-target ranking with derivatives, units, methods, flags,
-outcome counts, unusable samples, paths). Exit 0 completed (every derivative has a value), 2 some derivative
-unavailable, 4 refused spec or invalid input.
+outcome counts, unusable samples, execution, paths). Exit 0 completed (every derivative has a value) or planned, 2
+some derivative unavailable, 4 refused spec or invalid input, 130 cancelled (the study can be resumed).
 """
 
 from __future__ import annotations
@@ -70,17 +77,17 @@ import argparse
 import copy
 import math
 from pathlib import Path
-import shutil
 import time
 
 from . import workflow_common as wc
 from . import sweep_parameters as sweep
 from ._engine import matplotlib_missing_message
 from .edit_project import EditError, apply_edits, normalize_ops
+from .study import aggregate as agg, execute as ex, options as opts, requests as rq, store
 
 PROG = "os-optics-kit sensitivity"
 KIND = "opensci-example.sensitivity"
-EXIT_CODES = {**wc.WORKFLOW_EXIT_CODES, "INCOMPLETE": 2}
+EXIT_CODES = {**wc.WORKFLOW_EXIT_CODES, "INCOMPLETE": 2, **opts.EXIT_CODES}
 DEFAULT_THRESHOLD = 0.01
 #: target changes at or below this fraction of the target's magnitude are treated as floating-point round-off
 ROUNDOFF_RELATIVE = 64 * 2.220446049250313e-16
@@ -228,37 +235,46 @@ def target_units(document):
     return {t.get("target_id"): t.get("unit") for t in document.get("targets") or []}
 
 
-def prepare_dir(study_dir, overwrite):
-    """A new or empty study directory; with ``overwrite`` this script family's files are removed first."""
-    study_dir = Path(study_dir)
-    if study_dir.exists() and any(study_dir.iterdir()):
-        if not overwrite:
-            raise wc.WorkflowError("OUTPUT_EXISTS", f"{study_dir} is not empty; choose a new directory or use "
-                                   "--overwrite", out=study_dir.as_posix())
-        for name in STUDY_DIRS:
-            shutil.rmtree(study_dir / name, ignore_errors=True)
-        for name in STUDY_FILES:
-            (study_dir / name).unlink(missing_ok=True)
-    study_dir.mkdir(parents=True, exist_ok=True)
-    return study_dir
+def prepare_dir(study_dir, overwrite, resume=False):
+    """A new or empty study directory (or, with ``resume``, a planned study to continue); with ``overwrite`` this
+    script family's files are removed first. Returns ``(study_dir, resuming)``."""
+    return store.prepare_study_dir(study_dir, overwrite=overwrite, resume=resume, files=STUDY_FILES, dirs=STUDY_DIRS)
 
 
-def run_one(base, parameters, offsets, sample_dir, *, build, targets):
-    """Edit, run and record one sample (parameters missing from ``offsets`` stay at nominal); never raises for a
-    refused edit or run."""
-    started = time.perf_counter()
+def offset_request(sample_id, base, parameters, offsets, *, build, targets, labels, outputs=None):
+    """The request of one sample (parameters missing from ``offsets`` stay at nominal); a refused edit gives a
+    refused request. ``labels`` gain ``parameters``: value, offset and unit of every parameter."""
+    labels = {**labels, "parameters": {p["name"]: {"value": p["nominal"] + offsets.get(p["name"], 0.0),
+                                                   "offset": offsets.get(p["name"], 0.0), "unit": p["unit"]}
+                                       for p in parameters}}
     try:
         document = offset_document(base, parameters, offsets, build=build)
     except EditError as exc:
-        Path(sample_dir).mkdir(parents=True, exist_ok=True)
-        record = wc.error_record("edit", exc.code, [exc.as_dict()], sample_dir=sample_dir,
-                                 seconds=time.perf_counter() - started, selected=targets)
-    else:
-        record = wc.run_sample(document, sample_dir, targets=targets)
-    record["parameters"] = {p["name"]: {"value": p["nominal"] + offsets.get(p["name"], 0.0),
-                                        "offset": offsets.get(p["name"], 0.0), "unit": p["unit"]}
-                            for p in parameters}
-    return record
+        return rq.make_request(sample_id, None, labels=labels, selected_targets=targets, outputs=outputs,
+                               refusal={"stage": "edit", "code": exc.code, "problems": [exc.as_dict()]})
+    return rq.make_request(sample_id, document, labels=labels, selected_targets=targets, outputs=outputs)
+
+
+def execute(study_dir, kind, *, aggregate, workers=1, scheduler=None, evaluator=None, limits=None, resume=False,
+            on_progress=None):
+    """Execute a planned study and aggregate it with ``aggregate(study_dir)``; a cancelled execution returns the
+    CANCELLED document instead."""
+    execution = ex.execute_study(study_dir, workers=workers, scheduler=scheduler, evaluator=evaluator, limits=limits,
+                                 resume=resume, on_progress=on_progress)
+    if execution.state == "CANCELLED":
+        return opts.cancelled_summary(study_dir, kind, execution)
+    return aggregate(study_dir)
+
+
+def presentation_choice(study, plots, report):
+    """``(plots, report)``: the arguments, or what the planning tool recorded in ``study.json`` ``present``."""
+    present = study.get("present") or {}
+    return (present.get("plots", True) if plots is None else plots,
+            present.get("report", True) if report is None else report)
+
+
+def execution_seconds(study):
+    return float((study.get("execution") or {}).get("seconds") or 0.0)
 
 
 def problem_codes(problems):
@@ -547,14 +563,10 @@ def rank(entries):
 
 # --------------------------------------------------------------------------------------------- study
 
-def run_sensitivity(spec, study_dir, *, base=None, build=None, base_path=None, spec_dir=None, overwrite=False,
-                    plots=True, report=True):
-    """Run the study described by ``spec`` (module docstring) and write the study directory; returns the summary.
-
-    ``base``: the base Project document; ``build(values) -> ProjectDocumentV2``: Python alternative to op templates
-    (``values``: parameter name -> nominal + perturbation, in the parameter's unit; nominal = build of the
-    nominals). Without either, the spec's ``design`` or ``base_project`` is used."""
-    t_start = time.perf_counter()
+def plan_sensitivity(spec, study_dir, *, base=None, build=None, base_path=None, spec_dir=None, overwrite=False,
+                     resume=False, plots=True, report=True, outputs=None):
+    """Validate ``spec`` and write the planned study: s0000 nominal, then per parameter and step the -h and +h
+    samples, every request written before any run. Returns the study directory."""
     normalized = normalize_spec(spec, build=build)
     parameters = normalized["parameters"]
     document, base_info = resolve_base(spec, spec_dir=spec_dir, base=base, base_path=base_path, build=build)
@@ -569,44 +581,78 @@ def run_sensitivity(spec, study_dir, *, base=None, build=None, base_path=None, s
         by_name = {p["name"]: p for p in parameters}
         for _sid, name, _step, _side, offset in samples[1:]:
             normalize_ops(document, parameter_ops(by_name[name], offset))
-    started = wc.utc_now()
-    study_dir = prepare_dir(study_dir, overwrite)
-    study = {
-        "kind": KIND, "spec": spec,
-        "normalized": {**normalized, "targets": targets,
-                       "parameters": [{**p, "values": sorted({s * k for s in p["steps"] for k in (-1.0, 1.0)})}
-                                      for p in parameters]},
-        "base_project": {**base_info, "project_hash": checked["project_hash"],
-                         "engine_input_hash": checked["engine_input_hash"],
-                         "document_sha256": wc.canonical_digest(document)},
-        "engine": wc.engine_identity(), "installed_catalog": wc.catalog_identity(),
-        "catalog": wc.run_catalog_identity([]), "environment": wc.environment(),
-        "seed": None, "sampling": "deterministic finite-difference plan",
-        "budget": {"max_evaluations": normalized["max_evaluations"], "samples": normalized["samples"]},
-        "stop_on": [], "started": started,
-    }
-    wc.write_json(study_dir / "study.json", study)
+    requests = []
+    for sample_id, name, step, side, offset in samples:
+        labels = {"role": side, "perturbed_parameter": name, "step": step}
+        if name is None:
+            requests.append(offset_request(sample_id, document, parameters, {}, build=None, targets=targets,
+                                           labels=labels, outputs=outputs))
+        else:
+            requests.append(offset_request(sample_id, document, parameters, {name: offset}, build=build,
+                                           targets=targets, labels=labels, outputs=outputs))
+    study_dir, resuming = prepare_dir(study_dir, overwrite, resume)
+    header = store.study_header(
+        KIND, spec=spec,
+        normalized={**normalized, "targets": targets,
+                    "parameters": [{**p, "values": sorted({s * k for s in p["steps"] for k in (-1.0, 1.0)})}
+                                   for p in parameters]},
+        base_project={**base_info, "project_hash": checked["project_hash"],
+                      "engine_input_hash": checked["engine_input_hash"],
+                      "document_sha256": wc.canonical_digest(document)},
+        seed=None, sampling="deterministic finite-difference plan",
+        budget={"max_evaluations": normalized["max_evaluations"], "samples": normalized["samples"]},
+        stop_on=[], analysis={"target_units": units, "resolution": resolution},
+        present={"plots": bool(plots), "report": bool(report)})
+    store.plan_study(study_dir, header, requests, resume=resuming)
+    return study_dir
+
+
+def run_sensitivity(spec, study_dir, *, base=None, build=None, base_path=None, spec_dir=None, overwrite=False,
+                    plots=True, report=True, workers=1, scheduler=None, evaluator=None, limits=None, resume=False,
+                    plan_only=False, outputs=None, on_progress=None):
+    """Plan, execute and analyse the study described by ``spec`` (module docstring); returns the summary.
+
+    ``base``: the base Project document; ``build(values) -> ProjectDocumentV2``: Python alternative to op templates
+    (``values``: parameter name -> nominal + perturbation, in the parameter's unit; nominal = build of the
+    nominals). Without either, the spec's ``design`` or ``base_project`` is used. Execution arguments as in
+    ``sweep_parameters.run_sweep``."""
+    study_dir = plan_sensitivity(spec, study_dir, base=base, build=build, base_path=base_path, spec_dir=spec_dir,
+                                 overwrite=overwrite, resume=resume, plots=plots, report=report, outputs=outputs)
+    if plan_only:
+        return opts.planned_summary(study_dir, KIND)
+    return execute(study_dir, KIND, aggregate=aggregate_sensitivity, workers=workers, scheduler=scheduler,
+                   evaluator=evaluator, limits=limits, resume=resume, on_progress=on_progress)
+
+
+def aggregate_sensitivity(study_dir, *, plots=None, report=None):
+    """Finite differences, ranking, ``table.csv``, ``sensitivity.csv``, ``summary.json`` and (as planned, or as
+    given) plots and report from the saved samples of a sensitivity study; no Engine run."""
+    t_start = time.perf_counter()
+    study_dir = Path(study_dir)
+    study = store.read_study(study_dir)
+    plots, report = presentation_choice(study, plots, report)
+    normalized = study["normalized"]
+    parameters = normalized["parameters"]
+    targets = normalized["targets"]
+    units = study["analysis"]["target_units"]
+    resolution = study["analysis"]["resolution"]
     records, rows = {}, []
     by_name = {p["name"]: p for p in parameters}
-    for sample_id, name, step, side, offset in samples:
-        sample_dir = study_dir / "samples" / sample_id
-        if name is None:
-            record = run_one(document, parameters, {}, sample_dir, build=None, targets=targets)
-        else:
-            record = run_one(document, parameters, {name: offset}, sample_dir, build=build, targets=targets)
-        record.update({"sample_id": sample_id, "role": side, "perturbed_parameter": name, "step": step})
-        wc.write_json(sample_dir / "sample.json", record)
+    for entry, record in agg.collect_records(study_dir):
+        sample_id, name = entry["sample_id"], record.get("perturbed_parameter")
         records[sample_id] = record
-        row = sweep.row_from_record(sample_id, {p["name"]: offset if p["name"] == name else 0.0 for p in parameters},
-                                    parameters, record, study_dir)
-        row.update({"role": side, "perturbed_parameter": name, "step": step,
+        offset = ((record.get("parameters") or {}).get(name) or {}).get("offset") if name is not None else 0.0
+        row = agg.row_from_record(sample_id, {p["name"]: offset if p["name"] == name else 0.0 for p in parameters},
+                                  parameters, record, study_dir)
+        row.update({"role": record.get("role"), "perturbed_parameter": name, "step": record.get("step"),
                     "step_unit": None if name is None else by_name[name]["unit"]})
         rows.append(row)
     sweep.select_best(rows, [], None)  # no requirement constraints; per-target validity is assessed separately
     nominal = records["s0000"]
     pairs, estimate_rows = [], []
     for parameter in parameters:
-        ids = {(s[2], s[3]): s[0] for s in samples if s[1] == parameter["name"]}
+        ids = {(r.get("step"), r.get("role")): sid for sid, r in records.items()
+               if r.get("perturbed_parameter") == parameter["name"]}
         for target_id in targets:
             f0, nominal_reason = target_value(nominal, target_id)
             estimates = []
@@ -649,14 +695,11 @@ def run_sensitivity(spec, study_dir, *, base=None, build=None, base_path=None, s
     for row in estimate_rows:
         pair = next(p for p in pairs if p["parameter"] == row["parameter"] and p["target"] == row["target"])
         row["rank"] = pair.get("rank")
-    columns = sweep._columns(rows)
-    wc.write_csv(study_dir / "table.csv", rows, columns)
+    study = agg.finish_study(study_dir, rows)  # first: refused while an execution owns the study
+    columns = agg.write_table(study_dir, rows)
     wc.write_csv(study_dir / "sensitivity.csv", estimate_rows, list(estimate_rows[0]) if estimate_rows else [])
     unavailable = [{"parameter": p["parameter"], "target": p["target"]} for p in pairs if p["derivative"] is None]
     status = "INCOMPLETE" if unavailable else "COMPLETED"
-    study["catalog"] = wc.run_catalog_identity(rows)
-    study["finished"] = wc.utc_now()
-    wc.write_json(study_dir / "study.json", study)
     summary = {
         "status": status, "kind": f"{KIND}-summary",
         "method": {"default": "central finite differences", "formulas": METHOD_TEXT,
@@ -684,16 +727,15 @@ def run_sensitivity(spec, study_dir, *, base=None, build=None, base_path=None, s
                         "steps_source": p["steps_source"], "scale": p["scale"]} for p in parameters],
         "consistency_threshold": normalized["consistency_threshold"],
         "selected_targets": targets, "sensitivities": pairs, "ranking": ranking, "unavailable": unavailable,
-        "counts": sweep.counts(rows), "feasible": sum(1 for r in rows if r["feasible"]),
+        "counts": agg.counts(rows), "feasible": sum(1 for r in rows if r["feasible"]),
         "constraints": [], "objective": None, "best": None, "no_feasible": None, "stopped_by": None,
-        "targets": sweep._target_units(rows), "columns": columns, "rows": rows,
-        "identity": {"engine": study["engine"], **study["catalog"],
-                     "base_project_hash": checked["project_hash"]},
+        "targets": agg.target_units(rows), "columns": columns, "rows": rows,
+        "identity": agg.identity(study, rows, study["base_project"]["project_hash"]),
         "paths": {"study_dir": study_dir.as_posix(), "study": "study.json", "table": "table.csv",
                   "sensitivity_table": "sensitivity.csv", "summary": "summary.json", "samples": "samples"},
         "seconds": None,
     }
-    wc.write_json(study_dir / "summary.json", summary)
+    agg.write_summary(study_dir, summary)
     skipped = matplotlib_missing() if plots else "plots disabled"
     if skipped is None:
         summary["plots"] = plot_sensitivity(study_dir, summary)
@@ -706,8 +748,8 @@ def run_sensitivity(spec, study_dir, *, base=None, build=None, base_path=None, s
                                           extra={"sensitivity": _report_extra(summary)},
                                           artifacts=[(study_dir / "sensitivity.csv", "sensitivity table")])
         summary["paths"]["report"] = "report/report.md"
-    summary["seconds"] = round(time.perf_counter() - t_start, 3)
-    wc.write_json(study_dir / "summary.json", summary)
+    summary["seconds"] = round(execution_seconds(study) + time.perf_counter() - t_start, 3)
+    agg.write_summary(study_dir, summary)
     return summary
 
 
@@ -886,7 +928,9 @@ def compact(summary, limit=TOP_UNUSABLE):
             "identity": {"engine_version": summary["identity"]["engine"]["engine_version"],
                          "engine_build_id": summary["identity"]["engine"]["engine_build_id"],
                          "catalog_version": summary["identity"]["catalog_version"]},
-            "seconds": summary["seconds"], "paths": summary["paths"]}
+            "seconds": summary["seconds"],
+            "execution": opts.execution_brief((summary.get("paths") or {}).get("study_dir")),
+            "paths": summary["paths"]}
 
 
 def main(argv=None):
@@ -899,12 +943,14 @@ def main(argv=None):
         parser.add_argument("--overwrite", action="store_true", help="Replace the files this command writes in --out")
         parser.add_argument("--no-plots", action="store_true", help="Do not write plots")
         parser.add_argument("--no-report", action="store_true", help="Do not write report/")
+        opts.add_execution_options(parser)
         args = parser.parse_args(argv)
         spec = wc.read_json(args.spec)
         base = wc.read_json(args.base) if args.base else None
         summary = run_sensitivity(spec, args.out, base=base, base_path=args.base, spec_dir=args.spec.parent,
-                                  overwrite=args.overwrite, plots=not args.no_plots, report=not args.no_report)
-        return compact(summary)
+                                  overwrite=args.overwrite, plots=not args.no_plots, report=not args.no_report,
+                                  **opts.execution_arguments(args))
+        return summary if summary["status"] in opts.EXIT_CODES else compact(summary)
 
     return wc.emit(workflow, EXIT_CODES)
 

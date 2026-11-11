@@ -16,7 +16,7 @@ A 532 nm, 10 mW beam feeds a phase-only Fourier design. A circular super-Gaussia
 
 ## Run
 
-Use Python 3.12+ with os-optics 0.13.0 and os-optics-kit 0.3.0. In a copied case directory:
+Use Python 3.12+ with os-optics 0.13.0 and os-optics-kit 0.4.0. In a copied case directory:
 
 ```bash
 python -m pip install -r requirements-flat-top.txt

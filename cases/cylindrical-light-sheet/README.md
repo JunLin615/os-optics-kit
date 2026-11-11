@@ -40,7 +40,7 @@ An independent ABCD calculation refracts q into the glass, propagates through it
 
 ## Presentation from saved results
 
-Use kit 0.3.0 and Chrome/Chromium, with Microsoft YaHei or Noto Sans CJK SC for
+Use kit 0.4.0 and Chrome/Chromium, with Microsoft YaHei or Noto Sans CJK SC for
 Chinese text. Inputs are completed `workflow.py` output folders. The first input
 supplies the reference map and system view; add the 65 mm folder to compare the
 design that exceeds the waist-thickness limit.

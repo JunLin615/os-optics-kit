@@ -90,7 +90,7 @@ The Fourier calculation uses a 6 mm pupil window and zero pads 512² samples to
 2048² for focal sampling. Reconstruct the full focal field from the saved complex
 pupil if another crop is needed. Keep generated results outside version control.
 
-## Presentation from saved results (kit 0.3.0)
+## Presentation from saved results (kit 0.4.0)
 
 ```bash
 python present_case.py out/default out/stronger --out talk/en --language en --background light --size 1920x1080 --bundle talk/aberration-en.zip
