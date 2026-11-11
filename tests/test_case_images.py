@@ -16,6 +16,7 @@ import io
 import json
 from pathlib import Path
 import shutil
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -788,17 +789,33 @@ class ImagesEngineTests(unittest.TestCase):
             self.assertEqual(C.check_case(tree.case), [])
 
     def test_the_bare_command_renders_the_recorded_views_again(self):
-        """``cases images NAME`` with no view option reproduces the committed record: the same views, options and
-        PNG bytes (the engine's snapshots are deterministic for one run)."""
+        """``cases images NAME`` with no view option renders the committed record again: the same files, views and
+        options, valid PNGs within the budget, a run identity equal to a fresh run of the case, and a sha256 per
+        image that matches the file written. PNG bytes are not compared with the committed ones: engine snapshots
+        are not byte-identical across operating systems and font stacks; the sha256 is a file-integrity record."""
         with tempfile.TemporaryDirectory() as tmp, patch.dict("os.environ", {}, clear=False):
             tree = CaseTree(tmp)
             committed = tree.images()
             code, out, err = call(["images", NAME, "--root", str(tree.root)])
             self.assertEqual(code, 0, err)
             record = tree.images()
-            self.assertEqual([(r["file"], r["view"], r["options"]) for r in record["images"]],
-                             [(r["file"], r["view"], r["options"]) for r in committed["images"]])
-            self.assertEqual([r["sha256"] for r in record["images"]], [r["sha256"] for r in committed["images"]])
+            self.assertEqual([(r["file"], r["kind"], r["view"], r["options"]) for r in record["images"]],
+                             [(r["file"], r["kind"], r["view"], r["options"]) for r in committed["images"]])
+            for entry in record["images"]:
+                data = (tree.case / entry["file"]).read_bytes()
+                self.assertTrue(data.startswith(C.PNG_SIGNATURE), entry["file"])
+                self.assertLessEqual(len(data), C.IMAGE_MAX_BYTES, entry["file"])
+                self.assertEqual(entry["sha256"], hashlib.sha256(data).hexdigest(), entry["file"])
+            # the run identity of the committed record and of the new one equal a fresh run of project.json
+            run = Path(tmp) / "fresh-run"
+            done = subprocess.run(C.engine_command() + ["project", "run", str(tree.case / "project.json"),
+                                                        "--out-dir", str(run)], capture_output=True, text=True)
+            self.assertIn(done.returncode, (0, 1, 2, 3), done.stderr)
+            fresh = C.run_identity(json.loads((run / "manifest.json").read_text(encoding="utf-8")))
+            for key in ("project_hash", "engine_input_hash", "engine", "catalog"):
+                self.assertEqual(committed["run"][key], fresh[key], key)
+                self.assertEqual(record["run"][key], fresh[key], key)
+            self.assertEqual(record["project_sha256"], committed["project_sha256"])
             self.assertEqual((json.loads(out)["removed"], C.check_case(tree.case)), ([], []))
 
 
