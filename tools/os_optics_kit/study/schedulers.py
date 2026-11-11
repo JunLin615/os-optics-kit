@@ -316,8 +316,12 @@ class ProcessScheduler:
         self._retire(worker, terminate=True)
         code = worker.process.exitcode
         if job is not None:
-            on_result(job, None, {"code": "WORKER_LOST", "message": f"the worker process ended (exit code {code}) "
-                                  "while it was evaluating this sample"})
+            message = f"the worker process ended (exit code {code}) while it was evaluating this sample"
+            if not worker.ready:
+                message = (f"the worker process ended (exit code {code}) before it was ready; its stderr names the "
+                           "cause. A script that runs a study with worker processes must make its calls under "
+                           "if __name__ == \"__main__\": (each worker imports the script)")
+            on_result(job, None, {"code": "WORKER_LOST", "message": message})
 
     # ---------------------------------------------------------------------------------------- control
     def cancel(self):
