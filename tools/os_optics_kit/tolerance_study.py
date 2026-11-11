@@ -418,11 +418,14 @@ def run_tolerance(spec, study_dir, *, base=None, build=None, base_path=None, spe
 
     ``base`` / ``build`` as in sensitivity_analysis.run_sensitivity (``build(values)`` gets nominal + offset of
     every parameter). ``seed`` / ``samples`` override the spec; ``draw_only`` writes the sample set (study.json,
-    samples.csv, sampling.json) and stops. Execution arguments as in ``sweep_parameters.run_sweep``."""
+    samples.csv, sampling.json) and stops (it does not take ``resume`` or ``plan_only``). Execution arguments as in ``sweep_parameters.run_sweep``."""
     if draw_only:
         if resume:
             raise wc.WorkflowError("BAD_ARGUMENT", "--draw-only writes a new sample set and does not take --resume; "
                                    "use --plan-only --resume to extend a planned study")
+        if plan_only:
+            raise wc.WorkflowError("BAD_ARGUMENT", "--draw-only writes the sample set only and does not take "
+                                   "--plan-only; give --plan-only alone to write the sample set and the plan")
         return draw_tolerance(spec, study_dir, base=base, build=build, base_path=base_path, spec_dir=spec_dir,
                               overwrite=overwrite, seed=seed, samples=samples, zero_tolerance=zero_tolerance)
     study_dir, normalized, digest = plan_tolerance(
