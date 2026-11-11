@@ -5,12 +5,14 @@ A scheduler is any object with::
     run(jobs, worker, *, on_result) -> None    # call worker(job) for every job; report each one
     cancel() -> None                           # stop handing out jobs; stop running ones at their next checkpoint
 
+A cancellation stays in force: a cancelled scheduler starts no job until ``reset()`` withdraws the cancellation.
 ``jobs`` is an iterator of small JSON-able dicts, pulled one at a time as capacity frees up (the executor stops
 yielding when a stop rule or a cancellation makes later jobs unnecessary). ``worker`` is a module-level function.
 ``on_result(job, result, error)`` is called in the calling process, in completion order, with the worker's return
 value or with ``error = {"code", "message"}`` when the job produced none (``WORKER_EXCEPTION``, ``WORKER_LOST``,
 ``CANCELLED``, ``INTERRUPTED`` (Ctrl-C), ``TIME_LIMIT``). Optional attributes: ``name``, ``workers``,
-``blas_threads``, ``in_process`` (True when ``worker`` runs in the calling process), ``cancelled`` and ``close()``.
+``blas_threads``, ``in_process`` (True when ``worker`` runs in the calling process), ``cancelled``, ``reset()`` and
+``close()``.
 
 ``SerialScheduler`` runs the jobs one after another in the calling process; Ctrl-C or ``cancel()`` during a job
 stops the study after that job. ``ProcessScheduler`` keeps a pool of worker processes for its whole lifetime
@@ -88,6 +90,11 @@ class SerialScheduler:
     def cancel(self):
         self.cancelled = True
         self._event.set()
+
+    def reset(self):
+        """Withdraw a cancellation so the scheduler runs jobs again (call it between ``run`` calls only)."""
+        self.cancelled = False
+        self._event.clear()
 
     def close(self):
         pass
@@ -315,6 +322,11 @@ class ProcessScheduler:
         job, worker.job = worker.job, None
         self._retire(worker, terminate=True)
         code = worker.process.exitcode
+        if job is not None and not worker.ready and (self.cancelled or self._event.is_set()):
+            # Ctrl-C reaches a starting worker before it ignores it: the job was cancelled, not lost
+            on_result(job, None, {"code": "CANCELLED", "message": "the study was cancelled while the worker process "
+                                  f"was starting (exit code {code})"})
+            return
         if job is not None:
             message = f"the worker process ended (exit code {code}) while it was evaluating this sample"
             if not worker.ready:
@@ -327,6 +339,11 @@ class ProcessScheduler:
     def cancel(self):
         self.cancelled = True
         self._event.set()
+
+    def reset(self):
+        """Withdraw a cancellation so the pool runs jobs again (call it between ``run`` calls only)."""
+        self.cancelled = False
+        self._event.clear()
 
     def close(self):
         """Stop the worker processes (idle ones exit; a busy one is terminated)."""

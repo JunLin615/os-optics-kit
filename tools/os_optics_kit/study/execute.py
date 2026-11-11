@@ -16,13 +16,14 @@ studies (and of any caller that planned requests with ``store.plan_study``):
   are study-relative;
 * ``stop_on`` (outcome classes) acts in plan order: every sample after the first plan-ordered sample with such an
   outcome is recorded ``ERROR`` / ``STOPPED`` (``state`` ``NOT_RUN``), whether or not it ran; samples not started
-  once a stop is known are skipped;
+  once a stop is known are skipped; an evaluation stopped by the study's cancellation has no outcome for this rule;
 * ``resume=True`` keeps the samples whose record has the plan's ``request_hash``, state ``COMPLETED`` or
   ``REFUSED`` and was produced by the same evaluator, reads back a complete run directory left without a record, and
-  runs the rest; without it a study with results is refused (``STUDY_STARTED``);
+  runs the rest; without it a study with results is refused (``STUDY_STARTED``). An evaluator without an importable
+  ``module:function`` name has no identity: a resume runs its samples again;
 * a cancellation (``scheduler.cancel()``, Ctrl-C) stops handing out work, stops running evaluations at their next
   Engine checkpoint and records unfinished samples ``CANCELLED`` / ``NOT_RUN``; ``study.json`` ``execution.state``
-  is then ``CANCELLED`` and the study can be resumed.
+  is then ``CANCELLED`` and the study can be resumed (with a new scheduler, or the same one after its ``reset()``).
 
 A stopped evaluation has one record shape whatever stopped it: state ``CANCELLED``, error code ``RUN_STOPPED``, the
 cause as problem code (``TIME_LIMIT``, ``MEMORY_LIMIT``, ``STUDY_CANCELLED``, ``INTERRUPTED``), also when its worker
@@ -191,6 +192,15 @@ def recover_record(study_dir, request, attempt=1, evaluator=evaluators.DEFAULT_E
               **fields}
     return complete_record(record, request, study_dir, state="COMPLETED", attempt=attempt, worker="recovered",
                            evaluator=evaluator)
+
+
+def cancelled_by_study(record):
+    """Whether a record is that of an evaluation the study's own cancellation stopped (``RUN_STOPPED`` with problem
+    ``STUDY_CANCELLED`` or ``INTERRUPTED``): it has no outcome for ``stop_on``."""
+    error = record.get("error") or {}
+    return error.get("code") == "RUN_STOPPED" and any(
+        isinstance(problem, dict) and problem.get("code") in ("STUDY_CANCELLED", "INTERRUPTED")
+        for problem in error.get("problems") or [])
 
 
 def _stopped_record(request, study_dir, cause, message, attempt):
@@ -427,7 +437,8 @@ def _execute(study_dir, owner, t0, *, workers, scheduler, evaluator, limits, res
             runnable.append((entry, request, attempt))
 
     def first_stop():
-        hits = [order[sid] for sid, record in records.items() if record.get("outcome") in stop_on]
+        hits = [order[sid] for sid, record in records.items()
+                if record.get("outcome") in stop_on and not cancelled_by_study(record)]
         return min(hits) if hits else None
 
     source = _CancelSource(sched)
