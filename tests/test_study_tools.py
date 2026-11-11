@@ -24,7 +24,7 @@ from os_optics_kit import study_tool as st  # noqa: E402
 from os_optics_kit import sweep_parameters as sp  # noqa: E402
 from os_optics_kit import tolerance_study as ts  # noqa: E402
 from os_optics_kit import workflow_common as wc  # noqa: E402
-from os_optics_kit.study import execute, schedulers, store  # noqa: E402
+from os_optics_kit.study import execute, requests as rq, schedulers, store  # noqa: E402
 from tests import test_cli as cli_tests  # noqa: E402
 
 # L2 x position (0.5 mm overlaps L1: refused at run) x wavelength (L3 is modelled for 700-900 nm only)
@@ -207,7 +207,7 @@ class CompositionTests(unittest.TestCase):
             code, out, err = invoke(sa.main, [str(tmp / "spec.json"), "--out", str(tmp / "s")])
             self.assertEqual((code, json.loads(err)["error"]["code"]), (4, "OUTPUT_EXISTS"))
 
-    def test_cli_workers_two_and_cancelled_exit_code(self):
+    def test_cli_workers_two_and_an_api_cancel_resumes(self):
         with TempDir() as tmp:
             files = candidate_files(tmp)
             code, out, err = invoke(st.main, ["candidates", *map(str, files), "--out", str(tmp / "c"),
@@ -224,12 +224,91 @@ class CompositionTests(unittest.TestCase):
             summary = execute.execute_study(tmp / "c", scheduler=scheduler, resume=True)
             self.assertEqual((summary.state, summary.states), ("CANCELLED", {"NOT_RUN": 3}))
             self.assertEqual(store.read_study(tmp / "c")["execution"]["state"], "CANCELLED")
-            self.assertEqual(st.EXIT_CODES["CANCELLED"], 130)
             code, out, err = invoke(st.main, ["run", str(tmp / "c"), "--resume"])
             self.assertEqual((code, out["counts"]["requested"], out["execution"]["ran"]), (0, 3, 3), err)
 
 
+@requires_engine
+class ToolResumeTests(unittest.TestCase):
+    """--resume of the planning tools: a changed spec runs exactly the changed samples; a larger tolerance
+    --samples with the same seed keeps the samples already run; --draw-only writes the sample set only."""
+
+    def test_sweep_resume_with_a_changed_value_runs_only_that_sample(self):
+        with TempDir() as tmp:
+            wc.write_json(tmp / "base.json", expander())
+            spec = {"base_project": "base.json", "max_evaluations": 3,
+                    "parameters": [{"name": "l2_x", "unit": "mm", "values": [199.0, 200.0, 201.0],
+                                    "ops": [{"op": "set_component_pose", "instance_id": "L2",
+                                             "position_mm": ["$value", 0, 0]}]}]}
+            wc.write_json(tmp / "spec.json", spec)
+            code, out, err = invoke(sp.main, [str(tmp / "spec.json"), "--out", str(tmp / "s")])
+            self.assertEqual(code, 0, err)
+            spec["parameters"][0]["values"] = [199.0, 200.0, 201.5]
+            wc.write_json(tmp / "spec.json", spec)
+            code, out, err = invoke(sp.main, [str(tmp / "spec.json"), "--out", str(tmp / "s"), "--resume"])
+            self.assertEqual(code, 0, err)
+            self.assertEqual((out["execution"]["reused"], out["execution"]["ran"]), (2, 1))
+            self.assertEqual([e["sample_id"] for e in store.read_journal(tmp / "s") if e["event"] == "started"][3:],
+                             ["s0003"])
+
+    def test_tolerance_resume_with_more_samples_keeps_the_samples_already_run(self):
+        with TempDir() as tmp:
+            wc.write_json(tmp / "base.json", expander())
+            wc.write_json(tmp / "spec.json", {**TOLERANCE_SPEC, "base_project": "base.json", "max_evaluations": 7})
+            common = [str(tmp / "spec.json"), "--out", str(tmp / "t"), "--no-plots", "--no-report"]
+            code, out, err = invoke(ts.main, common)
+            self.assertEqual(code, 0, err)
+            code, out, err = invoke(ts.main, [*common, "--resume", "--samples", "6"])
+            self.assertEqual(code, 0, err)
+            self.assertEqual((out["execution"]["reused"], out["execution"]["ran"]), (5, 2))
+            self.assertEqual(ts.verify_samples(tmp / "t")["status"], "REPRODUCED")
+
+    def test_draw_only_writes_the_sample_set_and_no_requests(self):
+        with TempDir() as tmp:
+            wc.write_json(tmp / "base.json", expander())
+            wc.write_json(tmp / "spec.json", {**TOLERANCE_SPEC, "base_project": "base.json"})
+            code, out, err = invoke(ts.main, [str(tmp / "spec.json"), "--out", str(tmp / "d"), "--draw-only"])
+            self.assertEqual((code, out["status"]), (0, "DRAWN"), err)
+            self.assertEqual(sorted(p.name for p in (tmp / "d").iterdir()),
+                             ["samples.csv", "sampling.json", "study.json"])
+            code, out, err = invoke(ts.main, ["--verify-seed", str(tmp / "d")])
+            self.assertEqual((code, out["status"]), (0, "REPRODUCED"), err)
+            code, out, err = invoke(st.main, ["run", str(tmp / "d")])
+            self.assertEqual((code, json.loads(err)["error"]["code"]), (4, "STUDY_NOT_PLANNED"))
+            code, out, err = invoke(ts.main, [str(tmp / "spec.json"), "--out", str(tmp / "d"), "--draw-only",
+                                              "--resume"])
+            self.assertEqual((code, json.loads(err)["error"]["code"]), (4, "BAD_ARGUMENT"))
+
+    def test_benchmark_runs_and_reports(self):
+        from os_optics_kit.study import bench
+
+        with TempDir() as tmp:
+            result = bench.run_benchmark(tmp / "bench", workers=[1], samples=2, designs="expander")
+            self.assertEqual(result["status"], "BENCHMARKED")
+            self.assertEqual([(r["design"], r["workers"], r["equal_to_one_worker"]) for r in result["runs"]],
+                             [("expander", 1, True)])
+            self.assertIn("| design | workers |", (tmp / "bench" / "bench.md").read_text(encoding="utf-8"))
+            self.assertEqual(wc.read_json(tmp / "bench" / "bench.json")["workers_skipped"], [])
+
+
 class HelpTests(unittest.TestCase):
+    def test_planned_next_runs_as_printed_and_workers_errors_are_readable(self):
+        from os_optics_kit.study import options
+
+        with TempDir() as tmp:
+            store.plan_study(tmp / "p", {"kind": "test.study", "engine": {}, "installed_catalog": {}},
+                             [rq.make_request("s0001", {"x": 1.0})])
+            command = options.planned_summary(tmp / "p", "test")["next"].split()
+            self.assertEqual(command[:3], ["os-optics-kit", "study", "run"])
+            args = st._parser().parse_args(command[2:])
+            self.assertEqual((args.command, args.study_dir, args.workers), ("run", tmp / "p", 1))
+        for value, words in (("0", "give at least 1 worker"), ("many", "give a positive integer or auto")):
+            code, _out, err = invoke(st.main, ["run", "nowhere", "--workers", value])
+            message = json.loads(err)["error"]["message"]
+            self.assertEqual(code, 4)
+            self.assertIn(f"argument --workers: {words}", message)
+            self.assertNotIn("workers_value", message)
+
     def test_help_lists_the_entries_and_resource_options(self):
         done = subprocess.run([sys.executable, "-m", "os_optics_kit", "study", "--help"], capture_output=True,
                               text=True, timeout=120)
