@@ -305,10 +305,11 @@ def execute_study(study_dir, *, workers=1, scheduler=None, evaluator=None, limit
 
     ``workers``: worker count (1 = serial in this process unless ``scheduler`` says otherwise; ``"auto"``:
     ``resources.suggest_workers`` for the samples still to run, with the median run time of the study's completed
-    samples as their cost, 0.2 s per sample when none completed yet); ``scheduler``:
-    ``"serial"``, ``"process"`` or a scheduler object (not closed here, so one pool can serve several studies);
-    ``evaluator``: ``"module:function"`` or a function (default ``evaluators.run_project``; a worker process needs an
-    importable one); ``limits``: ``{"time_limit_s", "max_memory_mib"}`` per evaluation; ``stop_on``: outcome classes
+    samples as their cost, 0.2 s per sample when none completed yet; one with ``scheduler="serial"``);
+    ``scheduler``: ``"serial"``, ``"process"`` or a scheduler object (not closed here, so one pool can serve several
+    studies; after ``cancel()`` it runs nothing until ``reset()``); ``evaluator``: ``"module:function"`` or a function
+    (default ``evaluators.run_project``; a worker process needs an importable one; a function without an importable
+    module-level name has no identity, so ``resume=True`` runs its samples again); ``limits``: ``{"time_limit_s", "max_memory_mib"}`` per evaluation; ``stop_on``: outcome classes
     (default: the study's ``stop_on``); ``on_progress(event)``: called in this process after every sample with
     ``{sample_id, state, outcome, done, total}``; ``blas_threads``: threads per worker (default 1 with several
     workers). Refuses with ``STUDY_RUNNING`` while another execution owns the study.
@@ -365,7 +366,9 @@ def _execute(study_dir, owner, t0, *, workers, scheduler, evaluator, limits, res
                                f"with --resume, or {store.REPLAN_HINT}", study_dir=study_dir.as_posix())
     evaluator_name, evaluator_function = _evaluator_choice(evaluator)
     choice = None
-    if workers == "auto":
+    if workers == "auto" and scheduler == "serial":
+        workers = 1  # the serial scheduler answers what "auto" would decide
+    elif workers == "auto":
         to_run = len(store.resume_selection(study_dir, entries, evaluator_name)[2]) if resume else len(entries)
         measured = measured_seconds(study_dir, entries) if resume else None
         if measured is None:

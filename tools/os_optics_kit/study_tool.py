@@ -20,9 +20,9 @@ run        executes the samples that still need a result and aggregates the stud
            chosen when planning). --workers N runs N worker processes (spawned once, each imports the Engine once);
            1 runs serially in this process; auto chooses from the number of samples to run and their run time
            (the median of the study's completed samples with --resume, else 0.2 s assumed): serial unless worker
-           processes, which start in about 4 s, save time; at most 4. --resume keeps every sample whose record has
-           the plan's request hash, state COMPLETED or REFUSED and was produced by the same evaluator, reads back a
-           complete run directory without a record, and runs the rest. With or without --resume, the study's
+           processes, which start in about 4 s, save time; at most 4 (with --scheduler serial: one). --resume keeps
+           every sample whose record has the plan's request hash, state COMPLETED or REFUSED and was produced by
+           the same evaluator, reads back a complete run directory without a record, and runs the rest. With or without --resume, the study's
            Engine build and catalog release must be the installed ones (STUDY_IDENTITY_CHANGED names the field;
            plan it again with its planning command and --overwrite). One execution at a time: a second one on the
            same directory is refused (STUDY_RUNNING) while the first one's process runs. --time-limit-s and
@@ -211,7 +211,8 @@ def _parser():
     run.add_argument("study_dir", type=Path, metavar="STUDY_DIR")
     opts.add_execution_options(run, plan_only=False, outputs=False)
     run.add_argument("--scheduler", choices=("serial", "process"),
-                     help="serial (this process) or process (worker pool); default: serial for one worker")
+                     help="serial (this process) or process (worker pool); default: serial for one worker; serial "
+                          "with --workers auto runs serially")
     run.add_argument("--evaluator", metavar="module:function",
                      help="evaluate each request with this function instead of one Engine run (--resume keeps only "
                           "the samples this evaluator produced)")
