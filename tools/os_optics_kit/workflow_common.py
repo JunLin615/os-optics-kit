@@ -437,13 +437,16 @@ def _empty_record(sample_dir, project_file, selected):
     }
 
 
-def run_sample(document, sample_dir, *, targets=None, write_run=True):
+def run_sample(document, sample_dir, *, targets=None, write_run=True, monitor=None, ray_data="full"):
     """Save ``document`` as ``sample_dir/project.json``, run it in-process into ``sample_dir/run`` and return the
     sample record. Never raises for an Engine refusal: a refusal at load (``stage: "load"``) or at run (``stage:
     "run"``) gives an ``ERROR`` record with the Engine's problem codes. ``targets``: the target ids that decide the
-    outcome (default: all targets of the run)."""
+    outcome (default: all targets of the run). ``monitor``: an ``os_optics.run_monitor.RunMonitor`` passed to the
+    run; a run it stops gives an ``ERROR`` record with code ``RUN_STOPPED`` (problem code = the stop cause:
+    ``CALLER``, ``MEMORY_LIMIT``, ``ARTIFACT_LIMIT``). ``ray_data``: ``full`` or ``summary`` (chief rays only)."""
     from os_optics.local import LocalRunError, load_project, run_optical_project
     from os_optics.results import load_run
+    from os_optics.run_control import RunStopped
 
     sample_dir = Path(sample_dir)
     sample_dir.mkdir(parents=True, exist_ok=True)
@@ -458,8 +461,14 @@ def run_sample(document, sample_dir, *, targets=None, write_run=True):
                             project_file=project_file, seconds=time.perf_counter() - started, selected=targets)
     record["identity"]["project_hash"] = project.content_hash()
     try:
-        run = run_optical_project(project, output_dir=run_dir if write_run else None)
+        run = run_optical_project(project, output_dir=run_dir if write_run else None, monitor=monitor,
+                                  ray_data=ray_data)
         summary = summarize_results(load_run(run))
+    except RunStopped as exc:
+        problem = {"code": exc.cause, "message": exc.message, "phase": exc.phase}
+        record.update({"error": {"stage": "run", "code": "RUN_STOPPED", "problems": [problem]},
+                       "seconds": time.perf_counter() - started})
+        return record
     except LocalRunError as exc:
         record.update({"error": {"stage": "run", "code": "RUN_REFUSED", "problems": _problems(exc)},
                        "seconds": time.perf_counter() - started})
