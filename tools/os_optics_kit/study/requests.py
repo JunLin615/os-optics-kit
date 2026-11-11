@@ -32,13 +32,21 @@ REQUEST_SCHEMA_VERSION = 1
 RAY_DATA_LEVELS = ("full", "summary")
 DEFAULT_OUTPUTS = {"run_directory": True, "ray_data": "full"}
 #: Sample ids are lower-case ASCII so they can name directories and presentation sources.
-SAMPLE_ID = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
+SAMPLE_ID = re.compile(r"[a-z0-9][a-z0-9_-]{0,63}")
+#: Names Windows reserves for devices: never a sample directory.
+DEVICE_NAMES = frozenset(("con", "prn", "aux", "nul", *(f"com{i}" for i in range(10)), *(f"lpt{i}" for i in range(10))))
 #: Keys of a sample record that labels may not use (labels are copied into the record next to them).
 RESERVED_LABELS = frozenset((
     "sample_dir", "project_file", "project_file_sha256", "run_dir", "outcome", "execution", "requirements", "status",
     "engine_status", "in_model_scope", "model_scope_issues", "out_of_model_issues", "targets", "selected_targets",
     "issues", "warnings", "error", "identity", "seconds", "sample_id", "request_hash", "state", "attempts", "timing",
-    "peak_memory_bytes", "worker"))
+    "peak_memory_bytes", "worker", "evaluator"))
+
+
+def valid_sample_id(sample_id):
+    """Whether ``sample_id`` can name a sample directory: lower-case ASCII, no path separator, no device name."""
+    return (isinstance(sample_id, str) and SAMPLE_ID.fullmatch(sample_id) is not None
+            and sample_id not in DEVICE_NAMES)
 
 
 def sample_ids(count, *, start=1, prefix="s"):
@@ -98,8 +106,9 @@ def validate_request(request):
         raise wc.WorkflowError("REQUEST_INVALID", f"unsupported request schema_version "
                                f"{request.get('schema_version')!r}; this kit reads {REQUEST_SCHEMA_VERSION}")
     sample_id = request.get("sample_id")
-    if not isinstance(sample_id, str) or not SAMPLE_ID.match(sample_id):
-        raise wc.WorkflowError("REQUEST_INVALID", f"sample_id {sample_id!r} must match {SAMPLE_ID.pattern}")
+    if not valid_sample_id(sample_id):
+        raise wc.WorkflowError("REQUEST_INVALID", f"sample_id {sample_id!r} must match {SAMPLE_ID.pattern} and not be "
+                               "a device name")
     project, refusal = request.get("project"), request.get("refusal")
     if refusal is None and not isinstance(project, dict):
         raise wc.WorkflowError("REQUEST_INVALID", f"{sample_id}: a request needs a project or a refusal",

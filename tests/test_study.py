@@ -373,7 +373,8 @@ class DefaultEvaluatorTests(unittest.TestCase):
             execute.execute_study(study_dir)
             first = store.read_record(study_dir, "s0001")
             store.sample_path(study_dir, "s0001").unlink()  # interrupted after the Engine wrote the run
-            store.write_attempt(study_dir, "s0001", request["request_hash"], 1)
+            store.write_attempt(study_dir, "s0001", request["request_hash"], 1,
+                                evaluator=evaluators.DEFAULT_EVALUATOR)  # the marker names its evaluator
             summary = execute.execute_study(study_dir, resume=True)
             self.assertEqual((summary.recovered, summary.ran), (1, 0))
             self.assertEqual(events(study_dir, "recovered"), ["s0001"])

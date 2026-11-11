@@ -45,6 +45,8 @@ from .result_summary import EXIT_CODES, ERROR_EXIT, error_document, exit_status,
 OUTCOMES = ("ERROR", "OUT_OF_MODEL", "UNKNOWN", "FAIL", "PASS", "NOT_APPLICABLE")
 #: Exit codes of the workflow tools: the run statuses of result_summary plus the study / edit outcomes.
 WORKFLOW_EXIT_CODES = {**EXIT_CODES, "COMPLETED": 0, "EDITED": 0, "ALREADY_APPLIED": 0, "NO_FEASIBLE": 1}
+#: Exit code of a command stopped by Ctrl-C.
+INTERRUPTED_EXIT = 130
 
 
 class WorkflowError(Exception):
@@ -573,6 +575,9 @@ def emit(workflow, exit_codes=None):
         output = json.dumps(json_safe(summary), ensure_ascii=True, allow_nan=False, separators=(",", ":"))
     except SystemExit as exc:  # --help
         return exit_status(exc)
+    except KeyboardInterrupt:  # Ctrl-C outside a study execution (which handles it itself)
+        print(json.dumps({"error": {"code": "INTERRUPTED", "message": "interrupted (Ctrl-C)"}}), file=sys.stderr)
+        return INTERRUPTED_EXIT
     except Exception as exc:  # noqa: BLE001 - every failure becomes a JSON error
         error = exc.as_dict() if isinstance(exc, WorkflowError) else error_document(exc)
         print(json.dumps({"error": json_safe(error)}, ensure_ascii=True), file=sys.stderr)

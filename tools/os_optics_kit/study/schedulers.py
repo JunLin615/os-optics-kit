@@ -9,15 +9,16 @@ A scheduler is any object with::
 yielding when a stop rule or a cancellation makes later jobs unnecessary). ``worker`` is a module-level function.
 ``on_result(job, result, error)`` is called in the calling process, in completion order, with the worker's return
 value or with ``error = {"code", "message"}`` when the job produced none (``WORKER_EXCEPTION``, ``WORKER_LOST``,
-``CANCELLED``). Optional attributes: ``name``, ``workers``, ``blas_threads``, ``in_process`` (True when ``worker``
-runs in the calling process), ``cancelled`` and ``close()``.
+``CANCELLED``, ``INTERRUPTED`` (Ctrl-C), ``TIME_LIMIT``). Optional attributes: ``name``, ``workers``,
+``blas_threads``, ``in_process`` (True when ``worker`` runs in the calling process), ``cancelled`` and ``close()``.
 
-``SerialScheduler`` runs the jobs one after another in the calling process. ``ProcessScheduler`` keeps a pool of
-worker processes for its whole lifetime (several ``run`` calls share it): each worker is started with the ``spawn``
-method on every platform, sets the numerical-library thread variables, imports the Engine once and then takes jobs
-until the scheduler is closed. A worker that dies fails only the job it was running and is replaced. After
-``cancel()`` running jobs get ``grace_s`` seconds to stop at an Engine checkpoint; a worker that does not return in
-that time is terminated.
+``SerialScheduler`` runs the jobs one after another in the calling process; Ctrl-C or ``cancel()`` during a job
+stops the study after that job. ``ProcessScheduler`` keeps a pool of worker processes for its whole lifetime
+(several ``run`` calls share it): each worker is started with the ``spawn`` method on every platform, sets the
+numerical-library thread variables, imports the Engine once and then takes jobs until the scheduler is closed; what
+a worker prints goes to stderr. A worker that dies fails only the job it was running and is replaced. After
+``cancel()`` (or Ctrl-C in the calling process) running jobs get ``grace_s`` seconds to stop at an Engine
+checkpoint; a worker that does not return in that time is terminated.
 
 A script that uses ``ProcessScheduler`` must guard its entry point with ``if __name__ == "__main__":``.
 """
@@ -28,6 +29,7 @@ import importlib
 import multiprocessing
 import multiprocessing.connection
 import os
+import sys
 import threading
 import time
 
@@ -39,6 +41,16 @@ WARM_MODULES = ("os_optics", "os_optics.local", "os_optics.results", "os_optics.
                 "os_optics_kit.workflow_common", "os_optics_kit.study.execute")
 DEFAULT_GRACE_S = 10.0
 START_METHOD = "spawn"
+#: Connections per ``multiprocessing.connection.wait`` call (Windows waits on at most 63 handles before Python 3.13).
+WAIT_SLICE = 60
+
+
+def _has_message(worker):
+    """Whether a worker's answer is waiting in its pipe."""
+    try:
+        return bool(worker.conn.poll())
+    except (EOFError, OSError):
+        return False
 
 
 class SerialScheduler:
@@ -54,20 +66,24 @@ class SerialScheduler:
         self.cancelled = False
 
     def run(self, jobs, worker, *, on_result):
-        evaluators.set_cancel_event(self._event)
-        for job in jobs:
-            if self._event.is_set():
-                break
-            try:
-                result = worker(job)
-            except KeyboardInterrupt:
-                self.cancel()
-                on_result(job, None, {"code": "CANCELLED", "message": "interrupted (Ctrl-C)"})
-                break
-            except Exception as exc:  # noqa: BLE001 - a failing job is reported, the next one still runs
-                on_result(job, None, {"code": "WORKER_EXCEPTION", "message": f"{type(exc).__name__}: {exc}"})
-                continue
-            on_result(job, result, None)
+        previous = evaluators.set_cancel_event(self._event)
+        try:
+            for job in jobs:
+                try:
+                    result = worker(job)
+                except KeyboardInterrupt:
+                    self.cancel()
+                    on_result(job, None, {"code": "INTERRUPTED", "message": "interrupted (Ctrl-C)"})
+                    break
+                except Exception as exc:  # noqa: BLE001 - a failing job is reported, the next one still runs
+                    on_result(job, None, {"code": "WORKER_EXCEPTION", "message": f"{type(exc).__name__}: {exc}"})
+                else:
+                    on_result(job, result, None)
+                if self._event.is_set():  # cancelled during this job (cancel(), or Ctrl-C seen by the evaluator)
+                    self.cancelled = True
+                    break
+        finally:
+            evaluators.set_cancel_event(previous)
 
     def cancel(self):
         self.cancelled = True
@@ -99,6 +115,7 @@ def _worker_main(conn, environment, cancel_event, warm):
         signal.signal(signal.SIGINT, signal.SIG_IGN)  # the parent decides how an interrupted study stops
     except (ValueError, OSError):
         pass
+    sys.stdout = sys.stderr  # stdout carries only the calling tool's JSON document
     os.environ.update(environment)
     evaluators.set_cancel_event(cancel_event)
     started = time.perf_counter()
@@ -210,6 +227,8 @@ class ProcessScheduler:
         cancelled_at = None
         while True:
             try:
+                if not self.cancelled and self._event.is_set():  # cancelled from inside a worker
+                    self.cancelled = True
                 if self.cancelled and cancelled_at is None:
                     cancelled_at = time.monotonic()
                 while not self.cancelled and (waiting is not None or not exhausted):
@@ -235,23 +254,27 @@ class ProcessScheduler:
                     continue
                 if cancelled_at is not None and time.monotonic() - cancelled_at > self.grace_s:
                     for late in busy:
+                        if _has_message(late):  # it answered in time: _collect takes the answer
+                            continue
                         job, late.job = late.job, None
                         self._retire(late, terminate=True)
                         on_result(job, None, {"code": "CANCELLED", "message": "the worker was terminated: the "
                                               f"evaluation did not stop within {self.grace_s:g} s"})
-                    continue
                 self._expire(busy, on_result)
                 self._collect([w for w in busy if w.job is not None], on_result)
             except KeyboardInterrupt:
                 self.cancel()
 
     def _collect(self, busy, on_result):
-        waitables = {w.conn: w for w in busy}
-        waitables.update({w.process.sentinel: w for w in busy})
-        seen = []
-        for ready in multiprocessing.connection.wait(list(waitables), timeout=0.25):
-            if waitables[ready] not in seen:
-                seen.append(waitables[ready])
+        """Take the answers of busy workers (waiting up to 0.25 s for one) and report workers that died."""
+        conns = {w.conn: w for w in busy}
+        ready = []
+        handles = list(conns)
+        for start in range(0, len(handles), WAIT_SLICE):  # Windows waits on at most 63 handles per call
+            ready += multiprocessing.connection.wait(handles[start:start + WAIT_SLICE],
+                                                     timeout=0.25 if start == 0 else 0)
+        seen = [conns[conn] for conn in ready]
+        seen += [w for w in busy if w not in seen and not w.process.is_alive()]
         for worker in seen:
             while worker.job is not None:
                 try:
@@ -281,7 +304,8 @@ class ProcessScheduler:
             return
         now = time.monotonic()
         for late in busy:
-            if late.job is not None and late.job_started is not None and now - late.job_started > self.job_timeout_s:
+            if (late.job is not None and late.job_started is not None and now - late.job_started > self.job_timeout_s
+                    and not _has_message(late)):
                 job, late.job = late.job, None
                 self._retire(late, terminate=True)
                 on_result(job, None, {"code": "TIME_LIMIT", "message": "the worker was terminated: the evaluation ran "
@@ -289,8 +313,8 @@ class ProcessScheduler:
 
     def _lost(self, worker, on_result):
         job, worker.job = worker.job, None
-        code = worker.process.exitcode
         self._retire(worker, terminate=True)
+        code = worker.process.exitcode
         if job is not None:
             on_result(job, None, {"code": "WORKER_LOST", "message": f"the worker process ended (exit code {code}) "
                                   "while it was evaluating this sample"})

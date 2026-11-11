@@ -3,21 +3,30 @@
 ``execute_study(study_dir, workers=1)`` is the one execution step of the sweep, sensitivity, tolerance and candidate
 studies (and of any caller that planned requests with ``store.plan_study``):
 
-* it checks the study identity first (plan hash, Engine build, catalog release; ``STUDY_IDENTITY_CHANGED``);
+* one execution at a time owns the study directory (``owner.json``; a second one is refused with
+  ``STUDY_RUNNING``);
+* it checks the study identity (plan hash, Engine build, catalog release; ``STUDY_IDENTITY_CHANGED``);
+* before worker processes start, the calling process obtains the catalog release each pinned Project needs (the
+  workers never fetch one);
 * a planner refusal (``request.refusal``) is recorded ``REFUSED`` without running;
 * the other requests go to a scheduler (``schedulers.py``: serial in this process, or a pool of worker processes)
   which calls the evaluator (``evaluators.py``) once per request; the evaluating process writes
-  ``samples/<id>/sample.json``, the record of 3.2: the sample record keys + the request labels + ``request_hash``,
-  ``state``, ``attempts``, ``timing``, ``peak_memory_bytes``, ``worker``; paths in it are study-relative;
+  ``samples/<id>/sample.json``, the completed sample record: the sample record keys + the request labels +
+  ``request_hash``, ``state``, ``attempts``, ``timing``, ``peak_memory_bytes``, ``worker``, ``evaluator``; paths in it
+  are study-relative;
 * ``stop_on`` (outcome classes) acts in plan order: every sample after the first plan-ordered sample with such an
   outcome is recorded ``ERROR`` / ``STOPPED`` (``state`` ``NOT_RUN``), whether or not it ran; samples not started
   once a stop is known are skipped;
-* ``resume=True`` keeps the samples whose record has the plan's ``request_hash`` and state ``COMPLETED`` or
-  ``REFUSED``, reads back a complete run directory left without a record, and runs the rest; without it a study
-  with results is refused (``STUDY_STARTED``);
+* ``resume=True`` keeps the samples whose record has the plan's ``request_hash``, state ``COMPLETED`` or
+  ``REFUSED`` and was produced by the same evaluator, reads back a complete run directory left without a record, and
+  runs the rest; without it a study with results is refused (``STUDY_STARTED``);
 * a cancellation (``scheduler.cancel()``, Ctrl-C) stops handing out work, stops running evaluations at their next
   Engine checkpoint and records unfinished samples ``CANCELLED`` / ``NOT_RUN``; ``study.json`` ``execution.state``
   is then ``CANCELLED`` and the study can be resumed.
+
+A stopped evaluation has one record shape whatever stopped it: state ``CANCELLED``, error code ``RUN_STOPPED``, the
+cause as problem code (``TIME_LIMIT``, ``MEMORY_LIMIT``, ``STUDY_CANCELLED``, ``INTERRUPTED``), also when its worker
+process had to be terminated.
 
 Every step is appended to ``journal.jsonl`` (``execution_started``, ``reused``, ``recovered``, ``refused``,
 ``started``, ``finished``, ``failed``, ``cancelled``, ``not_run``, ``stopped``, ``execution_finished``).
@@ -37,8 +46,9 @@ from . import evaluators, schedulers, store
 from .resources import ResourceBudget, suggest_workers
 
 FINAL_STATES = ("COMPLETED", "REFUSED")
-#: How a job without a result is recorded: scheduler error code -> state.
-ERROR_STATES = {"CANCELLED": "CANCELLED", "TIME_LIMIT": "CANCELLED"}
+#: Scheduler error codes of a job that was stopped -> the problem code of its ``RUN_STOPPED`` record (state
+#: ``CANCELLED``); any other scheduler error is recorded ``FAILED`` under its own code.
+STOP_CAUSES = {"CANCELLED": "STUDY_CANCELLED", "INTERRUPTED": "INTERRUPTED", "TIME_LIMIT": "TIME_LIMIT"}
 #: Seconds a cancelled worker gets beyond the time limit before it is terminated.
 TIME_LIMIT_GRACE_S = 5.0
 
@@ -81,9 +91,10 @@ def current_identity(entries):
 
 # --------------------------------------------------------------------------------------------- records
 
-def complete_record(record, request, study_dir, *, state, attempt=1, queued_s=None, worker=None):
-    """The record of 3.2 from an evaluator's record: every sample-record key, the request labels, the job fields;
-    paths study-relative."""
+def complete_record(record, request, study_dir, *, state, attempt=1, queued_s=None, worker=None, evaluator=None):
+    """The completed sample record (``sample.json``) from an evaluator's record: every sample-record key, the
+    request labels, the job fields (``evaluator``: the ``module:function`` that produced it); paths
+    study-relative."""
     sample_id = request["sample_id"]
     out = {**evaluators.empty_record(None, request["selected_targets"]), **record}
     out["sample_id"] = sample_id
@@ -102,6 +113,7 @@ def complete_record(record, request, study_dir, *, state, attempt=1, queued_s=No
                      "phase_seconds": timing.get("phase_seconds")}
     out.setdefault("peak_memory_bytes", None)
     out["worker"] = worker
+    out["evaluator"] = evaluator
     return out
 
 
@@ -124,8 +136,10 @@ def worker_name():
 def run_job(job, evaluator=None):
     """Evaluate one request in this process and write its record (the worker entry of every scheduler).
 
-    ``job``: ``{study_dir, sample_id, request_hash, evaluator ("module:function"), limits, attempt, queued_at}``;
-    ``evaluator``: a function used instead of ``job["evaluator"]`` (in-process schedulers only)."""
+    ``job``: ``{study_dir, sample_id, request_hash, evaluator ("module:function"), limits, attempt, queued_at,
+    execution}``; ``evaluator``: a function used instead of ``job["evaluator"]`` (in-process schedulers only). The
+    record is not written when another execution has taken the sample over meanwhile (``SAMPLE_TAKEN_OVER``: a
+    worker left running by a killed parent)."""
     queued_s = max(0.0, time.time() - job["queued_at"]) if job.get("queued_at") else None
     study_dir = Path(job["study_dir"])
     sample_id = job["sample_id"]
@@ -136,14 +150,19 @@ def run_job(job, evaluator=None):
     folder = store.sample_dir(study_dir, sample_id)
     folder.mkdir(parents=True, exist_ok=True)
     (folder / store.SAMPLE_FILE).unlink(missing_ok=True)
-    store.write_attempt(study_dir, sample_id, request["request_hash"], job.get("attempt", 1))
+    store.write_attempt(study_dir, sample_id, request["request_hash"], job.get("attempt", 1),
+                        evaluator=job.get("evaluator"), execution=job.get("execution"))
     function = evaluator if evaluator is not None else evaluators.load_evaluator(job["evaluator"])
     record = function(request, folder, job.get("limits"))
     if not isinstance(record, dict) or record.get("outcome") not in wc.OUTCOMES:
         raise wc.WorkflowError("EVALUATOR_INVALID", f"{sample_id}: the evaluator returned no sample record with an "
                                f"outcome in {wc.OUTCOMES}", sample_id=sample_id)
     record = complete_record(record, request, study_dir, state=job_state(record), attempt=job.get("attempt", 1),
-                             queued_s=queued_s, worker=worker_name())
+                             queued_s=queued_s, worker=worker_name(), evaluator=job.get("evaluator"))
+    marker = store.read_attempt(study_dir, sample_id) or {}
+    if job.get("execution") is not None and marker.get("execution") != job["execution"]:
+        raise wc.WorkflowError("SAMPLE_TAKEN_OVER", f"{sample_id}: another execution of the study took this sample "
+                               "over; its record was not written", sample_id=sample_id)
     store.write_json_atomic(folder / store.SAMPLE_FILE, record)
     (folder / store.ATTEMPT_FILE).unlink(missing_ok=True)
     return {"sample_id": sample_id, "state": record["state"], "outcome": record["outcome"],
@@ -163,14 +182,86 @@ def _clear_sample(study_dir, sample_id):
     folder.mkdir(parents=True, exist_ok=True)
 
 
-def recover_record(study_dir, request, attempt=1):
+def recover_record(study_dir, request, attempt=1, evaluator=evaluators.DEFAULT_EVALUATOR):
     """The record of a sample whose complete run directory has no ``sample.json`` (read back, not rerun)."""
     folder = store.sample_dir(study_dir, request["sample_id"])
     _summary, fields = wc.read_saved_run(folder / "run", request["selected_targets"])
     project = folder / "project.json"
     record = {**wc._empty_record(None, project if project.is_file() else None, request["selected_targets"]),
               **fields}
-    return complete_record(record, request, study_dir, state="COMPLETED", attempt=attempt, worker="recovered")
+    return complete_record(record, request, study_dir, state="COMPLETED", attempt=attempt, worker="recovered",
+                           evaluator=evaluator)
+
+
+def _stopped_record(request, study_dir, cause, message, attempt):
+    """The record of an evaluation the scheduler stopped (the shape of an Engine checkpoint stop)."""
+    record = wc.error_record("run", "RUN_STOPPED", [{"code": cause, "message": message}],
+                             selected=request["selected_targets"])
+    return complete_record(record, request, study_dir, state="CANCELLED", attempt=attempt)
+
+
+# --------------------------------------------------------------------------------------------- catalog
+
+def _catalog_pins(project):
+    """The catalog releases a Project pins (``components[*].product.catalog_version``)."""
+    pins = set()
+    for component in (project or {}).get("components") or []:
+        version = ((component or {}).get("product") or {}).get("catalog_version") if isinstance(component, dict) \
+            else None
+        if isinstance(version, str):
+            pins.add(version)
+    return tuple(sorted(pins))
+
+
+def resolve_catalog(requests):
+    """Let the installed Engine obtain, in this process, the catalog releases the requests need (one Project check
+    per distinct set of pinned releases): worker processes run with automatic catalog access off. A Project the
+    Engine refuses here is refused again, with the same message, when its sample runs."""
+    seen = set()
+    for request in requests:
+        if request.get("project") is None:
+            continue
+        pins = _catalog_pins(request["project"])
+        if pins in seen:
+            continue
+        seen.add(pins)
+        try:
+            wc.check(request["project"])
+        except Exception:  # noqa: BLE001 - not the Engine's to decide here; the sample records the refusal
+            continue
+    return sorted(seen)
+
+
+def measured_seconds(study_dir, entries):
+    """Median run time of the study's completed evaluations (None when none completed yet)."""
+    times = []
+    for entry in entries:
+        record = store.read_record(study_dir, entry["sample_id"]) or {}
+        run_s = (record.get("timing") or {}).get("run_s")
+        if record.get("state") == "COMPLETED" and isinstance(run_s, (int, float)) and run_s > 0:
+            times.append(float(run_s))
+    if not times:
+        return None
+    times.sort()
+    middle = len(times) // 2
+    return times[middle] if len(times) % 2 else (times[middle - 1] + times[middle]) / 2
+
+
+class _CancelSource:
+    """What an evaluator in this process reads as "the study was cancelled", for any in-process scheduler:
+    ``set()`` (Ctrl-C seen by an evaluator) cancels the scheduler."""
+
+    def __init__(self, scheduler):
+        self.scheduler = scheduler
+        self.flag = False
+
+    def set(self):
+        if not self.flag:
+            self.flag = True
+            self.scheduler.cancel()
+
+    def is_set(self):
+        return self.flag or bool(getattr(self.scheduler, "cancelled", False))
 
 
 # --------------------------------------------------------------------------------------------- execution
@@ -192,18 +283,54 @@ def execute_study(study_dir, *, workers=1, scheduler=None, evaluator=None, limit
     """Run the planned study in ``study_dir`` (module docstring) and return an ``ExecutionSummary``.
 
     ``workers``: worker count (1 = serial in this process unless ``scheduler`` says otherwise; ``"auto"``:
-    ``resources.suggest_workers`` for the samples still to run); ``scheduler``:
+    ``resources.suggest_workers`` for the samples still to run, with the median run time of the study's completed
+    samples as their cost, 0.2 s per sample when none completed yet); ``scheduler``:
     ``"serial"``, ``"process"`` or a scheduler object (not closed here, so one pool can serve several studies);
     ``evaluator``: ``"module:function"`` or a function (default ``evaluators.run_project``; a worker process needs an
     importable one); ``limits``: ``{"time_limit_s", "max_memory_mib"}`` per evaluation; ``stop_on``: outcome classes
     (default: the study's ``stop_on``); ``on_progress(event)``: called in this process after every sample with
     ``{sample_id, state, outcome, done, total}``; ``blas_threads``: threads per worker (default 1 with several
-    workers)."""
+    workers). Refuses with ``STUDY_RUNNING`` while another execution owns the study."""
     t0 = time.perf_counter()
     study_dir = Path(study_dir).resolve()
+    store.read_study(study_dir)
+    store.read_plan(study_dir)
+    owner = store.acquire_execution(study_dir)
+    try:
+        return _execute(study_dir, owner, t0, workers=workers, scheduler=scheduler, evaluator=evaluator,
+                        limits=limits, resume=resume, stop_on=stop_on, on_progress=on_progress,
+                        blas_threads=blas_threads)
+    except BaseException as exc:
+        _mark_failed(study_dir, owner, exc)
+        raise
+    finally:
+        store.release_execution(study_dir, owner)
+
+
+def _mark_failed(study_dir, owner, exc):
+    """An execution that ended with an exception says so in ``study.json`` (it is never left ``RUNNING``)."""
+    try:
+        study = store.read_study(study_dir)
+        execution = study.get("execution") or {}
+        if execution.get("id") != owner["id"] or execution.get("state") != "RUNNING":
+            return
+        interrupted = isinstance(exc, KeyboardInterrupt)
+        execution.update({"state": "CANCELLED" if interrupted else "FAILED", "finished": wc.utc_now(),
+                          "error": {"code": "INTERRUPTED" if interrupted else getattr(exc, "code", type(exc).__name__),
+                                    "message": str(exc) or type(exc).__name__}})
+        store.write_study(study_dir, study)
+        store.append_journal(study_dir, "execution_cancelled" if interrupted else "execution_failed",
+                             code=execution["error"]["code"])
+    except Exception:  # noqa: BLE001 - the original exception is what the caller needs
+        pass
+
+
+def _execute(study_dir, owner, t0, *, workers, scheduler, evaluator, limits, resume, stop_on, on_progress,
+             blas_threads):
     study = store.read_study(study_dir)
     entries = store.read_plan(study_dir)
-    store.require_same_identity(study["identity"], current_identity(entries), study_dir=study_dir)
+    store.require_same_identity(study["identity"], current_identity(entries), study_dir=study_dir,
+                                resuming=bool(resume))
     stop_on = list(study.get("stop_on") or []) if stop_on is None else list(stop_on)
     unknown = [item for item in stop_on if item not in wc.OUTCOMES]
     if unknown:
@@ -211,12 +338,17 @@ def execute_study(study_dir, *, workers=1, scheduler=None, evaluator=None, limit
     limits = evaluators.normalize_limits(limits)
     if not resume and store.has_results(study_dir):
         raise wc.WorkflowError("STUDY_STARTED", f"{study_dir.as_posix()} already holds sample results; resume it "
-                               "(--resume) or plan it again (--overwrite)", study_dir=study_dir.as_posix())
+                               f"with --resume, or {store.REPLAN_HINT}", study_dir=study_dir.as_posix())
     evaluator_name, evaluator_function = _evaluator_choice(evaluator)
     choice = None
     if workers == "auto":
-        to_run = len(store.resume_selection(study_dir, entries)[2]) if resume else len(entries)
-        workers, choice = suggest_workers(to_run)
+        to_run = len(store.resume_selection(study_dir, entries, evaluator_name)[2]) if resume else len(entries)
+        measured = measured_seconds(study_dir, entries) if resume else None
+        if measured is None:
+            workers, choice = suggest_workers(to_run)
+        else:
+            workers, choice = suggest_workers(to_run, measured)
+        choice["seconds_per_sample_source"] = "assumed" if measured is None else "measured"
     owned = scheduler is None or isinstance(scheduler, str)
     if owned:
         budget = ResourceBudget.resolve(workers, blas_threads=blas_threads, max_memory_mib=limits["max_memory_mib"],
@@ -240,23 +372,23 @@ def execute_study(study_dir, *, workers=1, scheduler=None, evaluator=None, limit
     study["execution"] = {"scheduler": summary.scheduler, "workers": summary.workers,
                           "blas_threads": summary.blas_threads, "limits": limits, "evaluator": evaluator_name,
                           "workers_choice": choice, "resumed": bool(resume), "started": started, "finished": None,
-                          "state": "RUNNING"}
+                          "state": "RUNNING", "id": owner["id"]}
     store.write_study(study_dir, study)
     store.append_journal(study_dir, "execution_started", scheduler=summary.scheduler, workers=summary.workers,
-                         resume=bool(resume))
+                         resume=bool(resume), evaluator=evaluator_name, execution=owner["id"])
 
     order = {entry["sample_id"]: index for index, entry in enumerate(entries)}
     records = {}
     pending = entries
     if resume:
-        reused, recoverable, pending = store.resume_selection(study_dir, entries)
+        reused, recoverable, pending = store.resume_selection(study_dir, entries, evaluator_name)
         for entry in reused:
             records[entry["sample_id"]] = store.read_record(study_dir, entry["sample_id"])
             store.append_journal(study_dir, "reused", entry["sample_id"], request_hash=entry["request_hash"])
         for entry in recoverable:
             request = store.read_request(study_dir, entry["sample_id"])
             try:
-                record = recover_record(study_dir, request)
+                record = recover_record(study_dir, request, evaluator=evaluator_name)
             except Exception as exc:  # noqa: BLE001 - an unreadable run directory is run again
                 store.append_journal(study_dir, "recovery_failed", entry["sample_id"],
                                      message=f"{type(exc).__name__}: {exc}")
@@ -271,6 +403,9 @@ def execute_study(study_dir, *, workers=1, scheduler=None, evaluator=None, limit
     runnable = []
     for entry in pending:
         request = store.read_request(study_dir, entry["sample_id"])
+        if request["request_hash"] != entry["request_hash"]:
+            raise wc.WorkflowError("PLAN_INVALID", f"requests/{entry['sample_id']}.json does not hold the request "
+                                   f"plan.jsonl names; {store.REPLAN_HINT}", sample_id=entry["sample_id"])
         if request["refusal"] is not None:
             _clear_sample(study_dir, entry["sample_id"])
             refusal = request["refusal"]
@@ -292,12 +427,13 @@ def execute_study(study_dir, *, workers=1, scheduler=None, evaluator=None, limit
         hits = [order[sid] for sid, record in records.items() if record.get("outcome") in stop_on]
         return min(hits) if hits else None
 
+    source = _CancelSource(sched)
     state = {"cancelled": False}
     requests = {entry["sample_id"]: request for entry, request, _attempt in runnable}
 
     def jobs():
         for entry, _request, attempt in runnable:
-            if state["cancelled"] or getattr(sched, "cancelled", False):
+            if state["cancelled"] or source.is_set():
                 return
             stop = first_stop() if stop_on else None
             if stop is not None and order[entry["sample_id"]] > stop:
@@ -306,7 +442,7 @@ def execute_study(study_dir, *, workers=1, scheduler=None, evaluator=None, limit
             store.append_journal(study_dir, "started", entry["sample_id"], attempt=attempt)
             yield {"study_dir": study_dir.as_posix(), "sample_id": entry["sample_id"],
                    "request_hash": entry["request_hash"], "evaluator": evaluator_name, "limits": limits,
-                   "attempt": attempt, "queued_at": time.time()}
+                   "attempt": attempt, "queued_at": time.time(), "execution": owner["id"]}
 
     def on_result(job, result, error):
         sample_id = job["sample_id"]
@@ -319,12 +455,15 @@ def execute_study(study_dir, *, workers=1, scheduler=None, evaluator=None, limit
         if error is not None:
             existing = store.read_record(study_dir, sample_id)
             if (existing is not None and existing.get("request_hash") == request["request_hash"]
-                    and existing.get("attempts") == job["attempt"] and existing.get("state") == "CANCELLED"):
-                record = existing  # the evaluation recorded its own stop before the scheduler gave up on it
+                    and existing.get("attempts") == job["attempt"] and existing.get("evaluator") == evaluator_name):
+                record = existing  # the evaluation wrote its own record before the scheduler gave up on it
             else:
-                record = _not_run_record(request, study_dir, ERROR_STATES.get(error["code"], "FAILED"),
-                                         error["code"], error.get("message") or error["code"], stage="run",
-                                         attempt=job["attempt"])
+                message = error.get("message") or error["code"]
+                if error["code"] in STOP_CAUSES:
+                    record = _stopped_record(request, study_dir, STOP_CAUSES[error["code"]], message, job["attempt"])
+                else:
+                    record = _not_run_record(request, study_dir, "FAILED", error["code"], message, stage="run",
+                                             attempt=job["attempt"])
                 store.write_json_atomic(store.sample_path(study_dir, sample_id), record)
         records[sample_id] = record
         event = {"COMPLETED": "finished", "CANCELLED": "cancelled"}.get(record["state"], "failed")
@@ -335,16 +474,20 @@ def execute_study(study_dir, *, workers=1, scheduler=None, evaluator=None, limit
                          "done": len(records), "total": len(entries)})
 
     worker = functools.partial(run_job, evaluator=evaluator_function) if in_process else run_job
+    previous_source = evaluators.set_cancel_event(source) if in_process else None
     try:
         if runnable:
+            resolve_catalog([request for _entry, request, _attempt in runnable] if not in_process else [])
             sched.run(jobs(), worker, on_result=on_result)
     except KeyboardInterrupt:
         state["cancelled"] = True
         sched.cancel()
     finally:
+        if in_process:
+            evaluators.set_cancel_event(previous_source)
         if owned and callable(getattr(sched, "close", None)):
             sched.close()
-    cancelled = state["cancelled"] or bool(getattr(sched, "cancelled", False))
+    cancelled = state["cancelled"] or source.is_set()
     summary.startup = list(getattr(sched, "startup", []) or [])
 
     stop = first_stop() if stop_on else None
@@ -371,9 +514,8 @@ def execute_study(study_dir, *, workers=1, scheduler=None, evaluator=None, limit
             else:
                 record = _not_run_record(request, study_dir, "FAILED", "NOT_REPORTED",
                                          "the scheduler reported no result for this sample")
-            existing = store.read_record(study_dir, sample_id)
-            if existing is None or existing.get("request_hash") != entry["request_hash"] \
-                    or existing.get("state") not in FINAL_STATES:
+            existing = store.reusable_record(study_dir, entry, evaluator_name)
+            if existing is None:
                 store.write_json_atomic(store.sample_path(study_dir, sample_id), record)
                 store.append_journal(study_dir, "not_run", sample_id, code=record["error"]["code"])
             else:

@@ -35,14 +35,23 @@ _CANCEL = None  # an Event-like object set when the study is cancelled (installe
 
 
 def set_cancel_event(event):
-    """Install the object whose ``is_set()`` tells evaluators of this process that the study was cancelled."""
+    """Install the object whose ``is_set()`` tells evaluators of this process that the study was cancelled (None
+    uninstalls it); returns the one installed before."""
     global _CANCEL
-    _CANCEL = event
+    previous, _CANCEL = _CANCEL, event
+    return previous
 
 
 def cancel_requested():
     """Whether the study this process works for was cancelled."""
     return _CANCEL is not None and _CANCEL.is_set()
+
+
+def request_cancel():
+    """Cancel the study this process works for (an evaluator that saw Ctrl-C calls it: the study stops, not only
+    the evaluation)."""
+    if _CANCEL is not None:
+        _CANCEL.set()
 
 
 def empty_record(sample_dir=None, selected_targets=None):
@@ -99,6 +108,8 @@ def run_project(request, sample_dir, limits=None):
         for problem in record["error"]["problems"]:
             if problem.get("code") == "CALLER":  # cancelled here: by the study, the time limit or Ctrl-C
                 problem["code"] = stop["code"] or "INTERRUPTED"
+                if stop["code"] is None:  # Ctrl-C inside the Engine run: it stops the whole study
+                    request_cancel()
     progress = monitor.summary()
     record["timing"] = {"run_s": record["seconds"], "phase_seconds": progress["phase_seconds"]}
     record["peak_memory_bytes"] = progress["peak_memory_bytes"]
