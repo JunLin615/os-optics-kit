@@ -26,13 +26,13 @@
       "view": "section"
     }
   ],
-  "project_sha256": "063bdce7a0b21eac9a4e720a2aa056b5351e13168cf6d1c8bbcd344ee1016712",
+  "project_sha256": "5b0c027d46031f62efbebd9c4804e82f25bcd5dc883bc917275781695855eea5",
   "run": {
     "catalog": null,
     "engine": "0.13.0",
     "engine_input_hash": "1a9d4813ee6a51cdc8eeecf5c96f151414cd4fba7083019c213a498185cab9a4",
-    "project_hash": "0ae70e1143f5b3a9cad46247c422d1c0d3dc47fb4f29248770c2ad28777a9836",
-    "scene_content_hash": "eaf7c2ea748434fdfb3bc04fb65288ca64532015febdc422e30bee3c99093593"
+    "project_hash": "07fdacdbbd42e51ffae3f307ac1d9859a553a785e524cb9212d3f1b582b21602",
+    "scene_content_hash": "e98160f9c96e5ce84d41be0baf28eb293f43f01e80d1860cf473e2fe79e310f1"
   },
   "schema": "os-optics-kit.case-images",
   "schema_version": 1

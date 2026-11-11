@@ -499,7 +499,7 @@
         "project.json",
         "workflow.py"
       ],
-      "project_sha256": "063bdce7a0b21eac9a4e720a2aa056b5351e13168cf6d1c8bbcd344ee1016712"
+      "project_sha256": "5b0c027d46031f62efbebd9c4804e82f25bcd5dc883bc917275781695855eea5"
     },
     {
       "name": "ideal-lens-focus",
