@@ -36,7 +36,7 @@ def test_native_spec_rebuild_and_complete_gallery(tmp_path, monkeypatch):
     # handler dispatch, manifest writing and all four case plot renderers real.
     def saved_view(asset, ctx):
         image = ctx.asset_dir(asset['id']) / 'view.png'
-        shutil.copyfile(ROOT / 'achromatic-imaging/images/objective.png', image)
+        shutil.copyfile(ROOT / 'achromatic-imaging/images/iso.png', image)
         return {'files': {'image': image}}
     monkeypatch.setattr(present, 'build_view', saved_view)
     gallery = tmp_path / 'gallery'

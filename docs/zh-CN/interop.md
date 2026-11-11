@@ -28,7 +28,7 @@ python -m venv .venv
 .venv/bin/python -m pip install -r requirements-optimization.txt
 ```
 
-Windows 上使用 `.venv\Scripts\python`。依赖文件要求 `os-optics>=0.13,<0.14` 和 `os-optics-kit>=0.2,<0.3`，并固定第三方软件包的已验证版本；这些软件包都不是 `os-optics` 或 `os-optics-kit` 的依赖。
+Windows 上使用 `.venv\Scripts\python`。依赖文件要求 `os-optics>=0.13,<0.14` 和 `os-optics-kit>=0.3,<0.4`，并固定第三方软件包的已验证版本；这些软件包都不是 `os-optics` 或 `os-optics-kit` 的依赖。
 
 每个脚本在 stdout 输出一个 JSON 摘要。其中的 `outcome` 是 OpenSci 与外部工具或独立参考的比较结果，不是 OpenSci 运行状态：所有比较都在给定容差内时为 `WITHIN_TOLERANCE`（退出码 0），有比较超出容差时为 `OUT_OF_TOLERANCE`（退出码 1），只生成数据的步骤为 `COMPLETED`（退出码 0），出错时退出码为 4（stderr 上给出 JSON 错误）。OpenSci 自身的状态（`PASS`、`WARNING`、`OUT_OF_MODEL_SCOPE` 等）单独列在 `engine_status` 中。
 

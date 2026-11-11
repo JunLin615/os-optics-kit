@@ -1,22 +1,26 @@
 ---
 name: beam-expander
 title: Catalog beam expander: swap a lens, sweep its spacing, restore collimation
-summary: A Keplerian beam expander of two catalog plano-convex lenses (f = 50 mm and 100 mm, 780 nm, 1 mm waist) reaches its 1.9961 mm output waist. The studies swap L2 for a 100.3 mm fused-silica lens, sweep L2 along the beam and apply the best shift.
+summary: A Keplerian beam expander of two catalog plano-convex lenses (f = 50 mm and 100 mm, 780 nm, 1 mm waist) reaches its 1.99612 mm output waist. The studies swap L2 for a 100.3 mm fused-silica lens, sweep L2 along the beam and apply the best shift.
+class: free-space
+domain: gaussian-beam
+provenance: self-built
+publication: own-work
 engine: 0.13.0
 catalog: 2026-10-28.1
 project: project.json
 tools: candidates, edit, sweep, compare, plot, report
-tags: catalog, beam-expander, lens-swap, parameter-sweep, edit-by-id
+tags: beam-expander, lens-swap, parameter-sweep, edit-by-id
 license: MIT
 ---
 
 ## What it shows
 
-`project.json` is the engine's reference design `os-optics project example --kind beam_expander`; its components
-pin catalog release 2026-10-28.1. The target `expanded_waist` (waist radius of the output beam, a collimation
-measure) asks for 1.9961 mm ± 1 %. The study files edit the design by ID: swapping L2 for the 100.3 mm lens breaks
-collimation (`expanded_waist` 1.4407 mm, UNMET, while the radius at the plane, `output_beam_radius`, stays MET);
-a twelve-sample sweep of the L2 position finds +0.54 mm (1.99645 mm, 5 of 12 samples PASS); applying it passes.
+`project.json` is the engine's reference design `os-optics project example --kind beam_expander`, pinned to catalog
+release 2026-10-28.1. The target `expanded_waist` (output waist radius, a collimation measure) asks for
+1.99612 mm ± 1 %. The studies edit the design by ID: swapping L2 for the 100.3 mm lens breaks collimation
+(`expanded_waist` 1.4407 mm, UNMET; `output_beam_radius` stays MET); a twelve-sample sweep of the L2 position finds
++0.54 mm (1.99645 mm, 5 of 12 samples PASS); applying it passes.
 
 ## Run
 
@@ -49,4 +53,4 @@ os-optics 0.13.0, catalog 2026-10-28.1: run status PASS (`expected.json`).
 - `project.json`, `expected.json`: the design and its verified outcome.
 - `studies/beam_expander_swap_l2.json`, `studies/beam_expander_l2_sweep.json`, `studies/beam_expander_move_l2.json`:
   the lens swap, the L2 sweep and the final move.
-- `README.md`, `README.zh-CN.md`, `images/`: the illustrated page.
+- `README.md`, `README.zh-CN.md`: the illustrated pages; `images.json` records the system views in `images/`.

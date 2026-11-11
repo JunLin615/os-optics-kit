@@ -1,10 +1,21 @@
 # Intensity-only aberration correction
 
+[简体中文](README.zh-CN.md) · [Agent case sheet](CASE.md)
+
 How much focal intensity can five phase controls recover when spherical aberration
 remains uncontrolled? This case optimizes a scalar on-axis intensity sensor and
 compares the ideal, disturbed and corrected focal patterns at equal transmitted power.
 
-![Engine relay: source, two lenses and the pupil plane](images/layout.png)
+![3D view of the engine relay: the `laser` source, the ideal lenses `expander_negative` and `expander_positive`, and the handoff plane `modulator`](images/iso.png)
+
+![Section through the relay axis: the beam widens between the two lenses and runs parallel to `modulator`](images/section.png)
+
+Both images are the engine's browser-free snapshots of a run of `project.json`:
+`os-optics view run --no-browser --snapshot DIR` with `--views iso --size 960x540`, and again with
+`--section ALL --frame=scene --size 1360x440`. In a kit checkout,
+`os-optics-kit cases images bounded-aberration-correction` re-renders exactly these views as recorded in
+`images.json`. They show the engine relay only: the pupil, phase modes and Fourier lens are part of
+`workflow.py`.
 
 ## Run
 
@@ -92,6 +103,8 @@ pupil if another crop is needed. Keep generated results outside version control.
 
 ## Presentation from saved results (kit 0.3.0)
 
+The gallery is optional and is built from saved run folders:
+
 ```bash
 python present_case.py out/default out/stronger --out talk/en --language en --background light --size 1920x1080 --bundle talk/aberration-en.zip
 python present_case.py out/default out/stronger --out talk/zh --language zh-CN --background light
@@ -100,7 +113,7 @@ os-optics-kit present gallery talk/en
 os-optics-kit present bundle talk/en --out talk/share.zip --only psf,response
 ```
 
-Open `talk/en/index.html` offline. The gallery combines the Gaussian relay and
+Open `talk/en/index.html` (or `talk/zh/index.html`) offline. The gallery combines the Gaussian relay and
 its beam-radius target with the external scalar Fourier PSFs and on-axis intensity
 comparison. `psf` shows the first run's three states on a shared linear 0–1 scale;
 `response` normalizes each run to its own equal-power ideal on-axis intensity.
@@ -108,8 +121,10 @@ Comparison inputs must use the same optics, grids and control bounds, with the
 spherical coefficient as the varied parameter.
 
 The helper reads the saved arrays and metrics and checks the ratios against the
-complex pupil fields. Use a new `--out` for each style. Chrome/Chromium supports
-the relay view; Chinese text needs a font such as Microsoft YaHei or Noto Sans CJK SC.
+complex pupil fields. Use a new `--out` for each style. The gallery's 3D relay
+picture is a kit `render` capture: it needs the `render` extra (pinned in
+`requirements-aberration.txt`) and Chrome or Chromium. Chinese text needs a font
+such as Microsoft YaHei or Noto Sans CJK SC.
 
 Use the `present_case.py` commands above to rebuild the complete gallery from
 saved run folders, passing their new locations if moved. `presentation.json`

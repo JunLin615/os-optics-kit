@@ -2,11 +2,15 @@
 name: detector-measurements
 title: Detector linearity and reference-channel normalization
 summary: A 1 mW, 532 nm beam is split 50:50 onto a signal and a reference detector, each with a 2.5 mm radius active area. Two synthetic data sets with known answers calibrate the signal detector's linearity and normalize slow source drift by the reference channel.
+class: free-space
+domain: radiometry
+provenance: self-built
+publication: own-work
 engine: 0.13.0
 catalog: none
 project: project.json
 tools: measurements
-tags: catalog-free, measurements, detector, calibration, beam-splitter, reference-channel
+tags: beam-splitter, detector, measurements, calibration
 license: MIT
 ---
 
@@ -52,5 +56,5 @@ os-optics 0.13.0, no catalog: run status PASS (`expected.json`).
 ## Files
 
 - `project.json`, `expected.json`: the setup and its verified outcome.
-- `data/`: the two CSV files and their construction and attribution (`data/README.md`).
-- `README.md`, `README.zh-CN.md`, `images/top.png`: the illustrated page.
+- `data/`: the two CSV files and their construction and attribution (`data/README.md`, `data/README.zh-CN.md`).
+- `README.md`, `README.zh-CN.md`: the illustrated pages; `images.json` records `images/iso.png` and `images/top.png`.

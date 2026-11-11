@@ -1,10 +1,19 @@
 # Circular flat-top shaping and input-width sensitivity
 
+[简体中文](README.zh-CN.md) · [Agent case sheet](CASE.md)
+
 How well does a phase-only flat-top design tolerate a change in illumination width? This case designs one circular pattern and evaluates the same mask after reducing the source waist by 10%. The core intensity coefficient of variation (CV) rises from **0.01197 to 0.07450**, even though almost all power remains in the target region.
 
-![Native Gaussian illumination and reference focusing lens](images/layout.png)
+![3D view of the native reference system: the `LASER` source, the ideal lenses `NEG`, `POS` and `FOCUS`, the handoff plane `phase_input` and the unmodulated focal plane `unmodulated_focus`](images/iso.png)
 
-The native optical system uses a 532 nm, 10 mW TEM00 source with a 0.5 mm waist, an ideal −40/+60 mm telescope, and an ideal 100 mm Fourier lens. The engine exports a TEM00 handoff 1 mm before that lens, with a 0.750275 mm beam radius. The external calculation propagates this field by 1 mm, applies the phase mask at the lens plane, and computes its back-focal-plane field. The native focus and layout describe the unmodulated reference; the saved external field supplies the flat-top result.
+![Section through the axis: the telescope widens the beam, `phase_input` sits 1 mm before `FOCUS`, and the unmodulated beam converges to `unmodulated_focus` 100 mm later](images/section.png)
+
+Both images are the engine's browser-free snapshots of a run of `project.json`:
+`os-optics view run --no-browser --snapshot DIR` with `--views iso --size 960x540`, and again with
+`--section ALL --frame=-6,-6,-4,6,6,168 --size 1360x440`. In a kit checkout,
+`os-optics-kit cases images phase-only-flat-top` re-renders exactly these views as recorded in `images.json`.
+
+The native optical system uses a 532 nm, 10 mW TEM00 source with a 0.5 mm waist, an ideal −40/+60 mm telescope, and an ideal 100 mm Fourier lens. The engine exports a TEM00 handoff 1 mm before that lens, with a 0.750275 mm beam radius. The external calculation propagates this field by 1 mm, applies the phase mask at the lens plane, and computes its back-focal-plane field. The native focus and the views above describe the unmodulated reference; the saved external field supplies the flat-top result.
 
 ## Run and change a parameter
 
@@ -50,7 +59,9 @@ Keep generated runs and arrays in your chosen output directory. The case files c
 
 ## Present saved results
 
-With Chrome/Chromium installed, create a fresh output folder for each style:
+The gallery is optional. Its 3D system picture is a kit `render` capture, which needs
+the `render` extra (pinned in `requirements-flat-top.txt`) and Chrome or Chromium.
+Create a fresh output folder for each style:
 
 ```bash
 python present_case.py out/default --out figures/en --bundle figures/flat-top-en.zip

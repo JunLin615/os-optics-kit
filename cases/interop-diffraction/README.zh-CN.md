@@ -1,17 +1,22 @@
 # 声明光阑处的衍射
 
+[English](README.md)
+
 波长 532 nm 的 TEM00 光束（束腰半径 1 mm，1 mW）通过圆形孔径光阑与焦距 200 mm 的理想薄透镜。后焦面上的辐照度是多少？
 引擎追迹高斯光束及光阑透过的功率；光阑截断光束后，焦面场需要衍射计算。引擎把光阑处的光束状态交给外部衍射程序。
 
-![沿光束的截面：光源、pupil 与 stop_plane 面、光阑、透镜与焦面](images/section.png)
+![三维视图：激光光源、`pupil` 与 `stop_plane` 面、光阑 `STOP`、透镜 `L`、焦面 `focus` 与追迹光束](images/iso.png)
 
-![光阑与透镜的局部放大](images/stop.png)
+该图是引擎对 `project.json` 一次运行的无浏览器快照（`os-optics view run --no-browser --snapshot DIR --views iso --size 1280x400`）。
+在 kit 检出目录中，`os-optics-kit cases images interop-diffraction` 会按 `images.json` 中的记录原样重新渲染它。
 
 ## 运行
 
 ```bash
 os-optics-kit cases copy interop-diffraction --dest .
 cd interop-diffraction
+os-optics project run project.json --out-dir run
+os-optics results targets run
 python -m pip install -r requirements-diffraction.txt
 python opensci_handoff.py --out diff
 python external_focus.py diff

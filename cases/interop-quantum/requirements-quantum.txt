@@ -4,7 +4,7 @@
 # Licenses as reported upstream: perceval-quandela MIT; its required dependency exqalibur declares
 # CC BY-NC-ND 4.0 in its package metadata; piquasso Apache-2.0.
 os-optics>=0.13,<0.14
-os-optics-kit>=0.2,<0.3
+os-optics-kit>=0.3,<0.4
 numpy==2.5.4
 scipy==1.18.1
 perceval-quandela==1.3.1

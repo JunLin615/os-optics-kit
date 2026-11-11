@@ -8,8 +8,8 @@ English · [简体中文](https://github.com/JunLin615/os-optics-kit/blob/main/R
 [![Python](https://img.shields.io/pypi/pyversions/os-optics-kit.svg)](https://pypi.org/project/os-optics-kit/)
 
 os-optics-kit builds on the [OS Optics](https://github.com/JunLin615/os-optics) engine. It provides one command,
-`os-optics-kit`, with tools that edit Projects by ID, sweep parameters, compare saved runs, plot, report, render 3D
-figures, estimate sensitivity and tolerance, select catalog parts, analyze detector measurements and prepare presentation
+`os-optics-kit`, with tools that edit Projects by ID, sweep parameters, compare saved runs, plot, report, render
+presentation-grade 3D figures, estimate sensitivity and tolerance, select catalog parts, analyze detector measurements and prepare presentation
 material; a collection of cases, designs
 that rerun on the engine and compare with their recorded outcome; and a vendor-neutral skill page for each tool,
 which any coding agent can load.
@@ -30,9 +30,11 @@ python -m pip install "os-optics[protected]" os-optics-kit
 os-optics doctor
 ```
 
-Python 3.11 or newer. Plots need the `plot` extra: `python -m pip install "os-optics-kit[plot]"`; 3D figure capture
-needs the `render` extra and Chrome or Chromium; MP4 animations need the `media` extra. Cases that use
-catalog components need the catalog: `os-optics catalog sync`. The engine's
+Python 3.11 or newer. Plots need the `plot` extra: `python -m pip install "os-optics-kit[plot]"`. System views and
+case images come from the engine without a browser (`os-optics view RUN --no-browser --snapshot DIR --views iso`,
+`--section ALL` for a lens section); the kit's presentation-grade figures (`render`, `present`) need the `render`
+extra and Chrome or Chromium; MP4 animations need the `media` extra. Cases that use catalog components need the
+catalog: `os-optics catalog sync`. The engine's
 [installation guide](https://github.com/JunLin615/os-optics/blob/main/docs/en/installation.md) covers virtual
 environments and upgrades.
 
@@ -74,29 +76,43 @@ fonts, comparisons, animations and handoff.
 
 ## Cases
 
-| Case | What it shows | Catalog |
-| --- | --- | --- |
-| [beam-expander](https://github.com/JunLin615/os-optics-kit/tree/main/cases/beam-expander) | Catalog beam expander: swap a lens, sweep its spacing, restore collimation | yes |
-| [achromatic-imaging](cases/achromatic-imaging/README.md) | Three-colour native PSF/MTF, chromatic focus and alignment tolerances | no |
-| [sonnar-telephoto-lens](cases/sonnar-telephoto-lens/README.md) | Six-element 85 mm f/2.4 Sonnar measured at its full entrance pupil, with native PSF, MTF, Strehl and chromatic focus | no |
-| [midwave-infrared-imager](cases/midwave-infrared-imager/README.md) | Five-element 3–5 µm imager with manufacturable thicknesses: native PSF, MTF and Strehl at nine fields | no |
-| [aspheric-lens](cases/aspheric-lens/README.md) | Even aspheres carry a five-element f/3.5 lens to 25° half field, paired with a spherical control | no |
-| [focus-requirement](cases/focus-requirement/README.md) | Fixed-plane focusing requirement, refined placement tolerance and report | no |
-| [ideal-lens-focus](https://github.com/JunLin615/os-optics-kit/tree/main/cases/ideal-lens-focus) | Gaussian focus of an ideal thin lens | no |
-| [expansion-focus](https://github.com/JunLin615/os-optics-kit/tree/main/cases/expansion-focus) | Beam expansion and focusing workflow with sensitivity and tolerance studies | no |
-| [polarization-control](https://github.com/JunLin615/os-optics-kit/tree/main/cases/polarization-control) | Polarization control with a half-wave plate and a polarizer | no |
-| [mirror-alignment](https://github.com/JunLin615/os-optics-kit/tree/main/cases/mirror-alignment) | Beam position and pointing after a fold mirror | no |
-| [detector-measurements](https://github.com/JunLin615/os-optics-kit/tree/main/cases/detector-measurements) | Detector linearity and reference-channel normalization | no |
-| [interop-optimization](https://github.com/JunLin615/os-optics-kit/tree/main/cases/interop-optimization) | External optimization and Sobol tolerance of a beam expander | no |
-| [interop-diffraction](https://github.com/JunLin615/os-optics-kit/tree/main/cases/interop-diffraction) | Diffraction at a declared stop, handed off to external codes | no |
-| [interop-quantum](https://github.com/JunLin615/os-optics-kit/tree/main/cases/interop-quantum) | Hong-Ou-Mandel interference from the linear optical network export | no |
-| [interop-metasurface](https://github.com/JunLin615/os-optics-kit/tree/main/cases/interop-metasurface) | Metasurface lens as a tabulated virtual component | no |
-| [cylindrical-light-sheet](cases/cylindrical-light-sheet) | Cylindrical focusing: sheet thickness versus propagation range | no |
-| [phase-only-flat-top](cases/phase-only-flat-top) | Circular flat-top phase design and sensitivity to input beam width | no |
-| [bounded-aberration-correction](cases/bounded-aberration-correction) | Intensity-only correction with five bounded phase modes | no |
+<!-- cases:start -->
+### Lens
 
-Each case holds `project.json` (the Project with its targets), `CASE.md` (for agents), an illustrated `README.md`
-and `expected.json` (the verified outcome), plus its own scripts, study specs or data. See the
+| Case | What it shows | Domain | Scale | Catalog |
+| --- | --- | --- | --- | --- |
+| [achromatic-imaging](https://github.com/JunLin615/os-optics-kit/tree/main/cases/achromatic-imaging) | Three-colour imaging with a declared achromatic objective | Imaging, Dispersion, Diffraction | Small | no |
+| [aspheric-lens](https://github.com/JunLin615/os-optics-kit/tree/main/cases/aspheric-lens) | Even aspheres carry a five-element f/3.5 lens to 25° half field | Imaging, Diffraction | Medium | no |
+| [cylindrical-light-sheet](https://github.com/JunLin615/os-optics-kit/tree/main/cases/cylindrical-light-sheet) | Cylindrical light-sheet thickness and range | Gaussian beams, Beam shaping | Small | no |
+| [ideal-lens-focus](https://github.com/JunLin615/os-optics-kit/tree/main/cases/ideal-lens-focus) | Gaussian focus of an ideal thin lens | Gaussian beams | Small | no |
+| [interop-metasurface](https://github.com/JunLin615/os-optics-kit/tree/main/cases/interop-metasurface) | Metasurface lens as a virtual component | Nanophotonics, Diffraction | Small | no |
+| [midwave-infrared-imager](https://github.com/JunLin615/os-optics-kit/tree/main/cases/midwave-infrared-imager) | A five-element 3-5 µm imager with manufacturable element thicknesses | Imaging, Diffraction | Medium | no |
+| [sonnar-telephoto-lens](https://github.com/JunLin615/os-optics-kit/tree/main/cases/sonnar-telephoto-lens) | Six-element Sonnar at f/2.4, measured across the full entrance pupil | Imaging, Diffraction | Medium | no |
+
+### Free-space platform
+
+| Case | What it shows | Domain | Scale | Catalog |
+| --- | --- | --- | --- | --- |
+| [beam-expander](https://github.com/JunLin615/os-optics-kit/tree/main/cases/beam-expander) | Catalog beam expander | Gaussian beams | Small | yes |
+| [bounded-aberration-correction](https://github.com/JunLin615/os-optics-kit/tree/main/cases/bounded-aberration-correction) | Intensity-only aberration correction | Wavefront control, Diffraction | Small | no |
+| [detector-measurements](https://github.com/JunLin615/os-optics-kit/tree/main/cases/detector-measurements) | Detector linearity and reference-channel normalization | Radiometry | Medium | no |
+| [expansion-focus](https://github.com/JunLin615/os-optics-kit/tree/main/cases/expansion-focus) | Beam expansion and focusing | Gaussian beams | Small | no |
+| [focus-requirement](https://github.com/JunLin615/os-optics-kit/tree/main/cases/focus-requirement) | A focusing requirement verified at a fixed work plane | Gaussian beams | Small | no |
+| [interop-diffraction](https://github.com/JunLin615/os-optics-kit/tree/main/cases/interop-diffraction) | Diffraction at a declared stop | Diffraction, Gaussian beams | Small | no |
+| [interop-optimization](https://github.com/JunLin615/os-optics-kit/tree/main/cases/interop-optimization) | External optimization and Sobol tolerance | Gaussian beams | Small | no |
+| [interop-quantum](https://github.com/JunLin615/os-optics-kit/tree/main/cases/interop-quantum) | Hong-Ou-Mandel interference from the linear optical network export | Quantum optics, Interference | Medium | no |
+| [mirror-alignment](https://github.com/JunLin615/os-optics-kit/tree/main/cases/mirror-alignment) | Beam position and pointing after a fold mirror | Beam steering | Small | no |
+| [phase-only-flat-top](https://github.com/JunLin615/os-optics-kit/tree/main/cases/phase-only-flat-top) | Circular flat-top shaping and input-width sensitivity | Beam shaping, Diffraction | Small | no |
+| [polarization-control](https://github.com/JunLin615/os-optics-kit/tree/main/cases/polarization-control) | Polarization control with a half-wave plate and a polarizer | Polarization | Small | no |
+
+The classes, domains and tags are listed by `os-optics-kit cases vocabulary` and defined in the [case format](https://github.com/JunLin615/os-optics-kit/blob/main/docs/case-format.md).
+<!-- cases:end -->
+
+Each case holds `project.json` (the Project with its targets), `CASE.md` (for agents), `README.md` and
+`README.zh-CN.md` illustrated with the system views the engine renders from the case's own run (recorded in
+`images.json`), and `expected.json` (the verified outcome), plus its own scripts, study specs or data.
+`os-optics-kit cases list --class lens` filters by class, domain, provenance, publication, scale, tag or catalog;
+`os-optics-kit cases vocabulary` lists the values. See the
 [case format](https://github.com/JunLin615/os-optics-kit/blob/main/docs/case-format.md).
 
 ## Tools and skills
@@ -109,7 +125,7 @@ and `expected.json` (the verified outcome), plus its own scripts, study specs or
 | `compare` | `os-optics-kit compare` | Compare saved runs or sweep samples by target and plane ID, with freshness |
 | `plot` | `os-optics-kit plot` | Draw sweep curves, heatmaps, power distributions, bar charts and histograms |
 | `report` | `os-optics-kit report` | Assemble a Markdown and JSON report with counts, diagnostics and artifact hashes |
-| `render` | `os-optics-kit render` | Render 3D figures of a run at chosen camera angles, with element framing and a manifest |
+| `render` | `os-optics-kit render` | Render presentation-grade 3D figures of a run at chosen camera angles, with element framing and a manifest (needs Chrome or Chromium) |
 | `present` | `os-optics-kit present` | Build themed views, plots, comparisons and animations from saved results, with a gallery and bundle |
 | `sensitivity` | `os-optics-kit sensitivity` | Rank design parameters by finite-difference sensitivity at two step sizes |
 | `tolerance` | `os-optics-kit tolerance` | Run a seeded tolerance study under declared distributions |

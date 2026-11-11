@@ -2,7 +2,7 @@
 
 [外部工具指南](interop.md) · [English](../en/interop-prompts.md) · 简体中文
 
-以下模板供人阅读和改写：复制一个模板到你自己的编程 Agent，替换尖括号中的内容。实际交给 Agent 时可以使用中文，也可以使用[英文版](../en/interop-prompts.md)。每个模板都要求 Agent 在你的环境中、用你已安装的工具完成计算，并把 OpenSci 结果与外部结果分开报告。对应的案例（`interop-optimization`、`interop-diffraction`、`interop-quantum`、`interop-metasurface`）在 os-optics 0.13 和 os-optics-kit 0.2 上运行。
+以下模板供人阅读和改写：复制一个模板到你自己的编程 Agent，替换尖括号中的内容。实际交给 Agent 时可以使用中文，也可以使用[英文版](../en/interop-prompts.md)。每个模板都要求 Agent 在你的环境中、用你已安装的工具完成计算，并把 OpenSci 结果与外部结果分开报告。对应的案例（`interop-optimization`、`interop-diffraction`、`interop-quantum`、`interop-metasurface`）在 os-optics 0.13 和 os-optics-kit 0.3 上运行。
 
 模板只涉及仿真和分析。
 

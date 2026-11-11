@@ -1,8 +1,15 @@
 # 柱面光片的厚度与传播范围
 
+[English](README.md) · [智能体案例说明](CASE.md)
+
 柱面透镜只聚焦高斯光束的一个横向方向。缩短焦距会减小光片厚度，同时缩短有效传播范围。本案例通过真实双界面柱面处方和可分离的近轴高斯模型，比较这两个变化。
 
-![柱面透镜与观测面](images/layout.png)
+![三维视图：光源 LASER、柱面透镜 CYL、观测面 `after` 与 `nominal-focus`，光束沿 y 方向会聚](images/iso.png)
+
+![沿透镜光轴的 x-z 平面截面：柱轴沿 x，因此光束在 x 方向保持准直](images/section.png)
+
+两幅图都是引擎对 `project.json` 一次运行的无浏览器快照：`os-optics view run --no-browser --snapshot DIR` 加 `--views iso --size 960x540` 运行一次，再加 `--section ALL --frame=scene --size 1200x420` 运行一次。
+在 kit 检出目录中，`os-optics-kit cases images cylindrical-light-sheet` 会按 `images.json` 中的记录原样重新渲染这些视图。
 
 光源沿 +z 传播，波长为 488 nm，束腰半径为 1 mm，功率为 10 mW。透镜前顶点位于 z=20 mm；透镜厚 2 mm、折射率 n=1.52，入射面为曲面、出射面为平面。柱轴沿 x，因此聚焦方向为 y。默认入射面半径为 26 mm，通光直径为 10 mm，每个面的功率透射率为 0.995。折射率在 450–650 nm 范围内取常数，表面采用理想面形，M²=1。
 
@@ -12,7 +19,7 @@
 | 40 mm | 7.31569 um | 0.497068 mm | 60.6834 mm |
 | 65 mm | 11.88777 um | 1.312519 mm | 85.6796 mm |
 
-三个方案输出功率均为 9.90025 mW。默认焦点处的宽轴 FWHM 为 1.17748 mm。40 mm 透镜使束腰厚度减小约 20%，传播范围缩短约 36%。本例目标为束腰厚度不超过 10 um、全范围不小于 0.45 mm；40 和 50 mm 方案均满足；65 mm 方案的传播范围更长，但厚度未达标，流程退出码为 1。
+三个方案输出功率均为 9.90025 mW。默认焦点处的宽轴 FWHM 为 1.17748 mm。40 mm 透镜使束腰厚度减小 20%，传播范围缩短 36%。本例目标为束腰厚度不超过 10 um、全范围不小于 0.45 mm；40 和 50 mm 方案均满足；65 mm 方案的传播范围更长，但厚度未达标，流程退出码为 1。
 
 ## 运行与参数调整
 
@@ -28,7 +35,7 @@ python workflow.py --focal-length-mm 65 --out ../sheet-f65
 python workflow.py --out ../sheet-default --plot-only
 ```
 
-在已检查的 Windows/Python 3.14 环境中，默认完整流程约需 4–5 秒，包含预览绘制；物理配置构建与计算约需 2 秒。`--focal-length-mm` 接受 25–110 mm，`--input-waist-mm` 接受 0.5–1.5 mm。改变焦距时，流程根据曲面参数重新构造柱面处方。缩短焦距或增大入射束腰，会减小光片厚度和传播范围；引擎逐项评估两个目标。流程退出码 1 表示至少一个示例阈值未满足。
+在 Windows 与 Python 3.14 上，默认完整流程约需 4–5 秒，包含预览绘制；物理配置构建与计算约需 2 秒。`--focal-length-mm` 接受 25–110 mm，`--input-waist-mm` 接受 0.5–1.5 mm。改变焦距时，流程根据曲面参数重新构造柱面处方。缩短焦距或增大入射束腰，会减小光片厚度和传播范围；引擎逐项评估两个目标。流程退出码 1 表示至少一个示例阈值未满足。
 
 ## 读取保存的结果
 
@@ -40,8 +47,9 @@ python workflow.py --out ../sheet-default --plot-only
 
 ## 从保存结果制作展示素材
 
-使用 kit 0.3.0、Chrome/Chromium，中文绘图需微软雅黑或 Noto Sans CJK SC 字体。
-输入为已完成的 `workflow.py` 结果目录。首个输入提供参考纵截面和系统视图；
+本展示为可选内容，需要带 `render` 扩展的 kit 0.3.0 和 Chrome/Chromium，
+中文绘图需微软雅黑或 Noto Sans CJK SC 字体。输入为已完成的 `workflow.py` 结果目录。
+首个输入提供参考纵截面和图库中的三维视图；
 加入 65 mm 结果可比较超过束腰厚度上限的设计。
 
 ```bash

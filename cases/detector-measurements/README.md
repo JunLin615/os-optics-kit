@@ -1,11 +1,20 @@
 # Detector linearity and reference-channel normalization
 
+[简体中文](README.zh-CN.md)
+
 A 1 mW, 532 nm laser beam is split 50:50 by a plate beam splitter. The transmitted half reaches the signal detector,
 the reflected half the reference detector; both detectors have a 2.5 mm radius active area. The engine run confirms
 the power on each detector and that the beam fits the active area. Two synthetic data sets then calibrate the
 signal detector and remove slow source drift with the reference channel.
 
+![3D view: the source SRC, the splitter BS, the signal detector on the transmitted beam and the reference detector on the reflected beam](images/iso.png)
+
 ![Top view: source SRC, splitter BS, signal detector along +X and reference detector along +Y](images/top.png)
+
+Both views are the engine's browser-free snapshots of a run of `project.json`:
+`os-optics view run --no-browser --snapshot DIR` with `--views iso --size 800x800`, and again with
+`--views top --size 800x800`. In a kit checkout, `os-optics-kit cases images detector-measurements` re-renders
+exactly these views as recorded in `images.json`.
 
 ## Run it
 
@@ -13,8 +22,12 @@ signal detector and remove slow source drift with the reference channel.
 os-optics-kit cases copy detector-measurements --dest .
 cd detector-measurements
 os-optics project run project.json --out-dir run
+os-optics results targets run
 os-optics-kit measurements data/detector_response.csv --x input_power_mW --signal signal_V \
   --background dark_V --x-unit mW --signal-unit V --maximum-rmse 0.003 --out detector
+os-optics-kit measurements data/reference_drift.csv --x time_s --signal signal_V --background dark_V \
+  --x-unit s --signal-unit V --reference reference_V --reference-background reference_dark_V \
+  --reference-unit V --maximum-rmse 0.000000000001 --out reference
 ```
 
 ## Results
@@ -32,6 +45,8 @@ os-optics-kit measurements data/detector_response.csv --x input_power_mW --signa
 | `data/reference_drift.csv` (signal / reference, both dark-subtracted, over 7 s) | 8 of 13 | 0.4, constant, RMSE 0 |
 
 Both channels drift by 7 % over the scan; their ratio does not. Rows with a missing or invalid reading or a
-non-positive dark-subtracted reference are excluded and listed in `processed.csv`; the analyses report WARNING for the exclusions and PASS for the
-RMSE targets. `data/README.md` gives the formulas behind the data and their attribution. Verified with
-os-optics 0.13.0; run status PASS.
+non-positive dark-subtracted reference are excluded and listed in `processed.csv`; the analyses report WARNING for
+the exclusions and PASS for the RMSE targets. `data/README.md` gives the formulas behind the data and their
+attribution.
+
+Verified with os-optics 0.13.0; run status PASS.

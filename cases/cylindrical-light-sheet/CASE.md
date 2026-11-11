@@ -2,11 +2,15 @@
 name: cylindrical-light-sheet
 title: Cylindrical light-sheet thickness and range
 summary: A two-surface cylindrical lens focuses a 488 nm Gaussian beam along y. Compare 50 and 40 mm focal lengths to measure the tradeoff between waist FWHM and the propagation range within sqrt(2) of that thickness.
+class: lens
+domain: gaussian-beam, beam-shaping
+provenance: self-built
+publication: own-work
 engine: 0.13.0
 catalog: none
 project: project.json
 tools: summary, present
-tags: catalog-free, light-sheet, cylindrical-lens, gaussian-beam
+tags: cylindrical-lens, light-sheet, independent-reference
 license: MIT
 ---
 
@@ -26,6 +30,8 @@ python workflow.py --focal-length-mm 40 --out ../sheet-f40
 python present_case.py ../sheet-default ../sheet-f40 --out ../sheet-talk --bundle ../sheet-talk.zip
 ```
 
+`present_case.py` builds an optional presentation gallery and needs Chrome/Chromium.
+
 ## Targets
 
 Native `thin-waist`: waist_radius_y_mm <= 0.008493218, equivalent to FWHM <=10 um. Native `sheet-range`: rayleigh_range_y_mm >=0.225, equivalent to full range >=0.45 mm. Both apply at `after` and are MET by both examples. External profiles use native q and power, with independent thick-lens ABCD and power checks.
@@ -36,4 +42,4 @@ Engine 0.13.0 and kit 0.3.0; no catalog. Source 488 nm, 10 mW, 1 mm waist. Cylin
 
 ## Files
 
-`project.json` is the normalized default. `workflow.py` builds the prescribed lens from the specified surfaces and saves its configuration, handoff, targets, scientific profiles and preview under `--out`. `--plot-only` redraws saved profiles. `present_case.py` reuses saved results for bilingual galleries and bundles, showing the system, radius targets and derived FWHM profiles. See both READMEs for units, equations, parameter limits and redraw commands.
+`project.json` is the normalized default. `workflow.py` builds the prescribed lens from the specified surfaces and saves its configuration, handoff, targets, scientific profiles and preview under `--out`. `--plot-only` redraws saved profiles. `present_case.py` reuses saved results for bilingual galleries and bundles. `README.md`, `README.zh-CN.md`: units, equations, parameter limits and redraw commands; `images.json` records the system views in `images/`.

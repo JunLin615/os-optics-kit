@@ -1,6 +1,6 @@
 {
   "schema": "os-optics-kit.cases",
-  "schema_version": 1,
+  "schema_version": 2,
   "kit_version": "0.3.0",
   "cases": [
     {
@@ -8,6 +8,20 @@
       "title": "Three-colour imaging with a declared achromatic objective",
       "summary": "A 75 mm cemented N-BK7/N-F2 objective images an on-axis distant point through a 6 mm pupil at three wavelengths. Native PSF/MTF and encircled energy at one common image plane accompany chromatic focus, sensitivity and seeded alignment studies.",
       "path": "cases/achromatic-imaging",
+      "class": "lens",
+      "domain": [
+        "imaging",
+        "dispersion",
+        "diffraction"
+      ],
+      "provenance": "self-built",
+      "publication": "own-work",
+      "scale": {
+        "band": "small",
+        "elements": 1,
+        "sources": 1,
+        "branches": 0
+      },
       "engine": "0.13.0",
       "catalog": null,
       "tools": [
@@ -19,12 +33,22 @@
         "present"
       ],
       "tags": [
-        "catalog-free",
-        "imaging",
         "achromat",
-        "dispersion",
+        "mtf",
         "sensitivity",
         "tolerance"
+      ],
+      "images": [
+        {
+          "file": "images/iso.png",
+          "kind": "system-view",
+          "view": "iso"
+        },
+        {
+          "file": "images/section.png",
+          "kind": "system-view",
+          "view": "section"
+        }
       ],
       "files": [
         "CASE.md",
@@ -37,7 +61,9 @@
         "data/snapshot.json",
         "expected.json",
         "figures.py",
-        "images/objective.png",
+        "images.json",
+        "images/iso.png",
+        "images/section.png",
         "imaging-request.json",
         "project.json",
         "studies/sensitivity_imaging.json",
@@ -51,6 +77,19 @@
       "title": "Even aspheres carry a five-element f/3.5 lens to 25 degree half field",
       "summary": "Five elements at f/3.5 reach 25 deg half field with even aspheres on four surfaces; a spherical control reaches only 20 deg. The engine reports a scalar diffraction MTF at every field and wavelength.",
       "path": "cases/aspheric-lens",
+      "class": "lens",
+      "domain": [
+        "imaging",
+        "diffraction"
+      ],
+      "provenance": "self-built",
+      "publication": "own-work",
+      "scale": {
+        "band": "medium",
+        "elements": 5,
+        "sources": 9,
+        "branches": 0
+      },
       "engine": "0.13.0",
       "catalog": null,
       "tools": [
@@ -58,9 +97,36 @@
       ],
       "tags": [
         "aspheric",
-        "refractive-imaging",
         "wide-field",
-        "comparison"
+        "design-comparison",
+        "mtf"
+      ],
+      "images": [
+        {
+          "file": "images/iso.png",
+          "kind": "system-view",
+          "view": "iso"
+        },
+        {
+          "file": "images/section.png",
+          "kind": "system-view",
+          "view": "section"
+        },
+        {
+          "file": "images/mtf.png",
+          "kind": "figure",
+          "script": "figures.py"
+        },
+        {
+          "file": "images/strehl.png",
+          "kind": "figure",
+          "script": "figures.py"
+        },
+        {
+          "file": "images/spot.png",
+          "kind": "figure",
+          "script": "figures.py"
+        }
       ],
       "files": [
         "CASE.md",
@@ -68,10 +134,13 @@
         "README.zh-CN.md",
         "data/engine-aspheric.json",
         "expected.json",
+        "figures.py",
+        "images.json",
+        "images/iso.png",
         "images/mtf.png",
+        "images/section.png",
         "images/spot.png",
         "images/strehl.png",
-        "images/system.png",
         "imaging-request.json",
         "input_prescription.csv",
         "prescription.csv",
@@ -84,8 +153,20 @@
     {
       "name": "beam-expander",
       "title": "Catalog beam expander: swap a lens, sweep its spacing, restore collimation",
-      "summary": "A Keplerian beam expander of two catalog plano-convex lenses (f = 50 mm and 100 mm, 780 nm, 1 mm waist) reaches its 1.9961 mm output waist. The studies swap L2 for a 100.3 mm fused-silica lens, sweep L2 along the beam and apply the best shift.",
+      "summary": "A Keplerian beam expander of two catalog plano-convex lenses (f = 50 mm and 100 mm, 780 nm, 1 mm waist) reaches its 1.99612 mm output waist. The studies swap L2 for a 100.3 mm fused-silica lens, sweep L2 along the beam and apply the best shift.",
       "path": "cases/beam-expander",
+      "class": "free-space",
+      "domain": [
+        "gaussian-beam"
+      ],
+      "provenance": "self-built",
+      "publication": "own-work",
+      "scale": {
+        "band": "small",
+        "elements": 2,
+        "sources": 1,
+        "branches": 0
+      },
       "engine": "0.13.0",
       "catalog": "2026-10-28.1",
       "tools": [
@@ -97,17 +178,29 @@
         "report"
       ],
       "tags": [
-        "catalog",
         "beam-expander",
         "lens-swap",
         "parameter-sweep",
         "edit-by-id"
+      ],
+      "images": [
+        {
+          "file": "images/iso.png",
+          "kind": "system-view",
+          "view": "iso"
+        },
+        {
+          "file": "images/section.png",
+          "kind": "system-view",
+          "view": "section"
+        }
       ],
       "files": [
         "CASE.md",
         "README.md",
         "README.zh-CN.md",
         "expected.json",
+        "images.json",
         "images/iso.png",
         "images/section.png",
         "project.json",
@@ -122,23 +215,49 @@
       "title": "Intensity-only correction with five bounded phase modes",
       "summary": "Feed a Gaussian relay handoff into a scalar pupil model. Five bounded phase controls improve on-axis focal intensity while an uncontrolled spherical mode sets the residual.",
       "path": "cases/bounded-aberration-correction",
+      "class": "free-space",
+      "domain": [
+        "wavefront-control",
+        "diffraction"
+      ],
+      "provenance": "self-built",
+      "publication": "own-work",
+      "scale": {
+        "band": "small",
+        "elements": 2,
+        "sources": 1,
+        "branches": 0
+      },
       "engine": "0.13.0",
       "catalog": null,
       "tools": [
         "present"
       ],
       "tags": [
-        "catalog-free",
-        "aberration",
         "optimization",
-        "handoff"
+        "handoff",
+        "interop"
+      ],
+      "images": [
+        {
+          "file": "images/iso.png",
+          "kind": "system-view",
+          "view": "iso"
+        },
+        {
+          "file": "images/section.png",
+          "kind": "system-view",
+          "view": "section"
+        }
       ],
       "files": [
         "CASE.md",
         "README.md",
         "README.zh-CN.md",
         "expected.json",
-        "images/layout.png",
+        "images.json",
+        "images/iso.png",
+        "images/section.png",
         "present_case.py",
         "project.json",
         "requirements-aberration.txt",
@@ -151,6 +270,19 @@
       "title": "Cylindrical light-sheet thickness and range",
       "summary": "A two-surface cylindrical lens focuses a 488 nm Gaussian beam along y. Compare 50 and 40 mm focal lengths to measure the tradeoff between waist FWHM and the propagation range within sqrt(2) of that thickness.",
       "path": "cases/cylindrical-light-sheet",
+      "class": "lens",
+      "domain": [
+        "gaussian-beam",
+        "beam-shaping"
+      ],
+      "provenance": "self-built",
+      "publication": "own-work",
+      "scale": {
+        "band": "small",
+        "elements": 1,
+        "sources": 1,
+        "branches": 0
+      },
       "engine": "0.13.0",
       "catalog": null,
       "tools": [
@@ -158,17 +290,30 @@
         "present"
       ],
       "tags": [
-        "catalog-free",
-        "light-sheet",
         "cylindrical-lens",
-        "gaussian-beam"
+        "light-sheet",
+        "independent-reference"
+      ],
+      "images": [
+        {
+          "file": "images/iso.png",
+          "kind": "system-view",
+          "view": "iso"
+        },
+        {
+          "file": "images/section.png",
+          "kind": "system-view",
+          "view": "section"
+        }
       ],
       "files": [
         "CASE.md",
         "README.md",
         "README.zh-CN.md",
         "expected.json",
-        "images/layout.png",
+        "images.json",
+        "images/iso.png",
+        "images/section.png",
         "present_case.py",
         "project.json",
         "requirements-light-sheet.txt",
@@ -181,27 +326,52 @@
       "title": "Detector linearity and reference-channel normalization",
       "summary": "A 1 mW, 532 nm beam is split 50:50 onto a signal and a reference detector, each with a 2.5 mm radius active area. Two synthetic data sets with known answers calibrate the signal detector's linearity and normalize slow source drift by the reference channel.",
       "path": "cases/detector-measurements",
+      "class": "free-space",
+      "domain": [
+        "radiometry"
+      ],
+      "provenance": "self-built",
+      "publication": "own-work",
+      "scale": {
+        "band": "medium",
+        "elements": 1,
+        "sources": 1,
+        "branches": 1
+      },
       "engine": "0.13.0",
       "catalog": null,
       "tools": [
         "measurements"
       ],
       "tags": [
-        "catalog-free",
-        "measurements",
-        "detector",
-        "calibration",
         "beam-splitter",
-        "reference-channel"
+        "detector",
+        "measurements",
+        "calibration"
+      ],
+      "images": [
+        {
+          "file": "images/iso.png",
+          "kind": "system-view",
+          "view": "iso"
+        },
+        {
+          "file": "images/top.png",
+          "kind": "system-view",
+          "view": "top"
+        }
       ],
       "files": [
         "CASE.md",
         "README.md",
         "README.zh-CN.md",
         "data/README.md",
+        "data/README.zh-CN.md",
         "data/detector_response.csv",
         "data/reference_drift.csv",
         "expected.json",
+        "images.json",
+        "images/iso.png",
         "images/top.png",
         "project.json"
       ],
@@ -212,6 +382,18 @@
       "title": "Beam expansion and focusing workflow",
       "summary": "A Keplerian expander (ideal thin lenses f = 50 mm and 150 mm) and a 100 mm focusing lens take a 780 nm, 0.5 mm waist beam to a 1.5 mm expanded radius and a focus below 20 um. The workflow studies gap error, focal length, wavelength and waist one at a time against a complex-q reference.",
       "path": "cases/expansion-focus",
+      "class": "free-space",
+      "domain": [
+        "gaussian-beam"
+      ],
+      "provenance": "self-built",
+      "publication": "own-work",
+      "scale": {
+        "band": "small",
+        "elements": 3,
+        "sources": 1,
+        "branches": 0
+      },
       "engine": "0.13.0",
       "catalog": null,
       "tools": [
@@ -223,19 +405,31 @@
         "tolerance"
       ],
       "tags": [
-        "catalog-free",
-        "gaussian-beam",
         "beam-expander",
         "focusing",
-        "parameter-study",
+        "parameter-sweep",
         "sensitivity",
-        "tolerance"
+        "tolerance",
+        "independent-reference"
+      ],
+      "images": [
+        {
+          "file": "images/iso.png",
+          "kind": "system-view",
+          "view": "iso"
+        },
+        {
+          "file": "images/section.png",
+          "kind": "system-view",
+          "view": "section"
+        }
       ],
       "files": [
         "CASE.md",
         "README.md",
         "README.zh-CN.md",
         "expected.json",
+        "images.json",
         "images/iso.png",
         "images/section.png",
         "project.json",
@@ -250,9 +444,21 @@
     },
     {
       "name": "focus-requirement",
-      "title": "A focusing requirement verified at a fixed working plane",
+      "title": "A focusing requirement verified at a fixed work plane",
       "summary": "Focus a 780 nm Gaussian beam to a 1/e² intensity radius at most 20 µm at a fixed plane 50 mm beyond the nominal lens position. A before/after comparison and refined placement sweep turn the requirement into a bounded tolerance answer and report.",
       "path": "cases/focus-requirement",
+      "class": "free-space",
+      "domain": [
+        "gaussian-beam"
+      ],
+      "provenance": "self-built",
+      "publication": "own-work",
+      "scale": {
+        "band": "small",
+        "elements": 1,
+        "sources": 1,
+        "branches": 0
+      },
       "engine": "0.13.0",
       "catalog": null,
       "tools": [
@@ -264,11 +470,22 @@
         "present"
       ],
       "tags": [
-        "catalog-free",
-        "gaussian-beam",
         "focusing",
-        "requirements",
-        "placement-tolerance"
+        "requirement-check",
+        "placement-tolerance",
+        "report"
+      ],
+      "images": [
+        {
+          "file": "images/iso.png",
+          "kind": "system-view",
+          "view": "iso"
+        },
+        {
+          "file": "images/section.png",
+          "kind": "system-view",
+          "view": "section"
+        }
       ],
       "files": [
         "CASE.md",
@@ -276,7 +493,9 @@
         "README.zh-CN.md",
         "data/snapshot.json",
         "expected.json",
-        "images/focus.png",
+        "images.json",
+        "images/iso.png",
+        "images/section.png",
         "project.json",
         "workflow.py"
       ],
@@ -287,17 +506,39 @@
       "title": "Gaussian focus of an ideal thin lens",
       "summary": "A 532 nm Gaussian beam with a 1 mm waist radius is focused by an ideal thin lens (f = 100 mm); the 1/e^2 radius in the back focal plane must stay below 50 um. Catalog-free: the lens is the engine's native ideal thin lens.",
       "path": "cases/ideal-lens-focus",
+      "class": "lens",
+      "domain": [
+        "gaussian-beam"
+      ],
+      "provenance": "self-built",
+      "publication": "own-work",
+      "scale": {
+        "band": "small",
+        "elements": 1,
+        "sources": 1,
+        "branches": 0
+      },
       "engine": "0.13.0",
       "catalog": null,
       "tools": [
         "summary"
       ],
       "tags": [
-        "catalog-free",
-        "gaussian-beam",
-        "focusing",
         "ideal-lens",
+        "focusing",
         "python-api"
+      ],
+      "images": [
+        {
+          "file": "images/iso.png",
+          "kind": "system-view",
+          "view": "iso"
+        },
+        {
+          "file": "images/section.png",
+          "kind": "system-view",
+          "view": "section"
+        }
       ],
       "files": [
         "CASE.md",
@@ -305,6 +546,8 @@
         "README.zh-CN.md",
         "expected.json",
         "ideal_lens_focus.py",
+        "images.json",
+        "images/iso.png",
         "images/section.png",
         "project.json"
       ],
@@ -315,17 +558,36 @@
       "title": "Diffraction at a declared stop, handed off to external codes",
       "summary": "A 532 nm TEM00 beam (1 mm waist, 1 mW) passes a 1.2 mm radius stop and an ideal f = 200 mm lens. The engine's transverse-plane handoff feeds LightPipes, prysm, POPPY and Diffractio, which compute the diffracted focus the paraxial Gaussian result cannot give after truncation.",
       "path": "cases/interop-diffraction",
+      "class": "free-space",
+      "domain": [
+        "diffraction",
+        "gaussian-beam"
+      ],
+      "provenance": "self-built",
+      "publication": "own-work",
+      "scale": {
+        "band": "small",
+        "elements": 1,
+        "sources": 1,
+        "branches": 0
+      },
       "engine": "0.13.0",
       "catalog": null,
       "tools": [],
       "tags": [
-        "catalog-free",
-        "interop",
-        "diffraction",
         "aperture-stop",
-        "gaussian-beam",
+        "handoff",
+        "interop",
         "lightpipes",
-        "handoff"
+        "prysm",
+        "poppy"
+      ],
+      "images": [
+        {
+          "file": "images/iso.png",
+          "kind": "system-view",
+          "view": "iso"
+        }
       ],
       "files": [
         "CASE.md",
@@ -334,8 +596,8 @@
         "expected.json",
         "external_focus.py",
         "hankel_reference.py",
-        "images/section.png",
-        "images/stop.png",
+        "images.json",
+        "images/iso.png",
         "opensci_handoff.py",
         "project.json",
         "requirements-diffractio.txt",
@@ -349,22 +611,49 @@
       "title": "Metasurface lens as a tabulated virtual component",
       "summary": "A TiO2 nanopillar metalens (f = 200 um at 532 nm, 100 um diameter) is characterized with RCWA (grcwa) and angular-spectrum focusing, fitted as a TABULATED_THIN_LENS with stated errors and domain, and checked in the engine on held-out test cases and out-of-domain counterexamples.",
       "path": "cases/interop-metasurface",
+      "class": "lens",
+      "domain": [
+        "nanophotonics",
+        "diffraction"
+      ],
+      "provenance": "self-built",
+      "publication": "own-work",
+      "scale": {
+        "band": "small",
+        "elements": 1,
+        "sources": 1,
+        "branches": 0
+      },
       "engine": "0.13.0",
       "catalog": null,
       "tools": [],
       "tags": [
-        "catalog-free",
-        "interop",
         "metasurface",
-        "rcwa",
         "tabulated-thin-lens",
-        "model-validation"
+        "model-validation",
+        "rcwa",
+        "interop",
+        "grcwa"
+      ],
+      "images": [
+        {
+          "file": "images/camera.png",
+          "kind": "system-view",
+          "view": "camera"
+        },
+        {
+          "file": "images/section.png",
+          "kind": "system-view",
+          "view": "section"
+        }
       ],
       "files": [
         "CASE.md",
         "README.md",
         "README.zh-CN.md",
         "expected.json",
+        "images.json",
+        "images/camera.png",
         "images/section.png",
         "project.json",
         "requirements-metasurface.txt",
@@ -380,23 +669,49 @@
       "title": "External optimization and Sobol tolerance of a beam expander",
       "summary": "SciPy and Optuna collimate a catalog-free Keplerian expander (ideal thin lenses f = 50 mm and 150 mm, 532 nm, 0.5 mm waist) by moving L2, with every design run by the engine; SALib Sobol indices then rank the mounting errors. An ABCD reference checks every value.",
       "path": "cases/interop-optimization",
+      "class": "free-space",
+      "domain": [
+        "gaussian-beam"
+      ],
+      "provenance": "self-built",
+      "publication": "own-work",
+      "scale": {
+        "band": "small",
+        "elements": 2,
+        "sources": 1,
+        "branches": 0
+      },
       "engine": "0.13.0",
       "catalog": null,
       "tools": [],
       "tags": [
-        "catalog-free",
-        "interop",
+        "beam-expander",
         "optimization",
+        "sensitivity",
+        "interop",
         "scipy",
         "optuna",
-        "salib",
-        "sensitivity"
+        "salib"
+      ],
+      "images": [
+        {
+          "file": "images/iso.png",
+          "kind": "system-view",
+          "view": "iso"
+        },
+        {
+          "file": "images/section.png",
+          "kind": "system-view",
+          "view": "section"
+        }
       ],
       "files": [
         "CASE.md",
         "README.md",
         "README.zh-CN.md",
         "expected.json",
+        "images.json",
+        "images/iso.png",
         "images/section.png",
         "optimize_expander.py",
         "project.json",
@@ -409,17 +724,41 @@
       "title": "Hong-Ou-Mandel interference from the linear optical network export",
       "summary": "Two 780 nm sources meet on a native 50:50 plate splitter. The engine exports the layout as a linear optical network (modes, transfer matrix, path group delays); Perceval and Piquasso compute two-photon statistics from it and match a closed-form reference.",
       "path": "cases/interop-quantum",
+      "class": "free-space",
+      "domain": [
+        "quantum-optics",
+        "interference"
+      ],
+      "provenance": "self-built",
+      "publication": "own-work",
+      "scale": {
+        "band": "medium",
+        "elements": 1,
+        "sources": 2,
+        "branches": 1
+      },
       "engine": "0.13.0",
       "catalog": null,
       "tools": [],
       "tags": [
-        "catalog-free",
-        "interop",
-        "quantum-optics",
+        "beam-splitter",
         "hong-ou-mandel",
         "linear-optical-network",
+        "interop",
         "perceval",
         "piquasso"
+      ],
+      "images": [
+        {
+          "file": "images/iso.png",
+          "kind": "system-view",
+          "view": "iso"
+        },
+        {
+          "file": "images/top.png",
+          "kind": "system-view",
+          "view": "top"
+        }
       ],
       "files": [
         "CASE.md",
@@ -427,6 +766,8 @@
         "README.zh-CN.md",
         "build_layouts.py",
         "expected.json",
+        "images.json",
+        "images/iso.png",
         "images/top.png",
         "network_io.py",
         "project.json",
@@ -442,15 +783,55 @@
       "title": "A five-element 3-5 um imager with manufacturable element thicknesses",
       "summary": "Five-element F/2 imager for 3-5 um, EFL 100 mm, half field 3 deg, every element held to a 2-12 mm centre and 1.5-3 mm edge. The engine reports a scalar diffraction MTF at every field and wavelength.",
       "path": "cases/midwave-infrared-imager",
+      "class": "lens",
+      "domain": [
+        "imaging",
+        "diffraction"
+      ],
+      "provenance": "self-built",
+      "publication": "own-work",
+      "scale": {
+        "band": "medium",
+        "elements": 5,
+        "sources": 9,
+        "branches": 0
+      },
       "engine": "0.13.0",
       "catalog": null,
       "tools": [
         "summary"
       ],
       "tags": [
-        "midwave-infrared",
-        "refractive-imaging",
-        "thickness-constrained"
+        "mid-infrared",
+        "manufacturability",
+        "mtf"
+      ],
+      "images": [
+        {
+          "file": "images/iso.png",
+          "kind": "system-view",
+          "view": "iso"
+        },
+        {
+          "file": "images/section.png",
+          "kind": "system-view",
+          "view": "section"
+        },
+        {
+          "file": "images/mtf.png",
+          "kind": "figure",
+          "script": "figures.py"
+        },
+        {
+          "file": "images/spot.png",
+          "kind": "figure",
+          "script": "figures.py"
+        },
+        {
+          "file": "images/wavefront.png",
+          "kind": "figure",
+          "script": "figures.py"
+        }
       ],
       "files": [
         "CASE.md",
@@ -458,9 +839,12 @@
         "README.zh-CN.md",
         "data/engine-midwave.json",
         "expected.json",
+        "figures.py",
+        "images.json",
+        "images/iso.png",
         "images/mtf.png",
+        "images/section.png",
         "images/spot.png",
-        "images/system.png",
         "images/wavefront.png",
         "imaging-request.json",
         "input_prescription.csv",
@@ -474,6 +858,18 @@
       "title": "Beam position and pointing after a fold mirror",
       "summary": "A 633 nm beam folds 90 deg at a flat mirror onto planes 100 mm and 400 mm away; positions must stay within 0.1 mm and pointing within 0.5 mrad. The workflow studies mirror tilt and source offset against exact reflection geometry and the 2-theta law.",
       "path": "cases/mirror-alignment",
+      "class": "free-space",
+      "domain": [
+        "beam-steering"
+      ],
+      "provenance": "self-built",
+      "publication": "own-work",
+      "scale": {
+        "band": "small",
+        "elements": 1,
+        "sources": 1,
+        "branches": 0
+      },
       "engine": "0.13.0",
       "catalog": null,
       "tools": [
@@ -487,18 +883,30 @@
         "tolerance"
       ],
       "tags": [
-        "catalog-free",
+        "fold-mirror",
         "alignment",
-        "mirror",
-        "pointing",
-        "parameter-study",
-        "measurements"
+        "parameter-sweep",
+        "measurements",
+        "independent-reference"
+      ],
+      "images": [
+        {
+          "file": "images/iso.png",
+          "kind": "system-view",
+          "view": "iso"
+        },
+        {
+          "file": "images/top.png",
+          "kind": "system-view",
+          "view": "top"
+        }
       ],
       "files": [
         "CASE.md",
         "README.md",
         "README.zh-CN.md",
         "expected.json",
+        "images.json",
         "images/iso.png",
         "images/top.png",
         "project.json",
@@ -513,24 +921,50 @@
       "title": "Circular flat-top shaping and input-width sensitivity",
       "summary": "Design a phase-only mask for a circular flat top, then change the Gaussian input width while keeping the mask fixed. Measure core intensity variation and target-region power.",
       "path": "cases/phase-only-flat-top",
+      "class": "free-space",
+      "domain": [
+        "beam-shaping",
+        "diffraction"
+      ],
+      "provenance": "self-built",
+      "publication": "own-work",
+      "scale": {
+        "band": "small",
+        "elements": 3,
+        "sources": 1,
+        "branches": 0
+      },
       "engine": "0.13.0",
       "catalog": null,
       "tools": [
         "present"
       ],
       "tags": [
-        "catalog-free",
-        "beam-shaping",
         "phase-mask",
-        "fourier-optics",
+        "flat-top",
+        "handoff",
         "interop"
+      ],
+      "images": [
+        {
+          "file": "images/iso.png",
+          "kind": "system-view",
+          "view": "iso"
+        },
+        {
+          "file": "images/section.png",
+          "kind": "system-view",
+          "view": "section"
+        }
       ],
       "files": [
         "CASE.md",
         "README.md",
         "README.zh-CN.md",
         "expected.json",
-        "images/layout.png",
+        "images.json",
+        "images/iso.png",
+        "images/section.png",
         "present_case.py",
         "project.json",
         "requirements-flat-top.txt",
@@ -543,6 +977,18 @@
       "title": "Polarization control with a half-wave plate and a polarizer",
       "summary": "A linearly polarized 1030 nm beam passes a rotatable half-wave plate and a linear polarizer. At 22.5 deg the plate turns the polarization to 45 deg and 0.891 mW of 1 mW reaches the detector. The workflow studies plate angle and wavelength against Jones calculus and Malus' law.",
       "path": "cases/polarization-control",
+      "class": "free-space",
+      "domain": [
+        "polarization"
+      ],
+      "provenance": "self-built",
+      "publication": "own-work",
+      "scale": {
+        "band": "small",
+        "elements": 2,
+        "sources": 1,
+        "branches": 0
+      },
       "engine": "0.13.0",
       "catalog": null,
       "tools": [
@@ -555,18 +1001,24 @@
         "tolerance"
       ],
       "tags": [
-        "catalog-free",
-        "polarization",
         "waveplate",
         "polarizer",
-        "jones-calculus",
-        "parameter-study"
+        "parameter-sweep",
+        "independent-reference"
+      ],
+      "images": [
+        {
+          "file": "images/iso.png",
+          "kind": "system-view",
+          "view": "iso"
+        }
       ],
       "files": [
         "CASE.md",
         "README.md",
         "README.zh-CN.md",
         "expected.json",
+        "images.json",
         "images/iso.png",
         "project.json",
         "studies/polarization_hwp_wavelength_sweep.json",
@@ -582,23 +1034,58 @@
       "title": "Six-element Sonnar at f/2.4, measured across the full entrance pupil",
       "summary": "A six-element Sonnar (EFL 85 mm, f/2.4, half field 14 deg) run at its stated aperture rather than in its paraxial core. 4.05 um RMS on axis, 9.29 um at 14 deg, power ledger conserved.",
       "path": "cases/sonnar-telephoto-lens",
+      "class": "lens",
+      "domain": [
+        "imaging",
+        "diffraction"
+      ],
+      "provenance": "self-built",
+      "publication": "own-work",
+      "scale": {
+        "band": "medium",
+        "elements": 6,
+        "sources": 3,
+        "branches": 0
+      },
       "engine": "0.13.0",
       "catalog": null,
       "tools": [],
       "tags": [
-        "lens-design",
-        "imaging",
-        "mtf",
-        "sonnar",
-        "catalog-free"
+        "full-aperture",
+        "mtf"
+      ],
+      "images": [
+        {
+          "file": "images/iso.png",
+          "kind": "system-view",
+          "view": "iso"
+        },
+        {
+          "file": "images/section.png",
+          "kind": "system-view",
+          "view": "section"
+        },
+        {
+          "file": "images/spot.png",
+          "kind": "figure",
+          "script": "figures.py"
+        },
+        {
+          "file": "images/mtf.png",
+          "kind": "figure",
+          "script": "figures.py"
+        }
       ],
       "files": [
         "CASE.md",
         "README.md",
         "README.zh-CN.md",
         "expected.json",
+        "figures.py",
+        "images.json",
+        "images/iso.png",
         "images/mtf.png",
-        "images/results.png",
+        "images/section.png",
         "images/spot.png",
         "imaging-request.json",
         "input_prescription.csv",

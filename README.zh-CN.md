@@ -8,7 +8,7 @@
 [![Python](https://img.shields.io/pypi/pyversions/os-optics-kit.svg)](https://pypi.org/project/os-optics-kit/)
 
 os-optics-kit 基于 [OS Optics](https://github.com/JunLin615/os-optics) 引擎，提供一个命令 `os-optics-kit`：
-其中的工具可以按标识修改 Project、扫描参数、比较已保存的运行、绘图、生成报告、渲染三维图、估计灵敏度和公差、
+其中的工具可以按标识修改 Project、扫描参数、比较已保存的运行、绘图、生成报告、渲染演示级三维图、估计灵敏度和公差、
 挑选目录元件、分析探测器测量数据以及制作演示材料；一组案例，即可在引擎上重新运行并与记录结果比较的设计；以及每个工具
 对应的一份与厂商无关的技能说明，任何编程 Agent 都可以加载。
 
@@ -28,8 +28,10 @@ python -m pip install "os-optics[protected]" os-optics-kit
 os-optics doctor
 ```
 
-需要 Python 3.11 及以上版本。绘图需要 `plot` 扩展：`python -m pip install "os-optics-kit[plot]"`；
-截取三维图需要 `render` 扩展和 Chrome 或 Chromium；MP4 动画需要 `media` 扩展。
+需要 Python 3.11 及以上版本。绘图需要 `plot` 扩展：`python -m pip install "os-optics-kit[plot]"`。系统视图和案例
+插图由引擎生成，无需浏览器（`os-optics view RUN --no-browser --snapshot DIR --views iso`，透镜剖面用
+`--section ALL`）；套件的演示级图片（`render`、`present`）需要 `render` 扩展和 Chrome 或 Chromium；MP4 动画
+需要 `media` 扩展。
 使用目录元件的案例需要光学元件目录：`os-optics catalog sync`。虚拟环境和升级方法见引擎的
 [安装指南](https://github.com/JunLin615/os-optics/blob/main/docs/zh-CN/installation.md)。
 
@@ -69,29 +71,42 @@ os-optics-kit present bundle talk-zh --out talk-zh.zip
 
 ## 案例
 
-| 案例 | 内容 | 目录 |
-| --- | --- | --- |
-| [beam-expander](cases/beam-expander) | 目录元件扩束器：更换透镜、扫描间距、恢复准直 | 是 |
-| [achromatic-imaging](cases/achromatic-imaging/README.zh-CN.md) | 三色原生 PSF/MTF、色焦移与装调公差 | 否 |
-| [sonnar-telephoto-lens](cases/sonnar-telephoto-lens/README.zh-CN.md) | 六片式 85 mm f/2.4 Sonnar，在标称口径下测量原生 PSF、MTF、Strehl 与色焦移 | 否 |
-| [midwave-infrared-imager](cases/midwave-infrared-imager/README.zh-CN.md) | 五片式 3–5 µm 成像镜头，元件厚度可制造：九个视场的原生 PSF、MTF 与 Strehl | 否 |
-| [aspheric-lens](cases/aspheric-lens/README.zh-CN.md) | 非球面使五片式 f/3.5 镜头达到 25° 半视场，并与球面版本对照 | 否 |
-| [focus-requirement](cases/focus-requirement/README.zh-CN.md) | 固定工作面聚焦要求、加密位置公差与报告 | 否 |
-| [ideal-lens-focus](cases/ideal-lens-focus) | 理想薄透镜的高斯聚焦 | 否 |
-| [expansion-focus](cases/expansion-focus) | 扩束与聚焦工作流程，含灵敏度和公差研究 | 否 |
-| [polarization-control](cases/polarization-control) | 用半波片和偏振器控制偏振 | 否 |
-| [mirror-alignment](cases/mirror-alignment) | 折返镜后的光束位置和指向 | 否 |
-| [detector-measurements](cases/detector-measurements) | 探测器线性度与参考通道归一化 | 否 |
-| [interop-optimization](cases/interop-optimization) | 扩束器的外部优化与 Sobol 公差分析 | 否 |
-| [interop-diffraction](cases/interop-diffraction) | 声明光阑处的衍射，交给外部程序计算 | 否 |
-| [interop-quantum](cases/interop-quantum) | 基于线性光学网络导出的 Hong-Ou-Mandel 干涉 | 否 |
-| [interop-metasurface](cases/interop-metasurface) | 作为表格化虚拟元件的超表面透镜 | 否 |
-| [cylindrical-light-sheet](cases/cylindrical-light-sheet) | 柱面聚焦：光片厚度与传播范围的权衡 | 否 |
-| [phase-only-flat-top](cases/phase-only-flat-top) | 圆形平顶相位设计及其对入射光束宽度的敏感性 | 否 |
-| [bounded-aberration-correction](cases/bounded-aberration-correction) | 仅用强度反馈校正五个有界相位模式 | 否 |
+<!-- cases:start -->
+### 镜头
 
-每个案例包含 `project.json`（带目标的 Project）、`CASE.md`（供 Agent 阅读）、带插图的 `README.md`
-和 `expected.json`（验证结果），以及案例自己的脚本、研究规格或数据。见[案例格式（英文）](docs/case-format.md)。
+| 案例 | 内容 | 领域 | 规模 | 目录 |
+| --- | --- | --- | --- | --- |
+| [achromatic-imaging](https://github.com/JunLin615/os-optics-kit/tree/main/cases/achromatic-imaging) | 声明式消色差物镜的三色成像 | 成像、色散、衍射 | 小 | 否 |
+| [aspheric-lens](https://github.com/JunLin615/os-optics-kit/tree/main/cases/aspheric-lens) | 偶次非球面把 5 片 f/3.5 镜头带到 25° 半视场 | 成像、衍射 | 中 | 否 |
+| [cylindrical-light-sheet](https://github.com/JunLin615/os-optics-kit/tree/main/cases/cylindrical-light-sheet) | 柱面光片的厚度与传播范围 | 高斯光束、光束整形 | 小 | 否 |
+| [ideal-lens-focus](https://github.com/JunLin615/os-optics-kit/tree/main/cases/ideal-lens-focus) | 理想薄透镜的高斯聚焦 | 高斯光束 | 小 | 否 |
+| [interop-metasurface](https://github.com/JunLin615/os-optics-kit/tree/main/cases/interop-metasurface) | 作为虚拟元件的超表面透镜 | 纳米光子学、衍射 | 小 | 否 |
+| [midwave-infrared-imager](https://github.com/JunLin615/os-optics-kit/tree/main/cases/midwave-infrared-imager) | 可制造厚度的五片中波红外成像镜头 | 成像、衍射 | 中 | 否 |
+| [sonnar-telephoto-lens](https://github.com/JunLin615/os-optics-kit/tree/main/cases/sonnar-telephoto-lens) | 六片 Sonnar，f/2.4，在完整入瞳上测量 | 成像、衍射 | 中 | 否 |
+
+### 自由空间平台
+
+| 案例 | 内容 | 领域 | 规模 | 目录 |
+| --- | --- | --- | --- | --- |
+| [beam-expander](https://github.com/JunLin615/os-optics-kit/tree/main/cases/beam-expander) | 目录扩束器 | 高斯光束 | 小 | 是 |
+| [bounded-aberration-correction](https://github.com/JunLin615/os-optics-kit/tree/main/cases/bounded-aberration-correction) | 仅用强度反馈的像差校正 | 波前控制、衍射 | 小 | 否 |
+| [detector-measurements](https://github.com/JunLin615/os-optics-kit/tree/main/cases/detector-measurements) | 探测器线性度与参考通道归一化 | 辐射度量 | 中 | 否 |
+| [expansion-focus](https://github.com/JunLin615/os-optics-kit/tree/main/cases/expansion-focus) | 扩束与聚焦 | 高斯光束 | 小 | 否 |
+| [focus-requirement](https://github.com/JunLin615/os-optics-kit/tree/main/cases/focus-requirement) | 在固定工作面上验证的聚焦要求 | 高斯光束 | 小 | 否 |
+| [interop-diffraction](https://github.com/JunLin615/os-optics-kit/tree/main/cases/interop-diffraction) | 声明光阑处的衍射 | 衍射、高斯光束 | 小 | 否 |
+| [interop-optimization](https://github.com/JunLin615/os-optics-kit/tree/main/cases/interop-optimization) | 外部优化与 Sobol 公差分析 | 高斯光束 | 小 | 否 |
+| [interop-quantum](https://github.com/JunLin615/os-optics-kit/tree/main/cases/interop-quantum) | 基于线性光学网络导出的 Hong-Ou-Mandel 干涉 | 量子光学、干涉 | 中 | 否 |
+| [mirror-alignment](https://github.com/JunLin615/os-optics-kit/tree/main/cases/mirror-alignment) | 折返镜后的光束位置与指向 | 光束指向 | 小 | 否 |
+| [phase-only-flat-top](https://github.com/JunLin615/os-optics-kit/tree/main/cases/phase-only-flat-top) | 圆形平顶光整形与入射束宽敏感性 | 光束整形、衍射 | 小 | 否 |
+| [polarization-control](https://github.com/JunLin615/os-optics-kit/tree/main/cases/polarization-control) | 用半波片与偏振器控制偏振 | 偏振 | 小 | 否 |
+
+类别、领域和标签由 `os-optics-kit cases vocabulary` 列出，定义见[案例格式（英文）](https://github.com/JunLin615/os-optics-kit/blob/main/docs/case-format.md)。
+<!-- cases:end -->
+
+每个案例包含 `project.json`（带目标的 Project）、`CASE.md`（供 Agent 阅读）、`README.md` 和 `README.zh-CN.md`
+（插图是引擎依据案例自身运行生成的系统视图，记录在 `images.json` 中）、`expected.json`（验证结果），以及案例
+自己的脚本、研究规格或数据。`os-optics-kit cases list --class lens` 可按类别、领域、来源、发布依据、规模、标签或目录筛选；
+`os-optics-kit cases vocabulary` 列出可用的取值。见[案例格式（英文）](docs/case-format.md)。
 
 ## 工具与技能
 
@@ -103,7 +118,7 @@ os-optics-kit present bundle talk-zh --out talk-zh.zip
 | `compare` | `os-optics-kit compare` | 按目标和平面标识比较已保存的运行或扫描样本，并给出时效 |
 | `plot` | `os-optics-kit plot` | 绘制扫描曲线、热图、功率分布、条形图和直方图 |
 | `report` | `os-optics-kit report` | 生成 Markdown 和 JSON 报告，含计数、诊断信息和产物哈希 |
-| `render` | `os-optics-kit render` | 按指定相机角度渲染运行的三维图，可对准单个元件，并输出清单文件 |
+| `render` | `os-optics-kit render` | 按指定相机角度渲染运行的演示级三维图，可对准单个元件，并输出清单文件（需要 Chrome 或 Chromium） |
 | `present` | `os-optics-kit present` | 依据已保存的结果生成带主题的视图、结果图、比较图和动画，附图库和材料包 |
 | `sensitivity` | `os-optics-kit sensitivity` | 以两种步长的有限差分灵敏度对设计参数排序 |
 | `tolerance` | `os-optics-kit tolerance` | 在声明的分布下运行带种子的公差研究 |

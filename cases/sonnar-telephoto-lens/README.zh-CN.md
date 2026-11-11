@@ -1,15 +1,19 @@
-# f/2.4 六片 Sonnar，在完整入瞳上测量
+# 六片 Sonnar，f/2.4，在完整入瞳上测量
+
+[English](README.md) · [智能体案例说明](CASE.md)
 
 六片 Sonnar：EFL 85 mm、F/2.4、半视场 14°，可见光。本案例在**标称光圈**下运行该镜头，
 而不是只在它的近轴核心上取样，然后报告引擎成像分析返回的结果。
 
-![各视场 RMS 光斑半径与衍射极限对照](images/spot.png)
+![三维视图：三个视场光源、6 片镜头 SN 与像面](images/iso.png)
 
 ## 设计
 
 `prescription.csv` 是 `csv-surface-table/1` 格式的面表，13 个面组成 6 片玻璃。
 `project.json` 把它导入为一个 COMPOUND 单元，并把观察面放在近轴后焦点 x = 129.23 mm。
 引擎的近轴解给出 **EFL 84.9999 mm**、BFL 28.00 mm、FFD 56.07 mm。
+
+![沿镜头光轴的截面，真实比例：L1–L6、像面与追迹光线](images/section.png)
 
 | 面 | 半径 (mm) | 厚度 (mm) | 其后介质 |
 | --- | --- | --- | --- |
@@ -27,8 +31,9 @@
 | S12 | 39.10 | 14.41 | F2 |
 | S13 | 30.11 | 0.00 | 像方 |
 
-各面通光半径 15.7–20.8 mm；机械（磨边）半径大 0.6 mm，使磨边轮廓足够紧凑，
-杂散光探针的分支数保持有限。完整面表见 `prescription.csv`，`input_prescription.csv` 是起始设计。
+各面通光半径 14.7–20.8 mm；机械（磨边）半径大 0.6 mm，使磨边轮廓足够紧凑，
+杂散光探针的分支数保持有限。完整面表见 `prescription.csv`，`input_prescription.csv` 是起始设计。从第一个顶点到像面，镜头长
+129.2 mm，是焦距的 1.52 倍：它是长焦镜头，但不是摄远结构（总长短于焦距的结构）。
 
 ## 在标称光圈上测量
 
@@ -47,7 +52,7 @@ f/2.4、85 mm 镜头的入瞳半径是 17.7 mm。工程里带的是 2 mm 腰斑�
 （f/2.4、588 nm 下 1.72 µm）的 7.5 倍，这在物理上不可能；同时 `window_light_share`
 积分到 **1.13**，超过物理上限。两者都是采样不足的伪影。
 取 **256** 时同一个量变成 **1.33 µm**（0.77 × Airy），窗口光占比落到 0.9993；再取 512 两者都不再变化。
-本案例采用 256，成像量 KNOWN 从 160 时的 37 升到 **38**。
+本案例采用 256，42 个成像量中 38 个 KNOWN，而 160 时是 37 个。
 
 ## 结果
 
@@ -55,18 +60,18 @@ f/2.4、85 mm 镜头的入瞳半径是 17.7 mm。工程里带的是 2 mm 腰斑�
 
 | 视场 | RMS 光斑 (µm) | Strehl | OPD rms (λ) | EE80 (µm) | 衍射极限 EE80 (µm) | RMS / 极限 | 像方 NA |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0° | 4.05 | 0.060 | 0.328 | 6.61 | 1.33 | **3.06×** | 0.209 |
-| 7° | 13.94 | 0.018 | 1.195 | 28.10 | 1.34 | **10.37×** | 0.207 |
-| 14° | 9.29 | 0.123 | 0.461 | 11.81 | 1.97 | **4.73×** | 0.208 |
+| 0° | 4.05 | 0.0603 | 0.328 | 6.61 | 1.33 | **3.06×** | 0.209 |
+| 7° | 13.94 | 0.0175 | 1.195 | 28.10 | 1.34 | **10.37×** | 0.207 |
+| 14° | 9.29 | 0.1228 | 0.461 | 11.81 | 1.97 | **4.73×** | 0.208 |
 
-![切向与弧向调制传递函数](images/mtf.png)
+![各视场 RMS 光斑半径与衍射极限 EE80 半径对照](images/spot.png)
+
+![调制传递函数，切向与弧矢](images/mtf.png)
 
 直白地读：这是**一个可用的 f/2.4 镜头，但不是衍射极限级**。轴上 4 µm RMS，约为衍射极限
 包围圆半径的 3 倍；7° 视场带 1.2 波波前，是三个视场里最弱的；14° 视场回到 4.7 倍，
 因为后组是按视场边缘平衡离轴像差配置的。三个视场的像方 NA 都是 0.2085，
 所以这三个数描述的都是整圈光阑。
-
-![引擎成像量汇总表](images/results.png)
 
 ## 引擎拒绝给出、以及为什么
 
@@ -99,6 +104,14 @@ os-optics project check project.json
 os-optics project run project.json --out-dir run
 os-optics results targets run
 os-optics results imaging run --monitor image_plane --request imaging-request.json
+os-optics view run --no-browser --snapshot views --views iso --size 1280x560
+os-optics view run --no-browser --snapshot views --section ALL --size 1600x700
+python figures.py run --out images
 ```
+
+三维视图与截面是引擎对 `project.json` 一次运行的快照（上面两行 `os-optics view`，选项与记录一致；在 kit 检出中
+由 `os-optics-kit cases images sonnar-telephoto-lens` 按 `images.json` 中的记录原样重新渲染）。`figures.py` 用同一条
+`results imaging` 调用从这次运行画出弥散斑图与 MTF 图（matplotlib 随
+`pip install "os-optics-kit[plot]"` 安装）。
 
 `os-optics-kit cases verify sonnar-telephoto-lens` 会重跑并把目标评估与 `expected.json` 比对。

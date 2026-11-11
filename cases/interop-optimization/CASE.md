@@ -2,11 +2,15 @@
 name: interop-optimization
 title: External optimization and Sobol tolerance of a beam expander
 summary: SciPy and Optuna collimate a catalog-free Keplerian expander (ideal thin lenses f = 50 mm and 150 mm, 532 nm, 0.5 mm waist) by moving L2, with every design run by the engine; SALib Sobol indices then rank the mounting errors. An ABCD reference checks every value.
+class: free-space
+domain: gaussian-beam
+provenance: self-built
+publication: own-work
 engine: 0.13.0
 catalog: none
 project: project.json
 tools: none
-tags: catalog-free, interop, optimization, scipy, optuna, salib, sensitivity
+tags: beam-expander, optimization, sensitivity, interop, scipy, optuna, salib
 license: MIT
 ---
 
@@ -49,4 +53,5 @@ the engine run.
 - `project.json`, `expected.json`: the baseline design and its verified outcome.
 - `optimize_expander.py`: optimization, Sobol analysis and the ABCD reference.
 - `requirements-optimization.txt`: pinned third-party packages.
-- `README.md`, `README.zh-CN.md`, `images/section.png`: the illustrated page.
+- `README.md`, `README.zh-CN.md`: the illustrated pages; `images.json` records `images/iso.png` and
+  `images/section.png` (`os-optics-kit cases images interop-optimization`).
