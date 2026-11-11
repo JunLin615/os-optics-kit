@@ -1,7 +1,9 @@
 """Evaluators: the function that turns one request into one sample record.
 
 An evaluator is ``evaluator(request, sample_dir, limits) -> record``. ``request`` is a study request
-(``requests.py``); ``sample_dir`` is the sample's own directory (the evaluator is its only writer); ``limits`` is
+(``requests.py``); ``sample_dir`` is the sample's own directory, written only by the evaluating process: the
+executor keeps its attempt marker ``attempt.json`` there during the evaluation and writes ``sample.json`` after it
+(an evaluator may empty the directory first); ``limits`` is
 ``{"time_limit_s", "max_memory_mib"}`` (either may be None). The record holds at least ``outcome`` (``ERROR``,
 ``OUT_OF_MODEL``, ``UNKNOWN``, ``FAIL``, ``PASS`` or ``NOT_APPLICABLE``); ``empty_record`` gives every other key its
 default. An evaluator never raises for a refused design: it returns a record with ``error``.

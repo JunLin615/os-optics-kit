@@ -139,8 +139,9 @@ def run_job(job, evaluator=None):
 
     ``job``: ``{study_dir, sample_id, request_hash, evaluator ("module:function"), limits, attempt, queued_at,
     execution}``; ``evaluator``: a function used instead of ``job["evaluator"]`` (in-process schedulers only). The
-    record is not written when another execution has taken the sample over meanwhile (``SAMPLE_TAKEN_OVER``: a
-    worker left running by a killed parent)."""
+    attempt marker (``attempt.json``) stays in the sample directory during the evaluation. The record is not written
+    when another execution has taken the sample over meanwhile (``SAMPLE_TAKEN_OVER``: a worker left running by a
+    killed parent): the marker names another execution, or it is gone and another execution's record is there."""
     queued_s = max(0.0, time.time() - job["queued_at"]) if job.get("queued_at") else None
     study_dir = Path(job["study_dir"])
     sample_id = job["sample_id"]
@@ -160,8 +161,12 @@ def run_job(job, evaluator=None):
                                f"outcome in {wc.OUTCOMES}", sample_id=sample_id)
     record = complete_record(record, request, study_dir, state=job_state(record), attempt=job.get("attempt", 1),
                              queued_s=queued_s, worker=worker_name(), evaluator=job.get("evaluator"))
-    marker = store.read_attempt(study_dir, sample_id) or {}
-    if job.get("execution") is not None and marker.get("execution") != job["execution"]:
+    marker = store.read_attempt(study_dir, sample_id)
+    # a marker of another execution, or none beside a record this job did not write: another execution took the
+    # sample over (a marker removed by the evaluator emptying its own directory is not a take-over)
+    taken_over = (marker.get("execution") != job.get("execution") if isinstance(marker, dict)
+                  else (folder / store.SAMPLE_FILE).is_file())
+    if job.get("execution") is not None and taken_over:
         raise wc.WorkflowError("SAMPLE_TAKEN_OVER", f"{sample_id}: another execution of the study took this sample "
                                "over; its record was not written", sample_id=sample_id)
     store.write_json_atomic(folder / store.SAMPLE_FILE, record)
