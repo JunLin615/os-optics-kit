@@ -1,0 +1,14 @@
+{
+  "catalog": null,
+  "engine": "0.13.0",
+  "schema": "os-optics-kit.case-expected",
+  "schema_version": 1,
+  "status": "PASS",
+  "targets": {
+    "centroid_u": "MET",
+    "centroid_v": "MET",
+    "pupil_spot_C": "MET",
+    "pupil_spot_F": "MET",
+    "pupil_spot_d": "MET"
+  }
+}

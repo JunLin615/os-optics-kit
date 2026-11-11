@@ -3,6 +3,32 @@
   "default_requirements": ["scripts/requirements-alignment.txt"],
   "checks": [
     {
+      "name": "achromatic-imaging-compute",
+      "description": "Native three-colour PSF/MTF, common-plane and chromatic-focus verification",
+      "argv": ["{python}", "cases/achromatic-imaging/workflow.py", "compute", "--out", "{runs}/achromatic-imaging"],
+      "timeout": 600
+    },
+    {
+      "name": "achromatic-imaging-study",
+      "description": "Written-prescription sensitivity and seeded fixed-detector alignment tolerance",
+      "argv": ["{python}", "cases/achromatic-imaging/workflow.py", "study", "--out", "{runs}/achromatic-imaging"],
+      "needs": ["achromatic-imaging-compute"],
+      "timeout": 900
+    },
+    {
+      "name": "focus-requirement-compute",
+      "description": "Failing and passing lens placements at the same fixed work plane",
+      "argv": ["{python}", "cases/focus-requirement/workflow.py", "compute", "--out", "{runs}/focus-requirement"],
+      "timeout": 180
+    },
+    {
+      "name": "focus-requirement-study",
+      "description": "Coarse and refined placement bounds checked against independent complex-q propagation",
+      "argv": ["{python}", "cases/focus-requirement/workflow.py", "study", "--out", "{runs}/focus-requirement"],
+      "needs": ["focus-requirement-compute"],
+      "timeout": 600
+    },
+    {
       "name": "cylindrical-light-sheet",
       "description": "Cylindrical sheet thickness and range with independent ABCD and power checks",
       "argv": ["{python}", "cases/cylindrical-light-sheet/workflow.py", "--out", "{runs}/cylindrical-light-sheet"],

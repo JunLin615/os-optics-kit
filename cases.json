@@ -4,6 +4,49 @@
   "kit_version": "0.4.0",
   "cases": [
     {
+      "name": "achromatic-imaging",
+      "title": "Three-colour imaging with a declared achromatic objective",
+      "summary": "A 75 mm cemented N-BK7/N-F2 objective images an on-axis distant point through a 6 mm pupil at three wavelengths. Native PSF/MTF and encircled energy at one common image plane accompany chromatic focus, sensitivity and seeded alignment studies.",
+      "path": "cases/achromatic-imaging",
+      "engine": "0.13.0",
+      "catalog": null,
+      "tools": [
+        "summary",
+        "compare",
+        "sensitivity",
+        "tolerance",
+        "report",
+        "present"
+      ],
+      "tags": [
+        "catalog-free",
+        "imaging",
+        "achromat",
+        "dispersion",
+        "sensitivity",
+        "tolerance"
+      ],
+      "files": [
+        "CASE.md",
+        "README.md",
+        "README.zh-CN.md",
+        "analysis.py",
+        "data/README.md",
+        "data/README.zh-CN.md",
+        "data/prescription.json",
+        "data/snapshot.json",
+        "expected.json",
+        "figures.py",
+        "images/objective.png",
+        "imaging-request.json",
+        "project.json",
+        "studies/sensitivity_imaging.json",
+        "studies/tolerance_imaging.json",
+        "workflow.py"
+      ],
+      "project_sha256": "550295a34c371b2a95bac180eddaa6870ee8772044a3313cfb77634352948069"
+    },
+    {
       "name": "beam-expander",
       "title": "Catalog beam expander: swap a lens, sweep its spacing, restore collimation",
       "summary": "A Keplerian beam expander of two catalog plano-convex lenses (f = 50 mm and 100 mm, 780 nm, 1 mm waist) reaches its 1.9961 mm output waist. The studies swap L2 for a 100.3 mm fused-silica lens, sweep L2 along the beam and apply the best shift.",
@@ -169,6 +212,40 @@
         "workflow.py"
       ],
       "project_sha256": "617fc34c578308c9a4a7555884bf07502cd41ddb0cb3e7a6bee026077d3a59ee"
+    },
+    {
+      "name": "focus-requirement",
+      "title": "A focusing requirement verified at a fixed working plane",
+      "summary": "Focus a 780 nm Gaussian beam to a 1/e² intensity radius at most 20 µm at a fixed plane 50 mm beyond the nominal lens position. A before/after comparison and refined placement sweep turn the requirement into a bounded tolerance answer and report.",
+      "path": "cases/focus-requirement",
+      "engine": "0.13.0",
+      "catalog": null,
+      "tools": [
+        "summary",
+        "edit",
+        "sweep",
+        "compare",
+        "report",
+        "present"
+      ],
+      "tags": [
+        "catalog-free",
+        "gaussian-beam",
+        "focusing",
+        "requirements",
+        "placement-tolerance"
+      ],
+      "files": [
+        "CASE.md",
+        "README.md",
+        "README.zh-CN.md",
+        "data/snapshot.json",
+        "expected.json",
+        "images/focus.png",
+        "project.json",
+        "workflow.py"
+      ],
+      "project_sha256": "063bdce7a0b21eac9a4e720a2aa056b5351e13168cf6d1c8bbcd344ee1016712"
     },
     {
       "name": "ideal-lens-focus",

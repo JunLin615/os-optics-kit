@@ -72,6 +72,8 @@ os-optics-kit present bundle talk-zh --out talk-zh.zip
 | 案例 | 内容 | 目录 |
 | --- | --- | --- |
 | [beam-expander](cases/beam-expander) | 目录元件扩束器：更换透镜、扫描间距、恢复准直 | 是 |
+| [achromatic-imaging](cases/achromatic-imaging/README.zh-CN.md) | 三色原生 PSF/MTF、色焦移与装调公差 | 否 |
+| [focus-requirement](cases/focus-requirement/README.zh-CN.md) | 固定工作面聚焦要求、加密位置公差与报告 | 否 |
 | [ideal-lens-focus](cases/ideal-lens-focus) | 理想薄透镜的高斯聚焦 | 否 |
 | [expansion-focus](cases/expansion-focus) | 扩束与聚焦工作流程，含灵敏度和公差研究 | 否 |
 | [polarization-control](cases/polarization-control) | 用半波片和偏振器控制偏振 | 否 |
