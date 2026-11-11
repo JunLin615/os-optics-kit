@@ -15,6 +15,9 @@ python -m pip install -r requirements-optimization.txt
 python optimize_expander.py --out opt
 ```
 
+The Sobol samples run as one batch of independent evaluations; `--workers 4` runs them in four worker
+processes with the same results.
+
 ## Results
 
 | Target | Value | Bound | Assessment |

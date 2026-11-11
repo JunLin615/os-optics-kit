@@ -14,6 +14,8 @@ python -m pip install -r requirements-optimization.txt
 python optimize_expander.py --out opt
 ```
 
+Sobol 样本作为一批相互独立的评估运行；`--workers 4` 用四个工作进程运行，结果相同。
+
 ## 结果
 
 | 目标 | 数值 | 界限 | 评估 |
