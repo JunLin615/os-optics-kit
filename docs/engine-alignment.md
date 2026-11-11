@@ -69,6 +69,8 @@ the kit works with that build, not that the release on PyPI does.
 - The design workflows of the expansion-focus, polarization-control and mirror-alignment cases, one parameter
   sweep, one sensitivity and one tolerance study, and the catalog tool chain (candidates, edit, sweep, move,
   compare, plot, report) of the beam-expander studies.
+- `tolerance-polarization-workers`: the tolerance study in two worker processes; `study-resume`: `study run
+  --resume` of the completed tolerance study (every sample reused).
 
 Optional checks (full workflow studies, seed verification, external-tool cases with their own pinned
 requirements) run with `--optional NAME` or `--optional all`. A check with a `requirements` file runs in its own

@@ -15,8 +15,9 @@ walkthrough: [English](en/workflows.md) · [简体中文](zh-CN/workflows.md).
   --run` writes a valid edit and the Engine refuses the run, stdout reports
   `run.status` `RUN_REFUSED` with its `problems` (exit 4).
 - Inputs are never modified. Edit, study and workflow commands refuse an existing output
-  (`OUTPUT_EXISTS`) unless `--overwrite`; on a study directory `--overwrite` also removes
-  its `plots/` and `report/`, which describe the previous samples.
+  (`OUTPUT_EXISTS`) unless `--overwrite` (or, for a planned study, `--resume`); on a study
+  directory `--overwrite` also removes its `plots/` and `report/`, which describe the
+  previous samples.
 - Numbers keep their schema unit (`_mm`, `_nm`, `_w`/`_W`, `_deg`, `_rad`; target bounds
   in the target's `unit`) or are written `{"value": 250, "unit": "um"}` with `nm`, `um`,
   `mm`, `m`, `deg`, `rad`, `mrad`, `urad`, `W`, `mW`, `uW`. Quaternions `[w, x, y, z]`
@@ -32,15 +33,20 @@ walkthrough: [English](en/workflows.md) · [简体中文](zh-CN/workflows.md).
 | --- | --- | --- | --- | --- | --- |
 | `summary` | `PASS`, `WARNING`, `NOT_APPLICABLE` | `FAIL` | `UNKNOWN`, including a partial run (`PARTIAL`) | `OUT_OF_MODEL`, `OUT_OF_MODEL_SCOPE` | error, including a `FAILED` or `CANCELLED` run |
 | `edit` | `EDITED`, `ALREADY_APPLIED`, `DESCRIBED`; with `--run` outcome `PASS` or `NOT_APPLICABLE` | outcome `FAIL` | outcome `UNKNOWN` | outcome `OUT_OF_MODEL` | refused, `RUN_REFUSED` |
-| `sweep` | `COMPLETED` | `NO_FEASIBLE` (constraints given, none met) | | | refused |
-| `sensitivity` | `COMPLETED` | | `INCOMPLETE` (a derivative unavailable) | | refused |
-| `tolerance` | `COMPLETED` (at least one PASS), `DRAWN`, `REPRODUCED` | `NO_FEASIBLE` (no PASS), `MISMATCH` | | | refused |
+| `sweep` | `COMPLETED`, `PLANNED` | `NO_FEASIBLE` (constraints given, none met) | | | refused |
+| `sensitivity` | `COMPLETED`, `PLANNED` | | `INCOMPLETE` (a derivative unavailable) | | refused |
+| `tolerance` | `COMPLETED` (at least one PASS), `DRAWN`, `PLANNED`, `REPRODUCED` | `NO_FEASIBLE` (no PASS), `MISMATCH` | | | refused |
+| `study run`, `study aggregate` | as the planning tool (candidates: `COMPLETED`) | as the planning tool | as the planning tool | | refused |
+| `study status`, `study bench` | `DESCRIBED`, `BENCHMARKED` | | | | refused |
 | `compare`, `plot`, `report` | `COMPLETED` | | | | invalid input |
 | `present build` | `COMPLETED` | | `INCOMPLETE` (an asset has a missing input or could not be drawn) | | refused |
 | `candidates` | `COMPLETED` | `NO_MATCH` | | | invalid input, no catalog |
 | `measurements` | `PASS`, `WARNING` | `FAIL` (RMSE bound exceeded) | `UNKNOWN` (no fit) | | error |
 | `cases verify` | every case matches `expected.json` | a case differs | | | usage error, unknown case, no engine |
 | case `workflow.py` | nominal `PASS` | nominal `FAIL` | `UNKNOWN` | `OUT_OF_MODEL` | `ERROR`, refused |
+
+A study command whose execution was cancelled (Ctrl-C, or `cancel()` of its scheduler)
+prints status `CANCELLED` and exits 130; `study run DIR --resume` continues it.
 
 A partial run (execution `PARTIAL`, for example a reached `max_return_analysis_work`
 reported as `RETURN_ANALYSIS_BUDGET`) is `UNKNOWN`, exit 2, even when its targets are met;
@@ -227,10 +233,53 @@ Retry and concurrency:
   in-place `--expect-hash` example above). It refuses with
   `BASE_CHANGED` and the `current_hash` when BASE has changed since that result.
 
+## Study execution
+
+`sweep`, `sensitivity`, `tolerance` and `study candidates` are compositions of four steps
+that read and write one study directory: plan, execute, aggregate, present.
+
+```bash
+os-optics-kit sweep SPEC.json --out STUDY --plan-only        # plan: study.json, plan.jsonl, requests/
+os-optics-kit study run STUDY --workers 4                     # execute + aggregate
+os-optics-kit study status STUDY                              # states, execution, journal (no Engine)
+os-optics-kit study run STUDY --resume                        # after Ctrl-C or a failure
+os-optics-kit study aggregate STUDY --no-plots --no-report    # tables from saved records (no Engine)
+os-optics-kit study candidates A.json B.json C.json --out CAND --targets spot_radius --workers 2
+os-optics-kit study bench --workers 1,2,4 --samples 24        # elapsed, throughput, start-up, memory
+```
+
+| Option (tools and `study run`) | Meaning |
+| --- | --- |
+| `--workers N\|auto` | worker processes (spawned once, Engine imported once each); 1 = serial in this process; `auto` = serial unless the plan is large enough to repay about 4 s of start-up per worker |
+| `--resume` | keep samples whose record has the plan's `request_hash` and state `COMPLETED` / `REFUSED`; read back a complete run directory without a record; run the rest. A changed Engine build or catalog release is refused (`STUDY_IDENTITY_CHANGED`, field named); a tool run with a changed spec reruns only the changed requests |
+| `--plan-only` | write the plan and stop (`PLANNED`, exit 0); `study run` executes it with the planning tool's analysis and presentation choice |
+| `--time-limit-s S`, `--max-memory-mib M` | per evaluation, read at Engine checkpoints (each phase change and inside long phases); the run stops at the next checkpoint, state `CANCELLED`, code `TIME_LIMIT` / `MEMORY_LIMIT`; a worker still busy 5 s past its time limit is terminated; the serial scheduler has no other preemption |
+| `--ray-data full\|summary` | requested outputs: `summary` keeps chief rays only (same results and hashes) |
+| `--scheduler serial\|process`, `--evaluator module:function` | `study run` only: scheduler kind; replace the Engine call by `f(request, sample_dir, limits) -> record` |
+
+Files: `study.json` (tool keys + `schema` `os-optics-kit.study`, `identity` {plan hash,
+Engine version and build, catalog version and sha256, kit version}, `execution` {scheduler,
+workers, BLAS threads, limits, evaluator, state, counts, worker start-up}); `plan.jsonl` (one
+line per request in plan order); `requests/<id>.json` (Project with the sample's edits,
+`refusal`, `selected_targets`, `labels`, `outputs`, `seed`, `request_hash`);
+`samples/<id>/sample.json` (the sample record + `state` `COMPLETED | REFUSED | FAILED |
+CANCELLED | NOT_RUN`, `attempts`, `timing` {queued_s, run_s, phase_seconds}, `peak_memory_bytes`,
+`worker`; paths study-relative); `journal.jsonl` (started, finished, failed, cancelled, reused,
+recovered, stopped, ...). `table.csv` and `summary.json` keep plan order, so N workers give the
+same files as one except `seconds`, `timing`, `worker`, peak memory and `study.json` `execution`.
+An Engine refusal is a completed evaluation (outcome `ERROR`); an evaluation that raised is
+`FAILED`; a refused edit is `REFUSED` and never runs. Workers set `OPENBLAS_NUM_THREADS`,
+`OMP_NUM_THREADS`, `MKL_NUM_THREADS` to 1 and `OPENSCI_CATALOG_CHECK_INTERVAL=0`.
+
+Python: `from os_optics_kit.study import make_request, plan_study, study_header,
+execute_study, collect_records` hands an independent batch (finite differences, a Sobol or
+multistart set) to the executor; `cases/interop-optimization/optimize_expander.py` runs its
+Sobol samples this way.
+
 ## Sweep
 
 ```bash
-os-optics-kit sweep SPEC.json [--base BASE.json] --out STUDY_DIR
+os-optics-kit sweep SPEC.json [--base BASE.json] --out STUDY_DIR [--workers N|auto] [--resume] [--plan-only]
 ```
 
 | Key | Meaning |
@@ -242,7 +291,7 @@ os-optics-kit sweep SPEC.json [--base BASE.json] --out STUDY_DIR
 | `constraints` | all must hold: `{"outcome": [...]}`, `{"target": ID, "assessment": ["MET"]}`, `{"column": C, "min"?, "max"?}` (quantities convert to the column unit) |
 | `objective` | `{"column": C, "sense": "minimize" \| "maximize"}` over feasible samples (finite exact objective with applicable dependencies, every explicit constraint met) |
 | `derived` | `{"name", "op": add \| sub \| mul \| div \| abs \| abs_diff, "a", "b", "unit"?}`; `unit` applies to its constraints, objective, table and plots |
-| `stop_on` | outcome classes that stop the sweep; remaining samples become `ERROR` (default none) |
+| `stop_on` | outcome classes that stop the sweep; every sample after the first listed outcome in sample order becomes `ERROR` / `STOPPED` (default none) |
 
 Placeholders in `ops`: `"$value"` becomes `{"value": v, "unit": <parameter unit>}`;
 `{"$value": {"scale": s, "offset": o}}` becomes `o + s·v`. Each sample applies its ops to
@@ -411,7 +460,7 @@ without a `--range`, `--near` or `--sort` field, per field), `shown` and `omitte
 ## Sensitivity
 
 ```bash
-os-optics-kit sensitivity SPEC.json --out STUDY_DIR [--base BASE.json] [--no-plots] [--no-report]
+os-optics-kit sensitivity SPEC.json --out STUDY_DIR [--base BASE.json] [--no-plots] [--no-report] [--workers N]
 ```
 
 | Key | Meaning |
@@ -438,7 +487,7 @@ target unit per parameter unit. With `scale`, `scaled` = D·s and the ranking us
 ## Tolerance
 
 ```bash
-os-optics-kit tolerance SPEC.json --out STUDY_DIR [--seed N] [--samples N] [--zero-tolerance] [--draw-only]
+os-optics-kit tolerance SPEC.json --out STUDY_DIR [--seed N] [--samples N] [--zero-tolerance] [--draw-only] [--workers N]
 os-optics-kit tolerance --verify-seed STUDY_DIR
 ```
 
@@ -454,7 +503,8 @@ Offsets come from `numpy.random.Generator(PCG64(seed))`, one uniform number per 
 and parameter, row by row; `samples.csv` and `sampling.json` are written before any run.
 The same seed and spec give byte-identical `samples.csv`, and the first n samples of a
 larger run are the same; `--verify-seed` redraws and compares. `--zero-tolerance`
-reproduces the nominal project and result hashes exactly. Stdout: counts per outcome
+reproduces the nominal project and result hashes exactly. `--resume` with a larger
+`--samples` and the same seed keeps the samples already run. Stdout: counts per outcome
 class with denominators, target-value statistics over exact valid selected quantities
 (count stated), `samples_with_warnings`, sampling assumptions. Specs:
 `cases/*/studies/tolerance_*.json`.
@@ -478,7 +528,8 @@ Engine values with an independent closed-form reference and writes reports.
 a bare number in the option's unit or a unit suffix (`--gap-error-mm 250um`,
 `--min-power-w 0.85mW`). `--study NAME=V1,V2` or `NAME=START..STOP:COUNT` (repeatable)
 replaces the default studies; `--max-evaluations` (default 40) bounds nominal plus all
-samples before anything runs. Output: `DIR/workflow.json`, `DIR/nominal/`,
+samples before anything runs; `--workers N` runs the samples of every study in one pool of N
+worker processes. Output: `DIR/workflow.json`, `DIR/nominal/`,
 `DIR/studies/<NAME>/` (sweep study, `compare/`, `plots/`, `closed_form.json`, `report/`),
 `DIR/report/report.md`. Exit follows the nominal outcome; study samples are counted in
 `studies[].counts` and `pass_fraction` ("n/N"). The mirror-alignment workflow's
@@ -498,6 +549,12 @@ samples before anything runs. Output: `DIR/workflow.json`, `DIR/nominal/`,
 | `SPEC_INVALID`, `TARGET_UNKNOWN`, `COLUMN_UNKNOWN`, `NOMINAL_MISMATCH`, `STEP_REQUIRED` | spec structure, unknown target, objective / constraint / derived column the spec cannot produce, `set_*` parameter without its base `nominal`, relative step at nominal 0 | fix the spec as the message states; `known` lists the valid ids or columns |
 | `INPUT_INVALID` | a workflow input cannot build a design | change the named input |
 | `CATALOG_NOT_AVAILABLE` | no catalog release installed | `os-optics catalog sync` (or `catalog import FILE`) |
+| `STUDY_STARTED` | `study run` on a study that already has sample results | `--resume`, or plan it again with `--overwrite` |
+| `STUDY_IDENTITY_CHANGED` | Engine build, catalog release or plan differ from the planned study (`changed` names them) | `--overwrite` to start again with the installed Engine and catalog |
+| `STUDY_NOT_PLANNED`, `STUDY_KIND_CHANGED` | the directory holds no plan, or a study of another tool | plan with `--plan-only` / `study candidates`, or choose another `--out` |
+| `BUDGET_INVALID` | workers x threads exceed the logical CPUs | fewer `--workers` |
+| `EVALUATOR_INVALID` | `--evaluator` cannot be imported, or a worker process needs a named function | give `module:function` of an importable module |
+| sample `state` `FAILED` / `CANCELLED` / `NOT_RUN` | the evaluation raised, was stopped by a limit or a cancellation, or never started | `study run DIR --resume` reruns exactly these samples |
 
 An `ERROR` sample inside a study is recorded with its stage and code in `table.csv`; the
-other samples still run.
+other samples still run. `study status DIR` lists the samples a resume would run.
