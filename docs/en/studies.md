@@ -58,7 +58,8 @@ resumes it. One execution owns a study directory at a time (`owner.json`, remove
 which stays, lets one process at a time take ownership): while the first one's process runs, a second `study run`,
 a planning command and `study aggregate` on that directory are refused with `STUDY_RUNNING`, and `study status`
 reports `RUNNING` only while that process runs (`INTERRUPTED` once it ended without finishing; a resume takes the
-study over).
+study over). A study directory on a file system without file locks is refused with `STUDY_LOCK_UNAVAILABLE`: use a
+directory on a local disk.
 
 Every sample record carries a job `state` next to its requirement outcome: `COMPLETED` (the Engine returned a
 result or refused the design), `REFUSED` (the planner could not build the sample), `FAILED`, `CANCELLED` (a limit

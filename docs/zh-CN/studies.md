@@ -54,7 +54,8 @@ os-optics-kit study run study --resume         # 只运行没有完成记录的�
 执行占用一个研究目录（`owner.json`，执行结束时删除；`owner.lock` 一直保留，确保同一时刻只有一个进程
 能取得占用权）：只要前一次执行的进程仍在运行，对该目录再执行 `study run`、规划命令或 `study aggregate` 都会以
 `STUDY_RUNNING` 被拒绝；`study status` 也只在该进程运行期间报告 `RUNNING`（进程未完成就结束时报告
-`INTERRUPTED`；续跑会接管该研究）。
+`INTERRUPTED`；续跑会接管该研究）。研究目录所在的文件系统不支持文件锁时，命令以 `STUDY_LOCK_UNAVAILABLE`
+被拒绝：请改用本地磁盘上的目录。
 
 每条样本记录在结果类别（`outcome`）之外还有一个作业状态 `state`：`COMPLETED`（引擎给出结果或拒绝了该
 设计）、`REFUSED`（规划时无法构建该样本）、`FAILED`、`CANCELLED`（被限制或取消停止）或 `NOT_RUN`，并记录

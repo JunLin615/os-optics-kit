@@ -4,6 +4,7 @@ Most tests use a fake evaluator (no Engine needed) so the contracts are checked 
 default evaluator are marked ``@requires_engine``. Process-pool tests use at most two workers and a few samples.
 """
 
+import errno
 import hashlib
 import json
 import multiprocessing
@@ -1241,6 +1242,43 @@ class OwnershipTests(unittest.TestCase):
             store._sharing_retry(action, budget_s=0.1)
         self.assertGreaterEqual(time.monotonic() - started, 0.1)
         self.assertLess(len(calls), 30)
+
+    def test_a_file_system_without_locks_is_refused_at_once_and_by_name(self):
+        with TempDir() as tmp:
+            study_dir = self.plan(tmp / "study", fake_requests([1.0]))
+            callers = {"study run": lambda: execute.execute_study(study_dir, evaluator=FAKE),
+                       "planning": lambda: store.plan_study(study_dir, header(), fake_requests([1.0]), resume=True),
+                       "overwrite": lambda: store.prepare_study_dir(study_dir, overwrite=True),
+                       "study aggregate": lambda: study_tool.aggregate_study(study_dir)}
+            for unsupported in (errno.ENOLCK, errno.ENOSYS):
+                for name, call in callers.items():
+                    with self.subTest(errno=errno.errorcode[unsupported], caller=name):
+                        refusal = OSError(unsupported, os.strerror(unsupported))
+                        started = time.monotonic()
+                        with mock.patch.object(store, "_try_lock", side_effect=refusal), \
+                                self.assertRaises(wc.WorkflowError) as caught:
+                            call()
+                        self.assertEqual(caught.exception.code, "STUDY_LOCK_UNAVAILABLE")
+                        self.assertLess(time.monotonic() - started, store.TAKEOVER_WAIT_S / 2)
+                        self.assertIn(f"{study_dir.as_posix()}/{store.OWNER_LOCK} cannot be locked",
+                                      str(caught.exception))
+                        self.assertIn("use a study directory on a local disk", str(caught.exception))
+                        self.assertFalse((study_dir / store.OWNER_FILE).exists())
+                        self.assertFalse((study_dir / "summary.json").exists())
+            summary = execute.execute_study(study_dir, evaluator=FAKE)  # with locks: nothing was left behind
+            self.assertEqual(summary.state, "COMPLETED")
+
+    def test_a_held_lock_is_still_waited_for_and_refused_as_running(self):
+        with TempDir() as tmp:
+            study_dir = self.plan(tmp / "study", fake_requests([1.0]))
+            for held in (BlockingIOError(errno.EWOULDBLOCK, "held"), PermissionError(errno.EACCES, "held")):
+                with self.subTest(held=type(held).__name__):
+                    with mock.patch.object(store, "_try_lock", side_effect=held) as attempts, \
+                            mock.patch.object(store, "TAKEOVER_WAIT_S", 0.2), \
+                            self.assertRaises(wc.WorkflowError) as caught:
+                        store.acquire_execution(study_dir)
+                    self.assertEqual(caught.exception.code, "STUDY_RUNNING")
+                    self.assertGreater(attempts.call_count, 1)
 
     def test_every_refused_caller_is_given_the_same_true_next_step(self):
         with TempDir() as tmp:

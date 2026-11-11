@@ -563,6 +563,7 @@ worker processes. Output: `DIR/workflow.json`, `DIR/nominal/`,
 | `STUDY_STARTED` | `study run` on a study that already has sample results | `--resume`, or plan it again with its planning command and `--overwrite` |
 | `STUDY_IDENTITY_CHANGED` | Engine build, catalog release or plan differ from the planned study (`changed` names them); `study run` refuses it with or without `--resume` | plan it again with its planning command (`sweep`, `sensitivity`, `tolerance`, `study candidates`) and `--overwrite` |
 | `STUDY_RUNNING` | another execution owns the study (`owner.json`; its process still runs): `study run`, planning and `study aggregate` are refused | wait for it or stop it, then run the command again (a stopped execution continues with `study run DIR --resume`) |
+| `STUDY_LOCK_UNAVAILABLE` | the file system of the study directory does not support file locks (`owner.lock`) | use a study directory on a local disk |
 | `STUDY_NOT_PLANNED`, `STUDY_KIND_CHANGED` | the directory holds no plan, or a study of another tool | plan with `--plan-only` / `study candidates`, or choose another `--out` |
 | `PLAN_INVALID`, `REQUEST_INVALID` | `plan.jsonl` or a request file is not a valid plan (sample id, duplicate, hash) | plan it again with its planning command and `--overwrite` |
 | `BUDGET_INVALID` | workers x threads exceed the logical CPUs | fewer `--workers` |

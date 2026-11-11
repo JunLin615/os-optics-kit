@@ -647,7 +647,7 @@ def _unlock(fd):
 def _takeover_lock(study_dir):
     """Hold ``owner.lock`` (an operating-system lock that ends with its process): one caller at a time reads,
     replaces and writes ``owner.json``. The file is never removed (removing it would let two callers lock two
-    files)."""
+    files). A file system that cannot lock the file refuses at once with ``STUDY_LOCK_UNAVAILABLE``."""
     fd = _sharing_retry(lambda: os.open(Path(study_dir) / OWNER_LOCK, os.O_CREAT | os.O_RDWR))
     try:
         deadline = time.monotonic() + TAKEOVER_WAIT_S
@@ -655,10 +655,17 @@ def _takeover_lock(study_dir):
             try:
                 _try_lock(fd)
                 break
-            except OSError:
+            except (BlockingIOError, PermissionError):  # held by another caller (flock: EWOULDBLOCK; msvcrt: EACCES)
                 if time.monotonic() > deadline:
                     raise _running_error(study_dir, read_owner(study_dir)) from None
                 time.sleep(0.01)
+            except OSError as exc:  # the file system cannot lock (ENOLCK, ENOSYS, ENOTSUP, ...)
+                study = Path(study_dir).as_posix()
+                raise wc.WorkflowError(
+                    "STUDY_LOCK_UNAVAILABLE",
+                    f"{study}/{OWNER_LOCK} cannot be locked ({exc.strerror or exc}): the file system of the study "
+                    "directory does not support file locks; use a study directory on a local disk",
+                    study_dir=study) from None
         try:
             yield
         finally:
