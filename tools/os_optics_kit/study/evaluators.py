@@ -16,7 +16,9 @@ when the Engine reports progress (every phase change, and at most every 0.1 s in
 next checkpoint.
 
 A caller may pass another evaluator to ``execute_study`` (a function, or ``"module:function"`` for worker
-processes), for example one that evaluates the request with a different tool.
+processes), for example one that evaluates the request with a different tool. Its ``module:function`` name is its
+identity on resume; a function without one (a closure, a lambda, a ``functools.partial``, a bound method) has none,
+so a resume runs its samples again.
 """
 
 from __future__ import annotations

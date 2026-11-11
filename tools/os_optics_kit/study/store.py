@@ -217,8 +217,13 @@ def read_plan(study_dir):
         raise wc.WorkflowError("STUDY_NOT_PLANNED", f"{Path(study_dir).as_posix()} holds no plan.jsonl; plan the "
                                "study first (sweep / sensitivity / tolerance --plan-only, study candidates, or "
                                "os_optics_kit.study.plan_study)", study_dir=Path(study_dir).as_posix())
+    try:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        raise wc.WorkflowError("PLAN_INVALID", "plan.jsonl is not UTF-8 text; plan the study again with "
+                               "--overwrite") from None
     entries, seen = [], set()
-    for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+    for number, line in enumerate(text.splitlines(), start=1):
         if not line.strip():
             continue
         try:
@@ -245,7 +250,12 @@ def read_request(study_dir, sample_id):
     path = request_path(study_dir, sample_id)
     if not path.is_file():
         raise wc.WorkflowError("REQUEST_MISSING", f"requests/{sample_id}.json is missing", sample_id=sample_id)
-    request = validate_request(wc.read_json(path))
+    try:
+        saved = wc.read_json(path)
+    except ValueError:
+        raise wc.WorkflowError("REQUEST_INVALID", f"requests/{sample_id}.json is not a JSON request; {REPLAN_HINT}",
+                               sample_id=sample_id) from None
+    request = validate_request(saved)
     if request["sample_id"] != sample_id:
         raise wc.WorkflowError("REQUEST_INVALID", f"requests/{sample_id}.json holds the request of "
                                f"{request['sample_id']!r}", sample_id=sample_id)
@@ -400,7 +410,8 @@ def clear_plan(study_dir):
 # --------------------------------------------------------------------------------------------- sample records
 
 def read_record(study_dir, sample_id):
-    """The saved record of a sample, or None when it has none (or an unreadable one)."""
+    """The saved record of a sample, or None when it has none or an unreadable one (not JSON, or without a job
+    ``state`` and a requirement ``outcome`` of the known values: a damaged record is run again)."""
     path = sample_path(study_dir, sample_id)
     if not path.is_file():
         return None
@@ -408,18 +419,21 @@ def read_record(study_dir, sample_id):
         record = wc.read_json(path)
     except ValueError:
         return None
-    return record if isinstance(record, dict) else None
+    if not isinstance(record, dict) or record.get("state") not in STATES or record.get("outcome") not in wc.OUTCOMES:
+        return None
+    return record
 
 
 def reusable_record(study_dir, entry, evaluator):
     """The record of a finished sample of this plan entry (same ``request_hash``, final state, produced by
-    ``evaluator``; a planner refusal involves no evaluator), else None."""
+    ``evaluator``; a planner refusal involves no evaluator), else None. An evaluator without a name (None: a
+    function that cannot be imported by ``module:function``) has no identity, so none of its records is reused."""
     record = read_record(study_dir, entry["sample_id"])
     if record is None or record.get("request_hash") != entry["request_hash"]:
         return None
     if record.get("state") not in REUSABLE_STATES:
         return None
-    if record.get("worker") != "planner" and record.get("evaluator") != evaluator:
+    if record.get("worker") != "planner" and (evaluator is None or record.get("evaluator") != evaluator):
         return None
     return record
 
@@ -444,11 +458,12 @@ def read_attempt(study_dir, sample_id):
 
 def recoverable_run(study_dir, entry, evaluator):
     """True when the sample has no record but a complete run directory written for this request by ``evaluator``
-    (an evaluation that was interrupted after the Engine finished)."""
-    if read_record(study_dir, entry["sample_id"]) is not None:
+    (an evaluation that was interrupted after the Engine finished; never for an evaluator without a name)."""
+    if evaluator is None or read_record(study_dir, entry["sample_id"]) is not None:
         return False
     attempt = read_attempt(study_dir, entry["sample_id"])
-    if not attempt or attempt.get("request_hash") != entry["request_hash"] or attempt.get("evaluator") != evaluator:
+    if (not isinstance(attempt, dict) or attempt.get("request_hash") != entry["request_hash"]
+            or attempt.get("evaluator") != evaluator):
         return False
     return (sample_dir(study_dir, entry["sample_id"]) / "run" / "manifest.json").is_file()
 

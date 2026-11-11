@@ -174,7 +174,9 @@ def status(study_dir, events=8):
             continue
         states[record.get("state")] = states.get(record.get("state"), 0) + 1
         outcomes[record.get("outcome")] = outcomes.get(record.get("outcome"), 0) + 1
-    evaluator = (study.get("execution") or {}).get("evaluator") or evaluators.DEFAULT_EVALUATOR
+    last = study.get("execution") or {}
+    # the evaluator a resume is predicted for: the last execution's (None when it had no importable name)
+    evaluator = last.get("evaluator") if "evaluator" in last else evaluators.DEFAULT_EVALUATOR
     rerun = [e["sample_id"] for e in entries if e["sample_id"] not in missing
              and store.reusable_record(study_dir, e, evaluator) is None]
     journal = store.read_journal(study_dir)
@@ -184,12 +186,18 @@ def status(study_dir, events=8):
     running = owner is not None and store.owner_alive(owner)
     if execution.get("state") == "RUNNING" and not running:
         execution["state"] = "INTERRUPTED"  # its process ended without finishing: resume it with run --resume
-    return {"status": "DESCRIBED", "kind": study.get("kind"), "samples": len(entries),
-            "execution": execution, "owner": owner if running else None, "states": states, "outcomes": outcomes,
-            "without_record": wc.bounded(missing, TOP_ROWS), "to_run_on_resume": wc.bounded(missing + rerun, TOP_ROWS),
-            "identity": study["identity"], "aggregated": summary_path.is_file(),
-            "journal": journal[-events:], "paths": {"study_dir": study_dir.as_posix(), "study": store.STUDY_FILE,
-                                                    "plan": store.PLAN_FILE, "journal": store.JOURNAL_FILE}}
+    described = {"status": "DESCRIBED", "kind": study.get("kind"), "samples": len(entries),
+                 "execution": execution, "owner": owner if running else None, "states": states, "outcomes": outcomes,
+                 "without_record": wc.bounded(missing, TOP_ROWS),
+                 "to_run_on_resume": wc.bounded(missing + rerun, TOP_ROWS),
+                 "identity": study["identity"], "aggregated": summary_path.is_file(),
+                 "journal": journal[-events:], "paths": {"study_dir": study_dir.as_posix(), "study": store.STUDY_FILE,
+                                                         "plan": store.PLAN_FILE, "journal": store.JOURNAL_FILE}}
+    if "evaluator" in last and evaluator is None:
+        described["resume_note"] = ("the last execution's evaluator has no importable module:function name: a "
+                                    "resume keeps none of its records and runs those samples again (a module-level "
+                                    "function of an importable module has a name, and a resume keeps its records)")
+    return described
 
 
 # --------------------------------------------------------------------------------------------- CLI
