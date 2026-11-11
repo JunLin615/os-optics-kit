@@ -1,0 +1,4553 @@
+{
+  "case": "aspheric-lens",
+  "catalog": null,
+  "comparison": {
+    "by_field": [
+      {
+        "field_deg_aspheric": 0.0,
+        "field_deg_spherical": 0.0
+      },
+      {
+        "field_deg_aspheric": 12.5,
+        "field_deg_spherical": 10.0
+      },
+      {
+        "field_deg_aspheric": 25.0,
+        "field_deg_spherical": 20.0
+      }
+    ],
+    "note": "Per field and wavelength, the aspheric and spherical versions side by side. Strehl and ray spot come from results imaging; the fields differ because the spherical control cannot reach 25 deg."
+  },
+  "engine": "0.13.0",
+  "imaging_request": {
+    "crossing_index": null,
+    "fields": null,
+    "frequencies_cyc_per_mm": null,
+    "include_psf_map": false,
+    "launch_grid": 192,
+    "launch_radius_beam_radii": 1.0,
+    "psf_half_width_um": 250.0,
+    "psf_samples": 128,
+    "reference": "CENTROID",
+    "wavelengths_nm": null
+  },
+  "note": "Every value is copied from the engine's JSON. The two versions were run under identical conditions (same stop, source, budget and imaging request); only the field set differs, because the spherical control's rays stop arriving past 20 deg.",
+  "versions": {
+    "aspheric": {
+      "beam_partially_intercepted": 0,
+      "check": "ACCEPTED",
+      "detected_sources": [
+        "SRC0_0",
+        "SRC0_1",
+        "SRC0_2",
+        "SRC1_0",
+        "SRC1_1",
+        "SRC1_2",
+        "SRC2_0",
+        "SRC2_1",
+        "SRC2_2"
+      ],
+      "execution": {
+        "budgets": {
+          "affected_observation_ids": [],
+          "affected_path_ids": [
+            "SRC0_0#0",
+            "SRC0_1#0",
+            "SRC0_2#0",
+            "SRC1_0#0",
+            "SRC1_1#0",
+            "SRC1_2#0",
+            "SRC2_0#0",
+            "SRC2_1#0",
+            "SRC2_2#0"
+          ],
+          "affected_source_ids": [
+            "SRC0_0",
+            "SRC0_1",
+            "SRC0_2",
+            "SRC1_0",
+            "SRC1_1",
+            "SRC1_2",
+            "SRC2_0",
+            "SRC2_1",
+            "SRC2_2"
+          ],
+          "exhausted": [
+            "max_paths"
+          ],
+          "exhausted_by_phase": {
+            "untraced_light": [
+              "max_paths"
+            ]
+          },
+          "limits": {
+            "max_interactions_per_path": 96,
+            "max_interference_pairs": 256,
+            "max_paths": 8192,
+            "max_return_analysis_work": 4000000,
+            "max_trace_steps": 200000
+          },
+          "return_analysis": [
+            {
+              "closed_return_kinds": [],
+              "closed_return_screen": "COMPLETED_NO_RETURN",
+              "closed_return_surfaces": [],
+              "closed_series_bound": null,
+              "ended_in": "closed_returns",
+              "frames_limit": 0,
+              "frames_peak": 0,
+              "search_depth": 0,
+              "solid_fold_work": 0,
+              "termination": "COMPLETED",
+              "wavelength_nm": 486.1327,
+              "work_before": 0,
+              "work_done": 45183,
+              "work_limit": 4000000
+            },
+            {
+              "closed_return_kinds": [],
+              "closed_return_screen": "COMPLETED_NO_RETURN",
+              "closed_return_surfaces": [],
+              "closed_series_bound": null,
+              "ended_in": "closed_returns",
+              "frames_limit": 0,
+              "frames_peak": 0,
+              "search_depth": 0,
+              "solid_fold_work": 0,
+              "termination": "COMPLETED",
+              "wavelength_nm": 587.5618,
+              "work_before": 45183,
+              "work_done": 45183,
+              "work_limit": 3954817
+            },
+            {
+              "closed_return_kinds": [],
+              "closed_return_screen": "COMPLETED_NO_RETURN",
+              "closed_return_surfaces": [],
+              "closed_series_bound": null,
+              "ended_in": "closed_returns",
+              "frames_limit": 0,
+              "frames_peak": 0,
+              "search_depth": 0,
+              "solid_fold_work": 0,
+              "termination": "COMPLETED",
+              "wavelength_nm": 656.2725,
+              "work_before": 90366,
+              "work_done": 45183,
+              "work_limit": 3909634
+            }
+          ],
+          "untraced_power_W": null
+        },
+        "complete": false,
+        "outcome": "PARTIAL",
+        "reason": "a resource budget ran out (max_paths); the results count the light that was traced, and each affected quantity says what it leaves out",
+        "termination": "BUDGET_EXHAUSTED"
+      },
+      "fields_deg": [
+        0.0,
+        12.5,
+        25.0
+      ],
+      "in_model_scope": false,
+      "models": [
+        {
+          "model_id": "geometric_ray_bundle",
+          "validity": []
+        },
+        {
+          "model_id": "SRC0_0#0.geometric_mtf",
+          "validity": [
+            {
+              "maximum": null,
+              "minimum": 1.0,
+              "observed": 0.0796871337,
+              "parameter": "opd_rms_waves",
+              "unit": null,
+              "within": false
+            }
+          ]
+        },
+        {
+          "model_id": "SRC0_0#0.diffraction",
+          "validity": [
+            {
+              "maximum": 3.141592653589793,
+              "minimum": null,
+              "observed": 0.0163727233,
+              "parameter": "neighbour_phase_step_rad",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.5,
+              "minimum": null,
+              "observed": 0.0864145618,
+              "parameter": "window_half_width_over_ray_period",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": null,
+              "minimum": 0.95,
+              "observed": 0.9945054,
+              "parameter": "window_light_share",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.2,
+              "minimum": null,
+              "observed": 0.0322376801,
+              "parameter": "image_space_na",
+              "unit": null,
+              "within": true
+            }
+          ]
+        },
+        {
+          "model_id": "SRC0_1#0.geometric_mtf",
+          "validity": [
+            {
+              "maximum": null,
+              "minimum": 1.0,
+              "observed": 0.00608690302,
+              "parameter": "opd_rms_waves",
+              "unit": null,
+              "within": false
+            }
+          ]
+        },
+        {
+          "model_id": "SRC0_1#0.diffraction",
+          "validity": [
+            {
+              "maximum": 3.141592653589793,
+              "minimum": null,
+              "observed": 0.00263478032,
+              "parameter": "neighbour_phase_step_rad",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.5,
+              "minimum": null,
+              "observed": 0.0709191451,
+              "parameter": "window_half_width_over_ray_period",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": null,
+              "minimum": 0.95,
+              "observed": 0.993298571,
+              "parameter": "window_light_share",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.2,
+              "minimum": null,
+              "observed": 0.0319768925,
+              "parameter": "image_space_na",
+              "unit": null,
+              "within": true
+            }
+          ]
+        },
+        {
+          "model_id": "SRC0_2#0.geometric_mtf",
+          "validity": [
+            {
+              "maximum": null,
+              "minimum": 1.0,
+              "observed": 0.0350540156,
+              "parameter": "opd_rms_waves",
+              "unit": null,
+              "within": false
+            }
+          ]
+        },
+        {
+          "model_id": "SRC0_2#0.diffraction",
+          "validity": [
+            {
+              "maximum": 3.141592653589793,
+              "minimum": null,
+              "observed": 0.00905741723,
+              "parameter": "neighbour_phase_step_rad",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.5,
+              "minimum": null,
+              "observed": 0.0632590927,
+              "parameter": "window_half_width_over_ray_period",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": null,
+              "minimum": 0.95,
+              "observed": 0.992478411,
+              "parameter": "window_light_share",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.2,
+              "minimum": null,
+              "observed": 0.0318584803,
+              "parameter": "image_space_na",
+              "unit": null,
+              "within": true
+            }
+          ]
+        },
+        {
+          "model_id": "SRC1_0#0.geometric_mtf",
+          "validity": [
+            {
+              "maximum": null,
+              "minimum": 1.0,
+              "observed": 0.198132072,
+              "parameter": "opd_rms_waves",
+              "unit": null,
+              "within": false
+            }
+          ]
+        },
+        {
+          "model_id": "SRC1_0#0.diffraction",
+          "validity": [
+            {
+              "maximum": 3.141592653589793,
+              "minimum": null,
+              "observed": 0.045921803,
+              "parameter": "neighbour_phase_step_rad",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.5,
+              "minimum": null,
+              "observed": 0.0849459884,
+              "parameter": "window_half_width_over_ray_period",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": null,
+              "minimum": 0.95,
+              "observed": 0.994289557,
+              "parameter": "window_light_share",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.2,
+              "minimum": null,
+              "observed": 0.0315808911,
+              "parameter": "image_space_na",
+              "unit": null,
+              "within": true
+            }
+          ]
+        },
+        {
+          "model_id": "SRC1_1#0.geometric_mtf",
+          "validity": [
+            {
+              "maximum": null,
+              "minimum": 1.0,
+              "observed": 0.148896781,
+              "parameter": "opd_rms_waves",
+              "unit": null,
+              "within": false
+            }
+          ]
+        },
+        {
+          "model_id": "SRC1_1#0.diffraction",
+          "validity": [
+            {
+              "maximum": 3.141592653589793,
+              "minimum": null,
+              "observed": 0.0315980163,
+              "parameter": "neighbour_phase_step_rad",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.5,
+              "minimum": null,
+              "observed": 0.0697107245,
+              "parameter": "window_half_width_over_ray_period",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": null,
+              "minimum": 0.95,
+              "observed": 0.993037224,
+              "parameter": "window_light_share",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.2,
+              "minimum": null,
+              "observed": 0.0313226137,
+              "parameter": "image_space_na",
+              "unit": null,
+              "within": true
+            }
+          ]
+        },
+        {
+          "model_id": "SRC1_2#0.geometric_mtf",
+          "validity": [
+            {
+              "maximum": null,
+              "minimum": 1.0,
+              "observed": 0.136724368,
+              "parameter": "opd_rms_waves",
+              "unit": null,
+              "within": false
+            }
+          ]
+        },
+        {
+          "model_id": "SRC1_2#0.diffraction",
+          "validity": [
+            {
+              "maximum": 3.141592653589793,
+              "minimum": null,
+              "observed": 0.0346492404,
+              "parameter": "neighbour_phase_step_rad",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.5,
+              "minimum": null,
+              "observed": 0.062178953,
+              "parameter": "window_half_width_over_ray_period",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": null,
+              "minimum": 0.95,
+              "observed": 0.992184859,
+              "parameter": "window_light_share",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.2,
+              "minimum": null,
+              "observed": 0.0312048012,
+              "parameter": "image_space_na",
+              "unit": null,
+              "within": true
+            }
+          ]
+        },
+        {
+          "model_id": "SRC2_0#0.geometric_mtf",
+          "validity": [
+            {
+              "maximum": null,
+              "minimum": 1.0,
+              "observed": 1.16676323,
+              "parameter": "opd_rms_waves",
+              "unit": null,
+              "within": true
+            }
+          ]
+        },
+        {
+          "model_id": "SRC2_0#0.diffraction",
+          "validity": [
+            {
+              "maximum": 3.141592653589793,
+              "minimum": null,
+              "observed": 0.422989053,
+              "parameter": "neighbour_phase_step_rad",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.5,
+              "minimum": null,
+              "observed": 0.0949001948,
+              "parameter": "window_half_width_over_ray_period",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": null,
+              "minimum": 0.95,
+              "observed": 0.992780912,
+              "parameter": "window_light_share",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.2,
+              "minimum": null,
+              "observed": 0.0332467201,
+              "parameter": "image_space_na",
+              "unit": null,
+              "within": true
+            }
+          ]
+        },
+        {
+          "model_id": "SRC2_1#0.geometric_mtf",
+          "validity": [
+            {
+              "maximum": null,
+              "minimum": 1.0,
+              "observed": 0.761189448,
+              "parameter": "opd_rms_waves",
+              "unit": null,
+              "within": false
+            }
+          ]
+        },
+        {
+          "model_id": "SRC2_1#0.diffraction",
+          "validity": [
+            {
+              "maximum": 3.141592653589793,
+              "minimum": null,
+              "observed": 0.246743674,
+              "parameter": "neighbour_phase_step_rad",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.5,
+              "minimum": null,
+              "observed": 0.0759833021,
+              "parameter": "window_half_width_over_ray_period",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": null,
+              "minimum": 0.95,
+              "observed": 0.991426392,
+              "parameter": "window_light_share",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.2,
+              "minimum": null,
+              "observed": 0.0331431564,
+              "parameter": "image_space_na",
+              "unit": null,
+              "within": true
+            }
+          ]
+        },
+        {
+          "model_id": "SRC2_2#0.geometric_mtf",
+          "validity": [
+            {
+              "maximum": null,
+              "minimum": 1.0,
+              "observed": 0.553007903,
+              "parameter": "opd_rms_waves",
+              "unit": null,
+              "within": false
+            }
+          ]
+        },
+        {
+          "model_id": "SRC2_2#0.diffraction",
+          "validity": [
+            {
+              "maximum": 3.141592653589793,
+              "minimum": null,
+              "observed": 0.164299043,
+              "parameter": "neighbour_phase_step_rad",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.5,
+              "minimum": null,
+              "observed": 0.0663294582,
+              "parameter": "window_half_width_over_ray_period",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": null,
+              "minimum": 0.95,
+              "observed": 0.989885665,
+              "parameter": "window_light_share",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.2,
+              "minimum": null,
+              "observed": 0.0334906933,
+              "parameter": "image_space_na",
+              "unit": null,
+              "within": true
+            }
+          ]
+        }
+      ],
+      "out_of_model_issues": [
+        {
+          "code": "GAUSSIAN_SEVERE_TRUNCATION",
+          "message": "aperture truncates 0.1462 of the beam power"
+        },
+        {
+          "code": "GAUSSIAN_ABERRATION_DOMINATED",
+          "message": "the Engine's pupil rays spread 4.65 times as wide as an aberration-free beam with this Gaussian envelope can (on the plane of the beam's y waist, 4.337 mm before the observation plane; limit 2): the beam is aberration dominated and its Gaussian metrics are not valid"
+        }
+      ],
+      "quantities": [
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "image_space_na",
+          "reason": null,
+          "source_id": "SRC0_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.0322376801,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "geometric_spot_rms_radius",
+          "reason": null,
+          "source_id": "SRC0_0",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 5.71623381,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "opd_rms_waves",
+          "reason": null,
+          "source_id": "SRC0_0",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 0.0796871337,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "opd_pv_waves",
+          "reason": null,
+          "source_id": "SRC0_0",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 0.275947014,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC0_0#0.geometric_mtf",
+          "field_deg": 0.0,
+          "message": "the wavefront error (0.0797 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_tangential",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC0_0",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC0_0#0.geometric_mtf",
+          "field_deg": 0.0,
+          "message": "the wavefront error (0.0797 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_sagittal",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC0_0",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC0_0#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "strehl_ratio",
+          "reason": null,
+          "source_id": "SRC0_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.773154742,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC0_0#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "mtf_tangential",
+          "reason": null,
+          "source_id": "SRC0_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC0_0#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC0_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC0_0#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_tangential",
+          "reason": null,
+          "source_id": "SRC0_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC0_0#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC0_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC0_0#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "encircled_radius_50",
+          "reason": null,
+          "source_id": "SRC0_0",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 4.98974465,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC0_0#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC0_0",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 11.9500656,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC0_0#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "diffraction_limited_encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC0_0",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 6.76694427,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "image_space_na",
+          "reason": null,
+          "source_id": "SRC0_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.0319768925,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "geometric_spot_rms_radius",
+          "reason": null,
+          "source_id": "SRC0_1",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 0.749777434,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "opd_rms_waves",
+          "reason": null,
+          "source_id": "SRC0_1",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 0.00608690302,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "opd_pv_waves",
+          "reason": null,
+          "source_id": "SRC0_1",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 0.0204028003,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC0_1#0.geometric_mtf",
+          "field_deg": 0.0,
+          "message": "the wavefront error (0.00609 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_tangential",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC0_1",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC0_1#0.geometric_mtf",
+          "field_deg": 0.0,
+          "message": "the wavefront error (0.00609 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_sagittal",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC0_1",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC0_1#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "strehl_ratio",
+          "reason": null,
+          "source_id": "SRC0_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.998538446,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC0_1#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "mtf_tangential",
+          "reason": null,
+          "source_id": "SRC0_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC0_1#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC0_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC0_1#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_tangential",
+          "reason": null,
+          "source_id": "SRC0_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC0_1#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC0_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC0_1#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "encircled_radius_50",
+          "reason": null,
+          "source_id": "SRC0_1",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 4.94684914,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC0_1#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC0_1",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 8.24634702,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC0_1#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "diffraction_limited_encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC0_1",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 8.22341649,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "image_space_na",
+          "reason": null,
+          "source_id": "SRC0_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.0318584803,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "geometric_spot_rms_radius",
+          "reason": null,
+          "source_id": "SRC0_2",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 3.72078965,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "opd_rms_waves",
+          "reason": null,
+          "source_id": "SRC0_2",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 0.0350540156,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "opd_pv_waves",
+          "reason": null,
+          "source_id": "SRC0_2",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 0.121310439,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC0_2#0.geometric_mtf",
+          "field_deg": 0.0,
+          "message": "the wavefront error (0.0351 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_tangential",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC0_2",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC0_2#0.geometric_mtf",
+          "field_deg": 0.0,
+          "message": "the wavefront error (0.0351 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_sagittal",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC0_2",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC0_2#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "strehl_ratio",
+          "reason": null,
+          "source_id": "SRC0_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.952423862,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC0_2#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "mtf_tangential",
+          "reason": null,
+          "source_id": "SRC0_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC0_2#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC0_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC0_2#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_tangential",
+          "reason": null,
+          "source_id": "SRC0_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC0_2#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC0_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC0_2#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "encircled_radius_50",
+          "reason": null,
+          "source_id": "SRC0_2",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 5.72898713,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC0_2#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC0_2",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 10.6133215,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC0_2#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "diffraction_limited_encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC0_2",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 9.24695794,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "image_space_na",
+          "reason": null,
+          "source_id": "SRC1_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.0315808911,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "geometric_spot_rms_radius",
+          "reason": null,
+          "source_id": "SRC1_0",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 11.3187293,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "opd_rms_waves",
+          "reason": null,
+          "source_id": "SRC1_0",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 0.198132072,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "opd_pv_waves",
+          "reason": null,
+          "source_id": "SRC1_0",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 0.885434321,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC1_0#0.geometric_mtf",
+          "field_deg": 12.5,
+          "message": "the wavefront error (0.198 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_tangential",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC1_0",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC1_0#0.geometric_mtf",
+          "field_deg": 12.5,
+          "message": "the wavefront error (0.198 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_sagittal",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC1_0",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC1_0#0.diffraction",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "strehl_ratio",
+          "reason": null,
+          "source_id": "SRC1_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.253895227,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC1_0#0.diffraction",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "mtf_tangential",
+          "reason": null,
+          "source_id": "SRC1_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC1_0#0.diffraction",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC1_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC1_0#0.diffraction",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_tangential",
+          "reason": null,
+          "source_id": "SRC1_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC1_0#0.diffraction",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC1_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC1_0#0.diffraction",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "encircled_radius_50",
+          "reason": null,
+          "source_id": "SRC1_0",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 11.5177761,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC1_0#0.diffraction",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC1_0",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 19.7925902,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC1_0#0.diffraction",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "diffraction_limited_encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC1_0",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 7.00803645,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "image_space_na",
+          "reason": null,
+          "source_id": "SRC1_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.0313226137,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "geometric_spot_rms_radius",
+          "reason": null,
+          "source_id": "SRC1_1",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 9.87360761,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "opd_rms_waves",
+          "reason": null,
+          "source_id": "SRC1_1",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 0.148896781,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "opd_pv_waves",
+          "reason": null,
+          "source_id": "SRC1_1",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 0.723244692,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC1_1#0.geometric_mtf",
+          "field_deg": 12.5,
+          "message": "the wavefront error (0.149 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_tangential",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC1_1",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC1_1#0.geometric_mtf",
+          "field_deg": 12.5,
+          "message": "the wavefront error (0.149 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_sagittal",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC1_1",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC1_1#0.diffraction",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "strehl_ratio",
+          "reason": null,
+          "source_id": "SRC1_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.416382854,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC1_1#0.diffraction",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "mtf_tangential",
+          "reason": null,
+          "source_id": "SRC1_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC1_1#0.diffraction",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC1_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC1_1#0.diffraction",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_tangential",
+          "reason": null,
+          "source_id": "SRC1_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC1_1#0.diffraction",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC1_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC1_1#0.diffraction",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "encircled_radius_50",
+          "reason": null,
+          "source_id": "SRC1_1",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 9.32398709,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC1_1#0.diffraction",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC1_1",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 16.5813181,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC1_1#0.diffraction",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "diffraction_limited_encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC1_1",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 8.53208069,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "image_space_na",
+          "reason": null,
+          "source_id": "SRC1_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.0312048012,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "geometric_spot_rms_radius",
+          "reason": null,
+          "source_id": "SRC1_2",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 10.5837198,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "opd_rms_waves",
+          "reason": null,
+          "source_id": "SRC1_2",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 0.136724368,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "opd_pv_waves",
+          "reason": null,
+          "source_id": "SRC1_2",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 0.644165323,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC1_2#0.geometric_mtf",
+          "field_deg": 12.5,
+          "message": "the wavefront error (0.137 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_tangential",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC1_2",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC1_2#0.geometric_mtf",
+          "field_deg": 12.5,
+          "message": "the wavefront error (0.137 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_sagittal",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC1_2",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC1_2#0.diffraction",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "strehl_ratio",
+          "reason": null,
+          "source_id": "SRC1_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.483261005,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC1_2#0.diffraction",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "mtf_tangential",
+          "reason": null,
+          "source_id": "SRC1_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC1_2#0.diffraction",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC1_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC1_2#0.diffraction",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_tangential",
+          "reason": null,
+          "source_id": "SRC1_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC1_2#0.diffraction",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC1_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC1_2#0.diffraction",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "encircled_radius_50",
+          "reason": null,
+          "source_id": "SRC1_2",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 9.65870162,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC1_2#0.diffraction",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC1_2",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 18.1079494,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC1_2#0.diffraction",
+          "field_deg": 12.5,
+          "message": "",
+          "quantity": "diffraction_limited_encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC1_2",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 9.58403836,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "image_space_na",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.0332467201,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "geometric_spot_rms_radius",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 84.2477172,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "opd_rms_waves",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 1.16676323,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "opd_pv_waves",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 5.30624163,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC2_0#0.geometric_mtf",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "geometric_mtf_tangential",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC2_0#0.geometric_mtf",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "geometric_mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC2_0#0.diffraction",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "strehl_ratio",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.00536233873,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC2_0#0.diffraction",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "mtf_tangential",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC2_0#0.diffraction",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC2_0#0.diffraction",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_tangential",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC2_0#0.diffraction",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC2_0#0.diffraction",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "encircled_radius_50",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 69.0538009,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC2_0#0.diffraction",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 113.091603,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC2_0#0.diffraction",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "diffraction_limited_encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 6.96254396,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "image_space_na",
+          "reason": null,
+          "source_id": "SRC2_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.0331431564,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "geometric_spot_rms_radius",
+          "reason": null,
+          "source_id": "SRC2_1",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 71.6866843,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "opd_rms_waves",
+          "reason": null,
+          "source_id": "SRC2_1",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 0.761189448,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "opd_pv_waves",
+          "reason": null,
+          "source_id": "SRC2_1",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 3.40133634,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC2_1#0.geometric_mtf",
+          "field_deg": 25.0,
+          "message": "the wavefront error (0.761 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_tangential",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC2_1",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC2_1#0.geometric_mtf",
+          "field_deg": 25.0,
+          "message": "the wavefront error (0.761 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_sagittal",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC2_1",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC2_1#0.diffraction",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "strehl_ratio",
+          "reason": null,
+          "source_id": "SRC2_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.0100094088,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC2_1#0.diffraction",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "mtf_tangential",
+          "reason": null,
+          "source_id": "SRC2_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC2_1#0.diffraction",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC2_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC2_1#0.diffraction",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_tangential",
+          "reason": null,
+          "source_id": "SRC2_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC2_1#0.diffraction",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC2_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC2_1#0.diffraction",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "encircled_radius_50",
+          "reason": null,
+          "source_id": "SRC2_1",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 61.0185298,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC2_1#0.diffraction",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC2_1",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 106.94182,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC2_1#0.diffraction",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "diffraction_limited_encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC2_1",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 8.84901605,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "image_space_na",
+          "reason": null,
+          "source_id": "SRC2_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.0334906933,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "geometric_spot_rms_radius",
+          "reason": null,
+          "source_id": "SRC2_2",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 61.4681044,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "opd_rms_waves",
+          "reason": null,
+          "source_id": "SRC2_2",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 0.553007903,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "opd_pv_waves",
+          "reason": null,
+          "source_id": "SRC2_2",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 2.6134445,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC2_2#0.geometric_mtf",
+          "field_deg": 25.0,
+          "message": "the wavefront error (0.553 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_tangential",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC2_2",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC2_2#0.geometric_mtf",
+          "field_deg": 25.0,
+          "message": "the wavefront error (0.553 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_sagittal",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC2_2",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC2_2#0.diffraction",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "strehl_ratio",
+          "reason": null,
+          "source_id": "SRC2_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.0179893862,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC2_2#0.diffraction",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "mtf_tangential",
+          "reason": null,
+          "source_id": "SRC2_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC2_2#0.diffraction",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC2_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC2_2#0.diffraction",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_tangential",
+          "reason": null,
+          "source_id": "SRC2_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC2_2#0.diffraction",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC2_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC2_2#0.diffraction",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "encircled_radius_50",
+          "reason": null,
+          "source_id": "SRC2_2",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 53.902826,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC2_2#0.diffraction",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC2_2",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 78.6019122,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC2_2#0.diffraction",
+          "field_deg": 25.0,
+          "message": "",
+          "quantity": "diffraction_limited_encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC2_2",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 10.8815355,
+          "wavelength_nm": 656.2725
+        }
+      ],
+      "quantity_states": {
+        "KNOWN": 110,
+        "OUT_OF_MODEL_SCOPE": 16
+      },
+      "targets": [
+        {
+          "applicability_issue_codes": [],
+          "assessment": "MET",
+          "bounds": {
+            "maximum": 0.05
+          },
+          "error": null,
+          "issue_codes": [],
+          "message": "",
+          "metric": "spot_rms_mm",
+          "observation_id": "image_plane",
+          "status": "PASS",
+          "target_id": "spot_rms_f0deg_486.133nm",
+          "unit": "mm",
+          "value": 0.005417669559648447
+        },
+        {
+          "applicability_issue_codes": [],
+          "assessment": "MET",
+          "bounds": {
+            "maximum": 0.05
+          },
+          "error": null,
+          "issue_codes": [],
+          "message": "",
+          "metric": "spot_rms_mm",
+          "observation_id": "image_plane",
+          "status": "PASS",
+          "target_id": "spot_rms_f0deg_587.562nm",
+          "unit": "mm",
+          "value": 0.0009957620087561226
+        },
+        {
+          "applicability_issue_codes": [],
+          "assessment": "MET",
+          "bounds": {
+            "maximum": 0.05
+          },
+          "error": null,
+          "issue_codes": [],
+          "message": "",
+          "metric": "spot_rms_mm",
+          "observation_id": "image_plane",
+          "status": "PASS",
+          "target_id": "spot_rms_f0deg_656.273nm",
+          "unit": "mm",
+          "value": 0.0038500673283614274
+        },
+        {
+          "applicability_issue_codes": [],
+          "assessment": "MET",
+          "bounds": {
+            "maximum": 0.05
+          },
+          "error": null,
+          "issue_codes": [],
+          "message": "",
+          "metric": "spot_rms_mm",
+          "observation_id": "image_plane",
+          "status": "PASS",
+          "target_id": "spot_rms_f12.5deg_486.133nm",
+          "unit": "mm",
+          "value": 0.011083761846195549
+        },
+        {
+          "applicability_issue_codes": [],
+          "assessment": "MET",
+          "bounds": {
+            "maximum": 0.05
+          },
+          "error": null,
+          "issue_codes": [],
+          "message": "",
+          "metric": "spot_rms_mm",
+          "observation_id": "image_plane",
+          "status": "PASS",
+          "target_id": "spot_rms_f12.5deg_587.562nm",
+          "unit": "mm",
+          "value": 0.009800334654526783
+        },
+        {
+          "applicability_issue_codes": [],
+          "assessment": "MET",
+          "bounds": {
+            "maximum": 0.05
+          },
+          "error": null,
+          "issue_codes": [],
+          "message": "",
+          "metric": "spot_rms_mm",
+          "observation_id": "image_plane",
+          "status": "PASS",
+          "target_id": "spot_rms_f12.5deg_656.273nm",
+          "unit": "mm",
+          "value": 0.010552006409344873
+        },
+        {
+          "applicability_issue_codes": [],
+          "assessment": "UNMET",
+          "bounds": {
+            "maximum": 0.05
+          },
+          "error": null,
+          "issue_codes": [
+            "TARGET_NOT_MET"
+          ],
+          "message": "value 0.0862198 mm is above the maximum 0.05 mm",
+          "metric": "spot_rms_mm",
+          "observation_id": "image_plane",
+          "status": "FAIL",
+          "target_id": "spot_rms_f25deg_486.133nm",
+          "unit": "mm",
+          "value": 0.0862197669901521
+        },
+        {
+          "applicability_issue_codes": [],
+          "assessment": "UNMET",
+          "bounds": {
+            "maximum": 0.05
+          },
+          "error": null,
+          "issue_codes": [
+            "TARGET_NOT_MET"
+          ],
+          "message": "value 0.0674966 mm is above the maximum 0.05 mm",
+          "metric": "spot_rms_mm",
+          "observation_id": "image_plane",
+          "status": "FAIL",
+          "target_id": "spot_rms_f25deg_587.562nm",
+          "unit": "mm",
+          "value": 0.06749662526951335
+        },
+        {
+          "applicability_issue_codes": [],
+          "assessment": "UNMET",
+          "bounds": {
+            "maximum": 0.05
+          },
+          "error": null,
+          "issue_codes": [
+            "TARGET_NOT_MET"
+          ],
+          "message": "value 0.0619344 mm is above the maximum 0.05 mm",
+          "metric": "spot_rms_mm",
+          "observation_id": "image_plane",
+          "status": "FAIL",
+          "target_id": "spot_rms_f25deg_656.273nm",
+          "unit": "mm",
+          "value": 0.061934423097087535
+        }
+      ],
+      "validation_status": "FAIL",
+      "wavelengths_nm": [
+        486.1327,
+        587.5618,
+        656.2725
+      ]
+    },
+    "spherical": {
+      "beam_partially_intercepted": 0,
+      "check": "ACCEPTED",
+      "detected_sources": [
+        "SRC0_0",
+        "SRC0_1",
+        "SRC0_2",
+        "SRC1_0",
+        "SRC1_1",
+        "SRC1_2",
+        "SRC2_0",
+        "SRC2_1",
+        "SRC2_2"
+      ],
+      "execution": {
+        "budgets": {
+          "affected_observation_ids": [],
+          "affected_path_ids": [
+            "SRC0_0#0",
+            "SRC0_1#0",
+            "SRC0_2#0",
+            "SRC1_0#0",
+            "SRC1_1#0",
+            "SRC1_2#0",
+            "SRC2_0#0",
+            "SRC2_1#0",
+            "SRC2_2#0"
+          ],
+          "affected_source_ids": [
+            "SRC0_0",
+            "SRC0_1",
+            "SRC0_2",
+            "SRC1_0",
+            "SRC1_1",
+            "SRC1_2",
+            "SRC2_0",
+            "SRC2_1",
+            "SRC2_2"
+          ],
+          "exhausted": [
+            "max_paths"
+          ],
+          "exhausted_by_phase": {
+            "untraced_light": [
+              "max_paths"
+            ]
+          },
+          "limits": {
+            "max_interactions_per_path": 96,
+            "max_interference_pairs": 256,
+            "max_paths": 8192,
+            "max_return_analysis_work": 4000000,
+            "max_trace_steps": 200000
+          },
+          "return_analysis": [
+            {
+              "closed_return_kinds": [],
+              "closed_return_screen": "COMPLETED_NO_RETURN",
+              "closed_return_surfaces": [],
+              "closed_series_bound": null,
+              "ended_in": "closed_returns",
+              "frames_limit": 0,
+              "frames_peak": 0,
+              "search_depth": 0,
+              "solid_fold_work": 0,
+              "termination": "COMPLETED",
+              "wavelength_nm": 486.1327,
+              "work_before": 0,
+              "work_done": 45154,
+              "work_limit": 4000000
+            },
+            {
+              "closed_return_kinds": [],
+              "closed_return_screen": "COMPLETED_NO_RETURN",
+              "closed_return_surfaces": [],
+              "closed_series_bound": null,
+              "ended_in": "closed_returns",
+              "frames_limit": 0,
+              "frames_peak": 0,
+              "search_depth": 0,
+              "solid_fold_work": 0,
+              "termination": "COMPLETED",
+              "wavelength_nm": 587.5618,
+              "work_before": 45154,
+              "work_done": 45154,
+              "work_limit": 3954846
+            },
+            {
+              "closed_return_kinds": [],
+              "closed_return_screen": "COMPLETED_NO_RETURN",
+              "closed_return_surfaces": [],
+              "closed_series_bound": null,
+              "ended_in": "closed_returns",
+              "frames_limit": 0,
+              "frames_peak": 0,
+              "search_depth": 0,
+              "solid_fold_work": 0,
+              "termination": "COMPLETED",
+              "wavelength_nm": 656.2725,
+              "work_before": 90308,
+              "work_done": 45154,
+              "work_limit": 3909692
+            }
+          ],
+          "untraced_power_W": null
+        },
+        "complete": false,
+        "outcome": "PARTIAL",
+        "reason": "a resource budget ran out (max_paths); the results count the light that was traced, and each affected quantity says what it leaves out",
+        "termination": "BUDGET_EXHAUSTED"
+      },
+      "fields_deg": [
+        0.0,
+        10.0,
+        20.0
+      ],
+      "in_model_scope": false,
+      "models": [
+        {
+          "model_id": "geometric_ray_bundle",
+          "validity": []
+        },
+        {
+          "model_id": "SRC0_0#0.geometric_mtf",
+          "validity": [
+            {
+              "maximum": null,
+              "minimum": 1.0,
+              "observed": 0.126937721,
+              "parameter": "opd_rms_waves",
+              "unit": null,
+              "within": false
+            }
+          ]
+        },
+        {
+          "model_id": "SRC0_0#0.diffraction",
+          "validity": [
+            {
+              "maximum": 3.141592653589793,
+              "minimum": null,
+              "observed": 0.0295417592,
+              "parameter": "neighbour_phase_step_rad",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.5,
+              "minimum": null,
+              "observed": 0.0865514896,
+              "parameter": "window_half_width_over_ray_period",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": null,
+              "minimum": 0.95,
+              "observed": 0.994516173,
+              "parameter": "window_light_share",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.2,
+              "minimum": null,
+              "observed": 0.0322941896,
+              "parameter": "image_space_na",
+              "unit": null,
+              "within": true
+            }
+          ]
+        },
+        {
+          "model_id": "SRC0_1#0.geometric_mtf",
+          "validity": [
+            {
+              "maximum": null,
+              "minimum": 1.0,
+              "observed": 0.00339016343,
+              "parameter": "opd_rms_waves",
+              "unit": null,
+              "within": false
+            }
+          ]
+        },
+        {
+          "model_id": "SRC0_1#0.diffraction",
+          "validity": [
+            {
+              "maximum": 3.141592653589793,
+              "minimum": null,
+              "observed": 0.00147384162,
+              "parameter": "neighbour_phase_step_rad",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.5,
+              "minimum": null,
+              "observed": 0.0709860737,
+              "parameter": "window_half_width_over_ray_period",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": null,
+              "minimum": 0.95,
+              "observed": 0.993319692,
+              "parameter": "window_light_share",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.2,
+              "minimum": null,
+              "observed": 0.0320123183,
+              "parameter": "image_space_na",
+              "unit": null,
+              "within": true
+            }
+          ]
+        },
+        {
+          "model_id": "SRC0_2#0.geometric_mtf",
+          "validity": [
+            {
+              "maximum": null,
+              "minimum": 1.0,
+              "observed": 0.0366627966,
+              "parameter": "opd_rms_waves",
+              "unit": null,
+              "within": false
+            }
+          ]
+        },
+        {
+          "model_id": "SRC0_2#0.diffraction",
+          "validity": [
+            {
+              "maximum": 3.141592653589793,
+              "minimum": null,
+              "observed": 0.00762561674,
+              "parameter": "neighbour_phase_step_rad",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.5,
+              "minimum": null,
+              "observed": 0.0633148575,
+              "parameter": "window_half_width_over_ray_period",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": null,
+              "minimum": 0.95,
+              "observed": 0.992502545,
+              "parameter": "window_light_share",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.2,
+              "minimum": null,
+              "observed": 0.0318917508,
+              "parameter": "image_space_na",
+              "unit": null,
+              "within": true
+            }
+          ]
+        },
+        {
+          "model_id": "SRC1_0#0.geometric_mtf",
+          "validity": [
+            {
+              "maximum": null,
+              "minimum": 1.0,
+              "observed": 0.500379956,
+              "parameter": "opd_rms_waves",
+              "unit": null,
+              "within": false
+            }
+          ]
+        },
+        {
+          "model_id": "SRC1_0#0.diffraction",
+          "validity": [
+            {
+              "maximum": 3.141592653589793,
+              "minimum": null,
+              "observed": 0.142555443,
+              "parameter": "neighbour_phase_step_rad",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.5,
+              "minimum": null,
+              "observed": 0.0875695638,
+              "parameter": "window_half_width_over_ray_period",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": null,
+              "minimum": 0.95,
+              "observed": 0.994317007,
+              "parameter": "window_light_share",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.2,
+              "minimum": null,
+              "observed": 0.0324544122,
+              "parameter": "image_space_na",
+              "unit": null,
+              "within": true
+            }
+          ]
+        },
+        {
+          "model_id": "SRC1_1#0.geometric_mtf",
+          "validity": [
+            {
+              "maximum": null,
+              "minimum": 1.0,
+              "observed": 0.312382983,
+              "parameter": "opd_rms_waves",
+              "unit": null,
+              "within": false
+            }
+          ]
+        },
+        {
+          "model_id": "SRC1_1#0.diffraction",
+          "validity": [
+            {
+              "maximum": 3.141592653589793,
+              "minimum": null,
+              "observed": 0.0937194782,
+              "parameter": "neighbour_phase_step_rad",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.5,
+              "minimum": null,
+              "observed": 0.0719085829,
+              "parameter": "window_half_width_over_ray_period",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": null,
+              "minimum": 0.95,
+              "observed": 0.993176895,
+              "parameter": "window_light_share",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.2,
+              "minimum": null,
+              "observed": 0.0322119311,
+              "parameter": "image_space_na",
+              "unit": null,
+              "within": true
+            }
+          ]
+        },
+        {
+          "model_id": "SRC1_2#0.geometric_mtf",
+          "validity": [
+            {
+              "maximum": null,
+              "minimum": 1.0,
+              "observed": 0.240646384,
+              "parameter": "opd_rms_waves",
+              "unit": null,
+              "within": false
+            }
+          ]
+        },
+        {
+          "model_id": "SRC1_2#0.diffraction",
+          "validity": [
+            {
+              "maximum": 3.141592653589793,
+              "minimum": null,
+              "observed": 0.0744507333,
+              "parameter": "neighbour_phase_step_rad",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.5,
+              "minimum": null,
+              "observed": 0.064171995,
+              "parameter": "window_half_width_over_ray_period",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": null,
+              "minimum": 0.95,
+              "observed": 0.992390148,
+              "parameter": "window_light_share",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.2,
+              "minimum": null,
+              "observed": 0.0321084625,
+              "parameter": "image_space_na",
+              "unit": null,
+              "within": true
+            }
+          ]
+        },
+        {
+          "model_id": "SRC2_0#0.geometric_mtf",
+          "validity": [
+            {
+              "maximum": null,
+              "minimum": 1.0,
+              "observed": 1.78159534,
+              "parameter": "opd_rms_waves",
+              "unit": null,
+              "within": true
+            }
+          ]
+        },
+        {
+          "model_id": "SRC2_0#0.diffraction",
+          "validity": [
+            {
+              "maximum": 3.141592653589793,
+              "minimum": null,
+              "observed": 0.513349584,
+              "parameter": "neighbour_phase_step_rad",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.5,
+              "minimum": null,
+              "observed": 0.0836027393,
+              "parameter": "window_half_width_over_ray_period",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": null,
+              "minimum": 0.95,
+              "observed": 0.980330639,
+              "parameter": "window_light_share",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.2,
+              "minimum": null,
+              "observed": 0.0310863994,
+              "parameter": "image_space_na",
+              "unit": null,
+              "within": true
+            }
+          ]
+        },
+        {
+          "model_id": "SRC2_1#0.geometric_mtf",
+          "validity": [
+            {
+              "maximum": null,
+              "minimum": 1.0,
+              "observed": 1.37883698,
+              "parameter": "opd_rms_waves",
+              "unit": null,
+              "within": true
+            }
+          ]
+        },
+        {
+          "model_id": "SRC2_1#0.diffraction",
+          "validity": [
+            {
+              "maximum": 3.141592653589793,
+              "minimum": null,
+              "observed": 0.401704881,
+              "parameter": "neighbour_phase_step_rad",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.5,
+              "minimum": null,
+              "observed": 0.0687408413,
+              "parameter": "window_half_width_over_ray_period",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": null,
+              "minimum": 0.95,
+              "observed": 0.981834799,
+              "parameter": "window_light_share",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.2,
+              "minimum": null,
+              "observed": 0.0308953184,
+              "parameter": "image_space_na",
+              "unit": null,
+              "within": true
+            }
+          ]
+        },
+        {
+          "model_id": "SRC2_2#0.geometric_mtf",
+          "validity": [
+            {
+              "maximum": null,
+              "minimum": 1.0,
+              "observed": 1.19722214,
+              "parameter": "opd_rms_waves",
+              "unit": null,
+              "within": true
+            }
+          ]
+        },
+        {
+          "model_id": "SRC2_2#0.diffraction",
+          "validity": [
+            {
+              "maximum": 3.141592653589793,
+              "minimum": null,
+              "observed": 0.350558687,
+              "parameter": "neighbour_phase_step_rad",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.5,
+              "minimum": null,
+              "observed": 0.0613791653,
+              "parameter": "window_half_width_over_ray_period",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": null,
+              "minimum": 0.95,
+              "observed": 0.981627221,
+              "parameter": "window_light_share",
+              "unit": null,
+              "within": true
+            },
+            {
+              "maximum": 0.2,
+              "minimum": null,
+              "observed": 0.030813654,
+              "parameter": "image_space_na",
+              "unit": null,
+              "within": true
+            }
+          ]
+        }
+      ],
+      "out_of_model_issues": [
+        {
+          "code": "GAUSSIAN_ABERRATION_DOMINATED",
+          "message": "the Engine's pupil rays spread 2.96 times as wide as an aberration-free beam with this Gaussian envelope can (on the plane of the beam's y waist, 8.446 mm before the observation plane; limit 2): the beam is aberration dominated and its Gaussian metrics are not valid"
+        }
+      ],
+      "quantities": [
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "image_space_na",
+          "reason": null,
+          "source_id": "SRC0_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.0322941896,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "geometric_spot_rms_radius",
+          "reason": null,
+          "source_id": "SRC0_0",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 9.45910908,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "opd_rms_waves",
+          "reason": null,
+          "source_id": "SRC0_0",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 0.126937721,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "opd_pv_waves",
+          "reason": null,
+          "source_id": "SRC0_0",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 0.439647061,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC0_0#0.geometric_mtf",
+          "field_deg": 0.0,
+          "message": "the wavefront error (0.127 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_tangential",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC0_0",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC0_0#0.geometric_mtf",
+          "field_deg": 0.0,
+          "message": "the wavefront error (0.127 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_sagittal",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC0_0",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC0_0#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "strehl_ratio",
+          "reason": null,
+          "source_id": "SRC0_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.505451073,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC0_0#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "mtf_tangential",
+          "reason": null,
+          "source_id": "SRC0_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC0_0#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC0_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC0_0#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_tangential",
+          "reason": null,
+          "source_id": "SRC0_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC0_0#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC0_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC0_0#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "encircled_radius_50",
+          "reason": null,
+          "source_id": "SRC0_0",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 7.93063078,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC0_0#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC0_0",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 14.4342865,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC0_0#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "diffraction_limited_encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC0_0",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 6.75027711,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "image_space_na",
+          "reason": null,
+          "source_id": "SRC0_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.0320123183,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "geometric_spot_rms_radius",
+          "reason": null,
+          "source_id": "SRC0_1",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 0.417385898,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "opd_rms_waves",
+          "reason": null,
+          "source_id": "SRC0_1",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 0.00339016343,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "opd_pv_waves",
+          "reason": null,
+          "source_id": "SRC0_1",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 0.0113691711,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC0_1#0.geometric_mtf",
+          "field_deg": 0.0,
+          "message": "the wavefront error (0.00339 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_tangential",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC0_1",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC0_1#0.geometric_mtf",
+          "field_deg": 0.0,
+          "message": "the wavefront error (0.00339 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_sagittal",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC0_1",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC0_1#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "strehl_ratio",
+          "reason": null,
+          "source_id": "SRC0_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.999546307,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC0_1#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "mtf_tangential",
+          "reason": null,
+          "source_id": "SRC0_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC0_1#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC0_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC0_1#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_tangential",
+          "reason": null,
+          "source_id": "SRC0_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC0_1#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC0_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC0_1#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "encircled_radius_50",
+          "reason": null,
+          "source_id": "SRC0_1",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 4.93755597,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC0_1#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC0_1",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 8.21513393,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC0_1#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "diffraction_limited_encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC0_1",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 8.20810056,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "image_space_na",
+          "reason": null,
+          "source_id": "SRC0_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.0318917508,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "geometric_spot_rms_radius",
+          "reason": null,
+          "source_id": "SRC0_2",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 3.59912292,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "opd_rms_waves",
+          "reason": null,
+          "source_id": "SRC0_2",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 0.0366627966,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "opd_pv_waves",
+          "reason": null,
+          "source_id": "SRC0_2",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 0.126958333,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC0_2#0.geometric_mtf",
+          "field_deg": 0.0,
+          "message": "the wavefront error (0.0367 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_tangential",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC0_2",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC0_2#0.geometric_mtf",
+          "field_deg": 0.0,
+          "message": "the wavefront error (0.0367 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_sagittal",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC0_2",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC0_2#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "strehl_ratio",
+          "reason": null,
+          "source_id": "SRC0_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.948049332,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC0_2#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "mtf_tangential",
+          "reason": null,
+          "source_id": "SRC0_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC0_2#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC0_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC0_2#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_tangential",
+          "reason": null,
+          "source_id": "SRC0_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC0_2#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC0_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC0_2#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "encircled_radius_50",
+          "reason": null,
+          "source_id": "SRC0_2",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 5.7453697,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC0_2#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC0_2",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 10.8893692,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC0_2#0.diffraction",
+          "field_deg": 0.0,
+          "message": "",
+          "quantity": "diffraction_limited_encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC0_2",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 9.23040316,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "image_space_na",
+          "reason": null,
+          "source_id": "SRC1_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.0324544122,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "geometric_spot_rms_radius",
+          "reason": null,
+          "source_id": "SRC1_0",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 36.5868195,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "opd_rms_waves",
+          "reason": null,
+          "source_id": "SRC1_0",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 0.500379956,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "opd_pv_waves",
+          "reason": null,
+          "source_id": "SRC1_0",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 1.95462126,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC1_0#0.geometric_mtf",
+          "field_deg": 10.0,
+          "message": "the wavefront error (0.5 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_tangential",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC1_0",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC1_0#0.geometric_mtf",
+          "field_deg": 10.0,
+          "message": "the wavefront error (0.5 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_sagittal",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC1_0",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC1_0#0.diffraction",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "strehl_ratio",
+          "reason": null,
+          "source_id": "SRC1_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.023210469,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC1_0#0.diffraction",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "mtf_tangential",
+          "reason": null,
+          "source_id": "SRC1_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC1_0#0.diffraction",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC1_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC1_0#0.diffraction",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_tangential",
+          "reason": null,
+          "source_id": "SRC1_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC1_0#0.diffraction",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC1_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC1_0#0.diffraction",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "encircled_radius_50",
+          "reason": null,
+          "source_id": "SRC1_0",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 32.0033201,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC1_0#0.diffraction",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC1_0",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 47.1405739,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC1_0#0.diffraction",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "diffraction_limited_encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC1_0",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 6.75684411,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "image_space_na",
+          "reason": null,
+          "source_id": "SRC1_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.0322119311,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "geometric_spot_rms_radius",
+          "reason": null,
+          "source_id": "SRC1_1",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 27.6174493,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "opd_rms_waves",
+          "reason": null,
+          "source_id": "SRC1_1",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 0.312382983,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "opd_pv_waves",
+          "reason": null,
+          "source_id": "SRC1_1",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 1.25037643,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC1_1#0.geometric_mtf",
+          "field_deg": 10.0,
+          "message": "the wavefront error (0.312 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_tangential",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC1_1",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC1_1#0.geometric_mtf",
+          "field_deg": 10.0,
+          "message": "the wavefront error (0.312 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_sagittal",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC1_1",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC1_1#0.diffraction",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "strehl_ratio",
+          "reason": null,
+          "source_id": "SRC1_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.0654484325,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC1_1#0.diffraction",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "mtf_tangential",
+          "reason": null,
+          "source_id": "SRC1_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC1_1#0.diffraction",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC1_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC1_1#0.diffraction",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_tangential",
+          "reason": null,
+          "source_id": "SRC1_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC1_1#0.diffraction",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC1_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC1_1#0.diffraction",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "encircled_radius_50",
+          "reason": null,
+          "source_id": "SRC1_1",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 27.1840168,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC1_1#0.diffraction",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC1_1",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 46.3541306,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC1_1#0.diffraction",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "diffraction_limited_encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC1_1",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 8.20852164,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "image_space_na",
+          "reason": null,
+          "source_id": "SRC1_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.0321084625,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "geometric_spot_rms_radius",
+          "reason": null,
+          "source_id": "SRC1_2",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 23.6982254,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "opd_rms_waves",
+          "reason": null,
+          "source_id": "SRC1_2",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 0.240646384,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "opd_pv_waves",
+          "reason": null,
+          "source_id": "SRC1_2",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 0.976516679,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC1_2#0.geometric_mtf",
+          "field_deg": 10.0,
+          "message": "the wavefront error (0.241 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_tangential",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC1_2",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC1_2#0.geometric_mtf",
+          "field_deg": 10.0,
+          "message": "the wavefront error (0.241 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+          "quantity": "geometric_mtf_sagittal",
+          "reason": "GEOMETRIC_REGIME_NOT_MET",
+          "source_id": "SRC1_2",
+          "state": "OUT_OF_MODEL_SCOPE",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC1_2#0.diffraction",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "strehl_ratio",
+          "reason": null,
+          "source_id": "SRC1_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.13887995,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC1_2#0.diffraction",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "mtf_tangential",
+          "reason": null,
+          "source_id": "SRC1_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC1_2#0.diffraction",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC1_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC1_2#0.diffraction",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_tangential",
+          "reason": null,
+          "source_id": "SRC1_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC1_2#0.diffraction",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC1_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC1_2#0.diffraction",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "encircled_radius_50",
+          "reason": null,
+          "source_id": "SRC1_2",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 21.0080302,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC1_2#0.diffraction",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC1_2",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 36.495187,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC1_2#0.diffraction",
+          "field_deg": 10.0,
+          "message": "",
+          "quantity": "diffraction_limited_encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC1_2",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 9.22711706,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "image_space_na",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.0310863994,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "geometric_spot_rms_radius",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 141.535147,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "opd_rms_waves",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 1.78159534,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "opd_pv_waves",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 7.26053355,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC2_0#0.geometric_mtf",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "geometric_mtf_tangential",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC2_0#0.geometric_mtf",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "geometric_mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC2_0#0.diffraction",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "strehl_ratio",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.00161709204,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC2_0#0.diffraction",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "mtf_tangential",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC2_0#0.diffraction",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC2_0#0.diffraction",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_tangential",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC2_0#0.diffraction",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC2_0#0.diffraction",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "encircled_radius_50",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 124.359015,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC2_0#0.diffraction",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 208.51479,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "SRC2_0#0.diffraction",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "diffraction_limited_encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC2_0",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 7.27341041,
+          "wavelength_nm": 486.1327
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "image_space_na",
+          "reason": null,
+          "source_id": "SRC2_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.0308953184,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "geometric_spot_rms_radius",
+          "reason": null,
+          "source_id": "SRC2_1",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 132.519945,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "opd_rms_waves",
+          "reason": null,
+          "source_id": "SRC2_1",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 1.37883698,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "opd_pv_waves",
+          "reason": null,
+          "source_id": "SRC2_1",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 5.65916263,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC2_1#0.geometric_mtf",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "geometric_mtf_tangential",
+          "reason": null,
+          "source_id": "SRC2_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC2_1#0.geometric_mtf",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "geometric_mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC2_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC2_1#0.diffraction",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "strehl_ratio",
+          "reason": null,
+          "source_id": "SRC2_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.00288040753,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC2_1#0.diffraction",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "mtf_tangential",
+          "reason": null,
+          "source_id": "SRC2_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC2_1#0.diffraction",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC2_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC2_1#0.diffraction",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_tangential",
+          "reason": null,
+          "source_id": "SRC2_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC2_1#0.diffraction",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC2_1",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC2_1#0.diffraction",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "encircled_radius_50",
+          "reason": null,
+          "source_id": "SRC2_1",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 117.217738,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC2_1#0.diffraction",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC2_1",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 203.865823,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "SRC2_1#0.diffraction",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "diffraction_limited_encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC2_1",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 8.87785958,
+          "wavelength_nm": 587.5618
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "image_space_na",
+          "reason": null,
+          "source_id": "SRC2_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.030813654,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "geometric_spot_rms_radius",
+          "reason": null,
+          "source_id": "SRC2_2",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 128.53362,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "opd_rms_waves",
+          "reason": null,
+          "source_id": "SRC2_2",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 1.19722214,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "geometric_ray_bundle",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "opd_pv_waves",
+          "reason": null,
+          "source_id": "SRC2_2",
+          "state": "KNOWN",
+          "unit": "waves",
+          "value": 4.92928284,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC2_2#0.geometric_mtf",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "geometric_mtf_tangential",
+          "reason": null,
+          "source_id": "SRC2_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC2_2#0.geometric_mtf",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "geometric_mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC2_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC2_2#0.diffraction",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "strehl_ratio",
+          "reason": null,
+          "source_id": "SRC2_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": 0.00408409224,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC2_2#0.diffraction",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "mtf_tangential",
+          "reason": null,
+          "source_id": "SRC2_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC2_2#0.diffraction",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC2_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC2_2#0.diffraction",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_tangential",
+          "reason": null,
+          "source_id": "SRC2_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC2_2#0.diffraction",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "diffraction_limited_mtf_sagittal",
+          "reason": null,
+          "source_id": "SRC2_2",
+          "state": "KNOWN",
+          "unit": null,
+          "value": null,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC2_2#0.diffraction",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "encircled_radius_50",
+          "reason": null,
+          "source_id": "SRC2_2",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 111.119219,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC2_2#0.diffraction",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC2_2",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 187.015505,
+          "wavelength_nm": 656.2725
+        },
+        {
+          "basis": "SRC2_2#0.diffraction",
+          "field_deg": 20.0,
+          "message": "",
+          "quantity": "diffraction_limited_encircled_radius_80",
+          "reason": null,
+          "source_id": "SRC2_2",
+          "state": "KNOWN",
+          "unit": "um",
+          "value": 9.94059046,
+          "wavelength_nm": 656.2725
+        }
+      ],
+      "quantity_states": {
+        "KNOWN": 114,
+        "OUT_OF_MODEL_SCOPE": 12
+      },
+      "targets": [
+        {
+          "applicability_issue_codes": [],
+          "assessment": "MET",
+          "bounds": {
+            "maximum": 0.05
+          },
+          "error": null,
+          "issue_codes": [],
+          "message": "",
+          "metric": "spot_rms_mm",
+          "observation_id": "image_plane",
+          "status": "PASS",
+          "target_id": "spot_rms_f0deg_486.133nm",
+          "unit": "mm",
+          "value": 0.00936551337443931
+        },
+        {
+          "applicability_issue_codes": [],
+          "assessment": "MET",
+          "bounds": {
+            "maximum": 0.05
+          },
+          "error": null,
+          "issue_codes": [],
+          "message": "",
+          "metric": "spot_rms_mm",
+          "observation_id": "image_plane",
+          "status": "PASS",
+          "target_id": "spot_rms_f0deg_587.562nm",
+          "unit": "mm",
+          "value": 0.0005563636249538725
+        },
+        {
+          "applicability_issue_codes": [],
+          "assessment": "MET",
+          "bounds": {
+            "maximum": 0.05
+          },
+          "error": null,
+          "issue_codes": [],
+          "message": "",
+          "metric": "spot_rms_mm",
+          "observation_id": "image_plane",
+          "status": "PASS",
+          "target_id": "spot_rms_f0deg_656.273nm",
+          "unit": "mm",
+          "value": 0.003421968223972602
+        },
+        {
+          "applicability_issue_codes": [],
+          "assessment": "MET",
+          "bounds": {
+            "maximum": 0.05
+          },
+          "error": null,
+          "issue_codes": [],
+          "message": "",
+          "metric": "spot_rms_mm",
+          "observation_id": "image_plane",
+          "status": "PASS",
+          "target_id": "spot_rms_f10deg_486.133nm",
+          "unit": "mm",
+          "value": 0.03599943983789081
+        },
+        {
+          "applicability_issue_codes": [],
+          "assessment": "MET",
+          "bounds": {
+            "maximum": 0.05
+          },
+          "error": null,
+          "issue_codes": [],
+          "message": "",
+          "metric": "spot_rms_mm",
+          "observation_id": "image_plane",
+          "status": "PASS",
+          "target_id": "spot_rms_f10deg_587.562nm",
+          "unit": "mm",
+          "value": 0.02724094116636772
+        },
+        {
+          "applicability_issue_codes": [],
+          "assessment": "MET",
+          "bounds": {
+            "maximum": 0.05
+          },
+          "error": null,
+          "issue_codes": [],
+          "message": "",
+          "metric": "spot_rms_mm",
+          "observation_id": "image_plane",
+          "status": "PASS",
+          "target_id": "spot_rms_f10deg_656.273nm",
+          "unit": "mm",
+          "value": 0.023418680777524948
+        },
+        {
+          "applicability_issue_codes": [],
+          "assessment": "UNMET",
+          "bounds": {
+            "maximum": 0.05
+          },
+          "error": null,
+          "issue_codes": [
+            "TARGET_NOT_MET"
+          ],
+          "message": "value 0.139484 mm is above the maximum 0.05 mm",
+          "metric": "spot_rms_mm",
+          "observation_id": "image_plane",
+          "status": "FAIL",
+          "target_id": "spot_rms_f20deg_486.133nm",
+          "unit": "mm",
+          "value": 0.1394840208976946
+        },
+        {
+          "applicability_issue_codes": [],
+          "assessment": "UNMET",
+          "bounds": {
+            "maximum": 0.05
+          },
+          "error": null,
+          "issue_codes": [
+            "TARGET_NOT_MET"
+          ],
+          "message": "value 0.130586 mm is above the maximum 0.05 mm",
+          "metric": "spot_rms_mm",
+          "observation_id": "image_plane",
+          "status": "FAIL",
+          "target_id": "spot_rms_f20deg_587.562nm",
+          "unit": "mm",
+          "value": 0.13058559583560497
+        },
+        {
+          "applicability_issue_codes": [],
+          "assessment": "UNMET",
+          "bounds": {
+            "maximum": 0.05
+          },
+          "error": null,
+          "issue_codes": [
+            "TARGET_NOT_MET"
+          ],
+          "message": "value 0.126655 mm is above the maximum 0.05 mm",
+          "metric": "spot_rms_mm",
+          "observation_id": "image_plane",
+          "status": "FAIL",
+          "target_id": "spot_rms_f20deg_656.273nm",
+          "unit": "mm",
+          "value": 0.1266550901004368
+        }
+      ],
+      "validation_status": "FAIL",
+      "wavelengths_nm": [
+        486.1327,
+        587.5618,
+        656.2725
+      ]
+    }
+  }
+}

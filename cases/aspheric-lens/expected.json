@@ -1,0 +1,18 @@
+{
+  "catalog": null,
+  "engine": "0.13.0",
+  "schema": "os-optics-kit.case-expected",
+  "schema_version": 1,
+  "status": "FAIL",
+  "targets": {
+    "spot_rms_f0deg_486.133nm": "MET",
+    "spot_rms_f0deg_587.562nm": "MET",
+    "spot_rms_f0deg_656.273nm": "MET",
+    "spot_rms_f12.5deg_486.133nm": "MET",
+    "spot_rms_f12.5deg_587.562nm": "MET",
+    "spot_rms_f12.5deg_656.273nm": "MET",
+    "spot_rms_f25deg_486.133nm": "UNMET",
+    "spot_rms_f25deg_587.562nm": "UNMET",
+    "spot_rms_f25deg_656.273nm": "UNMET"
+  }
+}
