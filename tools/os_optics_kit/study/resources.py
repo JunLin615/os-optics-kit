@@ -23,6 +23,8 @@ from .. import workflow_common as wc
 DEFAULT_SECONDS_PER_SAMPLE = 0.2
 DEFAULT_STARTUP_S = 4.0
 DEFAULT_MEMORY_MIB = 150.0
+#: The most workers ``suggest_workers`` picks unless told otherwise (other jobs share the machine; give N for more).
+DEFAULT_MAX_WORKERS = 4
 MIB = 1024 * 1024
 THREAD_VARIABLES = ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS")
 
@@ -85,13 +87,15 @@ class ResourceBudget:
 
 
 def suggest_workers(samples, seconds_per_sample=DEFAULT_SECONDS_PER_SAMPLE, startup_s=DEFAULT_STARTUP_S,
-                    memory_mib=DEFAULT_MEMORY_MIB, *, cpus=None, available_mib=None, max_workers=None):
+                    memory_mib=DEFAULT_MEMORY_MIB, *, cpus=None, available_mib=None,
+                    max_workers=DEFAULT_MAX_WORKERS):
     """The worker count with the shortest expected elapsed time, ``(workers, reasoning)``.
 
     Serial time = ``samples`` x ``seconds_per_sample`` (the calling process has the Engine loaded already);
     with W worker processes = ``startup_s`` + ceil(samples / W) x ``seconds_per_sample``. W is bounded by the
-    logical CPUs minus one (the calling process), by ``max_workers``, by the samples and by the available memory
-    (``available_mib`` / ``memory_mib``, read from the system when None). Returns 1 when no W beats serial."""
+    logical CPUs minus one (the calling process), by ``max_workers`` (default 4), by the samples and by the
+    available memory (``available_mib`` / ``memory_mib``, read from the system when None). A parallel run must save
+    at least 10 % of the serial time. Returns 1 when no W does."""
     samples = max(0, int(samples))
     cpus = cpus or cpu_count()
     if available_mib is None:

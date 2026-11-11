@@ -250,7 +250,7 @@ os-optics-kit study bench --workers 1,2,4 --samples 24        # elapsed, through
 
 | Option (tools and `study run`) | Meaning |
 | --- | --- |
-| `--workers N\|auto` | worker processes (spawned once, Engine imported once each); 1 = serial in this process; `auto` = serial unless the plan is large enough to repay about 4 s of start-up per worker |
+| `--workers N\|auto` | worker processes (spawned once, Engine imported once each); 1 = serial in this process; `auto` = serial unless the plan is large enough to repay about 4 s of start-up per worker, at most 4 workers |
 | `--resume` | keep samples whose record has the plan's `request_hash` and state `COMPLETED` / `REFUSED`; read back a complete run directory without a record; run the rest. A changed Engine build or catalog release is refused (`STUDY_IDENTITY_CHANGED`, field named); a tool run with a changed spec reruns only the changed requests |
 | `--plan-only` | write the plan and stop (`PLANNED`, exit 0); `study run` executes it with the planning tool's analysis and presentation choice |
 | `--time-limit-s S`, `--max-memory-mib M` | per evaluation, read at Engine checkpoints (each phase change and inside long phases); the run stops at the next checkpoint, state `CANCELLED`, code `TIME_LIMIT` / `MEMORY_LIMIT`; a worker still busy 5 s past its time limit is terminated; the serial scheduler has no other preemption |

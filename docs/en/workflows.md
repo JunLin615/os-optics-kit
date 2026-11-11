@@ -6,6 +6,8 @@ The kit's tools take a design from a first run to a documented study: edit compo
 parameters, compare saved runs, plot and report the results, and estimate sensitivities and tolerances. Every step
 saves its projects and runs, prints a compact JSON summary and keeps the complete data in files. Three cases with
 parameterized workflows apply the same steps to beam expansion and focusing, polarization control and alignment.
+Sweeps, sensitivity and tolerance studies can run in parallel worker processes and be resumed; see
+[studies](studies.md).
 
 ## Before you start
 

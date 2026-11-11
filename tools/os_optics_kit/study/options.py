@@ -35,7 +35,7 @@ def workers_value(text):
 def add_execution_options(parser, *, plan_only=True, outputs=True):
     group = parser.add_argument_group("execution (the samples are independent; results do not depend on these)")
     group.add_argument("--workers", type=workers_value, default=1, metavar="N|auto",
-                       help="worker processes (default 1: serial in this process; auto: from the plan size)")
+                       help="worker processes (default 1: serial in this process; auto: from the plan size, at most 4)")
     group.add_argument("--resume", action="store_true",
                        help="continue a planned or interrupted study: samples whose request is unchanged and that "
                             "completed are kept, the rest run")
