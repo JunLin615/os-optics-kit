@@ -1,9 +1,17 @@
 # 仅用强度反馈的像差校正
 
+[English](README.md) · [智能体案例说明](CASE.md)
+
 球差无法控制时，五个相位自由度能恢复多少轴上焦点强度？本案例使用一个
 标量强度传感器进行优化，在相同透射功率下比较理想、受扰和校正后的焦斑。
 
-![引擎扩束光路：光源、两片透镜与光瞳观测面](images/layout.png)
+![引擎扩束光路的三维视图：光源 `laser`、理想透镜 `expander_negative` 与 `expander_positive`，以及交接面 `modulator`](images/iso.png)
+
+![沿扩束光路光轴的截面：光束在两片透镜之间扩展，此后平行传播至 `modulator`](images/section.png)
+
+两幅图都是引擎对 `project.json` 一次运行的无浏览器快照：`os-optics view run --no-browser --snapshot DIR` 加 `--views iso --size 960x540` 运行一次，再加 `--section ALL --frame=scene --size 1360x440` 运行一次。
+在 kit 检出目录中，`os-optics-kit cases images bounded-aberration-correction` 会按 `images.json` 中的记录原样重新渲染这些视图。
+图中只有引擎扩束光路：光瞳、相位模式与傅里叶透镜属于 `workflow.py`。
 
 ## 运行
 
@@ -80,32 +88,36 @@ Powell 搜索只使用标量传感器读数，调整前五项，每项范围为 
 
 ## 从保存结果制作展示素材（kit 0.3.0）
 
+图库为可选内容，由保存的运行目录生成：
+
 ```bash
-python present_case.py out/default out/stronger --out talk/zh --language zh-CN --background light --size 1920x1080 --bundle talk/aberration-zh.zip
-python present_case.py out/default out/stronger --out talk/en --language en --background light
+python present_case.py out/default out/stronger --out talk/en --language en --background light --size 1920x1080 --bundle talk/aberration-en.zip
+python present_case.py out/default out/stronger --out talk/zh --language zh-CN --background light
 python present_case.py out/default out/stronger --out talk/dark --language zh-CN --background dark
-os-optics-kit present gallery talk/zh
-os-optics-kit present bundle talk/zh --out talk/share.zip --only psf,response
+os-optics-kit present gallery talk/en
+os-optics-kit present bundle talk/en --out talk/share.zip --only psf,response
 ```
 
-离线打开 `talk/zh/index.html`。图库包含高斯扩束光路及其光束半径目标、外部标量
+离线打开 `talk/en/index.html`（或 `talk/zh/index.html`）。图库包含高斯扩束光路及其光束半径目标、外部标量
 傅里叶 PSF 和轴上强度对比。`psf` 展示首组结果的三个状态，共用 0–1 线性色标；
 `response` 将各组轴上强度除以该组等功率理想轴上强度。比较输入应使用相同的
 光学参数、网格和控制边界，以球差系数作为变化参数。
 
 辅助脚本读取保存的数组与指标，以复数光瞳场核对强度比。每种样式使用新的
-`--out`。光路视图需要 Chrome/Chromium；中文需要微软雅黑或 Noto Sans CJK SC 等字体。
+`--out`。图库中的三维光路图由 kit `render` 截取：需要 `render` 扩展（已在
+`requirements-aberration.txt` 中固定）以及 Chrome 或 Chromium。中文需要微软雅黑或
+Noto Sans CJK SC 等字体。
 
 使用上面的 `present_case.py` 命令从保存的运行目录重建完整图库，目录迁移后传入
 新路径。`presentation.json` 对应原生半径目标图；对该文件运行 `present build`
 会将图库索引替换为这张图。完整图库提供 PNG、SVG 曲线图、双语图注、数据快照和
 输入哈希。相机设置、数据来源、单位、归一化及数据选择保存在各图的溯源和重绘文件中。
 
-ZIP 包含离线图库与外部绘图快照。解压 `aberration-zh.zip` 后，使用包内脚本重绘：
+ZIP 包含离线图库与外部绘图快照。解压 `aberration-en.zip` 后，使用包内脚本重绘快照：
 
 ```bash
-python aberration-zh/assets/psf/present_case.py --redraw-external aberration-zh/assets/psf/redraw.json --out psf-dark --language zh-CN --background dark
-python aberration-zh/assets/response/present_case.py --redraw-external aberration-zh/assets/response/redraw.json --out response-dark --language zh-CN --background dark
+python aberration-en/assets/psf/present_case.py --redraw-external aberration-en/assets/psf/redraw.json --out psf-zh --language zh-CN --background dark
+python aberration-en/assets/response/present_case.py --redraw-external aberration-en/assets/response/redraw.json --out response-zh --language zh-CN --background dark
 ```
 
 这些命令使用包内数据，默认保留已保存主题，指定样式参数时覆盖对应设置。

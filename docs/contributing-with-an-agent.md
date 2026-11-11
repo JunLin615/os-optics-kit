@@ -24,14 +24,39 @@ os-optics-kit skills show contrib-tool
 
 A case is a design that runs: a ProjectDocumentV2 with its targets, verified by the engine.
 
-1. `os-optics-kit contrib case design.json --name my-case --tags tag-a,tag-b --dry-run`
-   normalizes the design, runs `os-optics project check`, `project run` and `results targets`, renders two views
-   with `os-optics view --snapshot`, and writes `contrib-case-my-case/` with `case/` (project.json, CASE.md,
-   README.md, expected.json, images/), the patch, `PR_BODY.md` and `bundle.json`.
+1. `os-optics-kit contrib case design.json --name my-case --class free-space --domain gaussian-beam
+   --tags beam-expander,focusing --dry-run` normalizes the design, runs `os-optics project check`, `project run`
+   and `results targets`, renders the system views with the engine (`os-optics view RUN --no-browser --snapshot
+   DIR --views iso`, plus `--section ALL --frame=scene` for a `lens` case), and writes `contrib-case-my-case/` with
+   `case/` (project.json, CASE.md, README.md, README.zh-CN.md, expected.json, images.json, images/), the patch,
+   `PR_BODY.md` and `bundle.json`. The class, domain and tag values are listed by `os-optics-kit cases vocabulary`;
+   `--provenance`, `--publication` and `--source` record where third-party material comes from. The patch adds the
+   case, `cases.json` and the README case tables (`os-optics-kit cases index --write` and
+   `python scripts/case_tables.py --write` in a temporary clone), so the pull request passes the index checks.
 2. The agent replaces the generated summary and "What it shows" in `case/CASE.md` and the intro of
-   `case/README.md` with what the design demonstrates.
+   `case/README.md` and `case/README.zh-CN.md` with what the design demonstrates. The language line under each
+   title (`English · [简体中文](README.zh-CN.md)` and `[English](README.md) · 简体中文`) stays: the two READMEs link
+   each other.
 3. `os-optics-kit contrib case --refresh contrib-case-my-case` re-runs the engine, checks the case format
-   (CASE.md within 700 tokens, required sections, at most 4 images of 400 KB) and rebuilds the patch.
+   (CASE.md within 700 tokens, required sections, classification and tags, images recorded in `images.json` and
+   shown in both READMEs, the READMEs linked to each other) and rebuilds the patch.
+
+Case images come from the engine and need no browser and no `render` extra. The kit's `render` and `present`
+commands make presentation-grade figures with Chrome or Chromium; a case never needs them. If the command warns
+`IMAGE_NOT_RENDERED` (status `INCOMPLETE`: the bundle holds the case files but no patch yet), run the engine
+command itself on a run of the case (`os-optics view RUN --no-browser --snapshot DIR --views iso`) to read its
+error, fix the cause and `--refresh`. The refresh renders the recorded views again, plus every view that was not
+rendered before and the views the class needs (a snapshot view first, the section of a `lens`), and updates the
+images of both READMEs: the image lines are rebuilt in `images.json` order, keeping your captions. A figure drawn
+by a case script is recorded with `os-optics-kit cases images NAME --figure images/X.png --script SCRIPT.py`;
+result tables stay Markdown tables.
+
+To change an existing case by hand, edit `cases/NAME/` in a kit checkout and re-record its views with
+`os-optics-kit cases images NAME`: without view options it renders again the views recorded in its `images.json`,
+each with its recorded options (a new case gets `iso`, plus `--section ALL --frame=scene` for a lens). Keep both
+READMEs showing exactly the recorded images (a system view first) and linking each other, then run
+`os-optics-kit cases index --write`, `python scripts/case_tables.py --write` (the README case tables) and
+`os-optics-kit cases index --check`, and commit `cases.json`, `README.md` and `README.zh-CN.md` with the case.
 
 The case records the engine version and the catalog release its components pin; `expected.json` holds the run
 status and every target assessment, which `os-optics-kit cases verify` compares on every later run.

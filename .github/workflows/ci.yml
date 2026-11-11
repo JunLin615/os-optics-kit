@@ -127,6 +127,9 @@ jobs:
       - name: cases.json is current
         if: ${{ !cancelled() }}
         run: python -m os_optics_kit cases index --check
+      - name: README case tables are current
+        if: ${{ !cancelled() }}
+        run: python scripts/case_tables.py --check
 
   package:
     name: Build and install the package
@@ -193,6 +196,10 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions:
+      contents: read
+      # Read this repository's artifacts: a tree already verified in full is not verified again.
+      actions: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -209,24 +216,24 @@ jobs:
         run: |
           sudo apt-get update -q
           sudo apt-get install -y -q --no-install-recommends fonts-noto-cjk
-      - name: Cases changed by the pull request
+      - name: Cases to verify
         id: cases
-        if: steps.gate.outputs.run == 'true' && github.event_name == 'pull_request'
-        env:
-          BASE: ${{ github.event.pull_request.base.sha }}
-          HEAD: ${{ github.event.pull_request.head.sha }}
-        run: python scripts/changed_cases.py "$BASE" "$HEAD"
-      - name: Tests, tools and cases against the published engine and the pinned catalog
         if: steps.gate.outputs.run == 'true'
         env:
-          # A pull request verifies the cases it changes (next step); main and the merge queue verify all of them.
-          SKIP: ${{ github.event_name == 'pull_request' && steps.cases.outputs.all != 'true' && 'cases-verify' || '' }}
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
-          args=(--out run-alignment)
-          if [[ -n "$SKIP" ]]; then
-            args+=(--skip "$SKIP")
+          # A pull request verifies the cases it changes, or all of them; main and the merge queue verify all.
+          if [[ "$EVENT" == "pull_request" ]]; then
+            python scripts/changed_cases.py --event pull_request "$BASE" "$HEAD"
+          else
+            python scripts/changed_cases.py --event "$EVENT"
           fi
-          python scripts/check_alignment.py "${args[@]}"
+      - name: Tests and tools against the published engine and the pinned catalog
+        if: steps.gate.outputs.run == 'true'
+        # The cases are verified once, by the "Verify cases" step.
+        run: python scripts/check_alignment.py --out run-alignment --skip cases-verify
       - name: Render with published engine and Chrome
         if: steps.gate.outputs.run == 'true'
         run: |
@@ -241,21 +248,77 @@ jobs:
         run: |
           run-alignment/.venv/bin/python -m pip install 'imageio-ffmpeg>=0.5,<1'
           run-alignment/.venv/bin/python -m pytest tests/test_present.py tests/test_present_gallery.py             tests/test_present_compose.py tests/test_present_animate.py             --basetemp=run-alignment/present-proof --junitxml=run-alignment/present-tests.xml
-      - name: Verify the changed cases
+      - name: Look for a full verification of this tree
+        id: verified
         if: >-
-          ${{ !cancelled() && steps.gate.outputs.run == 'true' && github.event_name == 'pull_request'
-          && steps.cases.outputs.all != 'true' && steps.cases.outputs.cases != '' }}
+          ${{ !cancelled() && steps.gate.outputs.run == 'true' && steps.cases.outcome == 'success'
+          && github.event_name != 'pull_request' }}
+        # Fail safe: if this step breaks, nothing is accepted and every case is verified.
+        continue-on-error: true
         env:
+          # The only step that gets the token (actions: read); the case runs never see it.
+          GITHUB_TOKEN: ${{ github.token }}
+          TREE: ${{ steps.cases.outputs.tree }}
+          REPOSITORY: ${{ github.repository }}
+          REPOSITORY_ID: ${{ github.repository_id }}
+        run: python scripts/verified_tree.py lookup --tree "$TREE" --repository "$REPOSITORY" --repository-id "$REPOSITORY_ID"
+      - name: Verify cases
+        id: verify
+        if: ${{ !cancelled() && steps.gate.outputs.run == 'true' && steps.cases.outcome == 'success' }}
+        env:
+          ALL: ${{ steps.cases.outputs.all }}
           CASES: ${{ steps.cases.outputs.cases }}
+          VERIFIED: ${{ steps.verified.outputs.verified }}
+          VERIFIED_RUN_URL: ${{ steps.verified.outputs.run_url }}
           OPENSCI_CATALOG_DIR: ${{ github.workspace }}/run-alignment/.catalog
           OPENSCI_CATALOG_CHECK_INTERVAL: "0"
         run: |
+          if [[ "$VERIFIED" == "true" ]]; then
+            python scripts/verified_tree.py summary --selection all --skipped verified --run-url "$VERIFIED_RUN_URL"
+            exit 0
+          fi
+          if [[ "$ALL" == "true" ]]; then
+            selection=all
+            names=(--all)
+          else
+            selection=changed
+            read -r -a names <<< "$CASES"
+            if (( ${#names[@]} == 0 )); then
+              python scripts/verified_tree.py summary --selection changed --skipped none-changed
+              exit 0
+            fi
+          fi
           status=0
-          for name in $CASES; do
-            run-alignment/.venv/bin/python -m os_optics_kit cases verify "$name" --out "run-alignment/cases/$name" \
-              || status=1
-          done
+          run-alignment/.venv/bin/python -m os_optics_kit cases verify "${names[@]}" --jobs 4 \
+            --out run-alignment/cases > run-alignment/cases-verify.json || status=$?
+          # The summary also fails (exit 1) when the exit code is 0 but cases-verify.json is missing or not MATCH.
+          summary=0
+          python scripts/verified_tree.py summary --selection "$selection" --verify run-alignment/cases-verify.json \
+            --exit "$status" || summary=$?
+          if (( status == 0 )); then status=$summary; fi
           exit "$status"
+      - name: Record the full verification of this tree
+        id: record
+        if: >-
+          ${{ !cancelled() && steps.verify.outcome == 'success' && steps.cases.outputs.all == 'true'
+          && steps.verified.outputs.verified != 'true' }}
+        env:
+          TREE: ${{ steps.cases.outputs.tree }}
+          EVENT: ${{ github.event_name }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          python scripts/verified_tree.py record --verify run-alignment/cases-verify.json \
+            --report run-alignment/report.json --tree "$TREE" --commit "$(git rev-parse HEAD)" --event "$EVENT" \
+            --run-id "$RUN_ID" --out run-alignment/verified-tree/verified-tree.json
+      - name: Upload the verified-tree record
+        if: ${{ !cancelled() && steps.record.outputs.recorded == 'true' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ steps.record.outputs.name }}
+          path: run-alignment/verified-tree/verified-tree.json
+          if-no-files-found: error
+          retention-days: 30
+          overwrite: true
       - name: Presentation demo from the beam-expander case (review artifact)
         if: ${{ !cancelled() && steps.gate.outputs.run == 'true' }}
         env:

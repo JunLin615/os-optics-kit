@@ -43,7 +43,7 @@ python -m venv .venv
 ```
 
 On Windows use `.venv\Scripts\python`. The requirements files request
-`os-optics>=0.13,<0.14` and `os-optics-kit>=0.2,<0.3` and pin the tested versions of the
+`os-optics>=0.13,<0.14` and `os-optics-kit>=0.3,<0.4` and pin the tested versions of the
 third-party packages, which are never dependencies of `os-optics` or `os-optics-kit`.
 
 Every script prints one JSON summary on stdout. Its `outcome` compares OpenSci with an

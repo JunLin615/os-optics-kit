@@ -4,7 +4,7 @@
 getting-started walkthrough is available in
 [English](https://github.com/JunLin615/os-optics/blob/main/docs/en/getting-started.md) and
 [Simplified Chinese](https://github.com/JunLin615/os-optics/blob/main/docs/zh-CN/getting-started.md).
-These recipes use os-optics 0.13 with os-optics-kit 0.2; the quoted results come from
+These recipes use os-optics 0.13 with os-optics-kit 0.3; the quoted results come from
 os-optics 0.13.0 and catalog release `2026-10-28.1`.
 The same edits by ID, with unit conversion, a change record and retry safety, are
 available without writing Python through `os-optics-kit edit`

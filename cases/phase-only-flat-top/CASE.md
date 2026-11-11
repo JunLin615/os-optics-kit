@@ -2,11 +2,15 @@
 name: phase-only-flat-top
 title: Circular flat-top shaping and input-width sensitivity
 summary: Design a phase-only mask for a circular flat top, then change the Gaussian input width while keeping the mask fixed. Measure core intensity variation and target-region power.
+class: free-space
+domain: beam-shaping, diffraction
+provenance: self-built
+publication: own-work
 engine: 0.13.0
 catalog: none
 project: project.json
 tools: present
-tags: catalog-free, beam-shaping, phase-mask, fourier-optics, interop
+tags: phase-mask, flat-top, handoff, interop
 license: MIT
 ---
 
@@ -20,9 +24,9 @@ Use Python 3.12+ with os-optics 0.13.0 and os-optics-kit 0.3.0. In a copied case
 
 ```bash
 python -m pip install -r requirements-flat-top.txt
-python workflow.py --out out/flat-top
-python workflow.py --out out/flat-top --redraw
-python present_case.py out/flat-top --out figures/en --bundle figures/flat-top.zip
+python workflow.py --out out/default
+python workflow.py --out out/default --redraw
+python present_case.py out/default --out figures/en --bundle figures/flat-top-en.zip
 ```
 
 `--width-scale 1.1` tests a wider input; `--radius-mm 0.45` redesigns the target. Use a fresh output directory for each computation. Default compute time is about 7 seconds on the recorded Windows/Python 3.14 environment.
@@ -33,8 +37,8 @@ Native target: illumination 1/e² radius 0.749–0.752 mm. External observables:
 
 ## Baseline
 
-Catalog-free. Scalar, coherent, paraxial model; continuous lossless phase and ideal f = 100 mm Fourier lens. Smooth energy transport initializes 251 Gerchberg–Saxton updates minimizing target-intensity error. Independent checks use complex-q propagation, direct Fourier quadrature, power conservation and a half-pitch evaluation of the fixed mask.
+No catalog. Scalar, coherent, paraxial model; continuous lossless phase and ideal f = 100 mm Fourier lens. Smooth energy transport initializes 251 Gerchberg–Saxton updates minimizing target-intensity error. Independent checks use complex-q propagation, direct Fourier quadrature, power conservation and a half-pitch evaluation of the fixed mask.
 
 ## Files
 
-`project.json` and `expected.json` describe native illumination. `workflow.py` saves native runs, handoffs, `science.npz`, `configuration.json`, `results.json` and `preview.png`. `present_case.py` redraws saved data with kit themes, bilingual captions and an offline gallery; see the READMEs for the native/external boundary and portable external redraw. `images/layout.png` shows the native reference system.
+`project.json` and `expected.json` describe native illumination. `workflow.py` saves native runs, handoffs, `science.npz`, `configuration.json`, `results.json` and `preview.png`. `present_case.py` builds an optional gallery from saved data. `README.md` and `README.zh-CN.md` explain the native/external boundary; `images.json` records `images/iso.png` and `images/section.png`, engine views of the unmodulated reference system.

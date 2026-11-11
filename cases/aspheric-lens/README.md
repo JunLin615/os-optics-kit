@@ -1,17 +1,22 @@
 # Even aspheres carry a five-element f/3.5 lens to 25° half field
 
+[简体中文](README.zh-CN.md) · [Agent case sheet](CASE.md)
+
 A five-element lens for the visible band (N-BK7, N-BK7, F2, N-BK7, F2) at F/3.5 and 50 mm focal
 length, designed for a 25° half field and evaluated at 486, 588 and 656 nm. Four surfaces carry an
 even asphere: a conic plus an A4 term. To show what the aspheres buy, the same elements were also
 optimised with every radius spherical, and both versions went through the engine under identical
 conditions — same stop, same source, same budget, same imaging request.
 
+![3D view: the nine field and wavelength sources, the five-element lens AS and the image plane](images/iso.png)
+
 ## The lens
 
-![System section, true scale](images/system.png)
+![Section through the lens axis, true scale: the stop, L1–L5, the image plane and the traced rays](images/section.png)
 
-The stop ahead of the first element opens to 7.143 mm, which sets F/3.5 for a 50 mm focal length.
-The aspheric terms sit on S1 and S3 (the first element) and on S9 and S10 (the last one):
+The stop ahead of the first element has a 7.143 mm semi-diameter (14.29 mm across), which sets F/3.5
+for a 50 mm focal length. The aspheric terms sit on S1 and S3 (the first element) and on S9 and S10
+(the last one):
 
 | surface | role | conic | A4 |
 | --- | --- | --- | --- |
@@ -20,12 +25,13 @@ The aspheric terms sit on S1 and S3 (the first element) and on S9 and S10 (the l
 | S9 | front of L5 | 9.6022 | −2.047e−06 |
 | S10 | back of L5 | 4.0369 | 4.320e−06 |
 
-The A4 terms do real work: at the clear radius of S10, A4·r⁴ is 0.0032 mm, well inside the sag of
-the surface but enough to trim the outer zone where the spherical version cannot.
+The A4 terms do real work: at the 19.98 mm clear radius of S10, A4·r⁴ is 0.689 mm, more than half
+the 1.17 mm sag of the base conic there, and it trims the outer zone where the spherical version
+cannot.
 
 ## What the aspheres buy
 
-![Diffraction MTF: asphere against spherical control](images/mtf.png)
+![Diffraction MTF of the even-asphere version at 12.5°](images/mtf.png)
 
 | | even-asphere version | spherical control |
 | --- | --- | --- |
@@ -36,18 +42,18 @@ the surface but enough to trim the outer zone where the spherical version cannot
 | sources on the plane | 9/9, 14 quantities each | 9/9, 14 quantities each |
 | KNOWN quantities | 110 of 126 | 114 of 126 |
 
-![Strehl ratio against field, both versions](images/strehl.png)
+![Strehl ratio against field, even-asphere version](images/strehl.png)
 
 The spherical control holds its first field only out to 20° — past that its rays stop reaching the
-image plane at all — and even there its off-axis Strehl ratio is 0.023–0.139. The aspheric version
-is at 0.254–0.483 on a field 25 % further out. On axis the two are comparable; the difference is
-entirely in the outer field, which is exactly where a five-element f/3.5 lens fails when every
-surface is spherical.
+image plane at all — and at its 10° off-axis field its Strehl ratio is only 0.023–0.139. The aspheric
+version holds 0.254–0.483 at 12.5°, a field 25 % further out. On axis the two are comparable; the
+difference is entirely in the outer field, which is exactly where a five-element f/3.5 lens fails when
+every surface is spherical.
 
 The control also pays by hiding in near-plane surfaces: to hold 20° it drives S4 to R = 443 mm and
-S10 to R = −794 mm. The aspheric version keeps every radius between −96 mm and +100 mm.
+S10 to R = −794 mm. The aspheric version keeps every radius between −96 mm and +173 mm.
 
-![Ray spot radius, both versions](images/spot.png)
+![Ray spot radius per field and wavelength, even-asphere version](images/spot.png)
 
 ## Reading the engine's verdict
 
@@ -67,11 +73,15 @@ KNOWN** — image-space NA, ray spot, wavefront RMS and PV, Strehl ratio, tangen
 diffraction MTF with its limit, and the 50 % / 80 % encircled radii. The 16 it declines are the
 `geometric_mtf_*` pair of eight fields, with the reason `GEOMETRIC_REGIME_NOT_MET`: *"the wavefront
 error (0.0797 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is
-the one to read"*. That is the same boundary the mid-wave infrared case shows from the other side:
-a lens good enough to be diffraction limited has no meaningful ray-based MTF.
+the one to read"*. That is the same boundary the [mid-wave infrared case](../midwave-infrared-imager/README.md)
+shows from the other side: a lens good enough to be diffraction limited has no meaningful ray-based
+MTF.
 
 The nine targets are `spot_rms_mm` at 0.05 mm: six MET (on axis 1.00–5.42 µm, 12.5° 9.80–11.08 µm)
-and three UNMET at 25° (61.93–86.22 µm). `expected.json` records that verdict as it stands.
+and three UNMET at 25° (61.93–86.22 µm). `expected.json` records that verdict as it stands. The
+targets read the spot of the run's own trace; the table and the spot figure read the ray spot of
+`results imaging`, which launches its own ray grid (`imaging-request.json`), so the two sets of
+numbers differ slightly.
 
 ## Reproducing it
 
@@ -80,11 +90,22 @@ os-optics project check project.json
 os-optics project run project.json --out-dir run
 os-optics results targets run
 os-optics results imaging run --monitor image_plane --request imaging-request.json
+os-optics view run --no-browser --snapshot views --views iso --size 960x540
+os-optics view run --no-browser --snapshot views --section ALL --size 1600x700
+python figures.py run --out images
 ```
+
+The 3D view and the section are the engine's snapshots of a run of `project.json` (the two `os-optics view`
+lines above, with the recorded options; in a kit checkout `os-optics-kit cases images aspheric-lens`
+re-renders them exactly as recorded in `images.json`).
+`figures.py` draws the MTF, Strehl and spot figures from that run with the same `results imaging` call
+(matplotlib comes with `pip install "os-optics-kit[plot]"`); the spherical control has no Project in
+this case, so its numbers stay in the table above.
 
 `data/engine-aspheric.json` holds both versions side by side: every quantity with its state, basis and —
 where the engine declined it — the reason and message verbatim. `studies/aspheric.csv` and
-`studies/spherical-control.csv` are the two surface tables; `prescription.csv` is the aspheric one.
+`studies/spherical-control.csv` are the two surface tables; `prescription.csv` is the aspheric one, and
+`input_prescription.csv` is the input prescription, without the stop row.
 
 The surface table imports directly:
 

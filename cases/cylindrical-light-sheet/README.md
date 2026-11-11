@@ -1,10 +1,20 @@
 # Cylindrical light-sheet thickness and range
 
+[简体中文](README.zh-CN.md) · [Agent case sheet](CASE.md)
+
 A cylindrical lens focuses one transverse axis of a Gaussian beam. A shorter focal length makes the sheet thinner and shortens the useful propagation range. This case compares the two effects using a real two-interface cylindrical prescription and a separable paraxial Gaussian model.
 
-![Cylindrical lens and observation planes](images/layout.png)
+![3D view: the source LASER, the cylindrical lens CYL, the observation planes `after` and `nominal-focus`, and the beam converging along y](images/iso.png)
 
-The source travels along +z at 488 nm with a 1 mm waist radius and 10 mW power. The lens entrance is at z=20 mm; the 2 mm thick, n=1.52 lens has a curved entrance and plane exit. Its cylinder axis is x, so y focuses. The default entrance radius is 26 mm, the clear diameter is 10 mm, and each surface transmits 0.995 of the power. The refractive index is constant over 450–650 nm. The modeled surfaces are ideal and M²=1.
+![Section through the lens axis in the x-z plane: the cylinder axis is x, so the beam stays collimated along x](images/section.png)
+
+Both images are the engine's browser-free snapshots of a run of `project.json`:
+`os-optics view run --no-browser --snapshot DIR` with `--views iso --size 960x540`, and again with
+`--section ALL --frame=scene --size 1200x420`. In a kit checkout,
+`os-optics-kit cases images cylindrical-light-sheet` re-renders exactly these views as recorded in
+`images.json`.
+
+The source travels along +z at 488 nm with a 1 mm waist radius and 10 mW power. The lens front vertex is at z=20 mm; the 2 mm thick, n=1.52 lens has a curved entrance and plane exit. Its cylinder axis is x, so y focuses. The default entrance radius is 26 mm, the clear diameter is 10 mm, and each surface transmits 0.995 of the power. The refractive index is constant over 450–650 nm. The modeled surfaces are ideal and M²=1.
 
 | Lens focal length | Waist thickness FWHM | Full sqrt(2)-thickness range | Waist z |
 | --- | --- | --- | --- |
@@ -28,7 +38,7 @@ python workflow.py --focal-length-mm 65 --out ../sheet-f65
 python workflow.py --out ../sheet-default --plot-only
 ```
 
-The complete default workflow takes about 4–5 seconds on the checked Windows/Python 3.14 environment, including preview rendering; scientific construction and calculation take about 2 seconds. `--focal-length-mm` accepts 25–110 mm and `--input-waist-mm` accepts 0.5–1.5 mm. Each changed focal length rebuilds the cylindrical prescription from the specified surfaces. Shorter focal lengths or larger input waists reduce thickness and range; the engine assesses each design's two targets. A workflow exit code of 1 means one of these example thresholds is missed.
+The complete default workflow takes about 4–5 seconds on Windows with Python 3.14, including preview rendering; scientific construction and calculation take about 2 seconds. `--focal-length-mm` accepts 25–110 mm and `--input-waist-mm` accepts 0.5–1.5 mm. Each changed focal length rebuilds the cylindrical prescription from the specified surfaces. Shorter focal lengths or larger input waists reduce thickness and range; the engine assesses each design's two targets. A workflow exit code of 1 means one of these example thresholds is missed.
 
 ## Read the saved result
 
@@ -40,9 +50,10 @@ An independent ABCD calculation refracts q into the glass, propagates through it
 
 ## Presentation from saved results
 
-Use kit 0.3.0 and Chrome/Chromium, with Microsoft YaHei or Noto Sans CJK SC for
-Chinese text. Inputs are completed `workflow.py` output folders. The first input
-supplies the reference map and system view; add the 65 mm folder to compare the
+This presentation is optional. It needs kit 0.3.0 with the `render` extra and
+Chrome/Chromium, with Microsoft YaHei or Noto Sans CJK SC for Chinese text.
+Inputs are completed `workflow.py` output folders. The first input supplies the
+reference map and the gallery's 3D view; add the 65 mm folder to compare the
 design that exceeds the waist-thickness limit.
 
 ```bash

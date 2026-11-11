@@ -1,19 +1,23 @@
 ---
 name: focus-requirement
-title: A focusing requirement verified at a fixed working plane
+title: A focusing requirement verified at a fixed work plane
 summary: Focus a 780 nm Gaussian beam to a 1/e² intensity radius at most 20 µm at a fixed plane 50 mm beyond the nominal lens position. A before/after comparison and refined placement sweep turn the requirement into a bounded tolerance answer and report.
+class: free-space
+domain: gaussian-beam
+provenance: self-built
+publication: own-work
 engine: 0.13.0
 catalog: none
 project: project.json
 tools: summary, edit, sweep, compare, report, present
-tags: catalog-free, gaussian-beam, focusing, requirements, placement-tolerance
+tags: focusing, requirement-check, placement-tolerance, report
 license: MIT
 ---
 
 ## What it shows
 
 Requirement sheet: 780 nm, M²=1, source waist radius 1 mm at x=−10 mm, ideal f=50 mm lens nominally at x=0,
-fixed working plane at x=50 mm. The requested radius is at this physical plane. The source and detector stay
+fixed work plane at x=50 mm. The requested radius is at this physical plane. The source and detector stay
 fixed during lens-placement variations. A +1 mm placement error supplies the unmet starting example.
 
 ## Run
@@ -44,5 +48,6 @@ boundary brackets, resolution, reference error and identities.
 ## Files
 
 `project.json`, `expected.json`: requirement and native baseline. `workflow.py`: shared compute/study/redraw steps.
-`data/snapshot.json`: numerical baseline. Bilingual READMEs and `images/` explain the workflow.
+`data/snapshot.json`: numerical baseline. `README.md`, `README.zh-CN.md`: the illustrated pages;
+`images.json` records the system views in `images/`.
 Generated outputs include saved runs, coarse/refined studies, comparison, reports, offline gallery and ZIP bundle.

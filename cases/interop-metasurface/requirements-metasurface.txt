@@ -2,7 +2,7 @@
 # not. Needs Python 3.12 or newer (numpy 2.5.4 and scipy 1.18.1 require it); verified with Python 3.14.7 and
 # os-optics 0.13.0. grcwa declares the GPLv3 license in its package metadata.
 os-optics>=0.13,<0.14
-os-optics-kit>=0.2,<0.3
+os-optics-kit>=0.3,<0.4
 numpy==2.5.4
 scipy==1.18.1
 grcwa==0.1.2

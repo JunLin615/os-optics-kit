@@ -1,10 +1,17 @@
 # 圆形平顶光整形与入射束宽敏感性
 
+[English](README.md) · [智能体案例说明](CASE.md)
+
 纯相位平顶设计能容忍多大的照明束宽变化？本案例设计一个圆形图案，再将光源束腰缩小 10%，使用同一相位掩模重新计算。核心区域的强度变异系数（CV）由 **0.01197 升至 0.07450**，但目标区域仍包含几乎全部功率。
 
-![原生高斯照明与参考聚焦透镜](images/layout.png)
+![原生参考系统的三维视图：光源 `LASER`、理想透镜 `NEG`、`POS` 与 `FOCUS`、交接面 `phase_input` 及未调制焦面 `unmodulated_focus`](images/iso.png)
 
-原生系统包含 532 nm、10 mW、束腰半径 0.5 mm 的 TEM00 光源，理想 −40/+60 mm 扩束系统和理想 100 mm 傅里叶透镜。引擎在该透镜前 1 mm 处导出 TEM00 交接数据，此处光束半径为 0.750275 mm。外部计算将该复场传播 1 mm，在透镜平面施加相位掩模，再计算后焦面复场。原生焦点与布局表示未调制的参考系统；平顶结果来自保存的外部复场。
+![沿光轴的截面：扩束系统扩大光束，`phase_input` 位于 `FOCUS` 前 1 mm，未调制光束在其后 100 mm 处会聚于 `unmodulated_focus`](images/section.png)
+
+两幅图都是引擎对 `project.json` 一次运行的无浏览器快照：`os-optics view run --no-browser --snapshot DIR` 加 `--views iso --size 960x540` 运行一次，再加 `--section ALL --frame=-6,-6,-4,6,6,168 --size 1360x440` 运行一次。
+在 kit 检出目录中，`os-optics-kit cases images phase-only-flat-top` 会按 `images.json` 中的记录原样重新渲染这些视图。
+
+原生系统包含 532 nm、10 mW、束腰半径 0.5 mm 的 TEM00 光源，理想 −40/+60 mm 扩束系统和理想 100 mm 傅里叶透镜。引擎在该透镜前 1 mm 处导出 TEM00 交接数据，此处光束半径为 0.750275 mm。外部计算将该复场传播 1 mm，在透镜平面施加相位掩模，再计算后焦面复场。原生焦点与上面的视图表示未调制的参考系统；平顶结果来自保存的外部复场。
 
 ## 运行与修改参数
 
@@ -50,7 +57,8 @@ python workflow.py --out out/default --redraw
 
 ## 展示保存结果
 
-安装 Chrome/Chromium 后，为每种样式创建新的输出目录：
+图库为可选内容。其中的三维系统图由 kit `render` 截取，需要 `render` 扩展（已在
+`requirements-flat-top.txt` 中固定）以及 Chrome 或 Chromium。为每种样式创建新的输出目录：
 
 ```bash
 python present_case.py out/default --out figures/en --bundle figures/flat-top-en.zip

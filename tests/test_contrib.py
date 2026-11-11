@@ -6,6 +6,7 @@ Run from the repository root: python -m pytest tests/test_contrib.py (or python 
 
 from __future__ import annotations
 
+import argparse
 import contextlib
 import io
 import json
@@ -16,6 +17,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 try:
@@ -77,7 +79,8 @@ def git(*args: str, cwd: Path) -> str:
 
 def make_kit_repo(where: Path) -> Path:
     """A small os-optics-kit checkout: the package's top-level modules, the skills and their index, the templates,
-    pyproject and baseline, no cases yet; one commit."""
+    pyproject and baseline, both top READMEs with their case tables and scripts/case_tables.py, no cases yet; one
+    commit."""
     repo = where / "kit"
     package = repo / "tools" / "os_optics_kit"
     package.mkdir(parents=True)
@@ -85,8 +88,10 @@ def make_kit_repo(where: Path) -> Path:
         shutil.copyfile(module, package / module.name)
     for folder in ("skills", "templates"):
         shutil.copytree(ROOT / folder, repo / folder, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
-    for name in ("pyproject.toml", "baseline.json", "skills.json"):
+    for name in ("pyproject.toml", "baseline.json", "skills.json", "README.md", "README.zh-CN.md"):
         shutil.copyfile(ROOT / name, repo / name)
+    (repo / "scripts").mkdir()
+    shutil.copyfile(ROOT / "scripts" / "case_tables.py", repo / "scripts" / "case_tables.py")
     (repo / ".gitattributes").write_bytes(b"* text=auto eol=lf\n*.png binary\n")
     git("init", "--quiet", "-b", "main", cwd=repo)
     git("config", "user.name", "Kit Contributor", cwd=repo)
@@ -127,6 +132,29 @@ def case_files(case_dir: Path, *, summary: str = "A short summary.", body_extra:
 
 
 VERIFIED = {"engine": "0.12.0", "catalog": None}
+#: the verified run of cases/ideal-lens-focus (the source of demo_case)
+DEMO_VERIFIED = {"engine": "0.13.0", "catalog": None}
+CLASSIFIED = {"class": "free-space", "domain": "gaussian-beam", "provenance": "self-built",
+              "publication": "own-work", "tags": "beam-expander, focusing"}
+ISO_RECORD = {"file": "images/iso.png", "kind": "system-view", "options": ["--views", "iso", "--size", "960x540"],
+              "sha256": "0" * 64, "view": "iso"}
+SECTION_RECORD = {"file": "images/section.png", "kind": "system-view",
+                  "options": ["--section", "ALL", "--frame=scene", "--size", "1200x420"], "sha256": "0" * 64,
+                  "view": "section"}
+
+
+def case_args(**overrides) -> argparse.Namespace:
+    """The classification options of ``contrib case`` (``None`` = not given)."""
+    values = {"case_class": "free-space", "domain": "gaussian-beam", "tags": "beam-expander", "provenance": None,
+              "publication": None, "source": None}
+    values.update(overrides)
+    return argparse.Namespace(**values)
+
+
+def _replace(path: Path, old: str, new: str) -> None:
+    text = path.read_text(encoding="utf-8")
+    assert old in text, (path, old)
+    path.write_text(text.replace(old, new, 1), encoding="utf-8", newline="\n")
 
 
 class FrontMatterTests(unittest.TestCase):
@@ -154,13 +182,13 @@ SKILL_VALUES = {"name": "hello", "description": "Print a greeting.", "kind": "to
                 "inputs": "- i", "outputs": "- o", "example": "os-optics-kit hello --help", "limits": "- l"}
 
 
-def case_values(case_dir: Path) -> dict:
+def case_values(case_dir: Path, classified: dict | None = None, language: str = "en") -> dict:
     verified = {"engine": "0.12.0", "catalog": None, "status": "PASS",
                 "targets": {"targets": [{"target_id": "w", "metric": "beam_radius_mm", "observation_id": "out",
                                          "unit": "mm", "bounds": {"maximum": 2.0}, "value": 1.5,
                                          "assessment": "MET"}]}}
-    return case_mod.prose_values("demo-case", "Demo", "A short summary.", ["summary"], ["demo"], verified,
-                                 case_dir, ["images/iso.png"])
+    return case_mod.prose_values("demo-case", "Demo", "A short summary.", ["summary"], classified or CLASSIFIED,
+                                 verified, case_dir, [ISO_RECORD, SECTION_RECORD], language)
 
 
 class TemplateTests(unittest.TestCase):
@@ -169,6 +197,13 @@ class TemplateTests(unittest.TestCase):
         self.assertEqual(C.fill_template("# T\n\n<!-- how to\nfill -->\n\n{{a}}\n\n\n", {"a": "1"}), "# T\n\n1\n")
         with self.assertRaises(KeyError):
             C.fill_template("{{zzz}}", {})
+
+    def test_optional_front_matter_line_dropped_when_empty(self):
+        template = "---\na: {{a}}\nsource: {{source}}\nb: {{b}}\n---\nsource: {{source}} in text\n"
+        self.assertEqual(C.fill_template(template, {"a": "1", "source": "", "b": "2"}),
+                         "---\na: 1\nb: 2\n---\nsource:  in text\n")
+        self.assertEqual(C.fill_template(template, {"a": "1", "source": "Ref 2020", "b": "2"}),
+                         "---\na: 1\nsource: Ref 2020\nb: 2\n---\nsource: Ref 2020 in text\n")
 
     def test_checkout_template_preferred_and_an_unfillable_one_skipped(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -190,20 +225,56 @@ class TemplateTests(unittest.TestCase):
     def test_repository_templates_fill_completely_into_valid_pages(self):
         with tempfile.TemporaryDirectory() as tmp:
             values = case_values(Path(tmp))
-        for name in ("CASE.md", "README.case.md"):
+            zh_values = case_values(Path(tmp), language="zh-CN")
+        for name, filled in (("CASE.md", values), ("README.case.md", values), ("README.case.zh-CN.md", zh_values)):
             with self.subTest(template=name):
-                text = C.render_template(None, name, values, [])
+                text = C.render_template(None, name, filled, [])
                 self.assertNotIn("{{", text)
                 self.assertNotIn("<!--", text)
                 self.assertNotIn("\n\n\n", text)
         case = C.render_template(None, "CASE.md", values, [])
         front, body = fm.split(case)
-        self.assertEqual(fm.check_keys(front, kit_cases.FRONT_MATTER_KEYS), [])
+        self.assertEqual(fm.check_keys(front, kit_cases.FRONT_MATTER_KEYS, kit_cases.OPTIONAL_FRONT_MATTER_KEYS), [])
+        self.assertEqual(list(front), list(kit_cases.FRONT_MATTER_KEYS))  # no source line for self-built work
+        self.assertEqual([c for c, _ in kit_cases.check_front_matter(front, "demo-case")], [])
         self.assertEqual(fm.headings(body), list(kit_cases.SECTIONS))
         self.assertIn("| `w` | `beam_radius_mm` | `out` | <= 2 mm | 1.5 mm, MET |", case)
         readme = C.render_template(None, "README.case.md", values, [])
-        self.assertIn("![Isometric view](images/iso.png)", readme)
+        self.assertEqual(readme.split("\n")[:3], ["# Demo", "", "English · [简体中文](README.zh-CN.md)"])
+        self.assertEqual(kit_cases.shown_images(readme), ["images/iso.png", "images/section.png"])
+        self.assertIn(f"![{case_mod.CAPTIONS['iso'][0]}](images/iso.png)", readme)
         self.assertIn("| `w` | 1.5 mm | <= 2 mm | MET |", readme)
+        readme_zh = C.render_template(None, "README.case.zh-CN.md", zh_values, [])
+        self.assertEqual(readme_zh.split("\n")[:3], ["# Demo", "", "[English](README.md) · 简体中文"])
+        self.assertEqual(kit_cases.shown_images(readme_zh), ["images/iso.png", "images/section.png"])
+        self.assertIn(f"![{case_mod.CAPTIONS['section'][1]}](images/section.png)", readme_zh)
+        self.assertIn("不使用目录产品", readme_zh)
+
+    def test_case_template_states_a_source_after_publication(self):
+        classified = {"class": "lens", "domain": "imaging, diffraction", "provenance": "literature",
+                      "publication": "public-domain", "source": "A. Author, Lens Design (1950), example 3",
+                      "tags": "achromat, mtf"}
+        with tempfile.TemporaryDirectory() as tmp:
+            values = case_values(Path(tmp), classified)
+        front, _ = fm.split(C.render_template(None, "CASE.md", values, []))
+        self.assertEqual(list(front), list(kit_cases.FRONT_MATTER_ORDER))
+        self.assertEqual(front["source"], classified["source"])
+        self.assertEqual(fm.check_keys(front, kit_cases.FRONT_MATTER_KEYS, kit_cases.OPTIONAL_FRONT_MATTER_KEYS), [])
+        self.assertEqual([c for c, _ in kit_cases.check_front_matter(front, "demo-case")], [])
+
+    def test_images_block_and_captions(self):
+        figure = {"file": "images/mtf.png", "kind": "figure", "script": "figures.py", "sha256": "0" * 64}
+        block = case_mod.images_block("demo-case", [ISO_RECORD, figure])
+        self.assertEqual(kit_cases.shown_images(block), ["images/iso.png", "images/mtf.png"])
+        self.assertIn("Figure drawn by `figures.py`", block)
+        self.assertIn("由 `figures.py` 绘制", case_mod.images_block("demo-case", [figure], "zh-CN"))
+        top = dict(ISO_RECORD, file="images/path_horizontal.png", view="path_horizontal")
+        self.assertIn("Path horizontal view", case_mod.caption(top))
+        for language in ("en", "zh-CN"):
+            empty = case_mod.images_block("demo-case", [], language)
+            self.assertEqual(kit_cases.shown_images(empty), [])
+            self.assertIn("os-optics-kit contrib case --refresh BUNDLE", empty)
+            self.assertTrue(case_mod.PLACEHOLDER_LINE.fullmatch(empty))
         skill = C.render_template(None, "SKILL.md", SKILL_VALUES, [])
         front, body = fm.split(skill)
         self.assertEqual(front["kind"], "tool")
@@ -285,25 +356,55 @@ class ValidationTests(unittest.TestCase):
     def test_case_dir_valid(self):
         with tempfile.TemporaryDirectory() as tmp:
             case_dir = Path(tmp) / "demo-case"
-            case_files(case_dir)
-            self.assertEqual(case_mod.validate_case_dir(case_dir, "demo-case", VERIFIED, {"summary"}), [])
+            demo_case(case_dir)
+            self.assertEqual(kit_cases.check_case(case_dir), [])
+            self.assertEqual(case_mod.validate_case_dir(case_dir, "demo-case", DEMO_VERIFIED, {"summary"}), [])
 
     def test_case_dir_problems(self):
         with tempfile.TemporaryDirectory() as tmp:
             case_dir = Path(tmp) / "demo-case"
             case_files(case_dir, summary="s" * 301, body_extra="x" * 3000)
             (case_dir / "optical_scene.glb").write_bytes(b"glb")
+            (case_dir / "ray_data.json").write_text("{}", encoding="utf-8")
             (case_dir / "images" / "big.png").write_bytes(b"0" * (400 * 1024 + 1))
             problems = "\n".join(case_mod.validate_case_dir(case_dir, "other-name", {"engine": "0.13.0",
                                                                                      "catalog": None}, set()))
-            for needle in ("optical_scene.glb", "big.png", "summary longer", "budget 700", "name is",
-                           "engine is", "not os-optics-kit commands"):
+            for needle in ("GENERATED_FILE: optical_scene.glb", "GENERATED_FILE: ray_data.json", "big.png",
+                           "SUMMARY_TOO_LONG", "the budget is 700", "CASE.md name is", "CASE.md engine is",
+                           "not os-optics-kit commands", "FRONT_MATTER_KEY", "IMAGES_RECORD: images.json is missing",
+                           "FILE_MISSING: README.zh-CN.md"):
                 self.assertIn(needle, problems)
 
     def test_case_dir_missing_files(self):
         with tempfile.TemporaryDirectory() as tmp:
-            problems = case_mod.validate_case_dir(Path(tmp), "x", VERIFIED, set())
-            self.assertIn("CASE.md missing", problems)
+            problems = case_mod.validate_case_dir(Path(tmp) / "x", "x", VERIFIED, set())
+            self.assertIn("FILE_MISSING: CASE.md is missing", problems)
+
+    def test_validation_reports_every_index_check_problem(self):
+        """Parity with ``cases index --check``: whatever check_case reports, validate_case_dir reports too."""
+        mutations = {
+            "class": lambda d: _replace(d / "CASE.md", "class: lens", "class: telescope"),
+            "tag": lambda d: _replace(d / "CASE.md", "tags: ideal-lens", "tags: catalog-free, ideal-lens"),
+            "source": lambda d: _replace(d / "CASE.md", "publication: own-work",
+                                         "publication: own-work\nsource: somewhere"),
+            "order": lambda d: _replace(d / "CASE.md", "domain: gaussian-beam\nprovenance: self-built",
+                                        "provenance: self-built\ndomain: gaussian-beam"),
+            "images-record": lambda d: (d / "images.json").unlink(),
+            "image-sha": lambda d: (d / "images" / "iso.png").write_bytes(b"\x89PNG\r\n\x1a\n" + b"0" * 64),
+            "readme-order": lambda d: _replace(d / "README.zh-CN.md", "](images/iso.png)", "](images/section.png)"),
+            "zh-readme": lambda d: (d / "README.zh-CN.md").unlink(),
+            "unrecorded-image": lambda d: (d / "images" / "top.png").write_bytes(b"\x89PNG\r\n\x1a\n"),
+            "expected": lambda d: _replace(d / "expected.json", '"status": "PASS"', '"status": "GREAT"'),
+        }
+        for label, mutate in mutations.items():
+            with self.subTest(mutation=label), tempfile.TemporaryDirectory() as tmp:
+                case_dir = Path(tmp) / "demo-case"
+                demo_case(case_dir)
+                mutate(case_dir)
+                checked = [f"{p['code']}: {p['message']}" for p in kit_cases.check_case(case_dir)]
+                self.assertTrue(checked, label)
+                validated = case_mod.validate_case_dir(case_dir, "demo-case", DEMO_VERIFIED, {"summary"})
+                self.assertEqual([p for p in checked if p not in validated], [])
 
     def test_skill_validation(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -364,7 +465,8 @@ class CliArgumentTests(unittest.TestCase):
             ([], "USAGE"),
             (["p.json"], "USAGE"),
             (["p.json", "--name", "Bad_Name"], "NAME_INVALID"),
-            (["missing-file.json", "--name", "ok-name", "--out", "unused"], "PROJECT_MISSING"),
+            (["missing-file.json", "--name", "ok-name", "--out", "unused", "--class", "lens", "--domain",
+              "imaging", "--tags", "mtf"], "PROJECT_MISSING"),
             (["--refresh", "nowhere"], "BUNDLE_INVALID"),
             (["--bogus"], "USAGE"),
         ]
@@ -374,6 +476,51 @@ class CliArgumentTests(unittest.TestCase):
                 self.assertEqual(code, 4)
                 self.assertEqual(doc["status"], "ERROR")
                 self.assertEqual(doc["error"]["code"], code_name)
+
+    def test_classification_refusals_name_the_allowed_values(self):
+        """Missing or unknown classification values: exit 4, BAD_ARGUMENT, before the project file is read."""
+        base = ["missing-file.json", "--name", "ok-name", "--out", "unused"]
+        good = ["--class", "lens", "--domain", "imaging", "--tags", "mtf"]
+        cases = [
+            ([], {"class", "domain", "tags"}),
+            (["--class", "telescope", "--domain", "imaging", "--tags", "mtf"], {"class"}),
+            (["--class", "lens", "--domain", "imaging,optics", "--tags", "mtf"], {"domain"}),
+            (["--class", "lens", "--domain", "imaging,diffraction,dispersion,polarization", "--tags", "mtf"],
+             {"domain"}),
+            (["--class", "lens", "--domain", "imaging", "--tags", "catalog-free"], {"tags"}),
+            (["--class", "lens", "--domain", "imaging", "--tags", "lens"], {"tags"}),
+            (["--class", "lens", "--domain", "imaging", "--tags", "none"], {"tags"}),
+            (["--class", "lens", "--domain", "imaging", "--tags", "mtf,mtf"], {"tags"}),
+            ([*good, "--provenance", "blog"], {"provenance"}),
+            ([*good, "--provenance", "literature"], {"publication", "source"}),
+            ([*good, "--provenance", "literature", "--publication", "public-domain"], {"source"}),
+            ([*good, "--source", "A paper"], {"source"}),
+            ([*good, "--publication", "permission"], {"publication"}),
+            ([*good, "--provenance", "patent", "--publication", "permission", "--source", "x" * 201], {"source"}),
+        ]
+        for extra, fields in cases:
+            with self.subTest(extra=extra):
+                code, doc = call(["case", *base, *extra])
+                self.assertEqual((code, doc["status"], doc["error"]["code"]), (4, "ERROR", "BAD_ARGUMENT"))
+                self.assertEqual(set(doc["error"]["allowed"]), fields)
+                self.assertIn("cases vocabulary", doc["error"]["hint"])
+        code, doc = call(["case", *base, "--class", "telescope", "--domain", "imaging", "--tags", "mtf"])
+        self.assertEqual(doc["error"]["allowed"]["class"], ["lens", "free-space", "integrated-path"])
+        # valid classifications pass on to the next step (the missing project file)
+        for extra in (good, [*good, "--provenance", "literature", "--publication", "open-license", "--source",
+                             "J. Doe, Optics Letters 1 (2020) 1"], ["--class", "free-space", "--domain",
+                                                                   "Gaussian-Beam,diffraction", "--tags", "MTF"]):
+            with self.subTest(extra=extra):
+                self.assertEqual(call(["case", *base, *extra])[1]["error"]["code"], "PROJECT_MISSING")
+
+    def test_classification_values(self):
+        values = case_mod.classification(case_args(domain="gaussian-beam, diffraction", tags="focusing,MTF"))
+        self.assertEqual(values, {"class": "free-space", "domain": "gaussian-beam, diffraction",
+                                  "provenance": "self-built", "publication": "own-work", "tags": "focusing, mtf"})
+        third_party = case_mod.classification(case_args(provenance="literature", publication="open-license",
+                                                        source="  A.  Author,\n Book  "))
+        self.assertEqual(list(third_party), ["class", "domain", "provenance", "publication", "source", "tags"])
+        self.assertEqual(third_party["source"], "A. Author, Book")
 
     def test_tool_argument_refusals(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -396,8 +543,224 @@ class CliArgumentTests(unittest.TestCase):
             bundle = Path(tmp)
             (bundle / "bundle.json").write_text(json.dumps({"schema": C.BUNDLE_SCHEMA, "kind": "case",
                                                             "name": "a"}), encoding="utf-8")
-            code, doc = call(["case", "--refresh", str(bundle), "--name", "b"])
-            self.assertEqual((code, doc["error"]["code"]), (4, "USAGE"))
+            for extra in (["--name", "b"], ["--class", "lens"], ["--domain", "imaging"], ["--tags", "mtf"],
+                          ["--provenance", "self-built"], ["--publication", "own-work"], ["--source", "x"]):
+                with self.subTest(extra=extra):
+                    code, doc = call(["case", "--refresh", str(bundle), *extra])
+                    self.assertEqual((code, doc["error"]["code"]), (4, "USAGE"))
+
+
+class ImagePlanTests(unittest.TestCase):
+    def test_default_views(self):
+        self.assertEqual(case_mod.default_views("free-space"), [("iso", "iso", "960x540", None)])
+        self.assertEqual(case_mod.default_views("lens"), [("iso", "iso", "960x540", None),
+                                                          ("section", "ALL", "1200x420", "scene")])
+
+    def test_recorded_views_follow_images_json(self):
+        figure = {"file": "images/mtf.png", "kind": "figure", "script": "figures.py", "sha256": "0" * 64}
+        camera = {"file": "images/camera.png", "kind": "system-view", "options": ["--camera", "30,20"],
+                  "sha256": "0" * 64, "view": "camera"}
+        document = {"images": [ISO_RECORD, camera, SECTION_RECORD, figure]}
+        self.assertEqual(case_mod.recorded_views(document), [("iso", "iso", "960x540", None),
+                                                             ("camera", "30,20", "960x540", None),
+                                                             ("section", "ALL", "1200x420", "scene")])
+        self.assertIsNone(case_mod.recorded_views({"images": [figure]}))
+        self.assertIsNone(case_mod.recorded_views(None))
+        # the frame is recorded as one token (a negative box frame stays one argument); the split form of earlier
+        # bundles is still read
+        box = dict(SECTION_RECORD, options=["--section", "ALL", "--frame=-5,-5,-5,5,5,5", "--size", "1200x420"])
+        split = dict(SECTION_RECORD, options=["--section", "ALL", "--frame", "scene", "--size", "800x300"])
+        self.assertEqual(case_mod.recorded_views({"images": [ISO_RECORD, box]})[1],
+                         ("section", "ALL", "1200x420", "-5,-5,-5,5,5,5"))
+        self.assertEqual(case_mod.recorded_views({"images": [ISO_RECORD, split]})[1],
+                         ("section", "ALL", "800x300", "scene"))
+
+    def test_refresh_plan_completes_what_the_class_needs(self):
+        iso, section = case_mod.default_views("lens")
+        top = ("top", "top", "960x540", None)
+        # a lens whose section was not rendered: the section is planned again
+        self.assertEqual(case_mod.refresh_plan([iso], None, "lens"), [iso, section])
+        # a lens whose iso was not rendered: a snapshot view goes first
+        self.assertEqual(case_mod.refresh_plan([section], None, "lens"), [iso, section])
+        # a recorded snapshot view later in the list is moved first, not replaced
+        self.assertEqual(case_mod.refresh_plan([section, top], None, "lens"), [top, section])
+        # a class edited to lens gets its section; a free-space case keeps what it records
+        self.assertEqual(case_mod.refresh_plan([iso], [], "lens"), [iso, section])
+        self.assertEqual(case_mod.refresh_plan([iso, top], None, "free-space"), [iso, top])
+        self.assertEqual(case_mod.refresh_plan(None, None, "free-space"), [iso])
+        self.assertEqual(case_mod.refresh_plan(None, [], "lens"), [iso, section])
+        # recorded options are kept: no second section when the recorded one has its own frame and size
+        boxed = ("section", "ALL", "1000x400", "-5,-5,-5,5,5,5")
+        self.assertEqual(case_mod.refresh_plan([iso, boxed], None, "lens"), [iso, boxed])
+
+    def test_refresh_plan_puts_unrendered_views_back_at_their_place(self):
+        iso, section = case_mod.default_views("lens")
+        top = ("top", "top", "960x540", None)
+        entries = case_mod.unrendered_entries([(1, top)])
+        self.assertEqual(entries, [{"index": 1, "view": "top", "argument": "top", "size": "960x540", "frame": None}])
+        self.assertEqual(json.loads(json.dumps(entries)), entries)  # bundle.json keeps them as they are
+        self.assertEqual(case_mod.refresh_plan([iso, section], entries, "lens"), [iso, top, section])
+        self.assertEqual(case_mod.refresh_plan([iso, top, section], entries, "lens"), [iso, top, section])
+        # the planned iso of a case none of whose views rendered
+        self.assertEqual(case_mod.refresh_plan(None, case_mod.unrendered_entries([(0, iso), (1, section)]), "lens"),
+                         [iso, section])
+        # entries that are not views are ignored
+        junk = [{"index": "1", "view": "top"}, {"index": 0}, "top", {"index": 2, "view": "top", "argument": "top",
+                                                                    "size": "960x540", "frame": 3}]
+        self.assertEqual(case_mod.refresh_plan([iso], junk, "free-space"), [iso])
+
+    def test_images_command_renders_the_planned_views(self):
+        iso, section = case_mod.default_views("lens")
+        self.assertEqual(case_mod.images_command("demo-case", [iso, section]),
+                         "os-optics-kit cases images demo-case --view iso --section ALL --frame=scene")
+        self.assertEqual(case_mod.images_command("demo-case", [iso]), "os-optics-kit cases images demo-case --view iso")
+        self.assertEqual(case_mod.images_command("demo-case", [("camera", "30,20", "640x360", None),
+                                                               ("section", "L1", "1000x400", "-5,-5,-5,5,5,5")]),
+                         "os-optics-kit cases images demo-case --camera 30,20 --section L1 --frame=-5,-5,-5,5,5,5 "
+                         "--size 640x360 --section-size 1000x400")
+
+    def test_unrendered_view_warns_with_the_recovery(self):
+        def failing(*args, **kwargs):
+            raise kit_cases.CaseError("IMAGE_TOO_LARGE", "iso stays over 409600 bytes")
+
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(kit_cases, "_render_view", failing):
+            warnings: list[str] = []
+            plan = case_mod.default_views("lens")
+            records, missing = case_mod.render_system_views(
+                "demo-case", plan, Path(tmp) / "run", Path(tmp), Path(tmp) / "case", {}, warnings)
+        self.assertEqual((records, missing), ([], [(0, plan[0]), (1, plan[1])]))
+        self.assertEqual(len(warnings), 2)
+        self.assertTrue(warnings[0].startswith("IMAGE_NOT_RENDERED: images/iso.png (IMAGE_TOO_LARGE"))
+        self.assertIn("os-optics view RUN --no-browser --snapshot DIR --views iso", warnings[0])
+        self.assertIn("os-optics view RUN --no-browser --snapshot DIR --section ALL", warnings[1])
+        for warning in warnings:
+            self.assertIn("'os-optics-kit contrib case --refresh BUNDLE' renders this view again and puts it into "
+                          "both READMEs", warning)
+            self.assertIn("without a browser or the render extra", warning)
+
+
+    def test_refresh_never_deletes_or_hashes_files_outside_the_case_images(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            case_dir = root / "bundle" / "case"
+            (case_dir / "images").mkdir(parents=True)
+            victim = root / "bundle" / "victim.png"
+            victim.write_bytes(b"\x89PNG\r\n\x1a\nvictim")
+            (case_dir / "images" / "iso.png").write_bytes(b"\x89PNG\r\n\x1a\nold")
+            run_dir = root / "run"
+            run_dir.mkdir()
+            (run_dir / "manifest.json").write_text("{}", encoding="utf-8")
+            previous = {"images": [
+                {"file": "images/iso.png", "kind": "system-view", "options": ["--views", "iso", "--size", "960x540"],
+                 "sha256": "0" * 64, "view": "iso"},
+                {"file": "images/../../victim.png", "kind": "system-view", "options": ["--views", "top"],
+                 "sha256": "0" * 64, "view": "top"},
+                {"file": "../victim.png", "kind": "figure", "script": "x.py", "sha256": "0" * 64},
+                {"file": victim.as_posix(), "kind": "figure", "script": "x.py", "sha256": "0" * 64}]}
+            with mock.patch.object(case_mod, "render_system_views", return_value=([], [])), \
+                    mock.patch.object(kit_cases, "write_images_record", side_effect=lambda _d, records, _r: records), \
+                    mock.patch.object(kit_cases, "run_identity", return_value={}):
+                records, _missing = case_mod.record_images("demo-case", case_dir, run_dir, root, {}, [],
+                                                           case_class="free-space", previous=previous)
+            self.assertEqual(victim.read_bytes(), b"\x89PNG\r\n\x1a\nvictim")
+            self.assertFalse((case_dir / "images" / "iso.png").exists(), "the case's own old view is replaced")
+            self.assertEqual(records, [], "no outside file is hashed into the record")
+
+
+ISO_LINE = f"![{case_mod.CAPTIONS['iso'][0]}](images/iso.png)"
+SECTION_LINE = f"![{case_mod.CAPTIONS['section'][0]}](images/section.png)"
+
+
+class ReadmeImagesTests(unittest.TestCase):
+    """--refresh makes both READMEs show exactly the images rendered now: a refresh that renders a view
+    missing before also shows it."""
+
+    def test_block_rebuilt_in_order_keeping_captions(self):
+        text = "# Demo\n\nIntro.\n\n![My own iso caption](images/iso.png)\n\n## Run it\n"
+        updated = case_mod.replace_images(text, "demo-case", [ISO_RECORD, SECTION_RECORD])
+        self.assertEqual(updated, "# Demo\n\nIntro.\n\n![My own iso caption](images/iso.png)\n\n"
+                                  f"{SECTION_LINE}\n\n## Run it\n")
+        # a view no longer rendered leaves the block; HTML images count as image lines
+        html = '<img src="images/section.png" alt="section" width="600">'
+        text = f"# Demo\n\n{html}\n\n{ISO_LINE}\n\nMore text.\n"
+        self.assertEqual(case_mod.replace_images(text, "demo-case", [ISO_RECORD]),
+                         f"# Demo\n\n{ISO_LINE}\n\nMore text.\n")
+        self.assertEqual(case_mod.replace_images(text, "demo-case", [ISO_RECORD, SECTION_RECORD]),
+                         f"# Demo\n\n{ISO_LINE}\n\n{html}\n\nMore text.\n")
+        # nothing rendered: the block becomes the generated placeholder line
+        self.assertEqual(case_mod.replace_images(text, "demo-case", []),
+                         f"# Demo\n\n{case_mod.images_block('demo-case', [])}\n\nMore text.\n")
+
+    def test_placeholder_of_this_and_earlier_versions_replaced(self):
+        earlier = {"en": "No system view is recorded yet: `os-optics-kit cases images demo-case` in a kit checkout "
+                         "renders and records it (no browser needed).",
+                   "zh-CN": "尚未记录系统视图：在套件仓库中运行 `os-optics-kit cases images demo-case` 生成并记录（无需浏览器）。"}
+        for language in ("en", "zh-CN"):
+            for line in (case_mod.images_block("demo-case", [], language), earlier[language]):
+                with self.subTest(language=language, line=line[:20]):
+                    text = f"# Demo\n\nIntro.\n\n{line}\n\n## Run\n"
+                    updated = case_mod.replace_images(text, "demo-case", [ISO_RECORD, SECTION_RECORD], language)
+                    self.assertEqual(updated, "# Demo\n\nIntro.\n\n"
+                                     + case_mod.images_block("demo-case", [ISO_RECORD, SECTION_RECORD], language)
+                                     + "\n\n## Run\n")
+
+    def test_hand_edited_images_are_left_alone(self):
+        for text in (f"# Demo\n\n{ISO_LINE}\n\nProse between.\n\n{SECTION_LINE}\n",
+                     f"# Demo\n\nSee {ISO_LINE} here.\n",
+                     f"# Demo\n\n{ISO_LINE} {SECTION_LINE}\n",
+                     f"# Demo\n\n{ISO_LINE}\n\n```\nx\n```\n\n{SECTION_LINE}\n",
+                     "# Demo\n\nNo image and no placeholder.\n"):
+            with self.subTest(text=text):
+                self.assertIsNone(case_mod.replace_images(text, "demo-case", [ISO_RECORD]))
+        # an image inside a code fence is not an image line of the README
+        fenced = f"# Demo\n\n```md\n{ISO_LINE}\n```\n\n{case_mod.images_block('demo-case', [])}\n"
+        self.assertEqual(case_mod.replace_images(fenced, "demo-case", [ISO_RECORD]),
+                         f"# Demo\n\n```md\n{ISO_LINE}\n```\n\n{ISO_LINE}\n")
+
+    def test_update_both_readmes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            case_dir = Path(tmp)
+            C.write_text(case_dir / "README.md", f"# Demo\n\n{ISO_LINE}\n")
+            zh_iso = f"![{case_mod.CAPTIONS['iso'][1]}](images/iso.png)"
+            C.write_text(case_dir / "README.zh-CN.md", f"# 演示\n\n{zh_iso}\n\n文字 {zh_iso}\n")
+            stuck = case_mod.update_readme_images("demo-case", case_dir, [ISO_RECORD, SECTION_RECORD])
+            self.assertEqual(stuck, ["README.zh-CN.md"])
+            self.assertEqual(kit_cases.shown_images((case_dir / "README.md").read_text(encoding="utf-8")),
+                             ["images/iso.png", "images/section.png"])
+            before = (case_dir / "README.md").read_bytes()
+            self.assertEqual(case_mod.update_readme_images("demo-case", case_dir, [ISO_RECORD, SECTION_RECORD]),
+                             ["README.zh-CN.md"])
+            self.assertEqual((case_dir / "README.md").read_bytes(), before)  # already right: not rewritten
+
+
+class PullRequestBodyTests(unittest.TestCase):
+    def test_body_shows_classification_and_images(self):
+        front = {"name": "demo-case", "title": "Demo", "summary": "A short summary.", "class": "lens",
+                 "domain": "imaging, diffraction", "provenance": "literature", "publication": "public-domain",
+                 "source": "A. Author, Lens Design (1950)", "tags": "achromat, mtf"}
+        verified = {"engine": "0.13.0", "catalog": None, "status": "PASS", "execution": "COMPLETED",
+                    "check": {"status": "ACCEPTED"}, "targets": {"targets": []}}
+        figure = {"file": "images/mtf.png", "kind": "figure", "script": "figures.py", "sha256": "0" * 64}
+        body = case_mod.case_pr_body(front, verified, None, {"files": []}, ["cases/demo-case/CASE.md"], True,
+                                     "regenerated", [ISO_RECORD, SECTION_RECORD, figure])
+        for needle in ("| Class | `lens` |", "| Domain | `imaging`, `diffraction` |", "| Tags | `achromat`, `mtf` |",
+                       "| Provenance | `literature` |", "| Publication | `public-domain` |",
+                       "| Source | A. Author, Lens Design (1950) |",
+                       "- `images/iso.png`: system view `iso` (`os-optics view RUN --no-browser --snapshot DIR "
+                       "--views iso --size 960x540`)",
+                       "- `images/mtf.png`: figure drawn by `figures.py`",
+                       "[x] 2 system views rendered by `os-optics view --no-browser --snapshot` and 1 figures",
+                       "[x] `README.md` and `README.zh-CN.md` link each other and show the recorded images in order",
+                       "[x] regenerated", "[x] commit signed off (DCO)"):
+            self.assertIn(needle, body)
+        self.assertLess(body.index("images/iso.png"), body.index("images/section.png"))
+        bare = case_mod.case_pr_body({**front, "provenance": "self-built", "publication": "own-work",
+                                      "source": ""}, verified, None, {"files": []}, [], False, None, [])
+        self.assertNotIn("| Source |", bare)
+        self.assertIn("[ ] 0 system views", bare)
+        self.assertIn("[ ] commit signed off (DCO): no patch in this bundle", bare)
+        self.assertIn("[ ] `cases.json` and the README case tables: the entry is in bundle.json; in a kit checkout "
+                      "run `os-optics-kit cases index --write` and `python scripts/case_tables.py --write`", bare)
 
 
 class FakeRunner:
@@ -463,11 +826,14 @@ class PatchTests(unittest.TestCase):
             clone = C.make_clone(repo, base, "contrib/case-demo-case", work)
             case_dir = clone.path / "cases" / "demo-case"
             demo_case(case_dir)
-            self.assertEqual(case_mod.update_case_indexes(clone), "regenerated by os-optics-kit cases index --write")
+            self.assertEqual(case_mod.update_case_indexes(clone),
+                             "`cases.json` and the README case tables regenerated by `os-optics-kit cases index "
+                             "--write` and `python scripts/case_tables.py --write`")
+            paths = case_mod.index_paths(clone, "demo-case")
+            self.assertEqual(paths, ["cases/demo-case", "cases.json", "README.md", "README.zh-CN.md"])
             patches = tmp / "patches"
             patches.mkdir()
-            patch = C.commit_and_format_patch(clone, ["cases/demo-case", "cases.json"], "feat(cases): add demo-case",
-                                              patches)
+            patch = C.commit_and_format_patch(clone, paths, "feat(cases): add demo-case", patches)
             text = patch.read_text(encoding="utf-8")
             self.assertIn("Signed-off-by: Kit Contributor <contributor@example.com>", text)
             self.assertIn("GIT binary patch", text)
@@ -486,6 +852,33 @@ class PatchTests(unittest.TestCase):
             checked = subprocess.run([sys.executable, "-m", "os_optics_kit", "cases", "index", "--check"],
                                      cwd=applied, env=env, capture_output=True, text=True)
             self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
+            # the README case tables CI checks are current, with a row for the new case in both languages
+            tables = subprocess.run([sys.executable, "scripts/case_tables.py", "--check"], cwd=applied,
+                                    capture_output=True, text=True)
+            self.assertEqual(tables.returncode, 0, tables.stdout + tables.stderr)
+            self.assertIn("README.md", git("show", "--name-only", "--format=", "HEAD", cwd=applied).split())
+            for readme in ("README.md", "README.zh-CN.md"):
+                self.assertIn("cases/demo-case", (applied / readme).read_text(encoding="utf-8"))
+
+    def test_case_tables_skipped_in_a_checkout_without_the_script(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            repo = make_kit_repo(tmp)
+            git("rm", "--quiet", "scripts/case_tables.py", cwd=repo)
+            git("commit", "--quiet", "-m", "older checkout", cwd=repo)
+            clone = C.make_clone(repo, C.resolve_base(repo, None), "contrib/case-demo-case", tmp / "work")
+            demo_case(clone.path / "cases" / "demo-case")
+            self.assertIn("no README case tables", case_mod.update_case_indexes(clone))
+            # a checkout whose README has no case table markers is refused, naming the script
+            repo2 = make_kit_repo(tmp / "second")
+            (repo2 / "README.md").write_text("# Kit\n", encoding="utf-8")
+            git("commit", "--quiet", "-am", "no tables", cwd=repo2)
+            clone2 = C.make_clone(repo2, C.resolve_base(repo2, None), "contrib/case-demo-case", tmp / "work2")
+            demo_case(clone2.path / "cases" / "demo-case")
+            with self.assertRaises(C.ContribError) as ctx:
+                case_mod.update_case_indexes(clone2)
+            self.assertEqual(ctx.exception.code, "CASES_INDEX_FAILED")
+            self.assertIn("case_tables.py", ctx.exception.message)
 
     def test_case_index_refuses_an_invalid_case(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -1,0 +1,57 @@
+{
+  "images": [
+    {
+      "file": "images/iso.png",
+      "kind": "system-view",
+      "options": [
+        "--views",
+        "iso",
+        "--size",
+        "1280x560"
+      ],
+      "sha256": "d72b028e5ea30a9bfcbc0107d2dacdf369de85cba8ae576dd43db14546c9fea7",
+      "view": "iso"
+    },
+    {
+      "file": "images/section.png",
+      "kind": "system-view",
+      "options": [
+        "--section",
+        "ALL",
+        "--frame=scene",
+        "--size",
+        "1600x700"
+      ],
+      "sha256": "e20b7472a32a82b6296c985ed1c664f247f8331854c6956e100b0af5a104ae5a",
+      "view": "section"
+    },
+    {
+      "file": "images/mtf.png",
+      "kind": "figure",
+      "script": "figures.py",
+      "sha256": "b87ca24e7150c5a99ae535b6ce1f5554f1b65ae1232fc83bc7fdf8c0ee12a591"
+    },
+    {
+      "file": "images/spot.png",
+      "kind": "figure",
+      "script": "figures.py",
+      "sha256": "b066d734c317b1400fb3e025bbd7a5dc95ca23e1e36704d302812da909e441e8"
+    },
+    {
+      "file": "images/wavefront.png",
+      "kind": "figure",
+      "script": "figures.py",
+      "sha256": "f438408e3a8fe60861be49962a1569b4bed29f95de885e18b5c956b6e61370a9"
+    }
+  ],
+  "project_sha256": "ce8142ad2b2da5a3b0b4d50d7e7dad28be04c2f107aea10361d47ec8321ae67a",
+  "run": {
+    "catalog": null,
+    "engine": "0.13.0",
+    "engine_input_hash": "e847b2a9dfc4772e5acd3886c4834b3cd8a95a5e9930f58fdf9972c8a0843ce9",
+    "project_hash": "f40870c250596e62ec4b01fe2534a4940931bd3b713c486810cd198c2fc97016",
+    "scene_content_hash": "93400fae6138084e00ba6dd95c519a7f7e84ebf95d4361cc55a5cad293005305"
+  },
+  "schema": "os-optics-kit.case-images",
+  "schema_version": 1
+}

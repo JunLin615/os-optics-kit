@@ -335,6 +335,68 @@ class WorkflowTests(unittest.TestCase):
                 self.assertEqual(text.count("uses: actions/checkout@"), text.count("persist-credentials: false"))
                 self.assertIn("timeout-minutes:", text)
 
+    def job(self, workflow, name):
+        """The text of one job of a workflow (from its key to the next job key)."""
+        import re
+        text = self.workflows()[workflow]
+        match = re.search(rf"(?ms)^  {re.escape(name)}:\n.*?(?=^  [\w-]+:\n|\Z)", text)
+        self.assertIsNotNone(match, name)
+        return match.group(0)
+
+    def step(self, job_text, name):
+        import re
+        match = re.search(rf"(?ms)^      - name: {re.escape(name)}\n.*?(?=^      - |\Z)", job_text)
+        self.assertIsNotNone(match, name)
+        return match.group(0)
+
+    def test_ci_verifies_cases_on_one_path_once_per_tree(self):
+        engine = self.job("ci.yml", "engine")
+        self.assertIn("name: Engine checks (published os-optics)", engine)
+        self.assertIn("python scripts/check_alignment.py --out run-alignment --skip cases-verify", engine)
+        self.assertEqual(engine.count("check_alignment.py"), 1)
+        self.assertIn("    permissions:\n      contents: read\n", engine)
+        self.assertRegex(engine, r"\n      actions: read\n")
+        verify = self.step(engine, "Verify cases")
+        self.assertIn("run-alignment/.venv/bin/python -m os_optics_kit cases verify \"${names[@]}\" --jobs 4", verify)
+        self.assertIn("--out run-alignment/cases > run-alignment/cases-verify.json", verify)
+        self.assertIn("OPENSCI_CATALOG_DIR: ${{ github.workspace }}/run-alignment/.catalog", verify)
+        self.assertIn('exit "$status"', verify)
+        # The summary's exit code (non-zero for a document that is not MATCH) fails the step when verify exited 0.
+        self.assertIn('--exit "$status" || summary=$?', verify)
+        self.assertIn("if (( status == 0 )); then status=$summary; fi", verify)
+        self.assertNotIn("GITHUB_TOKEN", verify)
+        self.assertEqual(engine.count("cases verify"), 1)  # no per-case loop
+        lookup = self.step(engine, "Look for a full verification of this tree")
+        self.assertIn("GITHUB_TOKEN: ${{ github.token }}", lookup)
+        self.assertIn("github.event_name != 'pull_request'", lookup)
+        self.assertEqual(engine.count("github.token"), 1)
+        record = self.step(engine, "Record the full verification of this tree")
+        self.assertIn("steps.cases.outputs.all == 'true'", record)
+        self.assertIn("steps.verify.outcome == 'success'", record)
+        upload = self.step(engine, "Upload the verified-tree record")
+        self.assertIn("name: ${{ steps.record.outputs.name }}", upload)
+        self.assertIn("scripts/changed_cases.py --event", self.step(engine, "Cases to verify"))
+        # The token permission and the alignment check's cases-verify stay where they belong.
+        for job in ("setup", "ruff", "mypy", "tests", "repository", "package", "dco"):
+            with self.subTest(job=job):
+                self.assertNotIn("actions: read", self.job("ci.yml", job))
+        # The scheduled runs keep verifying every case through the default check cases-verify.
+        self.assertNotIn("cases-verify", self.workflows()["scheduled.yml"])
+        self.assertIn("check_alignment.py", self.workflows()["scheduled.yml"])
+
+    def test_required_check_names_and_the_case_table_check(self):
+        text = self.workflows()["ci.yml"]
+        for name in ("Read baseline", "Lint (ruff)", "Types (mypy)", "Unit tests (Python ${{ matrix.python }}, no engine)",
+                     "Repository, skills and cases", "Build and install the package", "DCO sign-off",
+                     "Engine checks (published os-optics)"):
+            with self.subTest(name=name):
+                self.assertIn(f"    name: {name}\n", text)
+        repository = self.job("ci.yml", "repository")
+        table = self.step(repository, "README case tables are current")
+        self.assertIn("if: ${{ !cancelled() }}", table)
+        self.assertIn("run: python scripts/case_tables.py --check", table)
+        self.assertLess(repository.index("cases index --check"), repository.index("case_tables.py --check"))
+
     def test_only_the_scheduled_reporter_writes_issues_and_only_release_gets_an_oidc_token(self):
         workflows = self.workflows()
         self.assertEqual(sum(text.count("issues: write") for text in workflows.values()), 1)

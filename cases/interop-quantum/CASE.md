@@ -2,11 +2,15 @@
 name: interop-quantum
 title: Hong-Ou-Mandel interference from the linear optical network export
 summary: Two 780 nm sources meet on a native 50:50 plate splitter. The engine exports the layout as a linear optical network (modes, transfer matrix, path group delays); Perceval and Piquasso compute two-photon statistics from it and match a closed-form reference.
+class: free-space
+domain: quantum-optics, interference
+provenance: self-built
+publication: own-work
 engine: 0.13.0
 catalog: none
 project: project.json
 tools: none
-tags: catalog-free, interop, quantum-optics, hong-ou-mandel, linear-optical-network, perceval, piquasso
+tags: beam-splitter, hong-ou-mandel, linear-optical-network, interop, perceval, piquasso
 license: MIT
 ---
 
@@ -49,4 +53,5 @@ the pinned versions in `requirements-quantum.txt`.
 - `build_layouts.py`, `run_quantum.py`, `network_io.py`, `reference.py`: export, simulation and reference.
 - `quantum_inputs.json`: photons, wavepackets and detectors.
 - `requirements-quantum.txt`: pinned third-party packages.
-- `README.md`, `README.zh-CN.md`, `images/top.png`: the illustrated page.
+- `README.md`, `README.zh-CN.md`: the illustrated pages; `images.json` records `images/iso.png` and
+  `images/top.png` (`os-optics-kit cases images interop-quantum`).

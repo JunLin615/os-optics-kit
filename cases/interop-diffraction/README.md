@@ -1,19 +1,25 @@
 # Diffraction at a declared stop
 
+[简体中文](README.zh-CN.md)
+
 A 532 nm TEM00 beam (1 mm waist radius, 1 mW) passes a circular aperture stop and an ideal thin lens with a 200 mm
 focal length. What is the irradiance in the back focal plane? The engine traces the Gaussian beam and the power the
 stop transmits; after a truncating stop the focal field needs a diffraction calculation. The engine hands the beam
 state at the stop to external diffraction codes.
 
-![Section along the beam: source, pupil and stop planes, stop, lens and the focal plane](images/section.png)
+![3D view: the laser source, the planes `pupil` and `stop_plane`, the stop `STOP`, the lens `L` and the focal plane `focus` with the traced beam](images/iso.png)
 
-![Close-up of the stop and the lens](images/stop.png)
+The image is the engine's browser-free snapshot of a run of `project.json`
+(`os-optics view run --no-browser --snapshot DIR --views iso --size 1280x400`). In a kit checkout,
+`os-optics-kit cases images interop-diffraction` re-renders it exactly as recorded in `images.json`.
 
 ## Run it
 
 ```bash
 os-optics-kit cases copy interop-diffraction --dest .
 cd interop-diffraction
+os-optics project run project.json --out-dir run
+os-optics results targets run
 python -m pip install -r requirements-diffraction.txt
 python opensci_handoff.py --out diff
 python external_focus.py diff

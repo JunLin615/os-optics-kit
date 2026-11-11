@@ -65,7 +65,8 @@ the kit works with that build, not that the release on PyPI does.
 - `beam-summary`, `saved-run-summary`: a catalog beam expander run and its saved-result summary.
 - `catalog-tests`: the catalog-dependent test classes with `OS_OPTICS_KIT_REQUIRE_CATALOG=1`, so a missing
   catalog fails them instead of skipping.
-- `cases-verify`: `os-optics-kit cases verify --all`.
+- `cases-verify`: `os-optics-kit cases verify --all` (the CI engine job skips it and verifies the cases in its own
+  step, see [In CI](#in-ci)).
 - The design workflows of the expansion-focus, polarization-control and mirror-alignment cases, one parameter
   sweep, one sensitivity and one tolerance study, and the catalog tool chain (candidates, edit, sweep, move,
   compare, plot, report) of the beam-expander studies.
@@ -125,13 +126,33 @@ A check that could not run is `SKIPPED` with the category of the check that bloc
 
 ## In CI
 
-- **CI** (`.github/workflows/ci.yml`, every pull request and push to `main`): the engine job first asks PyPI for
-  `engine.verified_version`. When it is published, the job runs this runner on it with the catalog snapshot; a pull
-  request verifies the cases it changes (all cases when `baseline.json` or `pyproject.toml` changes), `main` and
-  the merge queue verify every case. When it is not published yet, the job says so in its summary and passes
-  without running engine checks.
+- **CI** (`.github/workflows/ci.yml`, every pull request, push to `main` and merge-queue run): the engine job first
+  asks PyPI for `engine.verified_version`. When it is not published yet, the job says so in its summary and passes
+  without running engine checks. When it is published, the job runs this runner on it with the catalog snapshot and
+  `--skip cases-verify`, then verifies the cases in one step, `os-optics-kit cases verify ... --jobs 4`, with the
+  runner's environment and catalog store. The step writes `cases-verify.json` and one summary line (cases and
+  MATCH/MISMATCH/ERROR counts, or why nothing was verified); any case that is not MATCH fails the job. The step
+  fails on a non-zero `cases verify` exit code and also when the exit code is 0 but `cases-verify.json` is missing
+  or its status is not MATCH.
+  - Selection (`scripts/changed_cases.py`): a pull request verifies the case directories its diff touches (a deleted
+    case is not verified), or every case when it changes a file that `cases verify` or the selection depends on:
+    `baseline.json`, `pyproject.toml`, `alignment-checks.json`, `.github/workflows/ci.yml`,
+    `scripts/changed_cases.py`, `scripts/verified_tree.py`, `scripts/check_alignment.py` and
+    `scripts/requirements-alignment.txt` (they build the step's environment and catalog store), and `__init__.py`,
+    `__main__.py`, `_version.py`, `cli.py` (the command's entry point and exit code), `cases.py`,
+    `case_taxonomy.py`, `_engine.py`, `_frontmatter.py`, `_resources.py` under `tools/os_optics_kit/`. A push to
+    `main` and the merge queue verify every case.
+  - Once per tree (`scripts/verified_tree.py`): a run that verified every case with every case MATCH uploads the
+    artifact `cases-verified-TREE` (TREE is `git rev-parse HEAD^{tree}` of the checked-out commit; for a pull
+    request that is the merge commit, the tree `main` gets when the up-to-date pull request merges). Before
+    verifying, a push to `main` or a merge-queue run looks for that artifact with the job's read-only token
+    (`actions: read`) and skips verification, naming the verifying run in its summary, only when the artifact is
+    not expired, comes from a run of this repository (not a fork), and its record names the same tree, every case
+    MATCH, and the engine version and catalog SHA-256 of `baseline.json`. Anything else, an API or download error
+    included, means the cases are verified.
 - **Scheduled checks** (`.github/workflows/scheduled.yml`, weekly and on demand): the verified engine on Linux,
-  Windows and macOS with every Python version in `baseline.json`, all cases; and the newest engine release on PyPI
+  Windows and macOS with every Python version in `baseline.json`, all cases through the default check
+  `cases-verify` (never skipped by an earlier verification); and the newest engine release on PyPI
   as a candidate when it is newer than the verified one. On demand, a candidate version and optional checks can be
   given.
 

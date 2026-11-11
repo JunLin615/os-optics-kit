@@ -1,10 +1,12 @@
-# Sonnar at f/2.4, measured across the full entrance pupil
+# Six-element Sonnar at f/2.4, measured across the full entrance pupil
+
+[简体中文](README.zh-CN.md) · [Agent case sheet](CASE.md)
 
 A six-element Sonnar: EFL 85 mm, f/2.4, half field 14° in visible light. This case runs the lens at
 its **stated aperture** rather than in its paraxial core, and reports what the engine's imaging
 analysis then returns.
 
-![RMS spot radius per field against the diffraction limit](images/spot.png)
+![3D view: the three field sources, the six-element lens SN and the image plane](images/iso.png)
 
 ## The design
 
@@ -12,6 +14,8 @@ analysis then returns.
 elements. `project.json` imports it as a single COMPOUND unit and places the observation plane at
 the paraxial rear focal point, x = 129.23 mm. The engine's paraxial solve gives **EFL 84.9999 mm**,
 BFL 28.00 mm and FFD 56.07 mm.
+
+![Section through the lens axis, true scale: L1–L6, the image plane and the traced rays](images/section.png)
 
 | Surface | Radius (mm) | Thickness (mm) | Glass after it |
 | --- | --- | --- | --- |
@@ -29,9 +33,11 @@ BFL 28.00 mm and FFD 56.07 mm.
 | S12 | 39.10 | 14.41 | F2 |
 | S13 | 30.11 | 0.00 | image side |
 
-Every clear radius is 15.7–20.8 mm; the mechanical (edge) radius is 0.6 mm larger, which keeps the
+Every clear radius is 14.7–20.8 mm; the mechanical (edge) radius is 0.6 mm larger, which keeps the
 ground outline tight enough that the stray-light probe stays finite. The full table is in
-`prescription.csv`; `input_prescription.csv` is the design it started from.
+`prescription.csv`; `input_prescription.csv` is the design it started from. From the first vertex to
+the image plane the lens is 129.2 mm long, 1.52 times its focal length: a long-focus lens, but not a
+telephoto layout (one shorter than its focal length).
 
 ## Measuring at the stated aperture
 
@@ -58,9 +64,11 @@ and 38 of 42 imaging quantities are KNOWN against 37 at 160.
 
 | Field | RMS spot (µm) | Strehl | OPD rms (λ) | EE80 (µm) | Diffraction-limit EE80 (µm) | RMS / limit | Image NA |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0° | 4.05 | 0.060 | 0.328 | 6.61 | 1.33 | **3.06×** | 0.209 |
-| 7° | 13.94 | 0.018 | 1.195 | 28.10 | 1.34 | **10.37×** | 0.207 |
-| 14° | 9.29 | 0.123 | 0.461 | 11.81 | 1.97 | **4.73×** | 0.208 |
+| 0° | 4.05 | 0.0603 | 0.328 | 6.61 | 1.33 | **3.06×** | 0.209 |
+| 7° | 13.94 | 0.0175 | 1.195 | 28.10 | 1.34 | **10.37×** | 0.207 |
+| 14° | 9.29 | 0.1228 | 0.461 | 11.81 | 1.97 | **4.73×** | 0.208 |
+
+![RMS spot radius per field against the diffraction-limited EE80 radius](images/spot.png)
 
 ![Modulation transfer function, tangential and sagittal](images/mtf.png)
 
@@ -69,8 +77,6 @@ Read plainly: this is a **usable f/2.4 lens, not a diffraction-limited one**. On
 1.2-wave wavefront and is the weakest of the three; the 14° field recovers to 4.7× because the rear
 group is oriented to balance the off-axis aberrations at the edge of the field. The image-space NA
 is 0.2085 on every field, so all three numbers describe the whole stop.
-
-![Engine imaging summary table](images/results.png)
 
 ## What the engine declines, and why
 
@@ -107,7 +113,15 @@ os-optics project check project.json
 os-optics project run project.json --out-dir run
 os-optics results targets run
 os-optics results imaging run --monitor image_plane --request imaging-request.json
+os-optics view run --no-browser --snapshot views --views iso --size 1280x560
+os-optics view run --no-browser --snapshot views --section ALL --size 1600x700
+python figures.py run --out images
 ```
+
+The 3D view and the section are the engine's snapshots of a run of `project.json` (the two `os-optics view`
+lines above, with the recorded options; in a kit checkout `os-optics-kit cases images sonnar-telephoto-lens`
+re-renders them exactly as recorded in `images.json`). `figures.py` draws the spot and MTF figures from that
+run with the same `results imaging` call (matplotlib comes with `pip install "os-optics-kit[plot]"`).
 
 `os-optics-kit cases verify sonnar-telephoto-lens` repeats the run and compares the target
 assessments with `expected.json`.

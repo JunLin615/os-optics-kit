@@ -1,11 +1,20 @@
 # Metasurface lens as a virtual component
 
+[简体中文](README.zh-CN.md) · [Agent case sheet](CASE.md)
+
 A TiO2 nanopillar metalens (focal length 200 µm at 532 nm, 100 µm diameter) is characterized outside the engine and
 turned into an engine model. RCWA (grcwa) gives every pillar's transmission, an angular-spectrum calculation gives the
 focus, and a fit turns the focus table into a `TABULATED_THIN_LENS` with stated errors and a validated domain. The
 engine then uses the model like any other lens and refuses to report results outside its domain as valid.
 
+![3D view, 30° to the beam axis: the source SRC 1 mm upstream, the metalens META and the observation plane `after`](images/camera.png)
+
 ![Section through the metalens: the 30 µm beam focuses 0.2 mm behind META](images/section.png)
+
+Both images are the engine's browser-free snapshots of a run of `project.json`:
+`os-optics view run --no-browser --snapshot DIR` with `--camera 30,20 --size 960x540`, and again with
+`--section ALL --size 1200x600`. In a kit checkout, `os-optics-kit cases images interop-metasurface`
+re-renders exactly these views as recorded in `images.json`.
 
 ## Run it
 
@@ -13,11 +22,12 @@ engine then uses the model like any other lens and refuses to report results out
 os-optics-kit cases copy interop-metasurface --dest .
 cd interop-metasurface
 os-optics project run project.json --out-dir run
+os-optics results targets run
 python -m pip install -r requirements-metasurface.txt
 python step1_unit_cells.py --out ms
 ```
 
-`CASE.md` lists all seven commands of steps 1–4 (24 minutes in the verified run).
+`CASE.md` lists all seven commands of steps 1–4 (about 24 minutes in total).
 
 ## Results
 
@@ -34,5 +44,4 @@ python step1_unit_cells.py --out ms
 | Held-out test cases (wavelengths, 25 µm beam, 1.5°) | all inside the stated errors |
 | 450 nm, 5°, 8°, 20°, an unvalidated metric | OUT_OF_MODEL_SCOPE, target INDETERMINATE |
 
-The model is a simulation model of this metalens, not an orderable product. Verified with os-optics 0.13.0 on
-Python 3.14.7 (grcwa 0.1.2, numpy 2.5.4, scipy 1.18.1).
+Verified with os-optics 0.13.0 on Python 3.14.7 (grcwa 0.1.2, numpy 2.5.4, scipy 1.18.1).
