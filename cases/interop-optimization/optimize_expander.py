@@ -17,12 +17,7 @@ The optimizer chooses the
 values; OpenSci computes each design. Project ``retained_dofs`` are design intent,
 not optimizer variables.
 
-The SciPy and Optuna searches are sequential (each step depends on the previous ones). The
-Sobol samples are independent: they are handed to os-optics-kit's study executor as one
-batch (``tolerance-batch/``: one request per sample, records in sample order), which runs
-them serially or, with ``--workers N``, in N worker processes with the same values.
-
-Usage: python cases/interop-optimization/optimize_expander.py --out run-interop-optimization [--workers N]
+Usage: python cases/interop-optimization/optimize_expander.py --out run-interop-optimization
 """
 
 from __future__ import annotations
@@ -128,23 +123,14 @@ class EngineObjective:
         self.compute_budget = compute_budget
         self.max_evaluations = max_evaluations
 
-    def document(self, separation_mm, *, l1_shift_mm=0.0, waist_mm=WAIST_MM):
-        """The Project of one evaluation: the edited baseline with this study's requirement and compute budget."""
-        document = edited_project(separation_mm, l1_shift_mm=l1_shift_mm, waist_mm=waist_mm)
-        document["targets"][0]["maximum"] = self.max_divergence_rad
-        if self.compute_budget:
-            document["compute_budget"] = self.compute_budget
-        return document
-
-    def _log(self, record):
-        with self.log_path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(record, ensure_ascii=True, allow_nan=False) + "\n")
-
     def __call__(self, separation_mm, *, l1_shift_mm=0.0, waist_mm=WAIST_MM, stage="search"):
         if self.count >= self.max_evaluations:
             raise ValueError("evaluation budget exhausted; evaluations.jsonl retains completed evaluations")
         started = time.perf_counter()
-        document = self.document(separation_mm, l1_shift_mm=l1_shift_mm, waist_mm=waist_mm)
+        document = edited_project(separation_mm, l1_shift_mm=l1_shift_mm, waist_mm=waist_mm)
+        document["targets"][0]["maximum"] = self.max_divergence_rad
+        if self.compute_budget:
+            document["compute_budget"] = self.compute_budget
         self.count += 1
         inputs = {"L1_x_mm": L1_X_MM + l1_shift_mm, "L2_x_mm": L1_X_MM + separation_mm, "waist_radius_mm": waist_mm}
         try:
@@ -158,7 +144,8 @@ class EngineObjective:
                       "feasible": False, "execution": None, "run_status": "ERROR", "identity": None,
                       "error": {"code": getattr(exc, "code", type(exc).__name__), "message": str(exc)},
                       "seconds": round(time.perf_counter() - started, 4)}
-            self._log(record)
+            with self.log_path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(record, ensure_ascii=True, allow_nan=False) + "\n")
             return INFEASIBLE_PENALTY_RAD
         statuses = results.describe()["status"]
         run_status = statuses.get("validation_status") or statuses["engine_status"]
@@ -179,69 +166,13 @@ class EngineObjective:
             "seconds": round(time.perf_counter() - started, 4),
             "identity": run_identity(results),
         }
-        self._log(record)
-        return value
-
-    def batch(self, study_dir, points, *, stage, workers=1):
-        """Evaluate independent ``points`` (``[(separation_mm, {"l1_shift_mm", "waist_mm"})]``) as one study batch
-        of os-optics-kit's executor; log every evaluation in point order and return the objective values."""
-        from os_optics_kit.study import collect_records, execute_study, make_request, plan_study, sample_ids
-        from os_optics_kit.study import study_header
-
-        if self.count + len(points) > self.max_evaluations:
-            raise ValueError("evaluation budget exhausted; evaluations.jsonl retains completed evaluations")
-        requests = []
-        for sample_id, (separation_mm, kwargs) in zip(sample_ids(len(points)), points):
-            inputs = {"L1_x_mm": L1_X_MM + kwargs["l1_shift_mm"], "L2_x_mm": L1_X_MM + separation_mm,
-                      "waist_radius_mm": kwargs["waist_mm"]}
-            requests.append(make_request(sample_id, self.document(separation_mm, **kwargs),
-                                         selected_targets=["collimated"], outputs={"run_directory": False},
-                                         labels={"stage": stage, "inputs": inputs, "separation_mm": separation_mm,
-                                                 "settings": kwargs}))
-        plan_study(study_dir, study_header("interop-optimization.batch", stage=stage), requests)
-        execute_study(study_dir, workers=workers)
-        values = []
-        for _entry, sample in collect_records(study_dir):
-            self.count += 1
-            values.append(self._log_sample(sample))
-        return values
-
-    def _log_sample(self, sample):
-        """Log one batch record in the format of ``__call__`` (stage ``tolerance``: the value whenever it is valid)."""
-        inputs, stage, settings = sample["inputs"], sample["stage"], sample["settings"]
-        target = next((t for t in sample.get("targets") or [] if t["id"] == "collimated"), None)
-        if sample.get("error") or target is None:
-            error = sample.get("error") or {"code": "TARGET_MISSING", "problems": []}
-            self._log({"evaluation": self.count, "stage": stage, "inputs": inputs,
-                       "metric": METRIC, "value": None, "unit": "rad", "target_status": None,
-                       "assessment": None, "objective_valid": False, "requirement_feasible": False,
-                       "feasible": False, "execution": None, "run_status": "ERROR", "identity": None,
-                       "error": {"code": error.get("code"), "message": "; ".join(
-                           str(p.get("message") or p.get("code")) for p in error.get("problems") or [])},
-                       "seconds": round(sample.get("seconds") or 0.0, 4)})
-            return INFEASIBLE_PENALTY_RAD
-        objective_valid = (target["status"] in ("PASS", "WARNING", "FAIL")
-                           and not target["applicability_issue_codes"]
-                           and target["value"] is not None and math.isfinite(target["value"]))
-        feasible = objective_valid and target["assessment"] == "MET"
-        value = target["value"] if objective_valid and (feasible or stage == "tolerance") else INFEASIBLE_PENALTY_RAD
-        self._log({
-            "evaluation": self.count, "stage": stage, "inputs": inputs,
-            "metric": METRIC, "value": target["value"], "unit": target["unit"], "target_status": target["status"],
-            "assessment": target["assessment"], "objective_valid": objective_valid,
-            "applicability_issue_codes": target["applicability_issue_codes"],
-            "execution": sample["execution"], "requirement_feasible": feasible,
-            "run_status": sample["status"], "feasible": feasible,
-            "reference_value": reference_divergence(sample["separation_mm"], **settings),
-            "seconds": round(sample["seconds"], 4),
-            "identity": {key: sample["identity"].get(key) for key in (
-                "engine_version", "engine_build_id", "project_hash", "input_hash", "result_hash", "catalog_version")},
-        })
+        with self.log_path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(record, ensure_ascii=True, allow_nan=False) + "\n")
         return value
 
 
 def run_example(out_dir, *, optuna_trials=60, seed=1, sobol_n=128,
-                max_divergence_rad=1e-3, compute_budget=None, max_evaluations=1000, workers=1):
+                max_divergence_rad=1e-3, compute_budget=None, max_evaluations=1000):
     installed = require_engine()
     import numpy as np
     import optuna
@@ -251,8 +182,7 @@ def run_example(out_dir, *, optuna_trials=60, seed=1, sobol_n=128,
 
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    if any((out_dir / name).exists() for name in ("project-baseline.json", "evaluations.jsonl", "report.json",
-                                                  "tolerance-batch")):
+    if any((out_dir / name).exists() for name in ("project-baseline.json", "evaluations.jsonl", "report.json")):
         raise ValueError("output already contains a study; choose a new --out directory to preserve it")
     if optuna_trials < 1 or sobol_n < 1 or sobol_n & (sobol_n - 1):
         raise ValueError("optuna-trials must be positive; sobol-n must be a positive power of two")
@@ -303,10 +233,11 @@ def run_example(out_dir, *, optuna_trials=60, seed=1, sobol_n=128,
                           [-TOLERANCES["waist_rel"], TOLERANCES["waist_rel"]]]}
     samples = sobol_sample.sample(problem, sobol_n, calc_second_order=False, seed=seed)
     started = time.perf_counter()
-    points = [(optimum + float(dl2), {"l1_shift_mm": float(dl1), "waist_mm": WAIST_MM * (1.0 + float(dw))})
-              for dl1, dl2, dw in samples]
-    engine_values = objective.batch(out_dir / "tolerance-batch", points, stage="tolerance", workers=workers)
-    reference_values = [reference_divergence(separation, **kwargs) for separation, kwargs in points]
+    engine_values, reference_values = [], []
+    for dl1, dl2, dw in samples:
+        kwargs = {"l1_shift_mm": float(dl1), "waist_mm": WAIST_MM * (1.0 + float(dw))}
+        engine_values.append(objective(optimum + float(dl2), stage="tolerance", **kwargs))
+        reference_values.append(reference_divergence(optimum + float(dl2), **kwargs))
     tolerance_seconds = time.perf_counter() - started
     engine_values, reference_values = np.array(engine_values), np.array(reference_values)
     log = [json.loads(line) for line in (out_dir / "evaluations.jsonl").read_text(encoding="utf-8").splitlines()]
@@ -351,7 +282,7 @@ def run_example(out_dir, *, optuna_trials=60, seed=1, sobol_n=128,
                    "seconds": round(optuna_seconds, 2)},
         "tolerance": {"method": "SALib Sobol (Saltelli sampling, first-order and total indices)",
                       "about_separation_mm": optimum, "uniform_half_ranges": TOLERANCES, "samples": len(samples),
-                      "seconds": round(tolerance_seconds, 2), "workers": workers,
+                      "seconds": round(tolerance_seconds, 2),
                       "divergence_rad": {"engine_mean": float(engine_values.mean()), "engine_max": float(engine_values.max()),
                                          "reference_mean": float(reference_values.mean())},
                       "engine": {name: {key: float(engine_si[key][i]) for key in ("S1", "S1_conf", "ST", "ST_conf")}
@@ -364,8 +295,7 @@ def run_example(out_dir, *, optuna_trials=60, seed=1, sobol_n=128,
         "infeasible_evaluations": infeasible, "mean_seconds_per_evaluation": round(sum(r["seconds"] for r in log) / len(log), 4),
         "engine_build_ids": sorted(identities), "engine_version": installed,
         "first_evaluation_identity": log[0]["identity"],
-        "files": {"evaluations": str(out_dir / "evaluations.jsonl"), "baseline_project": str(out_dir / "project-baseline.json"),
-                  "tolerance_batch": str(out_dir / "tolerance-batch")},
+        "files": {"evaluations": str(out_dir / "evaluations.jsonl"), "baseline_project": str(out_dir / "project-baseline.json")},
     }
     write_json(out_dir / "report.json", report)
     return {key: report[key] for key in ("example", "outcome", "reference", "scipy", "optuna", "checks",
@@ -384,14 +314,11 @@ def main(argv=None):
         parser.add_argument("--max-evaluations", type=int, default=1000, help="total evaluation cap (default 1000)")
         parser.add_argument("--max-trace-steps", type=int, default=2048, help="Engine trace steps per evaluation")
         parser.add_argument("--max-interactions-per-path", type=int, default=64, help="Engine surface interactions per path")
-        parser.add_argument("--workers", type=int, default=1,
-                            help="worker processes for the independent Sobol batch (default 1: serial)")
         args = parser.parse_args(argv)
         return run_example(args.out, optuna_trials=args.optuna_trials, seed=args.seed, sobol_n=args.sobol_n,
                            max_divergence_rad=args.max_divergence_rad, max_evaluations=args.max_evaluations,
                            compute_budget={"max_trace_steps": args.max_trace_steps,
-                                           "max_interactions_per_path": args.max_interactions_per_path},
-                           workers=args.workers)
+                                           "max_interactions_per_path": args.max_interactions_per_path})
 
     return emit(workflow)
 

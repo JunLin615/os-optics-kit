@@ -19,8 +19,6 @@ evaluation, sets L2's position by `instance_id`, runs the engine in memory and r
 unmet and refused designs. Verified run: SciPy reaches the ABCD optimum (200.0573 mm) to 9e-7 mm in 10 evaluations;
 Optuna's best design is within 0.14 % of the optimal divergence; engine values match the reference to 2e-14; the
 engine and reference Sobol indices agree to 2e-14. Outcome WITHIN_TOLERANCE (710 evaluations, 1.9 min).
-The 640 Sobol samples are independent: they run as one os-optics-kit study batch (`opt/tolerance-batch/`),
-serially or with `--workers N` in N worker processes; both give the same values and report.
 
 ## Run
 
@@ -30,7 +28,6 @@ os-optics results targets run
 python -m pip install -r requirements-optimization.txt
 python optimize_expander.py --out opt
 python optimize_expander.py --out opt-strict --max-divergence-rad 1e-9
-python optimize_expander.py --out opt-w4 --workers 4
 ```
 
 The strict requirement leaves no feasible design: outcome NO_FEASIBLE_RESULT, exit code 2.
