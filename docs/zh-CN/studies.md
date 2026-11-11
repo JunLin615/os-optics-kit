@@ -51,8 +51,8 @@ os-optics-kit study run study --resume         # 只运行没有完成记录的�
 
 无论有几个工作进程，Ctrl-C 都会停止整个研究：正在运行的样本被取消，不再启动其他样本，`study.json` 的
 `execution.state` 变为 `CANCELLED`，命令以退出码 130 结束，并给出可续跑的 `next` 命令。同一时间只有一次
-执行占用一个研究目录（`owner.json`，执行结束时删除；`owner.lock` 一直保留，保证同一时间只有一个进程
-取得占用）：只要前一次执行的进程仍在运行，对该目录再执行 `study run`、规划命令或 `study aggregate` 都会以
+执行占用一个研究目录（`owner.json`，执行结束时删除；`owner.lock` 一直保留，确保同一时刻只有一个进程
+能取得占用权）：只要前一次执行的进程仍在运行，对该目录再执行 `study run`、规划命令或 `study aggregate` 都会以
 `STUDY_RUNNING` 被拒绝；`study status` 也只在该进程运行期间报告 `RUNNING`（进程未完成就结束时报告
 `INTERRUPTED`；续跑会接管该研究）。
 

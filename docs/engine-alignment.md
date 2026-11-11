@@ -60,6 +60,9 @@ the kit works with that build, not that the release on PyPI does.
 
 ### Default checks
 
+- `achromatic-imaging-compute`, `achromatic-imaging-study`: the native three-colour imaging run of the
+  achromatic-imaging case, then its sensitivity and tolerance studies; `focus-requirement-compute`,
+  `focus-requirement-study`: the two lens placements of the focus-requirement case, then its placement sweeps.
 - `kit-cli`, `summary-missing-run`: the installed command and its JSON error contract.
 - `offline-tests`: the whole test suite before the catalog is prepared (catalog tests skip themselves).
 - `beam-summary`, `saved-run-summary`: a catalog beam expander run and its saved-result summary.
