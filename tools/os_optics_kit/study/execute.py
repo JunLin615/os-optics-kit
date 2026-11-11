@@ -226,7 +226,8 @@ def _catalog_pins(project):
 def resolve_catalog(requests):
     """Let the installed Engine obtain, in this process, the catalog releases the requests need (one Project check
     per distinct set of pinned releases): worker processes run with automatic catalog access off. A Project the
-    Engine refuses here is refused again, with the same message, when its sample runs."""
+    Engine refuses before it binds the catalog does not count: the next Project with the same pins is checked. A
+    Project the Engine refuses here is refused again, with the same message, when its sample runs."""
     seen = set()
     for request in requests:
         if request.get("project") is None:
@@ -234,11 +235,16 @@ def resolve_catalog(requests):
         pins = _catalog_pins(request["project"])
         if pins in seen:
             continue
-        seen.add(pins)
         try:
-            wc.check(request["project"])
+            checked = wc.check(request["project"])
         except Exception:  # noqa: BLE001 - not the Engine's to decide here; the sample records the refusal
+            seen.add(pins)  # not a load refusal: one attempt per set of pins
             continue
+        error = (checked or {}).get("error") or {}
+        codes = [error.get("code")] + [problem.get("code") for problem in error.get("problems") or []
+                                       if isinstance(problem, dict)]
+        if (checked or {}).get("ok") or any(str(code or "").startswith("CATALOG_") for code in codes):
+            seen.add(pins)  # the release was obtained, or the Engine says it cannot be: one attempt is enough
     return sorted(seen)
 
 
