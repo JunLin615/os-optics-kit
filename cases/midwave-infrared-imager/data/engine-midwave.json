@@ -1,0 +1,4337 @@
+{
+  "case": "midwave-infrared-imager",
+  "catalog": "2026-10-28.1",
+  "engine": "0.13.0",
+  "evaluation_aperture": {
+    "f_number_nominal": 2.0,
+    "image_space_na_measured": 0.0598038835,
+    "image_space_na_of_full_cone": 0.25,
+    "launch_radius_beam_radii": 1.0,
+    "note_en": "The imaging request launches a disc one source beam radius wide, so the diffraction model evaluates the near-axis core of the stop cone, not the whole f/2 pupil. The numbers in this case describe that evaluated cone.",
+    "note_zh": "\u6210\u50cf\u8bf7\u6c42\u53ea\u53d1\u5c04\u4e00\u4e2a\u5149\u6e90\u5149\u675f\u534a\u5f84\u5bbd\u7684\u5706\u76d8\uff0c\u56e0\u6b64\u884d\u5c04\u6a21\u578b\u8bc4\u4f30\u7684\u662f\u5149\u9611\u9525\u7684\u8fd1\u8f74\u6838\u5fc3\uff0c\u800c\u975e\u6574\u4e2a f/2 \u5b54\u5f84\uff1b\u672c\u6848\u4f8b\u7684\u6570\u5b57\u90fd\u5bf9\u5e94\u8fd9\u4e2a\u88ab\u6d4b\u9525\u3002"
+  },
+  "imaging_request": {
+    "crossing_index": null,
+    "fields": null,
+    "frequencies_cyc_per_mm": null,
+    "include_psf_map": false,
+    "launch_grid": 192,
+    "launch_radius_beam_radii": 1.0,
+    "psf_half_width_um": 250.0,
+    "psf_samples": 128,
+    "reference": "CENTROID",
+    "wavelengths_nm": null
+  },
+  "models": [
+    {
+      "assumptions": [
+        "the traced rays of a uniformly lit pupil; the geometric MTF stands for the MTF where the wavefront error is large"
+      ],
+      "model_id": "geometric_ray_bundle",
+      "name": "geometric ray bundle of the traced rays",
+      "validity": []
+    },
+    {
+      "assumptions": [
+        "|sum over the rays of p_j exp(-i 2 pi f (r_j - r_c))|, p_j each ray's share of the irradiance on the pupil"
+      ],
+      "model_id": "SRC0_0#0.geometric_mtf",
+      "name": "geometric MTF of the ray spot",
+      "validity": [
+        {
+          "maximum": null,
+          "minimum": 1.0,
+          "observed": 0.125511771,
+          "parameter": "opd_rms_waves",
+          "unit": null,
+          "within": false
+        }
+      ]
+    },
+    {
+      "assumptions": [
+        "a point object lights the pupil uniformly; each ray carries the irradiance its field keeps to the plane (a sample's amplitude, the interfaces' and coatings' transmissions); a partially polarized or unpolarized source's two components are mutually incoherent: each component's pupil field is propagated to the image apart and their point spread functions add in irradiance, each by its share of the light that reaches the plane",
+        "each ray stands for the solid angle its tube fills in image space and carries the phase of its optical path difference",
+        "Debye integral over the rays' directions about the reference point (Fresnel number of the converging cone much above 1)",
+        "monochromatic: one spectral line per field",
+        "scalar field: image-space sine at most the scalar limit"
+      ],
+      "model_id": "SRC0_0#0.diffraction",
+      "name": "scalar Debye integral over the traced rays",
+      "validity": [
+        {
+          "maximum": 3.141592653589793,
+          "minimum": null,
+          "observed": 0.0347010304,
+          "parameter": "neighbour_phase_step_rad",
+          "unit": null,
+          "within": true
+        },
+        {
+          "maximum": 0.5,
+          "minimum": null,
+          "observed": 0.026295921,
+          "parameter": "window_half_width_over_ray_period",
+          "unit": null,
+          "within": true
+        },
+        {
+          "maximum": null,
+          "minimum": 0.95,
+          "observed": 0.981247674,
+          "parameter": "window_light_share",
+          "unit": null,
+          "within": true
+        },
+        {
+          "maximum": 0.2,
+          "minimum": null,
+          "observed": 0.0604003507,
+          "parameter": "image_space_na",
+          "unit": null,
+          "within": true
+        }
+      ]
+    },
+    {
+      "assumptions": [
+        "|sum over the rays of p_j exp(-i 2 pi f (r_j - r_c))|, p_j each ray's share of the irradiance on the pupil"
+      ],
+      "model_id": "SRC0_1#0.geometric_mtf",
+      "name": "geometric MTF of the ray spot",
+      "validity": [
+        {
+          "maximum": null,
+          "minimum": 1.0,
+          "observed": 0.0214987233,
+          "parameter": "opd_rms_waves",
+          "unit": null,
+          "within": false
+        }
+      ]
+    },
+    {
+      "assumptions": [
+        "a point object lights the pupil uniformly; each ray carries the irradiance its field keeps to the plane (a sample's amplitude, the interfaces' and coatings' transmissions); a partially polarized or unpolarized source's two components are mutually incoherent: each component's pupil field is propagated to the image apart and their point spread functions add in irradiance, each by its share of the light that reaches the plane",
+        "each ray stands for the solid angle its tube fills in image space and carries the phase of its optical path difference",
+        "Debye integral over the rays' directions about the reference point (Fresnel number of the converging cone much above 1)",
+        "monochromatic: one spectral line per field",
+        "scalar field: image-space sine at most the scalar limit"
+      ],
+      "model_id": "SRC0_1#0.diffraction",
+      "name": "scalar Debye integral over the traced rays",
+      "validity": [
+        {
+          "maximum": 3.141592653589793,
+          "minimum": null,
+          "observed": 0.00938222759,
+          "parameter": "neighbour_phase_step_rad",
+          "unit": null,
+          "within": true
+        },
+        {
+          "maximum": 0.5,
+          "minimum": null,
+          "observed": 0.0196209504,
+          "parameter": "window_half_width_over_ray_period",
+          "unit": null,
+          "within": true
+        },
+        {
+          "maximum": null,
+          "minimum": 0.95,
+          "observed": 0.975556544,
+          "parameter": "window_light_share",
+          "unit": null,
+          "within": true
+        },
+        {
+          "maximum": 0.2,
+          "minimum": null,
+          "observed": 0.0600940204,
+          "parameter": "image_space_na",
+          "unit": null,
+          "within": true
+        }
+      ]
+    },
+    {
+      "assumptions": [
+        "|sum over the rays of p_j exp(-i 2 pi f (r_j - r_c))|, p_j each ray's share of the irradiance on the pupil"
+      ],
+      "model_id": "SRC0_2#0.geometric_mtf",
+      "name": "geometric MTF of the ray spot",
+      "validity": [
+        {
+          "maximum": null,
+          "minimum": 1.0,
+          "observed": 0.0412440982,
+          "parameter": "opd_rms_waves",
+          "unit": null,
+          "within": false
+        }
+      ]
+    },
+    {
+      "assumptions": [
+        "a point object lights the pupil uniformly; each ray carries the irradiance its field keeps to the plane (a sample's amplitude, the interfaces' and coatings' transmissions); a partially polarized or unpolarized source's two components are mutually incoherent: each component's pupil field is propagated to the image apart and their point spread functions add in irradiance, each by its share of the light that reaches the plane",
+        "each ray stands for the solid angle its tube fills in image space and carries the phase of its optical path difference",
+        "Debye integral over the rays' directions about the reference point (Fresnel number of the converging cone much above 1)",
+        "monochromatic: one spectral line per field",
+        "scalar field: image-space sine at most the scalar limit"
+      ],
+      "model_id": "SRC0_2#0.diffraction",
+      "name": "scalar Debye integral over the traced rays",
+      "validity": [
+        {
+          "maximum": 3.141592653589793,
+          "minimum": null,
+          "observed": 0.00664021595,
+          "parameter": "neighbour_phase_step_rad",
+          "unit": null,
+          "within": true
+        },
+        {
+          "maximum": 0.5,
+          "minimum": null,
+          "observed": 0.0156199153,
+          "parameter": "window_half_width_over_ray_period",
+          "unit": null,
+          "within": true
+        },
+        {
+          "maximum": null,
+          "minimum": 0.95,
+          "observed": 0.969652378,
+          "parameter": "window_light_share",
+          "unit": null,
+          "within": true
+        },
+        {
+          "maximum": 0.2,
+          "minimum": null,
+          "observed": 0.0598038835,
+          "parameter": "image_space_na",
+          "unit": null,
+          "within": true
+        }
+      ]
+    },
+    {
+      "assumptions": [
+        "|sum over the rays of p_j exp(-i 2 pi f (r_j - r_c))|, p_j each ray's share of the irradiance on the pupil"
+      ],
+      "model_id": "SRC1_0#0.geometric_mtf",
+      "name": "geometric MTF of the ray spot",
+      "validity": [
+        {
+          "maximum": null,
+          "minimum": 1.0,
+          "observed": 0.134511464,
+          "parameter": "opd_rms_waves",
+          "unit": null,
+          "within": false
+        }
+      ]
+    },
+    {
+      "assumptions": [
+        "a point object lights the pupil uniformly; each ray carries the irradiance its field keeps to the plane (a sample's amplitude, the interfaces' and coatings' transmissions); a partially polarized or unpolarized source's two components are mutually incoherent: each component's pupil field is propagated to the image apart and their point spread functions add in irradiance, each by its share of the light that reaches the plane",
+        "each ray stands for the solid angle its tube fills in image space and carries the phase of its optical path difference",
+        "Debye integral over the rays' directions about the reference point (Fresnel number of the converging cone much above 1)",
+        "monochromatic: one spectral line per field",
+        "scalar field: image-space sine at most the scalar limit"
+      ],
+      "model_id": "SRC1_0#0.diffraction",
+      "name": "scalar Debye integral over the traced rays",
+      "validity": [
+        {
+          "maximum": 3.141592653589793,
+          "minimum": null,
+          "observed": 0.0396660049,
+          "parameter": "neighbour_phase_step_rad",
+          "unit": null,
+          "within": true
+        },
+        {
+          "maximum": 0.5,
+          "minimum": null,
+          "observed": 0.0263392055,
+          "parameter": "window_half_width_over_ray_period",
+          "unit": null,
+          "within": true
+        },
+        {
+          "maximum": null,
+          "minimum": 0.95,
+          "observed": 0.981169403,
+          "parameter": "window_light_share",
+          "unit": null,
+          "within": true
+        },
+        {
+          "maximum": 0.2,
+          "minimum": null,
+          "observed": 0.0604628812,
+          "parameter": "image_space_na",
+          "unit": null,
+          "within": true
+        }
+      ]
+    },
+    {
+      "assumptions": [
+        "|sum over the rays of p_j exp(-i 2 pi f (r_j - r_c))|, p_j each ray's share of the irradiance on the pupil"
+      ],
+      "model_id": "SRC1_1#0.geometric_mtf",
+      "name": "geometric MTF of the ray spot",
+      "validity": [
+        {
+          "maximum": null,
+          "minimum": 1.0,
+          "observed": 0.0285120848,
+          "parameter": "opd_rms_waves",
+          "unit": null,
+          "within": false
+        }
+      ]
+    },
+    {
+      "assumptions": [
+        "a point object lights the pupil uniformly; each ray carries the irradiance its field keeps to the plane (a sample's amplitude, the interfaces' and coatings' transmissions); a partially polarized or unpolarized source's two components are mutually incoherent: each component's pupil field is propagated to the image apart and their point spread functions add in irradiance, each by its share of the light that reaches the plane",
+        "each ray stands for the solid angle its tube fills in image space and carries the phase of its optical path difference",
+        "Debye integral over the rays' directions about the reference point (Fresnel number of the converging cone much above 1)",
+        "monochromatic: one spectral line per field",
+        "scalar field: image-space sine at most the scalar limit"
+      ],
+      "model_id": "SRC1_1#0.diffraction",
+      "name": "scalar Debye integral over the traced rays",
+      "validity": [
+        {
+          "maximum": 3.141592653589793,
+          "minimum": null,
+          "observed": 0.0130999594,
+          "parameter": "neighbour_phase_step_rad",
+          "unit": null,
+          "within": true
+        },
+        {
+          "maximum": 0.5,
+          "minimum": null,
+          "observed": 0.0196527465,
+          "parameter": "window_half_width_over_ray_period",
+          "unit": null,
+          "within": true
+        },
+        {
+          "maximum": null,
+          "minimum": 0.95,
+          "observed": 0.975530683,
+          "parameter": "window_light_share",
+          "unit": null,
+          "within": true
+        },
+        {
+          "maximum": 0.2,
+          "minimum": null,
+          "observed": 0.0601557132,
+          "parameter": "image_space_na",
+          "unit": null,
+          "within": true
+        }
+      ]
+    },
+    {
+      "assumptions": [
+        "|sum over the rays of p_j exp(-i 2 pi f (r_j - r_c))|, p_j each ray's share of the irradiance on the pupil"
+      ],
+      "model_id": "SRC1_2#0.geometric_mtf",
+      "name": "geometric MTF of the ray spot",
+      "validity": [
+        {
+          "maximum": null,
+          "minimum": 1.0,
+          "observed": 0.0365726577,
+          "parameter": "opd_rms_waves",
+          "unit": null,
+          "within": false
+        }
+      ]
+    },
+    {
+      "assumptions": [
+        "a point object lights the pupil uniformly; each ray carries the irradiance its field keeps to the plane (a sample's amplitude, the interfaces' and coatings' transmissions); a partially polarized or unpolarized source's two components are mutually incoherent: each component's pupil field is propagated to the image apart and their point spread functions add in irradiance, each by its share of the light that reaches the plane",
+        "each ray stands for the solid angle its tube fills in image space and carries the phase of its optical path difference",
+        "Debye integral over the rays' directions about the reference point (Fresnel number of the converging cone much above 1)",
+        "monochromatic: one spectral line per field",
+        "scalar field: image-space sine at most the scalar limit"
+      ],
+      "model_id": "SRC1_2#0.diffraction",
+      "name": "scalar Debye integral over the traced rays",
+      "validity": [
+        {
+          "maximum": 3.141592653589793,
+          "minimum": null,
+          "observed": 0.00613798624,
+          "parameter": "neighbour_phase_step_rad",
+          "unit": null,
+          "within": true
+        },
+        {
+          "maximum": 0.5,
+          "minimum": null,
+          "observed": 0.0156446241,
+          "parameter": "window_half_width_over_ray_period",
+          "unit": null,
+          "within": true
+        },
+        {
+          "maximum": null,
+          "minimum": 0.95,
+          "observed": 0.969694636,
+          "parameter": "window_light_share",
+          "unit": null,
+          "within": true
+        },
+        {
+          "maximum": 0.2,
+          "minimum": null,
+          "observed": 0.0598644803,
+          "parameter": "image_space_na",
+          "unit": null,
+          "within": true
+        }
+      ]
+    },
+    {
+      "assumptions": [
+        "|sum over the rays of p_j exp(-i 2 pi f (r_j - r_c))|, p_j each ray's share of the irradiance on the pupil"
+      ],
+      "model_id": "SRC2_0#0.geometric_mtf",
+      "name": "geometric MTF of the ray spot",
+      "validity": [
+        {
+          "maximum": null,
+          "minimum": 1.0,
+          "observed": 0.162197807,
+          "parameter": "opd_rms_waves",
+          "unit": null,
+          "within": false
+        }
+      ]
+    },
+    {
+      "assumptions": [
+        "a point object lights the pupil uniformly; each ray carries the irradiance its field keeps to the plane (a sample's amplitude, the interfaces' and coatings' transmissions); a partially polarized or unpolarized source's two components are mutually incoherent: each component's pupil field is propagated to the image apart and their point spread functions add in irradiance, each by its share of the light that reaches the plane",
+        "each ray stands for the solid angle its tube fills in image space and carries the phase of its optical path difference",
+        "Debye integral over the rays' directions about the reference point (Fresnel number of the converging cone much above 1)",
+        "monochromatic: one spectral line per field",
+        "scalar field: image-space sine at most the scalar limit"
+      ],
+      "model_id": "SRC2_0#0.diffraction",
+      "name": "scalar Debye integral over the traced rays",
+      "validity": [
+        {
+          "maximum": 3.141592653589793,
+          "minimum": null,
+          "observed": 0.0501115173,
+          "parameter": "neighbour_phase_step_rad",
+          "unit": null,
+          "within": true
+        },
+        {
+          "maximum": 0.5,
+          "minimum": null,
+          "observed": 0.0264248564,
+          "parameter": "window_half_width_over_ray_period",
+          "unit": null,
+          "within": true
+        },
+        {
+          "maximum": null,
+          "minimum": 0.95,
+          "observed": 0.980891199,
+          "parameter": "window_light_share",
+          "unit": null,
+          "within": true
+        },
+        {
+          "maximum": 0.2,
+          "minimum": null,
+          "observed": 0.0606199635,
+          "parameter": "image_space_na",
+          "unit": null,
+          "within": true
+        }
+      ]
+    },
+    {
+      "assumptions": [
+        "|sum over the rays of p_j exp(-i 2 pi f (r_j - r_c))|, p_j each ray's share of the irradiance on the pupil"
+      ],
+      "model_id": "SRC2_1#0.geometric_mtf",
+      "name": "geometric MTF of the ray spot",
+      "validity": [
+        {
+          "maximum": null,
+          "minimum": 1.0,
+          "observed": 0.0500348037,
+          "parameter": "opd_rms_waves",
+          "unit": null,
+          "within": false
+        }
+      ]
+    },
+    {
+      "assumptions": [
+        "a point object lights the pupil uniformly; each ray carries the irradiance its field keeps to the plane (a sample's amplitude, the interfaces' and coatings' transmissions); a partially polarized or unpolarized source's two components are mutually incoherent: each component's pupil field is propagated to the image apart and their point spread functions add in irradiance, each by its share of the light that reaches the plane",
+        "each ray stands for the solid angle its tube fills in image space and carries the phase of its optical path difference",
+        "Debye integral over the rays' directions about the reference point (Fresnel number of the converging cone much above 1)",
+        "monochromatic: one spectral line per field",
+        "scalar field: image-space sine at most the scalar limit"
+      ],
+      "model_id": "SRC2_1#0.diffraction",
+      "name": "scalar Debye integral over the traced rays",
+      "validity": [
+        {
+          "maximum": 3.141592653589793,
+          "minimum": null,
+          "observed": 0.0208517687,
+          "parameter": "neighbour_phase_step_rad",
+          "unit": null,
+          "within": true
+        },
+        {
+          "maximum": 0.5,
+          "minimum": null,
+          "observed": 0.0197161137,
+          "parameter": "window_half_width_over_ray_period",
+          "unit": null,
+          "within": true
+        },
+        {
+          "maximum": null,
+          "minimum": 0.95,
+          "observed": 0.975405366,
+          "parameter": "window_light_share",
+          "unit": null,
+          "within": true
+        },
+        {
+          "maximum": 0.2,
+          "minimum": null,
+          "observed": 0.0603113565,
+          "parameter": "image_space_na",
+          "unit": null,
+          "within": true
+        }
+      ]
+    },
+    {
+      "assumptions": [
+        "|sum over the rays of p_j exp(-i 2 pi f (r_j - r_c))|, p_j each ray's share of the irradiance on the pupil"
+      ],
+      "model_id": "SRC2_2#0.geometric_mtf",
+      "name": "geometric MTF of the ray spot",
+      "validity": [
+        {
+          "maximum": null,
+          "minimum": 1.0,
+          "observed": 0.0251731193,
+          "parameter": "opd_rms_waves",
+          "unit": null,
+          "within": false
+        }
+      ]
+    },
+    {
+      "assumptions": [
+        "a point object lights the pupil uniformly; each ray carries the irradiance its field keeps to the plane (a sample's amplitude, the interfaces' and coatings' transmissions); a partially polarized or unpolarized source's two components are mutually incoherent: each component's pupil field is propagated to the image apart and their point spread functions add in irradiance, each by its share of the light that reaches the plane",
+        "each ray stands for the solid angle its tube fills in image space and carries the phase of its optical path difference",
+        "Debye integral over the rays' directions about the reference point (Fresnel number of the converging cone much above 1)",
+        "monochromatic: one spectral line per field",
+        "scalar field: image-space sine at most the scalar limit"
+      ],
+      "model_id": "SRC2_2#0.diffraction",
+      "name": "scalar Debye integral over the traced rays",
+      "validity": [
+        {
+          "maximum": 3.141592653589793,
+          "minimum": null,
+          "observed": 0.00471183137,
+          "parameter": "neighbour_phase_step_rad",
+          "unit": null,
+          "within": true
+        },
+        {
+          "maximum": 0.5,
+          "minimum": null,
+          "observed": 0.0156944033,
+          "parameter": "window_half_width_over_ray_period",
+          "unit": null,
+          "within": true
+        },
+        {
+          "maximum": null,
+          "minimum": 0.95,
+          "observed": 0.96976669,
+          "parameter": "window_light_share",
+          "unit": null,
+          "within": true
+        },
+        {
+          "maximum": 0.2,
+          "minimum": null,
+          "observed": 0.0600183328,
+          "parameter": "image_space_na",
+          "unit": null,
+          "within": true
+        }
+      ]
+    }
+  ],
+  "note": "Every value here is copied from the engine's JSON; design-layer merit is not included.",
+  "out_of_model_scope": [
+    {
+      "basis": "SRC0_0#0.geometric_mtf",
+      "message": "the wavefront error (0.126 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity_id": "SRC0_0#0.geometric_mtf_tangential",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "state": "OUT_OF_MODEL_SCOPE"
+    },
+    {
+      "basis": "SRC0_0#0.geometric_mtf",
+      "message": "the wavefront error (0.126 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity_id": "SRC0_0#0.geometric_mtf_sagittal",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "state": "OUT_OF_MODEL_SCOPE"
+    },
+    {
+      "basis": "SRC0_1#0.geometric_mtf",
+      "message": "the wavefront error (0.0215 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity_id": "SRC0_1#0.geometric_mtf_tangential",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "state": "OUT_OF_MODEL_SCOPE"
+    },
+    {
+      "basis": "SRC0_1#0.geometric_mtf",
+      "message": "the wavefront error (0.0215 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity_id": "SRC0_1#0.geometric_mtf_sagittal",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "state": "OUT_OF_MODEL_SCOPE"
+    },
+    {
+      "basis": "SRC0_2#0.geometric_mtf",
+      "message": "the wavefront error (0.0412 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity_id": "SRC0_2#0.geometric_mtf_tangential",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "state": "OUT_OF_MODEL_SCOPE"
+    },
+    {
+      "basis": "SRC0_2#0.geometric_mtf",
+      "message": "the wavefront error (0.0412 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity_id": "SRC0_2#0.geometric_mtf_sagittal",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "state": "OUT_OF_MODEL_SCOPE"
+    },
+    {
+      "basis": "SRC1_0#0.geometric_mtf",
+      "message": "the wavefront error (0.135 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity_id": "SRC1_0#0.geometric_mtf_tangential",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "state": "OUT_OF_MODEL_SCOPE"
+    },
+    {
+      "basis": "SRC1_0#0.geometric_mtf",
+      "message": "the wavefront error (0.135 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity_id": "SRC1_0#0.geometric_mtf_sagittal",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "state": "OUT_OF_MODEL_SCOPE"
+    },
+    {
+      "basis": "SRC1_1#0.geometric_mtf",
+      "message": "the wavefront error (0.0285 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity_id": "SRC1_1#0.geometric_mtf_tangential",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "state": "OUT_OF_MODEL_SCOPE"
+    },
+    {
+      "basis": "SRC1_1#0.geometric_mtf",
+      "message": "the wavefront error (0.0285 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity_id": "SRC1_1#0.geometric_mtf_sagittal",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "state": "OUT_OF_MODEL_SCOPE"
+    },
+    {
+      "basis": "SRC1_2#0.geometric_mtf",
+      "message": "the wavefront error (0.0366 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity_id": "SRC1_2#0.geometric_mtf_tangential",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "state": "OUT_OF_MODEL_SCOPE"
+    },
+    {
+      "basis": "SRC1_2#0.geometric_mtf",
+      "message": "the wavefront error (0.0366 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity_id": "SRC1_2#0.geometric_mtf_sagittal",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "state": "OUT_OF_MODEL_SCOPE"
+    },
+    {
+      "basis": "SRC2_0#0.geometric_mtf",
+      "message": "the wavefront error (0.162 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity_id": "SRC2_0#0.geometric_mtf_tangential",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "state": "OUT_OF_MODEL_SCOPE"
+    },
+    {
+      "basis": "SRC2_0#0.geometric_mtf",
+      "message": "the wavefront error (0.162 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity_id": "SRC2_0#0.geometric_mtf_sagittal",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "state": "OUT_OF_MODEL_SCOPE"
+    },
+    {
+      "basis": "SRC2_1#0.geometric_mtf",
+      "message": "the wavefront error (0.05 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity_id": "SRC2_1#0.geometric_mtf_tangential",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "state": "OUT_OF_MODEL_SCOPE"
+    },
+    {
+      "basis": "SRC2_1#0.geometric_mtf",
+      "message": "the wavefront error (0.05 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity_id": "SRC2_1#0.geometric_mtf_sagittal",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "state": "OUT_OF_MODEL_SCOPE"
+    },
+    {
+      "basis": "SRC2_2#0.geometric_mtf",
+      "message": "the wavefront error (0.0252 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity_id": "SRC2_2#0.geometric_mtf_tangential",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "state": "OUT_OF_MODEL_SCOPE"
+    },
+    {
+      "basis": "SRC2_2#0.geometric_mtf",
+      "message": "the wavefront error (0.0252 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity_id": "SRC2_2#0.geometric_mtf_sagittal",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "state": "OUT_OF_MODEL_SCOPE"
+    }
+  ],
+  "power_budget": {
+    "available": true,
+    "by_element": [
+      {
+        "element_id": "MW",
+        "sinks": {
+          "UNTRACED_REFLECTION": 0.008057133391852848
+        },
+        "total_loss_W": 0.008057133391852848
+      }
+    ],
+    "conserved": true,
+    "entries": [
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_0#0",
+        "power_W": 0.00030114769295202615,
+        "source_id": "SRC0_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L1-S1",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_0#0",
+        "power_W": 0.00021045775998169823,
+        "source_id": "SRC0_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L1-S2",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_0#0",
+        "power_W": 8.541395471488589e-05,
+        "source_id": "SRC0_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L2-S1",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_0#0",
+        "power_W": 7.047614735430007e-05,
+        "source_id": "SRC0_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L2-S2",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_0#0",
+        "power_W": 9.930706869379819e-06,
+        "source_id": "SRC0_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L3-S1",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_0#0",
+        "power_W": 9.634112521817304e-06,
+        "source_id": "SRC0_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L3-S2",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_0#0",
+        "power_W": 9.424104628448516e-05,
+        "source_id": "SRC0_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L4-S1",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_0#0",
+        "power_W": 6.58605726145273e-05,
+        "source_id": "SRC0_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L4-S2",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_0#0",
+        "power_W": 2.6729411009995e-05,
+        "source_id": "SRC0_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L5-S1",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_0#0",
+        "power_W": 2.205477916720034e-05,
+        "source_id": "SRC0_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L5-S2",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "DETECTED",
+        "element_id": "observation",
+        "kind": "DETECTED",
+        "path_id": "SRC0_0#0",
+        "power_W": 0.00010405381652968397,
+        "source_id": "SRC0_0",
+        "spectral_index": 0,
+        "surface_id": "observation/image_plane",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_1#0",
+        "power_W": 0.00030036240815722604,
+        "source_id": "SRC0_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L1-S1",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_1#0",
+        "power_W": 0.000210144831923218,
+        "source_id": "SRC0_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L1-S2",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_1#0",
+        "power_W": 8.529962803932775e-05,
+        "source_id": "SRC0_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L2-S1",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_1#0",
+        "power_W": 7.043520686822928e-05,
+        "source_id": "SRC0_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L2-S2",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_1#0",
+        "power_W": 9.645658623780699e-06,
+        "source_id": "SRC0_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L3-S1",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_1#0",
+        "power_W": 9.366897511866515e-06,
+        "source_id": "SRC0_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L3-S2",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_1#0",
+        "power_W": 9.45376769520354e-05,
+        "source_id": "SRC0_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L4-S1",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_1#0",
+        "power_W": 6.614211264113216e-05,
+        "source_id": "SRC0_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L4-S2",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_1#0",
+        "power_W": 2.6847662892253807e-05,
+        "source_id": "SRC0_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L5-S1",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_1#0",
+        "power_W": 2.2169155167622956e-05,
+        "source_id": "SRC0_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L5-S2",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "DETECTED",
+        "element_id": "observation",
+        "kind": "DETECTED",
+        "path_id": "SRC0_1#0",
+        "power_W": 0.00010504876122330725,
+        "source_id": "SRC0_1",
+        "spectral_index": 0,
+        "surface_id": "observation/image_plane",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_2#0",
+        "power_W": 0.00030000030343174173,
+        "source_id": "SRC0_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L1-S1",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_2#0",
+        "power_W": 0.0002100001213726046,
+        "source_id": "SRC0_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L1-S2",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_2#0",
+        "power_W": 8.513576495561532e-05,
+        "source_id": "SRC0_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L2-S1",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_2#0",
+        "power_W": 7.034371442846196e-05,
+        "source_id": "SRC0_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L2-S2",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_2#0",
+        "power_W": 9.25191306358604e-06,
+        "source_id": "SRC0_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L3-S1",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_2#0",
+        "power_W": 8.996030393432891e-06,
+        "source_id": "SRC0_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L3-S2",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_2#0",
+        "power_W": 9.488174167337715e-05,
+        "source_id": "SRC0_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L4-S1",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_2#0",
+        "power_W": 6.64171903812319e-05,
+        "source_id": "SRC0_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L4-S2",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_2#0",
+        "power_W": 2.692607162486413e-05,
+        "source_id": "SRC0_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L5-S1",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC0_2#0",
+        "power_W": 2.224775796690397e-05,
+        "source_id": "SRC0_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L5-S2",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "DETECTED",
+        "element_id": "observation",
+        "kind": "DETECTED",
+        "path_id": "SRC0_2#0",
+        "power_W": 0.0001057993907081798,
+        "source_id": "SRC0_2",
+        "spectral_index": 0,
+        "surface_id": "observation/image_plane",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_0#0",
+        "power_W": 0.00030127247686832635,
+        "source_id": "SRC1_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L1-S1",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_0#0",
+        "power_W": 0.000210515488648882,
+        "source_id": "SRC1_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L1-S2",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_0#0",
+        "power_W": 8.543427901545916e-05,
+        "source_id": "SRC1_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L2-S1",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_0#0",
+        "power_W": 7.048333745793805e-05,
+        "source_id": "SRC1_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L2-S2",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_0#0",
+        "power_W": 9.940340394365133e-06,
+        "source_id": "SRC1_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L3-S1",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_0#0",
+        "power_W": 9.641827609325228e-06,
+        "source_id": "SRC1_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L3-S2",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_0#0",
+        "power_W": 9.421492749907505e-05,
+        "source_id": "SRC1_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L4-S1",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_0#0",
+        "power_W": 6.581527557547485e-05,
+        "source_id": "SRC1_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L4-S2",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_0#0",
+        "power_W": 2.6714298145880135e-05,
+        "source_id": "SRC1_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L5-S1",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_0#0",
+        "power_W": 2.203601613316182e-05,
+        "source_id": "SRC1_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L5-S2",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "DETECTED",
+        "element_id": "observation",
+        "kind": "DETECTED",
+        "path_id": "SRC1_0#0",
+        "power_W": 0.00010393173265211235,
+        "source_id": "SRC1_0",
+        "spectral_index": 0,
+        "surface_id": "observation/image_plane",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_1#0",
+        "power_W": 0.0003004871218722813,
+        "source_id": "SRC1_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L1-S1",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_1#0",
+        "power_W": 0.00021020271870353605,
+        "source_id": "SRC1_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L1-S2",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_1#0",
+        "power_W": 8.532006777747336e-05,
+        "source_id": "SRC1_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L2-S1",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_1#0",
+        "power_W": 7.044253528973006e-05,
+        "source_id": "SRC1_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L2-S2",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_1#0",
+        "power_W": 9.655117930635783e-06,
+        "source_id": "SRC1_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L3-S1",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_1#0",
+        "power_W": 9.374516993060472e-06,
+        "source_id": "SRC1_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L3-S2",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_1#0",
+        "power_W": 9.451196224069046e-05,
+        "source_id": "SRC1_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L4-S1",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_1#0",
+        "power_W": 6.609695534263535e-05,
+        "source_id": "SRC1_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L4-S2",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_1#0",
+        "power_W": 2.6832638333065483e-05,
+        "source_id": "SRC1_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L5-S1",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_1#0",
+        "power_W": 2.2150416026743416e-05,
+        "source_id": "SRC1_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L5-S2",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "DETECTED",
+        "element_id": "observation",
+        "kind": "DETECTED",
+        "path_id": "SRC1_1#0",
+        "power_W": 0.00010492594949014843,
+        "source_id": "SRC1_1",
+        "spectral_index": 0,
+        "surface_id": "observation/image_plane",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_2#0",
+        "power_W": 0.00030012498451847296,
+        "source_id": "SRC1_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L1-S1",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_2#0",
+        "power_W": 0.0002100580808673847,
+        "source_id": "SRC1_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L1-S2",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_2#0",
+        "power_W": 8.515626545780066e-05,
+        "source_id": "SRC1_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L2-S1",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_2#0",
+        "power_W": 7.035113577413933e-05,
+        "source_id": "SRC1_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L2-S2",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_2#0",
+        "power_W": 9.261108080081262e-06,
+        "source_id": "SRC1_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L3-S1",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_2#0",
+        "power_W": 9.003490700716415e-06,
+        "source_id": "SRC1_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L3-S2",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_2#0",
+        "power_W": 9.485641374904039e-05,
+        "source_id": "SRC1_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L4-S1",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_2#0",
+        "power_W": 6.637215644675691e-05,
+        "source_id": "SRC1_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L4-S2",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_2#0",
+        "power_W": 2.6911149595009086e-05,
+        "source_id": "SRC1_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L5-S1",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC1_2#0",
+        "power_W": 2.222906711311034e-05,
+        "source_id": "SRC1_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L5-S2",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "DETECTED",
+        "element_id": "observation",
+        "kind": "DETECTED",
+        "path_id": "SRC1_2#0",
+        "power_W": 0.00010567614769748807,
+        "source_id": "SRC1_2",
+        "spectral_index": 0,
+        "surface_id": "observation/image_plane",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_0#0",
+        "power_W": 0.0003016470855074474,
+        "source_id": "SRC2_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L1-S1",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_0#0",
+        "power_W": 0.00021068865880329008,
+        "source_id": "SRC2_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L1-S2",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_0#0",
+        "power_W": 8.549517685199398e-05,
+        "source_id": "SRC2_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L2-S1",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_0#0",
+        "power_W": 7.050478092509526e-05,
+        "source_id": "SRC2_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L2-S2",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_0#0",
+        "power_W": 9.969310374918182e-06,
+        "source_id": "SRC2_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L3-S1",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_0#0",
+        "power_W": 9.665002804271971e-06,
+        "source_id": "SRC2_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L3-S2",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_0#0",
+        "power_W": 9.41362563955151e-05,
+        "source_id": "SRC2_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L4-S1",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_0#0",
+        "power_W": 6.567922163580179e-05,
+        "source_id": "SRC2_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L4-S2",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_0#0",
+        "power_W": 2.6668866026380623e-05,
+        "source_id": "SRC2_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L5-S1",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_0#0",
+        "power_W": 2.1979694171527566e-05,
+        "source_id": "SRC2_0",
+        "spectral_index": 0,
+        "surface_id": "MW/L5-S2",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "DETECTED",
+        "element_id": "observation",
+        "kind": "DETECTED",
+        "path_id": "SRC2_0#0",
+        "power_W": 0.00010356594650375764,
+        "source_id": "SRC2_0",
+        "spectral_index": 0,
+        "surface_id": "observation/image_plane",
+        "wavelength_nm": 3000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_1#0",
+        "power_W": 0.00030086152049182193,
+        "source_id": "SRC2_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L1-S1",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_1#0",
+        "power_W": 0.00021037636406247807,
+        "source_id": "SRC2_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L1-S2",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_1#0",
+        "power_W": 8.538131255913253e-05,
+        "source_id": "SRC2_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L2-S1",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_1#0",
+        "power_W": 7.046439413819139e-05,
+        "source_id": "SRC2_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L2-S2",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_1#0",
+        "power_W": 9.683565005665005e-06,
+        "source_id": "SRC2_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L3-S1",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_1#0",
+        "power_W": 9.397406412586427e-06,
+        "source_id": "SRC2_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L3-S2",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_1#0",
+        "power_W": 9.443450370371127e-05,
+        "source_id": "SRC2_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L4-S1",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_1#0",
+        "power_W": 6.596131879496437e-05,
+        "source_id": "SRC2_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L4-S2",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_1#0",
+        "power_W": 2.678747032950104e-05,
+        "source_id": "SRC2_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L5-S1",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_1#0",
+        "power_W": 2.2094164727981807e-05,
+        "source_id": "SRC2_1",
+        "spectral_index": 0,
+        "surface_id": "MW/L5-S2",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "DETECTED",
+        "element_id": "observation",
+        "kind": "DETECTED",
+        "path_id": "SRC2_1#0",
+        "power_W": 0.0001045579797739661,
+        "source_id": "SRC2_1",
+        "spectral_index": 0,
+        "surface_id": "observation/image_plane",
+        "wavelength_nm": 4000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_2#0",
+        "power_W": 0.00030049928552220616,
+        "source_id": "SRC2_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L1-S1",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_2#0",
+        "power_W": 0.00021023194476976382,
+        "source_id": "SRC2_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L1-S2",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_2#0",
+        "power_W": 8.521769305216002e-05,
+        "source_id": "SRC2_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L2-S1",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_2#0",
+        "power_W": 7.037327381584615e-05,
+        "source_id": "SRC2_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L2-S2",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_2#0",
+        "power_W": 9.28876159441538e-06,
+        "source_id": "SRC2_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L3-S1",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_2#0",
+        "power_W": 9.02590369951218e-06,
+        "source_id": "SRC2_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L3-S2",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_2#0",
+        "power_W": 9.478011656152973e-05,
+        "source_id": "SRC2_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L4-S1",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_2#0",
+        "power_W": 6.623688875452128e-05,
+        "source_id": "SRC2_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L4-S2",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_2#0",
+        "power_W": 2.686628874085796e-05,
+        "source_id": "SRC2_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L5-S1",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "interface reflection (not followed)",
+        "element_id": "MW",
+        "kind": "UNTRACED_REFLECTION",
+        "path_id": "SRC2_2#0",
+        "power_W": 2.2172959920678905e-05,
+        "source_id": "SRC2_2",
+        "spectral_index": 0,
+        "surface_id": "MW/L5-S2",
+        "wavelength_nm": 5000.0
+      },
+      {
+        "detail": "DETECTED",
+        "element_id": "observation",
+        "kind": "DETECTED",
+        "path_id": "SRC2_2#0",
+        "power_W": 0.00010530688356850818,
+        "source_id": "SRC2_2",
+        "spectral_index": 0,
+        "surface_id": "observation/image_plane",
+        "wavelength_nm": 5000.0
+      }
+    ],
+    "lines": [
+      {
+        "conserved": true,
+        "input_power_W": 0.001,
+        "observed_W": {
+          "image_plane": 0.00010405381652968397
+        },
+        "residual_W": 6.505213034913027e-19,
+        "sinks": {
+          "DETECTED": 0.00010405381652968397,
+          "UNTRACED_REFLECTION": 0.0008959461834703153
+        },
+        "source_id": "SRC0_0",
+        "spectral_index": 0,
+        "wavelength_nm": 3000.0
+      },
+      {
+        "conserved": true,
+        "input_power_W": 0.001,
+        "observed_W": {
+          "image_plane": 0.00010504876122330725
+        },
+        "residual_W": 4.336808689942018e-19,
+        "sinks": {
+          "DETECTED": 0.00010504876122330725,
+          "UNTRACED_REFLECTION": 0.0008949512387766924
+        },
+        "source_id": "SRC0_1",
+        "spectral_index": 0,
+        "wavelength_nm": 4000.0
+      },
+      {
+        "conserved": true,
+        "input_power_W": 0.001,
+        "observed_W": {
+          "image_plane": 0.0001057993907081798
+        },
+        "residual_W": 4.336808689942018e-19,
+        "sinks": {
+          "DETECTED": 0.0001057993907081798,
+          "UNTRACED_REFLECTION": 0.0008942006092918197
+        },
+        "source_id": "SRC0_2",
+        "spectral_index": 0,
+        "wavelength_nm": 5000.0
+      },
+      {
+        "conserved": true,
+        "input_power_W": 0.001,
+        "observed_W": {
+          "image_plane": 0.00010393173265211235
+        },
+        "residual_W": -2.168404344971009e-19,
+        "sinks": {
+          "DETECTED": 0.00010393173265211235,
+          "UNTRACED_REFLECTION": 0.0008960682673478878
+        },
+        "source_id": "SRC1_0",
+        "spectral_index": 0,
+        "wavelength_nm": 3000.0
+      },
+      {
+        "conserved": true,
+        "input_power_W": 0.001,
+        "observed_W": {
+          "image_plane": 0.00010492594949014843
+        },
+        "residual_W": -2.168404344971009e-19,
+        "sinks": {
+          "DETECTED": 0.00010492594949014843,
+          "UNTRACED_REFLECTION": 0.0008950740505098518
+        },
+        "source_id": "SRC1_1",
+        "spectral_index": 0,
+        "wavelength_nm": 4000.0
+      },
+      {
+        "conserved": true,
+        "input_power_W": 0.001,
+        "observed_W": {
+          "image_plane": 0.00010567614769748807
+        },
+        "residual_W": 0.0,
+        "sinks": {
+          "DETECTED": 0.00010567614769748807,
+          "UNTRACED_REFLECTION": 0.000894323852302512
+        },
+        "source_id": "SRC1_2",
+        "spectral_index": 0,
+        "wavelength_nm": 5000.0
+      },
+      {
+        "conserved": true,
+        "input_power_W": 0.001,
+        "observed_W": {
+          "image_plane": 0.00010356594650375764
+        },
+        "residual_W": 6.505213034913027e-19,
+        "sinks": {
+          "DETECTED": 0.00010356594650375764,
+          "UNTRACED_REFLECTION": 0.0008964340534962418
+        },
+        "source_id": "SRC2_0",
+        "spectral_index": 0,
+        "wavelength_nm": 3000.0
+      },
+      {
+        "conserved": true,
+        "input_power_W": 0.001,
+        "observed_W": {
+          "image_plane": 0.0001045579797739661
+        },
+        "residual_W": 0.0,
+        "sinks": {
+          "DETECTED": 0.0001045579797739661,
+          "UNTRACED_REFLECTION": 0.0008954420202260339
+        },
+        "source_id": "SRC2_1",
+        "spectral_index": 0,
+        "wavelength_nm": 4000.0
+      },
+      {
+        "conserved": true,
+        "input_power_W": 0.001,
+        "observed_W": {
+          "image_plane": 0.00010530688356850818
+        },
+        "residual_W": 2.168404344971009e-19,
+        "sinks": {
+          "DETECTED": 0.00010530688356850818,
+          "UNTRACED_REFLECTION": 0.0008946931164314916
+        },
+        "source_id": "SRC2_2",
+        "spectral_index": 0,
+        "wavelength_nm": 5000.0
+      }
+    ],
+    "residual_W": 1.734723475976807e-18,
+    "rows": [
+      {
+        "category": "INPUT",
+        "conserved": true,
+        "fraction_of_input": 1.0,
+        "name": null,
+        "power_W": 0.001,
+        "source_id": "SRC0_0",
+        "spectral_index": 0,
+        "wavelength_nm": 3000.0
+      },
+      {
+        "category": "SINK",
+        "conserved": null,
+        "fraction_of_input": 0.10405381652968397,
+        "name": "DETECTED",
+        "power_W": 0.00010405381652968397,
+        "source_id": "SRC0_0",
+        "spectral_index": 0,
+        "wavelength_nm": 3000.0
+      },
+      {
+        "category": "SINK",
+        "conserved": null,
+        "fraction_of_input": 0.8959461834703153,
+        "name": "UNTRACED_REFLECTION",
+        "power_W": 0.0008959461834703153,
+        "source_id": "SRC0_0",
+        "spectral_index": 0,
+        "wavelength_nm": 3000.0
+      },
+      {
+        "category": "OBSERVED",
+        "conserved": null,
+        "fraction_of_input": 0.10405381652968397,
+        "name": "image_plane",
+        "power_W": 0.00010405381652968397,
+        "source_id": "SRC0_0",
+        "spectral_index": 0,
+        "wavelength_nm": 3000.0
+      },
+      {
+        "category": "RESIDUAL",
+        "conserved": true,
+        "fraction_of_input": 6.505213034913027e-16,
+        "name": null,
+        "power_W": 6.505213034913027e-19,
+        "source_id": "SRC0_0",
+        "spectral_index": 0,
+        "wavelength_nm": 3000.0
+      },
+      {
+        "category": "INPUT",
+        "conserved": true,
+        "fraction_of_input": 1.0,
+        "name": null,
+        "power_W": 0.001,
+        "source_id": "SRC0_1",
+        "spectral_index": 0,
+        "wavelength_nm": 4000.0
+      },
+      {
+        "category": "SINK",
+        "conserved": null,
+        "fraction_of_input": 0.10504876122330725,
+        "name": "DETECTED",
+        "power_W": 0.00010504876122330725,
+        "source_id": "SRC0_1",
+        "spectral_index": 0,
+        "wavelength_nm": 4000.0
+      },
+      {
+        "category": "SINK",
+        "conserved": null,
+        "fraction_of_input": 0.8949512387766924,
+        "name": "UNTRACED_REFLECTION",
+        "power_W": 0.0008949512387766924,
+        "source_id": "SRC0_1",
+        "spectral_index": 0,
+        "wavelength_nm": 4000.0
+      },
+      {
+        "category": "OBSERVED",
+        "conserved": null,
+        "fraction_of_input": 0.10504876122330725,
+        "name": "image_plane",
+        "power_W": 0.00010504876122330725,
+        "source_id": "SRC0_1",
+        "spectral_index": 0,
+        "wavelength_nm": 4000.0
+      },
+      {
+        "category": "RESIDUAL",
+        "conserved": true,
+        "fraction_of_input": 4.3368086899420177e-16,
+        "name": null,
+        "power_W": 4.336808689942018e-19,
+        "source_id": "SRC0_1",
+        "spectral_index": 0,
+        "wavelength_nm": 4000.0
+      },
+      {
+        "category": "INPUT",
+        "conserved": true,
+        "fraction_of_input": 1.0,
+        "name": null,
+        "power_W": 0.001,
+        "source_id": "SRC0_2",
+        "spectral_index": 0,
+        "wavelength_nm": 5000.0
+      },
+      {
+        "category": "SINK",
+        "conserved": null,
+        "fraction_of_input": 0.1057993907081798,
+        "name": "DETECTED",
+        "power_W": 0.0001057993907081798,
+        "source_id": "SRC0_2",
+        "spectral_index": 0,
+        "wavelength_nm": 5000.0
+      },
+      {
+        "category": "SINK",
+        "conserved": null,
+        "fraction_of_input": 0.8942006092918198,
+        "name": "UNTRACED_REFLECTION",
+        "power_W": 0.0008942006092918197,
+        "source_id": "SRC0_2",
+        "spectral_index": 0,
+        "wavelength_nm": 5000.0
+      },
+      {
+        "category": "OBSERVED",
+        "conserved": null,
+        "fraction_of_input": 0.1057993907081798,
+        "name": "image_plane",
+        "power_W": 0.0001057993907081798,
+        "source_id": "SRC0_2",
+        "spectral_index": 0,
+        "wavelength_nm": 5000.0
+      },
+      {
+        "category": "RESIDUAL",
+        "conserved": true,
+        "fraction_of_input": 4.3368086899420177e-16,
+        "name": null,
+        "power_W": 4.336808689942018e-19,
+        "source_id": "SRC0_2",
+        "spectral_index": 0,
+        "wavelength_nm": 5000.0
+      },
+      {
+        "category": "INPUT",
+        "conserved": true,
+        "fraction_of_input": 1.0,
+        "name": null,
+        "power_W": 0.001,
+        "source_id": "SRC1_0",
+        "spectral_index": 0,
+        "wavelength_nm": 3000.0
+      },
+      {
+        "category": "SINK",
+        "conserved": null,
+        "fraction_of_input": 0.10393173265211235,
+        "name": "DETECTED",
+        "power_W": 0.00010393173265211235,
+        "source_id": "SRC1_0",
+        "spectral_index": 0,
+        "wavelength_nm": 3000.0
+      },
+      {
+        "category": "SINK",
+        "conserved": null,
+        "fraction_of_input": 0.8960682673478878,
+        "name": "UNTRACED_REFLECTION",
+        "power_W": 0.0008960682673478878,
+        "source_id": "SRC1_0",
+        "spectral_index": 0,
+        "wavelength_nm": 3000.0
+      },
+      {
+        "category": "OBSERVED",
+        "conserved": null,
+        "fraction_of_input": 0.10393173265211235,
+        "name": "image_plane",
+        "power_W": 0.00010393173265211235,
+        "source_id": "SRC1_0",
+        "spectral_index": 0,
+        "wavelength_nm": 3000.0
+      },
+      {
+        "category": "RESIDUAL",
+        "conserved": true,
+        "fraction_of_input": -2.1684043449710089e-16,
+        "name": null,
+        "power_W": -2.168404344971009e-19,
+        "source_id": "SRC1_0",
+        "spectral_index": 0,
+        "wavelength_nm": 3000.0
+      },
+      {
+        "category": "INPUT",
+        "conserved": true,
+        "fraction_of_input": 1.0,
+        "name": null,
+        "power_W": 0.001,
+        "source_id": "SRC1_1",
+        "spectral_index": 0,
+        "wavelength_nm": 4000.0
+      },
+      {
+        "category": "SINK",
+        "conserved": null,
+        "fraction_of_input": 0.10492594949014843,
+        "name": "DETECTED",
+        "power_W": 0.00010492594949014843,
+        "source_id": "SRC1_1",
+        "spectral_index": 0,
+        "wavelength_nm": 4000.0
+      },
+      {
+        "category": "SINK",
+        "conserved": null,
+        "fraction_of_input": 0.8950740505098518,
+        "name": "UNTRACED_REFLECTION",
+        "power_W": 0.0008950740505098518,
+        "source_id": "SRC1_1",
+        "spectral_index": 0,
+        "wavelength_nm": 4000.0
+      },
+      {
+        "category": "OBSERVED",
+        "conserved": null,
+        "fraction_of_input": 0.10492594949014843,
+        "name": "image_plane",
+        "power_W": 0.00010492594949014843,
+        "source_id": "SRC1_1",
+        "spectral_index": 0,
+        "wavelength_nm": 4000.0
+      },
+      {
+        "category": "RESIDUAL",
+        "conserved": true,
+        "fraction_of_input": -2.1684043449710089e-16,
+        "name": null,
+        "power_W": -2.168404344971009e-19,
+        "source_id": "SRC1_1",
+        "spectral_index": 0,
+        "wavelength_nm": 4000.0
+      },
+      {
+        "category": "INPUT",
+        "conserved": true,
+        "fraction_of_input": 1.0,
+        "name": null,
+        "power_W": 0.001,
+        "source_id": "SRC1_2",
+        "spectral_index": 0,
+        "wavelength_nm": 5000.0
+      },
+      {
+        "category": "SINK",
+        "conserved": null,
+        "fraction_of_input": 0.10567614769748807,
+        "name": "DETECTED",
+        "power_W": 0.00010567614769748807,
+        "source_id": "SRC1_2",
+        "spectral_index": 0,
+        "wavelength_nm": 5000.0
+      },
+      {
+        "category": "SINK",
+        "conserved": null,
+        "fraction_of_input": 0.894323852302512,
+        "name": "UNTRACED_REFLECTION",
+        "power_W": 0.000894323852302512,
+        "source_id": "SRC1_2",
+        "spectral_index": 0,
+        "wavelength_nm": 5000.0
+      },
+      {
+        "category": "OBSERVED",
+        "conserved": null,
+        "fraction_of_input": 0.10567614769748807,
+        "name": "image_plane",
+        "power_W": 0.00010567614769748807,
+        "source_id": "SRC1_2",
+        "spectral_index": 0,
+        "wavelength_nm": 5000.0
+      },
+      {
+        "category": "RESIDUAL",
+        "conserved": true,
+        "fraction_of_input": 0.0,
+        "name": null,
+        "power_W": 0.0,
+        "source_id": "SRC1_2",
+        "spectral_index": 0,
+        "wavelength_nm": 5000.0
+      },
+      {
+        "category": "INPUT",
+        "conserved": true,
+        "fraction_of_input": 1.0,
+        "name": null,
+        "power_W": 0.001,
+        "source_id": "SRC2_0",
+        "spectral_index": 0,
+        "wavelength_nm": 3000.0
+      },
+      {
+        "category": "SINK",
+        "conserved": null,
+        "fraction_of_input": 0.10356594650375764,
+        "name": "DETECTED",
+        "power_W": 0.00010356594650375764,
+        "source_id": "SRC2_0",
+        "spectral_index": 0,
+        "wavelength_nm": 3000.0
+      },
+      {
+        "category": "SINK",
+        "conserved": null,
+        "fraction_of_input": 0.8964340534962418,
+        "name": "UNTRACED_REFLECTION",
+        "power_W": 0.0008964340534962418,
+        "source_id": "SRC2_0",
+        "spectral_index": 0,
+        "wavelength_nm": 3000.0
+      },
+      {
+        "category": "OBSERVED",
+        "conserved": null,
+        "fraction_of_input": 0.10356594650375764,
+        "name": "image_plane",
+        "power_W": 0.00010356594650375764,
+        "source_id": "SRC2_0",
+        "spectral_index": 0,
+        "wavelength_nm": 3000.0
+      },
+      {
+        "category": "RESIDUAL",
+        "conserved": true,
+        "fraction_of_input": 6.505213034913027e-16,
+        "name": null,
+        "power_W": 6.505213034913027e-19,
+        "source_id": "SRC2_0",
+        "spectral_index": 0,
+        "wavelength_nm": 3000.0
+      },
+      {
+        "category": "INPUT",
+        "conserved": true,
+        "fraction_of_input": 1.0,
+        "name": null,
+        "power_W": 0.001,
+        "source_id": "SRC2_1",
+        "spectral_index": 0,
+        "wavelength_nm": 4000.0
+      },
+      {
+        "category": "SINK",
+        "conserved": null,
+        "fraction_of_input": 0.1045579797739661,
+        "name": "DETECTED",
+        "power_W": 0.0001045579797739661,
+        "source_id": "SRC2_1",
+        "spectral_index": 0,
+        "wavelength_nm": 4000.0
+      },
+      {
+        "category": "SINK",
+        "conserved": null,
+        "fraction_of_input": 0.8954420202260339,
+        "name": "UNTRACED_REFLECTION",
+        "power_W": 0.0008954420202260339,
+        "source_id": "SRC2_1",
+        "spectral_index": 0,
+        "wavelength_nm": 4000.0
+      },
+      {
+        "category": "OBSERVED",
+        "conserved": null,
+        "fraction_of_input": 0.1045579797739661,
+        "name": "image_plane",
+        "power_W": 0.0001045579797739661,
+        "source_id": "SRC2_1",
+        "spectral_index": 0,
+        "wavelength_nm": 4000.0
+      },
+      {
+        "category": "RESIDUAL",
+        "conserved": true,
+        "fraction_of_input": 0.0,
+        "name": null,
+        "power_W": 0.0,
+        "source_id": "SRC2_1",
+        "spectral_index": 0,
+        "wavelength_nm": 4000.0
+      },
+      {
+        "category": "INPUT",
+        "conserved": true,
+        "fraction_of_input": 1.0,
+        "name": null,
+        "power_W": 0.001,
+        "source_id": "SRC2_2",
+        "spectral_index": 0,
+        "wavelength_nm": 5000.0
+      },
+      {
+        "category": "SINK",
+        "conserved": null,
+        "fraction_of_input": 0.10530688356850817,
+        "name": "DETECTED",
+        "power_W": 0.00010530688356850818,
+        "source_id": "SRC2_2",
+        "spectral_index": 0,
+        "wavelength_nm": 5000.0
+      },
+      {
+        "category": "SINK",
+        "conserved": null,
+        "fraction_of_input": 0.8946931164314916,
+        "name": "UNTRACED_REFLECTION",
+        "power_W": 0.0008946931164314916,
+        "source_id": "SRC2_2",
+        "spectral_index": 0,
+        "wavelength_nm": 5000.0
+      },
+      {
+        "category": "OBSERVED",
+        "conserved": null,
+        "fraction_of_input": 0.10530688356850817,
+        "name": "image_plane",
+        "power_W": 0.00010530688356850818,
+        "source_id": "SRC2_2",
+        "spectral_index": 0,
+        "wavelength_nm": 5000.0
+      },
+      {
+        "category": "RESIDUAL",
+        "conserved": true,
+        "fraction_of_input": 2.1684043449710089e-16,
+        "name": null,
+        "power_W": 2.168404344971009e-19,
+        "source_id": "SRC2_2",
+        "spectral_index": 0,
+        "wavelength_nm": 5000.0
+      },
+      {
+        "category": "INPUT",
+        "conserved": true,
+        "fraction_of_input": 1.0,
+        "name": "TOTAL",
+        "power_W": 0.009000000000000001,
+        "source_id": null,
+        "spectral_index": null,
+        "wavelength_nm": null
+      },
+      {
+        "category": "SINK",
+        "conserved": null,
+        "fraction_of_input": 0.10476295646079464,
+        "name": "DETECTED",
+        "power_W": 0.0009428666081471519,
+        "source_id": null,
+        "spectral_index": null,
+        "wavelength_nm": null
+      },
+      {
+        "category": "SINK",
+        "conserved": null,
+        "fraction_of_input": 0.8952370435392052,
+        "name": "UNTRACED_REFLECTION",
+        "power_W": 0.008057133391852848,
+        "source_id": null,
+        "spectral_index": null,
+        "wavelength_nm": null
+      },
+      {
+        "category": "RESIDUAL",
+        "conserved": true,
+        "fraction_of_input": 1.9274705288631188e-16,
+        "name": "TOTAL",
+        "power_W": 1.734723475976807e-18,
+        "source_id": null,
+        "spectral_index": null,
+        "wavelength_nm": null
+      }
+    ],
+    "tolerance_W": 9.009000000000001e-12,
+    "total_input_W": 0.009000000000000001,
+    "total_sinks": {
+      "DETECTED": 0.0009428666081471519,
+      "UNTRACED_REFLECTION": 0.008057133391852848
+    }
+  },
+  "power_ledger_fresnel_check": {
+    "note": "\u6bcf\u9762\u7684\u83f2\u6d85\u8033\u53cd\u5c04\u7387\u7531\u5f15\u64ce\u76ee\u5f55\u6298\u5c04\u7387\u7b97\u51fa\uff0c\u4e0e\u5f15\u64ce power-budget \u5728\u540c\u4e00\u6ce2\u957f\u4e0b\u9010\u9762\u5e76\u5217\uff1b\u73bb\u7483\u51fa\u5c04\u9762\u7684\u5b9e\u6d4b\u503c\u5c0f\u4e8e\u83f2\u6d85\u8033\u503c\uff0c\u56e0\u4e3a\u5149\u675f\u5728\u524d\u4e00\u4e2a\u9762\u5df2\u7ecf\u635f\u5931\u4e86\u529f\u7387\u3002",
+    "note_en": "Fresnel reflectance of each interface from the catalog indices, beside the engine's per-face untraced reflection at the same wavelength. The measured exit-face share is below the Fresnel value because the beam already lost power at the entry face.",
+    "rows": [
+      {
+        "element": "L1",
+        "engine_entry_from_air_W": 0.00030114769295202615,
+        "engine_exit_to_air_W": 0.00021045775998169823,
+        "fresnel_reflectance_air_to_glass": 0.30115,
+        "material": "SILICON",
+        "n_glass": 3.43232,
+        "wavelength_nm": 3000.0
+      },
+      {
+        "element": "L2",
+        "engine_entry_from_air_W": 8.541395471488589e-05,
+        "engine_exit_to_air_W": 7.047614735430007e-05,
+        "fresnel_reflectance_air_to_glass": 0.17489,
+        "material": "ZNSE",
+        "n_glass": 2.43758,
+        "wavelength_nm": 3000.0
+      },
+      {
+        "element": "L3",
+        "engine_entry_from_air_W": 9.930706869379819e-06,
+        "engine_exit_to_air_W": 9.634112521817304e-06,
+        "fresnel_reflectance_air_to_glass": 0.02987,
+        "material": "CAF2",
+        "n_glass": 1.41785,
+        "wavelength_nm": 3000.0
+      },
+      {
+        "element": "L4",
+        "engine_entry_from_air_W": 9.424104628448516e-05,
+        "engine_exit_to_air_W": 6.58605726145273e-05,
+        "fresnel_reflectance_air_to_glass": 0.30115,
+        "material": "SILICON",
+        "n_glass": 3.43232,
+        "wavelength_nm": 3000.0
+      },
+      {
+        "element": "L5",
+        "engine_entry_from_air_W": 2.6729411009995e-05,
+        "engine_exit_to_air_W": 2.205477916720034e-05,
+        "fresnel_reflectance_air_to_glass": 0.17489,
+        "material": "ZNSE",
+        "n_glass": 2.43758,
+        "wavelength_nm": 3000.0
+      }
+    ],
+    "source_id": "SRC0_0",
+    "totals": {
+      "conserved": true,
+      "input_W": 0.009000000000000001,
+      "residual_W": 1.734723475976807e-18,
+      "sinks": {
+        "DETECTED": 0.0009428666081471519,
+        "UNTRACED_REFLECTION": 0.008057133391852848
+      },
+      "tolerance_W": 9.009000000000001e-12
+    },
+    "wavelength_nm": 3000.0
+  },
+  "quantities": [
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "image_space_na",
+      "reason": null,
+      "source_id": "SRC0_0",
+      "state": "KNOWN",
+      "unit": null,
+      "value": 0.0604003507,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "geometric_spot_rms_radius",
+      "reason": null,
+      "source_id": "SRC0_0",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 32.9304945,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "opd_rms_waves",
+      "reason": null,
+      "source_id": "SRC0_0",
+      "state": "KNOWN",
+      "unit": "waves",
+      "value": 0.125511771,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "opd_pv_waves",
+      "reason": null,
+      "source_id": "SRC0_0",
+      "state": "KNOWN",
+      "unit": "waves",
+      "value": 0.434036139,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC0_0#0.geometric_mtf",
+      "field_deg": 0.0,
+      "message": "the wavefront error (0.126 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity": "geometric_mtf_tangential",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "source_id": "SRC0_0",
+      "state": "OUT_OF_MODEL_SCOPE",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC0_0#0.geometric_mtf",
+      "field_deg": 0.0,
+      "message": "the wavefront error (0.126 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity": "geometric_mtf_sagittal",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "source_id": "SRC0_0",
+      "state": "OUT_OF_MODEL_SCOPE",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC0_0#0.diffraction",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "strehl_ratio",
+      "reason": null,
+      "source_id": "SRC0_0",
+      "state": "KNOWN",
+      "unit": null,
+      "value": 0.514271139,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC0_0#0.diffraction",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "mtf_tangential",
+      "reason": null,
+      "source_id": "SRC0_0",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC0_0#0.diffraction",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "mtf_sagittal",
+      "reason": null,
+      "source_id": "SRC0_0",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC0_0#0.diffraction",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "diffraction_limited_mtf_tangential",
+      "reason": null,
+      "source_id": "SRC0_0",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC0_0#0.diffraction",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "diffraction_limited_mtf_sagittal",
+      "reason": null,
+      "source_id": "SRC0_0",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC0_0#0.diffraction",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "encircled_radius_50",
+      "reason": null,
+      "source_id": "SRC0_0",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 25.0373316,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC0_0#0.diffraction",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "encircled_radius_80",
+      "reason": null,
+      "source_id": "SRC0_0",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 48.6665163,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC0_0#0.diffraction",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "diffraction_limited_encircled_radius_80",
+      "reason": null,
+      "source_id": "SRC0_0",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 22.2568629,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "image_space_na",
+      "reason": null,
+      "source_id": "SRC0_1",
+      "state": "KNOWN",
+      "unit": null,
+      "value": 0.0600940204,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "geometric_spot_rms_radius",
+      "reason": null,
+      "source_id": "SRC0_1",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 9.60009307,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "opd_rms_waves",
+      "reason": null,
+      "source_id": "SRC0_1",
+      "state": "KNOWN",
+      "unit": "waves",
+      "value": 0.0214987233,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "opd_pv_waves",
+      "reason": null,
+      "source_id": "SRC0_1",
+      "state": "KNOWN",
+      "unit": "waves",
+      "value": 0.0721284524,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC0_1#0.geometric_mtf",
+      "field_deg": 0.0,
+      "message": "the wavefront error (0.0215 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity": "geometric_mtf_tangential",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "source_id": "SRC0_1",
+      "state": "OUT_OF_MODEL_SCOPE",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC0_1#0.geometric_mtf",
+      "field_deg": 0.0,
+      "message": "the wavefront error (0.0215 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity": "geometric_mtf_sagittal",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "source_id": "SRC0_1",
+      "state": "OUT_OF_MODEL_SCOPE",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC0_1#0.diffraction",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "strehl_ratio",
+      "reason": null,
+      "source_id": "SRC0_1",
+      "state": "KNOWN",
+      "unit": null,
+      "value": 0.981886614,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC0_1#0.diffraction",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "mtf_tangential",
+      "reason": null,
+      "source_id": "SRC0_1",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC0_1#0.diffraction",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "mtf_sagittal",
+      "reason": null,
+      "source_id": "SRC0_1",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC0_1#0.diffraction",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "diffraction_limited_mtf_tangential",
+      "reason": null,
+      "source_id": "SRC0_1",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC0_1#0.diffraction",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "diffraction_limited_mtf_sagittal",
+      "reason": null,
+      "source_id": "SRC0_1",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC0_1#0.diffraction",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "encircled_radius_50",
+      "reason": null,
+      "source_id": "SRC0_1",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 18.0309633,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC0_1#0.diffraction",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "encircled_radius_80",
+      "reason": null,
+      "source_id": "SRC0_1",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 30.982774,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC0_1#0.diffraction",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "diffraction_limited_encircled_radius_80",
+      "reason": null,
+      "source_id": "SRC0_1",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 29.8270771,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "image_space_na",
+      "reason": null,
+      "source_id": "SRC0_2",
+      "state": "KNOWN",
+      "unit": null,
+      "value": 0.0598038835,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "geometric_spot_rms_radius",
+      "reason": null,
+      "source_id": "SRC0_2",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 14.9046579,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "opd_rms_waves",
+      "reason": null,
+      "source_id": "SRC0_2",
+      "state": "KNOWN",
+      "unit": "waves",
+      "value": 0.0412440982,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "opd_pv_waves",
+      "reason": null,
+      "source_id": "SRC0_2",
+      "state": "KNOWN",
+      "unit": "waves",
+      "value": 0.142075299,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC0_2#0.geometric_mtf",
+      "field_deg": 0.0,
+      "message": "the wavefront error (0.0412 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity": "geometric_mtf_tangential",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "source_id": "SRC0_2",
+      "state": "OUT_OF_MODEL_SCOPE",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC0_2#0.geometric_mtf",
+      "field_deg": 0.0,
+      "message": "the wavefront error (0.0412 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity": "geometric_mtf_sagittal",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "source_id": "SRC0_2",
+      "state": "OUT_OF_MODEL_SCOPE",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC0_2#0.diffraction",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "strehl_ratio",
+      "reason": null,
+      "source_id": "SRC0_2",
+      "state": "KNOWN",
+      "unit": null,
+      "value": 0.934656868,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC0_2#0.diffraction",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "mtf_tangential",
+      "reason": null,
+      "source_id": "SRC0_2",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC0_2#0.diffraction",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "mtf_sagittal",
+      "reason": null,
+      "source_id": "SRC0_2",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC0_2#0.diffraction",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "diffraction_limited_mtf_tangential",
+      "reason": null,
+      "source_id": "SRC0_2",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC0_2#0.diffraction",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "diffraction_limited_mtf_sagittal",
+      "reason": null,
+      "source_id": "SRC0_2",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC0_2#0.diffraction",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "encircled_radius_50",
+      "reason": null,
+      "source_id": "SRC0_2",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 23.5573986,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC0_2#0.diffraction",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "encircled_radius_80",
+      "reason": null,
+      "source_id": "SRC0_2",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 50.6032665,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC0_2#0.diffraction",
+      "field_deg": 0.0,
+      "message": "",
+      "quantity": "diffraction_limited_encircled_radius_80",
+      "reason": null,
+      "source_id": "SRC0_2",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 37.4653857,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "image_space_na",
+      "reason": null,
+      "source_id": "SRC1_0",
+      "state": "KNOWN",
+      "unit": null,
+      "value": 0.0604628812,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "geometric_spot_rms_radius",
+      "reason": null,
+      "source_id": "SRC1_0",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 35.0733572,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "opd_rms_waves",
+      "reason": null,
+      "source_id": "SRC1_0",
+      "state": "KNOWN",
+      "unit": "waves",
+      "value": 0.134511464,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "opd_pv_waves",
+      "reason": null,
+      "source_id": "SRC1_0",
+      "state": "KNOWN",
+      "unit": "waves",
+      "value": 0.47660117,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC1_0#0.geometric_mtf",
+      "field_deg": 1.5,
+      "message": "the wavefront error (0.135 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity": "geometric_mtf_tangential",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "source_id": "SRC1_0",
+      "state": "OUT_OF_MODEL_SCOPE",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC1_0#0.geometric_mtf",
+      "field_deg": 1.5,
+      "message": "the wavefront error (0.135 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity": "geometric_mtf_sagittal",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "source_id": "SRC1_0",
+      "state": "OUT_OF_MODEL_SCOPE",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC1_0#0.diffraction",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "strehl_ratio",
+      "reason": null,
+      "source_id": "SRC1_0",
+      "state": "KNOWN",
+      "unit": null,
+      "value": 0.462977994,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC1_0#0.diffraction",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "mtf_tangential",
+      "reason": null,
+      "source_id": "SRC1_0",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC1_0#0.diffraction",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "mtf_sagittal",
+      "reason": null,
+      "source_id": "SRC1_0",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC1_0#0.diffraction",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "diffraction_limited_mtf_tangential",
+      "reason": null,
+      "source_id": "SRC1_0",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC1_0#0.diffraction",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "diffraction_limited_mtf_sagittal",
+      "reason": null,
+      "source_id": "SRC1_0",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC1_0#0.diffraction",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "encircled_radius_50",
+      "reason": null,
+      "source_id": "SRC1_0",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 27.5128664,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC1_0#0.diffraction",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "encircled_radius_80",
+      "reason": null,
+      "source_id": "SRC1_0",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 51.9932241,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC1_0#0.diffraction",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "diffraction_limited_encircled_radius_80",
+      "reason": null,
+      "source_id": "SRC1_0",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 22.2465092,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "image_space_na",
+      "reason": null,
+      "source_id": "SRC1_1",
+      "state": "KNOWN",
+      "unit": null,
+      "value": 0.0601557132,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "geometric_spot_rms_radius",
+      "reason": null,
+      "source_id": "SRC1_1",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 11.7177821,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "opd_rms_waves",
+      "reason": null,
+      "source_id": "SRC1_1",
+      "state": "KNOWN",
+      "unit": "waves",
+      "value": 0.0285120848,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "opd_pv_waves",
+      "reason": null,
+      "source_id": "SRC1_1",
+      "state": "KNOWN",
+      "unit": "waves",
+      "value": 0.106731726,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC1_1#0.geometric_mtf",
+      "field_deg": 1.5,
+      "message": "the wavefront error (0.0285 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity": "geometric_mtf_tangential",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "source_id": "SRC1_1",
+      "state": "OUT_OF_MODEL_SCOPE",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC1_1#0.geometric_mtf",
+      "field_deg": 1.5,
+      "message": "the wavefront error (0.0285 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity": "geometric_mtf_sagittal",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "source_id": "SRC1_1",
+      "state": "OUT_OF_MODEL_SCOPE",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC1_1#0.diffraction",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "strehl_ratio",
+      "reason": null,
+      "source_id": "SRC1_1",
+      "state": "KNOWN",
+      "unit": null,
+      "value": 0.969115094,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC1_1#0.diffraction",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "mtf_tangential",
+      "reason": null,
+      "source_id": "SRC1_1",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC1_1#0.diffraction",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "mtf_sagittal",
+      "reason": null,
+      "source_id": "SRC1_1",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC1_1#0.diffraction",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "diffraction_limited_mtf_tangential",
+      "reason": null,
+      "source_id": "SRC1_1",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC1_1#0.diffraction",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "diffraction_limited_mtf_sagittal",
+      "reason": null,
+      "source_id": "SRC1_1",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC1_1#0.diffraction",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "encircled_radius_50",
+      "reason": null,
+      "source_id": "SRC1_1",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 18.1968797,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC1_1#0.diffraction",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "encircled_radius_80",
+      "reason": null,
+      "source_id": "SRC1_1",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 32.0234773,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC1_1#0.diffraction",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "diffraction_limited_encircled_radius_80",
+      "reason": null,
+      "source_id": "SRC1_1",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 29.8132147,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "image_space_na",
+      "reason": null,
+      "source_id": "SRC1_2",
+      "state": "KNOWN",
+      "unit": null,
+      "value": 0.0598644803,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "geometric_spot_rms_radius",
+      "reason": null,
+      "source_id": "SRC1_2",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 12.9849268,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "opd_rms_waves",
+      "reason": null,
+      "source_id": "SRC1_2",
+      "state": "KNOWN",
+      "unit": "waves",
+      "value": 0.0365726577,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "opd_pv_waves",
+      "reason": null,
+      "source_id": "SRC1_2",
+      "state": "KNOWN",
+      "unit": "waves",
+      "value": 0.131501764,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC1_2#0.geometric_mtf",
+      "field_deg": 1.5,
+      "message": "the wavefront error (0.0366 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity": "geometric_mtf_tangential",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "source_id": "SRC1_2",
+      "state": "OUT_OF_MODEL_SCOPE",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC1_2#0.geometric_mtf",
+      "field_deg": 1.5,
+      "message": "the wavefront error (0.0366 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity": "geometric_mtf_sagittal",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "source_id": "SRC1_2",
+      "state": "OUT_OF_MODEL_SCOPE",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC1_2#0.diffraction",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "strehl_ratio",
+      "reason": null,
+      "source_id": "SRC1_2",
+      "state": "KNOWN",
+      "unit": null,
+      "value": 0.948805095,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC1_2#0.diffraction",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "mtf_tangential",
+      "reason": null,
+      "source_id": "SRC1_2",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC1_2#0.diffraction",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "mtf_sagittal",
+      "reason": null,
+      "source_id": "SRC1_2",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC1_2#0.diffraction",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "diffraction_limited_mtf_tangential",
+      "reason": null,
+      "source_id": "SRC1_2",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC1_2#0.diffraction",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "diffraction_limited_mtf_sagittal",
+      "reason": null,
+      "source_id": "SRC1_2",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC1_2#0.diffraction",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "encircled_radius_50",
+      "reason": null,
+      "source_id": "SRC1_2",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 23.2702933,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC1_2#0.diffraction",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "encircled_radius_80",
+      "reason": null,
+      "source_id": "SRC1_2",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 45.1337846,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC1_2#0.diffraction",
+      "field_deg": 1.5,
+      "message": "",
+      "quantity": "diffraction_limited_encircled_radius_80",
+      "reason": null,
+      "source_id": "SRC1_2",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 37.4480122,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "image_space_na",
+      "reason": null,
+      "source_id": "SRC2_0",
+      "state": "KNOWN",
+      "unit": null,
+      "value": 0.0606199635,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "geometric_spot_rms_radius",
+      "reason": null,
+      "source_id": "SRC2_0",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 41.5764636,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "opd_rms_waves",
+      "reason": null,
+      "source_id": "SRC2_0",
+      "state": "KNOWN",
+      "unit": "waves",
+      "value": 0.162197807,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "opd_pv_waves",
+      "reason": null,
+      "source_id": "SRC2_0",
+      "state": "KNOWN",
+      "unit": "waves",
+      "value": 0.603423927,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC2_0#0.geometric_mtf",
+      "field_deg": 3.0,
+      "message": "the wavefront error (0.162 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity": "geometric_mtf_tangential",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "source_id": "SRC2_0",
+      "state": "OUT_OF_MODEL_SCOPE",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC2_0#0.geometric_mtf",
+      "field_deg": 3.0,
+      "message": "the wavefront error (0.162 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity": "geometric_mtf_sagittal",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "source_id": "SRC2_0",
+      "state": "OUT_OF_MODEL_SCOPE",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC2_0#0.diffraction",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "strehl_ratio",
+      "reason": null,
+      "source_id": "SRC2_0",
+      "state": "KNOWN",
+      "unit": null,
+      "value": 0.315194974,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC2_0#0.diffraction",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "mtf_tangential",
+      "reason": null,
+      "source_id": "SRC2_0",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC2_0#0.diffraction",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "mtf_sagittal",
+      "reason": null,
+      "source_id": "SRC2_0",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC2_0#0.diffraction",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "diffraction_limited_mtf_tangential",
+      "reason": null,
+      "source_id": "SRC2_0",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC2_0#0.diffraction",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "diffraction_limited_mtf_sagittal",
+      "reason": null,
+      "source_id": "SRC2_0",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC2_0#0.diffraction",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "encircled_radius_50",
+      "reason": null,
+      "source_id": "SRC2_0",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 33.0257411,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC2_0#0.diffraction",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "encircled_radius_80",
+      "reason": null,
+      "source_id": "SRC2_0",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 60.6718161,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "SRC2_0#0.diffraction",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "diffraction_limited_encircled_radius_80",
+      "reason": null,
+      "source_id": "SRC2_0",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 22.2155026,
+      "wavelength_nm": 3000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "image_space_na",
+      "reason": null,
+      "source_id": "SRC2_1",
+      "state": "KNOWN",
+      "unit": null,
+      "value": 0.0603113565,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "geometric_spot_rms_radius",
+      "reason": null,
+      "source_id": "SRC2_1",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 18.2446519,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "opd_rms_waves",
+      "reason": null,
+      "source_id": "SRC2_1",
+      "state": "KNOWN",
+      "unit": "waves",
+      "value": 0.0500348037,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "opd_pv_waves",
+      "reason": null,
+      "source_id": "SRC2_1",
+      "state": "KNOWN",
+      "unit": "waves",
+      "value": 0.199775614,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC2_1#0.geometric_mtf",
+      "field_deg": 3.0,
+      "message": "the wavefront error (0.05 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity": "geometric_mtf_tangential",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "source_id": "SRC2_1",
+      "state": "OUT_OF_MODEL_SCOPE",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC2_1#0.geometric_mtf",
+      "field_deg": 3.0,
+      "message": "the wavefront error (0.05 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity": "geometric_mtf_sagittal",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "source_id": "SRC2_1",
+      "state": "OUT_OF_MODEL_SCOPE",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC2_1#0.diffraction",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "strehl_ratio",
+      "reason": null,
+      "source_id": "SRC2_1",
+      "state": "KNOWN",
+      "unit": null,
+      "value": 0.90836282,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC2_1#0.diffraction",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "mtf_tangential",
+      "reason": null,
+      "source_id": "SRC2_1",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC2_1#0.diffraction",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "mtf_sagittal",
+      "reason": null,
+      "source_id": "SRC2_1",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC2_1#0.diffraction",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "diffraction_limited_mtf_tangential",
+      "reason": null,
+      "source_id": "SRC2_1",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC2_1#0.diffraction",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "diffraction_limited_mtf_sagittal",
+      "reason": null,
+      "source_id": "SRC2_1",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC2_1#0.diffraction",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "encircled_radius_50",
+      "reason": null,
+      "source_id": "SRC2_1",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 19.0777773,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC2_1#0.diffraction",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "encircled_radius_80",
+      "reason": null,
+      "source_id": "SRC2_1",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 43.2364231,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "SRC2_1#0.diffraction",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "diffraction_limited_encircled_radius_80",
+      "reason": null,
+      "source_id": "SRC2_1",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 29.771701,
+      "wavelength_nm": 4000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "image_space_na",
+      "reason": null,
+      "source_id": "SRC2_2",
+      "state": "KNOWN",
+      "unit": null,
+      "value": 0.0600183328,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "geometric_spot_rms_radius",
+      "reason": null,
+      "source_id": "SRC2_2",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 8.17096265,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "opd_rms_waves",
+      "reason": null,
+      "source_id": "SRC2_2",
+      "state": "KNOWN",
+      "unit": "waves",
+      "value": 0.0251731193,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "geometric_ray_bundle",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "opd_pv_waves",
+      "reason": null,
+      "source_id": "SRC2_2",
+      "state": "KNOWN",
+      "unit": "waves",
+      "value": 0.101428072,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC2_2#0.geometric_mtf",
+      "field_deg": 3.0,
+      "message": "the wavefront error (0.0252 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity": "geometric_mtf_tangential",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "source_id": "SRC2_2",
+      "state": "OUT_OF_MODEL_SCOPE",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC2_2#0.geometric_mtf",
+      "field_deg": 3.0,
+      "message": "the wavefront error (0.0252 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+      "quantity": "geometric_mtf_sagittal",
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "source_id": "SRC2_2",
+      "state": "OUT_OF_MODEL_SCOPE",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC2_2#0.diffraction",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "strehl_ratio",
+      "reason": null,
+      "source_id": "SRC2_2",
+      "state": "KNOWN",
+      "unit": null,
+      "value": 0.977229984,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC2_2#0.diffraction",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "mtf_tangential",
+      "reason": null,
+      "source_id": "SRC2_2",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC2_2#0.diffraction",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "mtf_sagittal",
+      "reason": null,
+      "source_id": "SRC2_2",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC2_2#0.diffraction",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "diffraction_limited_mtf_tangential",
+      "reason": null,
+      "source_id": "SRC2_2",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC2_2#0.diffraction",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "diffraction_limited_mtf_sagittal",
+      "reason": null,
+      "source_id": "SRC2_2",
+      "state": "KNOWN",
+      "unit": null,
+      "value": null,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC2_2#0.diffraction",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "encircled_radius_50",
+      "reason": null,
+      "source_id": "SRC2_2",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 22.7058119,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC2_2#0.diffraction",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "encircled_radius_80",
+      "reason": null,
+      "source_id": "SRC2_2",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 39.658355,
+      "wavelength_nm": 5000.0
+    },
+    {
+      "basis": "SRC2_2#0.diffraction",
+      "field_deg": 3.0,
+      "message": "",
+      "quantity": "diffraction_limited_encircled_radius_80",
+      "reason": null,
+      "source_id": "SRC2_2",
+      "state": "KNOWN",
+      "unit": "um",
+      "value": 37.3959841,
+      "wavelength_nm": 5000.0
+    }
+  ],
+  "run": {
+    "beam_partially_intercepted": 0,
+    "check": "ACCEPTED",
+    "detected_sources": [
+      "SRC0_0",
+      "SRC0_1",
+      "SRC0_2",
+      "SRC1_0",
+      "SRC1_1",
+      "SRC1_2",
+      "SRC2_0",
+      "SRC2_1",
+      "SRC2_2"
+    ],
+    "execution": {
+      "budgets": {
+        "affected_observation_ids": [],
+        "affected_path_ids": [
+          "SRC0_0#0",
+          "SRC0_1#0",
+          "SRC0_2#0",
+          "SRC1_0#0",
+          "SRC1_1#0",
+          "SRC1_2#0",
+          "SRC2_0#0",
+          "SRC2_1#0",
+          "SRC2_2#0"
+        ],
+        "affected_source_ids": [
+          "SRC0_0",
+          "SRC0_1",
+          "SRC0_2",
+          "SRC1_0",
+          "SRC1_1",
+          "SRC1_2",
+          "SRC2_0",
+          "SRC2_1",
+          "SRC2_2"
+        ],
+        "exhausted": [
+          "max_paths"
+        ],
+        "exhausted_by_phase": {
+          "untraced_light": [
+            "max_paths"
+          ]
+        },
+        "limits": {
+          "max_interactions_per_path": 96,
+          "max_interference_pairs": 256,
+          "max_paths": 8192,
+          "max_return_analysis_work": 4000000,
+          "max_trace_steps": 200000
+        },
+        "return_analysis": [
+          {
+            "closed_return_kinds": [],
+            "closed_return_screen": "COMPLETED_NO_RETURN",
+            "closed_return_surfaces": [],
+            "closed_series_bound": null,
+            "ended_in": "closed_returns",
+            "frames_limit": 0,
+            "frames_peak": 0,
+            "search_depth": 0,
+            "solid_fold_work": 0,
+            "termination": "COMPLETED",
+            "wavelength_nm": 3000.0,
+            "work_before": 0,
+            "work_done": 45164,
+            "work_limit": 4000000
+          },
+          {
+            "closed_return_kinds": [],
+            "closed_return_screen": "COMPLETED_NO_RETURN",
+            "closed_return_surfaces": [],
+            "closed_series_bound": null,
+            "ended_in": "closed_returns",
+            "frames_limit": 0,
+            "frames_peak": 0,
+            "search_depth": 0,
+            "solid_fold_work": 0,
+            "termination": "COMPLETED",
+            "wavelength_nm": 4000.0,
+            "work_before": 45164,
+            "work_done": 45164,
+            "work_limit": 3954836
+          },
+          {
+            "closed_return_kinds": [],
+            "closed_return_screen": "COMPLETED_NO_RETURN",
+            "closed_return_surfaces": [],
+            "closed_series_bound": null,
+            "ended_in": "closed_returns",
+            "frames_limit": 0,
+            "frames_peak": 0,
+            "search_depth": 0,
+            "solid_fold_work": 0,
+            "termination": "COMPLETED",
+            "wavelength_nm": 5000.0,
+            "work_before": 90328,
+            "work_done": 45164,
+            "work_limit": 3909672
+          }
+        ],
+        "untraced_power_W": null
+      },
+      "complete": false,
+      "outcome": "PARTIAL",
+      "reason": "a resource budget ran out (max_paths); the results count the light that was traced, and each affected quantity says what it leaves out",
+      "termination": "BUDGET_EXHAUSTED"
+    },
+    "in_model_scope": true,
+    "validation_status": "WARNING"
+  },
+  "subject": {
+    "SRC0_0": {
+      "field_deg": 0.0,
+      "wavelength_nm": 3000.0
+    },
+    "SRC0_1": {
+      "field_deg": 0.0,
+      "wavelength_nm": 4000.0
+    },
+    "SRC0_2": {
+      "field_deg": 0.0,
+      "wavelength_nm": 5000.0
+    },
+    "SRC1_0": {
+      "field_deg": 1.5,
+      "wavelength_nm": 3000.0
+    },
+    "SRC1_1": {
+      "field_deg": 1.5,
+      "wavelength_nm": 4000.0
+    },
+    "SRC1_2": {
+      "field_deg": 1.5,
+      "wavelength_nm": 5000.0
+    },
+    "SRC2_0": {
+      "field_deg": 3.0,
+      "wavelength_nm": 3000.0
+    },
+    "SRC2_1": {
+      "field_deg": 3.0,
+      "wavelength_nm": 4000.0
+    },
+    "SRC2_2": {
+      "field_deg": 3.0,
+      "wavelength_nm": 5000.0
+    }
+  },
+  "targets": [
+    {
+      "applicability_issue_codes": [],
+      "assessment": "MET",
+      "bounds": {
+        "maximum": 0.05
+      },
+      "error": null,
+      "issue_codes": [],
+      "message": "",
+      "metric": "spot_rms_mm",
+      "observation_id": "image_plane",
+      "status": "PASS",
+      "target_id": "spot_rms_f0deg_3000nm",
+      "unit": "mm",
+      "value": 0.03512714734790057
+    },
+    {
+      "applicability_issue_codes": [],
+      "assessment": "MET",
+      "bounds": {
+        "maximum": 0.05
+      },
+      "error": null,
+      "issue_codes": [],
+      "message": "",
+      "metric": "spot_rms_mm",
+      "observation_id": "image_plane",
+      "status": "PASS",
+      "target_id": "spot_rms_f0deg_4000nm",
+      "unit": "mm",
+      "value": 0.012832963922502856
+    },
+    {
+      "applicability_issue_codes": [],
+      "assessment": "MET",
+      "bounds": {
+        "maximum": 0.05
+      },
+      "error": null,
+      "issue_codes": [],
+      "message": "",
+      "metric": "spot_rms_mm",
+      "observation_id": "image_plane",
+      "status": "PASS",
+      "target_id": "spot_rms_f0deg_5000nm",
+      "unit": "mm",
+      "value": 0.013202952739488062
+    },
+    {
+      "applicability_issue_codes": [],
+      "assessment": "MET",
+      "bounds": {
+        "maximum": 0.05
+      },
+      "error": null,
+      "issue_codes": [],
+      "message": "",
+      "metric": "spot_rms_mm",
+      "observation_id": "image_plane",
+      "status": "PASS",
+      "target_id": "spot_rms_f1.5deg_3000nm",
+      "unit": "mm",
+      "value": 0.03723388467957978
+    },
+    {
+      "applicability_issue_codes": [],
+      "assessment": "MET",
+      "bounds": {
+        "maximum": 0.05
+      },
+      "error": null,
+      "issue_codes": [],
+      "message": "",
+      "metric": "spot_rms_mm",
+      "observation_id": "image_plane",
+      "status": "PASS",
+      "target_id": "spot_rms_f1.5deg_4000nm",
+      "unit": "mm",
+      "value": 0.014833748174871913
+    },
+    {
+      "applicability_issue_codes": [],
+      "assessment": "MET",
+      "bounds": {
+        "maximum": 0.05
+      },
+      "error": null,
+      "issue_codes": [],
+      "message": "",
+      "metric": "spot_rms_mm",
+      "observation_id": "image_plane",
+      "status": "PASS",
+      "target_id": "spot_rms_f1.5deg_5000nm",
+      "unit": "mm",
+      "value": 0.011600309129675657
+    },
+    {
+      "applicability_issue_codes": [],
+      "assessment": "MET",
+      "bounds": {
+        "maximum": 0.05
+      },
+      "error": null,
+      "issue_codes": [],
+      "message": "",
+      "metric": "spot_rms_mm",
+      "observation_id": "image_plane",
+      "status": "PASS",
+      "target_id": "spot_rms_f3deg_3000nm",
+      "unit": "mm",
+      "value": 0.043627517528454285
+    },
+    {
+      "applicability_issue_codes": [],
+      "assessment": "MET",
+      "bounds": {
+        "maximum": 0.05
+      },
+      "error": null,
+      "issue_codes": [],
+      "message": "",
+      "metric": "spot_rms_mm",
+      "observation_id": "image_plane",
+      "status": "PASS",
+      "target_id": "spot_rms_f3deg_4000nm",
+      "unit": "mm",
+      "value": 0.021080411658779937
+    },
+    {
+      "applicability_issue_codes": [],
+      "assessment": "MET",
+      "bounds": {
+        "maximum": 0.05
+      },
+      "error": null,
+      "issue_codes": [],
+      "message": "",
+      "metric": "spot_rms_mm",
+      "observation_id": "image_plane",
+      "status": "PASS",
+      "target_id": "spot_rms_f3deg_5000nm",
+      "unit": "mm",
+      "value": 0.008487469367548798
+    }
+  ]
+}

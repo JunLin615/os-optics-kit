@@ -1,0 +1,673 @@
+{
+  "components": [
+    {
+      "custom_part": {
+        "custom_part_key": "SN",
+        "description": "sonnar-telephoto-lens: imported from a csv-surface-table/1 prescription (6 elements, 0 aperture stops)"
+      },
+      "instance_id": "SN",
+      "nominal_pose": {
+        "position_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "quaternion_wxyz": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ]
+      },
+      "optical_model_id": "SN",
+      "optical_role": "lens",
+      "retained_dofs": [],
+      "selected_parameters": []
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "field-0deg",
+        "description": "Collimated Gaussian beam for field 0 deg."
+      },
+      "instance_id": "SRC0",
+      "nominal_pose": {
+        "position_mm": [
+          -30.0,
+          0.0,
+          0.0
+        ],
+        "quaternion_wxyz": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ]
+      },
+      "optical_role": "source",
+      "retained_dofs": [],
+      "selected_parameters": [],
+      "source_model": {
+        "m2": 1.0,
+        "model_kind": "GAUSSIAN_BEAM",
+        "polarization": {
+          "angle_deg": 0.0,
+          "kind": "LINEAR"
+        },
+        "power_w": 0.001,
+        "waist_position_mm": 0.0,
+        "waist_radius_mm": 2.0,
+        "wavelength_nm": 587.5618
+      }
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "field-7deg",
+        "description": "Collimated Gaussian beam for field 7 deg."
+      },
+      "instance_id": "SRC1",
+      "nominal_pose": {
+        "position_mm": [
+          -29.77638454923966,
+          0.0,
+          3.6560803021544244
+        ],
+        "quaternion_wxyz": [
+          0.46854312944350507,
+          0.529591668978362,
+          0.529591668978362,
+          0.46854312944350507
+        ]
+      },
+      "optical_role": "source",
+      "retained_dofs": [],
+      "selected_parameters": [],
+      "source_model": {
+        "m2": 1.0,
+        "model_kind": "GAUSSIAN_BEAM",
+        "polarization": {
+          "angle_deg": 0.0,
+          "kind": "LINEAR"
+        },
+        "power_w": 0.001,
+        "waist_position_mm": 0.0,
+        "waist_radius_mm": 2.0,
+        "wavelength_nm": 587.5618
+      }
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "field-14deg",
+        "description": "Collimated Gaussian beam for field 14 deg."
+      },
+      "instance_id": "SRC2",
+      "nominal_pose": {
+        "position_mm": [
+          -29.108871788279895,
+          0.0,
+          7.257656867990032
+        ],
+        "quaternion_wxyz": [
+          0.4353384041180873,
+          0.5572077475232348,
+          0.5572077475232348,
+          0.4353384041180873
+        ]
+      },
+      "optical_role": "source",
+      "retained_dofs": [],
+      "selected_parameters": [],
+      "source_model": {
+        "m2": 1.0,
+        "model_kind": "GAUSSIAN_BEAM",
+        "polarization": {
+          "angle_deg": 0.0,
+          "kind": "LINEAR"
+        },
+        "power_w": 0.001,
+        "waist_position_mm": 0.0,
+        "waist_radius_mm": 2.0,
+        "wavelength_nm": 587.5618
+      }
+    }
+  ],
+  "compute_budget": {
+    "max_interactions_per_path": 96,
+    "max_paths": 8192,
+    "max_trace_steps": 200000,
+    "pupil_points_per_ring": 12,
+    "pupil_ring_count": 8
+  },
+  "materials": [],
+  "model_materials": [
+    {
+      "basis": "Sellmeier dispersion formula of F2 (SCHOTT); copied from public optical catalog 2026-10-28.1",
+      "dispersion": {
+        "b": [
+          "1.34533359",
+          "0.209073176",
+          "0.937357162"
+        ],
+        "c_um2": [
+          "0.00997743871",
+          "0.0470450767",
+          "111.886764"
+        ],
+        "kind": "SELLMEIER"
+      },
+      "display_name": "F2",
+      "material_id": "F2",
+      "valid_band_nm": {
+        "max_nm": "2500",
+        "min_nm": "320",
+        "status": "SPECIFIED"
+      }
+    },
+    {
+      "basis": "Sellmeier dispersion formula of N-BK7 (SCHOTT); copied from public optical catalog 2026-10-28.1",
+      "dispersion": {
+        "b": [
+          "1.03961212",
+          "0.231792344",
+          "1.01046945"
+        ],
+        "c_um2": [
+          "0.00600069867",
+          "0.0200179144",
+          "103.560653"
+        ],
+        "kind": "SELLMEIER"
+      },
+      "display_name": "N-BK7",
+      "material_id": "N-BK7",
+      "valid_band_nm": {
+        "max_nm": "2500",
+        "min_nm": "300",
+        "status": "SPECIFIED"
+      }
+    }
+  ],
+  "observations": [
+    {
+      "absorbing": true,
+      "aperture": {
+        "center_offset_mm": [
+          0.0,
+          0.0
+        ],
+        "obstruction_radius_mm": 0.0,
+        "radius_mm": 25.4,
+        "shape": "circle"
+      },
+      "medium": "air",
+      "observation_id": "image_plane",
+      "pose": {
+        "position_mm": [
+          129.23143775437904,
+          0.0,
+          0.0
+        ],
+        "quaternion_wxyz": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ]
+      }
+    }
+  ],
+  "optical_models": [
+    {
+      "display_name": "sonnar-telephoto-lens (csv-surface-table/1, source SHA-256 f8e9c3f654daebff4e0a8abcef4dd8331f23bb07d0ed946d73281ec36f19c79d)",
+      "model": {
+        "envelope": {
+          "diameter_mm": "42.838",
+          "kind": "CYLINDER",
+          "status": "DERIVED",
+          "z_max_mm": "107.672421",
+          "z_min_mm": "0"
+        },
+        "members": [
+          {
+            "member_id": "L1",
+            "model_id": "SN-L1",
+            "pose": {
+              "position_mm": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "quaternion_wxyz": [
+                1.0,
+                0.0,
+                0.0,
+                0.0
+              ]
+            }
+          },
+          {
+            "member_id": "L2",
+            "model_id": "SN-L2",
+            "pose": {
+              "position_mm": [
+                0.0,
+                0.0,
+                11.00514869
+              ],
+              "quaternion_wxyz": [
+                1.0,
+                0.0,
+                0.0,
+                0.0
+              ]
+            }
+          },
+          {
+            "member_id": "L3",
+            "model_id": "SN-L3",
+            "pose": {
+              "position_mm": [
+                0.0,
+                0.0,
+                30.19794289
+              ],
+              "quaternion_wxyz": [
+                1.0,
+                0.0,
+                0.0,
+                0.0
+              ]
+            }
+          },
+          {
+            "member_id": "L4",
+            "model_id": "SN-L4",
+            "pose": {
+              "position_mm": [
+                0.0,
+                0.0,
+                45.19317737
+              ],
+              "quaternion_wxyz": [
+                1.0,
+                0.0,
+                0.0,
+                0.0
+              ]
+            }
+          },
+          {
+            "member_id": "L5",
+            "model_id": "SN-L5",
+            "pose": {
+              "position_mm": [
+                0.0,
+                0.0,
+                74.53845122
+              ],
+              "quaternion_wxyz": [
+                1.0,
+                0.0,
+                0.0,
+                0.0
+              ]
+            }
+          },
+          {
+            "member_id": "L6",
+            "model_id": "SN-L6",
+            "pose": {
+              "position_mm": [
+                0.0,
+                0.0,
+                86.83004972
+              ],
+              "quaternion_wxyz": [
+                1.0,
+                0.0,
+                0.0,
+                0.0
+              ]
+            }
+          }
+        ],
+        "model_kind": "COMPOUND",
+        "model_version": "1",
+        "ports": [
+          {
+            "direction": [
+              "0",
+              "0",
+              "1"
+            ],
+            "point_mm": [
+              "0",
+              "0",
+              "0"
+            ],
+            "port_id": "IN",
+            "role": "INPUT",
+            "status": "DERIVED"
+          },
+          {
+            "direction": [
+              "0",
+              "0",
+              "1"
+            ],
+            "point_mm": [
+              "0",
+              "0",
+              "107.672421"
+            ],
+            "port_id": "OUT",
+            "role": "OUTPUT",
+            "status": "DERIVED"
+          }
+        ]
+      },
+      "model_id": "SN"
+    },
+    {
+      "display_name": "sonnar-telephoto-lens: element L1, surfaces S1-S2 (rows 9-10, csv-surface-table/1)",
+      "model": {
+        "approximations": [
+          "CATALOG_MATERIAL_DISPERSION",
+          "EDGE_AS_OPAQUE_RIM",
+          "GHOST_REFLECTIONS_NOT_TRACED",
+          "IDEAL_SURFACE_FIGURE",
+          "NOMINAL_PRESCRIPTION"
+        ],
+        "edge_radius_mm": "19.2004",
+        "fidelity": "SURFACE_PRESCRIPTION",
+        "media": [
+          "N-BK7"
+        ],
+        "model_kind": "SURFACE_SEQUENCE",
+        "model_version": "2",
+        "status": "SPECIFIED",
+        "surfaces": [
+          {
+            "clear_radius_mm": "18.4998",
+            "edge_radius_mm": "19.0998",
+            "radius_mm": "95.6477182",
+            "status": "SPECIFIED",
+            "surface_id": "S1",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "0"
+          },
+          {
+            "clear_radius_mm": "18.6004",
+            "radius_mm": "-259.142548",
+            "status": "SPECIFIED",
+            "surface_id": "S2",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "9.00514869"
+          }
+        ],
+        "valid_band_nm": {
+          "max_nm": "680",
+          "min_nm": "430",
+          "status": "SPECIFIED"
+        }
+      },
+      "model_id": "SN-L1"
+    },
+    {
+      "display_name": "sonnar-telephoto-lens: element L2, surfaces S3-S4 (rows 11-12, csv-surface-table/1)",
+      "model": {
+        "approximations": [
+          "CATALOG_MATERIAL_DISPERSION",
+          "EDGE_AS_OPAQUE_RIM",
+          "GHOST_REFLECTIONS_NOT_TRACED",
+          "IDEAL_SURFACE_FIGURE",
+          "NOMINAL_PRESCRIPTION"
+        ],
+        "edge_radius_mm": "19.097",
+        "fidelity": "SURFACE_PRESCRIPTION",
+        "media": [
+          "N-BK7"
+        ],
+        "model_kind": "SURFACE_SEQUENCE",
+        "model_version": "2",
+        "status": "SPECIFIED",
+        "surfaces": [
+          {
+            "clear_radius_mm": "18.497",
+            "radius_mm": "36.9875951",
+            "status": "SPECIFIED",
+            "surface_id": "S1",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "0"
+          },
+          {
+            "clear_radius_mm": "15.923",
+            "edge_radius_mm": "16.523",
+            "radius_mm": "70.8044105",
+            "status": "SPECIFIED",
+            "surface_id": "S2",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "16.0091532"
+          }
+        ],
+        "valid_band_nm": {
+          "max_nm": "680",
+          "min_nm": "430",
+          "status": "SPECIFIED"
+        }
+      },
+      "model_id": "SN-L2"
+    },
+    {
+      "display_name": "sonnar-telephoto-lens: element L3, surfaces S5-S6 (rows 13-14, csv-surface-table/1)",
+      "model": {
+        "approximations": [
+          "CATALOG_MATERIAL_DISPERSION",
+          "EDGE_AS_OPAQUE_RIM",
+          "GHOST_REFLECTIONS_NOT_TRACED",
+          "IDEAL_SURFACE_FIGURE",
+          "NOMINAL_PRESCRIPTION"
+        ],
+        "edge_radius_mm": "16.32",
+        "fidelity": "SURFACE_PRESCRIPTION",
+        "media": [
+          "F2"
+        ],
+        "model_kind": "SURFACE_SEQUENCE",
+        "model_version": "2",
+        "status": "SPECIFIED",
+        "surfaces": [
+          {
+            "clear_radius_mm": "15.72",
+            "radius_mm": "-334.950539",
+            "status": "SPECIFIED",
+            "surface_id": "S1",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "0"
+          },
+          {
+            "clear_radius_mm": "14.6876",
+            "edge_radius_mm": "15.2876",
+            "radius_mm": "35.2041284",
+            "status": "SPECIFIED",
+            "surface_id": "S2",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "7.85752048"
+          }
+        ],
+        "valid_band_nm": {
+          "max_nm": "680",
+          "min_nm": "430",
+          "status": "SPECIFIED"
+        }
+      },
+      "model_id": "SN-L3"
+    },
+    {
+      "display_name": "sonnar-telephoto-lens: cemented element L4, surfaces S7-S9 (rows 15-17, csv-surface-table/1)",
+      "model": {
+        "approximations": [
+          "CATALOG_MATERIAL_DISPERSION",
+          "EDGE_AS_OPAQUE_RIM",
+          "GHOST_REFLECTIONS_NOT_TRACED",
+          "IDEAL_SURFACE_FIGURE",
+          "NOMINAL_PRESCRIPTION"
+        ],
+        "edge_radius_mm": "19.0374",
+        "fidelity": "SURFACE_PRESCRIPTION",
+        "media": [
+          "F2",
+          "N-BK7"
+        ],
+        "model_kind": "SURFACE_SEQUENCE",
+        "model_version": "2",
+        "status": "SPECIFIED",
+        "surfaces": [
+          {
+            "clear_radius_mm": "15.1702",
+            "edge_radius_mm": "15.7702",
+            "radius_mm": "-201.795881",
+            "status": "SPECIFIED",
+            "surface_id": "S1",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "0"
+          },
+          {
+            "clear_radius_mm": "16.6482",
+            "edge_radius_mm": "17.2482",
+            "radius_mm": "44.3548212",
+            "status": "SPECIFIED",
+            "surface_id": "S2",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "9.60363615"
+          },
+          {
+            "clear_radius_mm": "18.4374",
+            "radius_mm": "-61.5041658",
+            "status": "SPECIFIED",
+            "surface_id": "S3",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "27.34527385"
+          }
+        ],
+        "valid_band_nm": {
+          "max_nm": "680",
+          "min_nm": "430",
+          "status": "SPECIFIED"
+        }
+      },
+      "model_id": "SN-L4"
+    },
+    {
+      "display_name": "sonnar-telephoto-lens: element L5, surfaces S10-S11 (rows 18-19, csv-surface-table/1)",
+      "model": {
+        "approximations": [
+          "CATALOG_MATERIAL_DISPERSION",
+          "EDGE_AS_OPAQUE_RIM",
+          "GHOST_REFLECTIONS_NOT_TRACED",
+          "IDEAL_SURFACE_FIGURE",
+          "NOMINAL_PRESCRIPTION"
+        ],
+        "edge_radius_mm": "20.9458",
+        "fidelity": "SURFACE_PRESCRIPTION",
+        "media": [
+          "N-BK7"
+        ],
+        "model_kind": "SURFACE_SEQUENCE",
+        "model_version": "2",
+        "status": "SPECIFIED",
+        "surfaces": [
+          {
+            "clear_radius_mm": "19.9337",
+            "edge_radius_mm": "20.5337",
+            "radius_mm": "65.1283653",
+            "status": "SPECIFIED",
+            "surface_id": "S1",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "0"
+          },
+          {
+            "clear_radius_mm": "20.3458",
+            "radius_mm": "-215.842573",
+            "status": "SPECIFIED",
+            "surface_id": "S2",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "10.2915985"
+          }
+        ],
+        "valid_band_nm": {
+          "max_nm": "680",
+          "min_nm": "430",
+          "status": "SPECIFIED"
+        }
+      },
+      "model_id": "SN-L5"
+    },
+    {
+      "display_name": "sonnar-telephoto-lens: element L6, surfaces S12-S13 (rows 20-21, csv-surface-table/1)",
+      "model": {
+        "approximations": [
+          "CATALOG_MATERIAL_DISPERSION",
+          "EDGE_AS_OPAQUE_RIM",
+          "GHOST_REFLECTIONS_NOT_TRACED",
+          "IDEAL_SURFACE_FIGURE",
+          "NOMINAL_PRESCRIPTION"
+        ],
+        "edge_radius_mm": "21.419",
+        "fidelity": "SURFACE_PRESCRIPTION",
+        "media": [
+          "F2"
+        ],
+        "model_kind": "SURFACE_SEQUENCE",
+        "model_version": "2",
+        "status": "SPECIFIED",
+        "surfaces": [
+          {
+            "clear_radius_mm": "20.819",
+            "radius_mm": "39.0961603",
+            "status": "SPECIFIED",
+            "surface_id": "S1",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "0"
+          },
+          {
+            "clear_radius_mm": "18.0057",
+            "edge_radius_mm": "18.6057",
+            "radius_mm": "30.1080478",
+            "status": "SPECIFIED",
+            "surface_id": "S2",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "14.4054542"
+          }
+        ],
+        "valid_band_nm": {
+          "max_nm": "680",
+          "min_nm": "430",
+          "status": "SPECIFIED"
+        }
+      },
+      "model_id": "SN-L6"
+    }
+  ],
+  "project_schema_version": "2.0",
+  "schema": "opensci.project",
+  "targets": [
+    {
+      "maximum": 0.006,
+      "metric": "spot_rms_mm",
+      "observation_id": "image_plane",
+      "parameters": [],
+      "source_id": "SRC0",
+      "target_id": "on_axis_spot",
+      "unit": "mm"
+    },
+    {
+      "maximum": 0.02,
+      "metric": "spot_rms_mm",
+      "observation_id": "image_plane",
+      "parameters": [],
+      "source_id": "SRC2",
+      "target_id": "edge_field_spot",
+      "unit": "mm"
+    }
+  ]
+}

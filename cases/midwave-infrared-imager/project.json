@@ -1,0 +1,939 @@
+{
+  "components": [
+    {
+      "custom_part": {
+        "custom_part_key": "MW",
+        "description": "midwave-infrared-imager: imported from a csv-surface-table/1 prescription (5 elements, 1 aperture stop)"
+      },
+      "instance_id": "MW",
+      "nominal_pose": {
+        "position_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "quaternion_wxyz": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ]
+      },
+      "optical_model_id": "MW",
+      "optical_role": "lens",
+      "retained_dofs": [],
+      "selected_parameters": []
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "field-0deg-3000nm",
+        "description": "Collimated Gaussian beam, field 0 deg, 3000 nm."
+      },
+      "instance_id": "SRC0_0",
+      "nominal_pose": {
+        "position_mm": [
+          -5.0,
+          0.0,
+          0.0
+        ],
+        "quaternion_wxyz": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ]
+      },
+      "optical_role": "source",
+      "retained_dofs": [],
+      "selected_parameters": [],
+      "source_model": {
+        "m2": 1.0,
+        "model_kind": "GAUSSIAN_BEAM",
+        "polarization": {
+          "angle_deg": 0.0,
+          "kind": "LINEAR"
+        },
+        "power_w": 0.001,
+        "waist_position_mm": 0.0,
+        "waist_radius_mm": 6.0,
+        "wavelength_nm": 3000.0
+      }
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "field-0deg-4000nm",
+        "description": "Collimated Gaussian beam, field 0 deg, 4000 nm."
+      },
+      "instance_id": "SRC0_1",
+      "nominal_pose": {
+        "position_mm": [
+          -5.0,
+          0.0,
+          0.0
+        ],
+        "quaternion_wxyz": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ]
+      },
+      "optical_role": "source",
+      "retained_dofs": [],
+      "selected_parameters": [],
+      "source_model": {
+        "m2": 1.0,
+        "model_kind": "GAUSSIAN_BEAM",
+        "polarization": {
+          "angle_deg": 0.0,
+          "kind": "LINEAR"
+        },
+        "power_w": 0.001,
+        "waist_position_mm": 0.0,
+        "waist_radius_mm": 6.0,
+        "wavelength_nm": 4000.0
+      }
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "field-0deg-5000nm",
+        "description": "Collimated Gaussian beam, field 0 deg, 5000 nm."
+      },
+      "instance_id": "SRC0_2",
+      "nominal_pose": {
+        "position_mm": [
+          -5.0,
+          0.0,
+          0.0
+        ],
+        "quaternion_wxyz": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ]
+      },
+      "optical_role": "source",
+      "retained_dofs": [],
+      "selected_parameters": [],
+      "source_model": {
+        "m2": 1.0,
+        "model_kind": "GAUSSIAN_BEAM",
+        "polarization": {
+          "angle_deg": 0.0,
+          "kind": "LINEAR"
+        },
+        "power_w": 0.001,
+        "waist_position_mm": 0.0,
+        "waist_radius_mm": 6.0,
+        "wavelength_nm": 5000.0
+      }
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "field-1.5deg-3000nm",
+        "description": "Collimated Gaussian beam, field 1.5 deg, 3000 nm."
+      },
+      "instance_id": "SRC1_0",
+      "nominal_pose": {
+        "position_mm": [
+          -4.998286624877786,
+          0.0,
+          0.13088474153936577
+        ],
+        "quaternion_wxyz": [
+          0.4934123660013313,
+          0.5065019615726758,
+          0.5065019615726758,
+          0.4934123660013313
+        ]
+      },
+      "optical_role": "source",
+      "retained_dofs": [],
+      "selected_parameters": [],
+      "source_model": {
+        "m2": 1.0,
+        "model_kind": "GAUSSIAN_BEAM",
+        "polarization": {
+          "angle_deg": 0.0,
+          "kind": "LINEAR"
+        },
+        "power_w": 0.001,
+        "waist_position_mm": 0.0,
+        "waist_radius_mm": 6.0,
+        "wavelength_nm": 3000.0
+      }
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "field-1.5deg-4000nm",
+        "description": "Collimated Gaussian beam, field 1.5 deg, 4000 nm."
+      },
+      "instance_id": "SRC1_1",
+      "nominal_pose": {
+        "position_mm": [
+          -4.998286624877786,
+          0.0,
+          0.13088474153936577
+        ],
+        "quaternion_wxyz": [
+          0.4934123660013313,
+          0.5065019615726758,
+          0.5065019615726758,
+          0.4934123660013313
+        ]
+      },
+      "optical_role": "source",
+      "retained_dofs": [],
+      "selected_parameters": [],
+      "source_model": {
+        "m2": 1.0,
+        "model_kind": "GAUSSIAN_BEAM",
+        "polarization": {
+          "angle_deg": 0.0,
+          "kind": "LINEAR"
+        },
+        "power_w": 0.001,
+        "waist_position_mm": 0.0,
+        "waist_radius_mm": 6.0,
+        "wavelength_nm": 4000.0
+      }
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "field-1.5deg-5000nm",
+        "description": "Collimated Gaussian beam, field 1.5 deg, 5000 nm."
+      },
+      "instance_id": "SRC1_2",
+      "nominal_pose": {
+        "position_mm": [
+          -4.998286624877786,
+          0.0,
+          0.13088474153936577
+        ],
+        "quaternion_wxyz": [
+          0.4934123660013313,
+          0.5065019615726758,
+          0.5065019615726758,
+          0.4934123660013313
+        ]
+      },
+      "optical_role": "source",
+      "retained_dofs": [],
+      "selected_parameters": [],
+      "source_model": {
+        "m2": 1.0,
+        "model_kind": "GAUSSIAN_BEAM",
+        "polarization": {
+          "angle_deg": 0.0,
+          "kind": "LINEAR"
+        },
+        "power_w": 0.001,
+        "waist_position_mm": 0.0,
+        "waist_radius_mm": 6.0,
+        "wavelength_nm": 5000.0
+      }
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "field-3deg-3000nm",
+        "description": "Collimated Gaussian beam, field 3 deg, 3000 nm."
+      },
+      "instance_id": "SRC2_0",
+      "nominal_pose": {
+        "position_mm": [
+          -4.993147673772869,
+          0.0,
+          0.2616797812147192
+        ],
+        "quaternion_wxyz": [
+          0.486740188333842,
+          0.5129171366417152,
+          0.5129171366417152,
+          0.486740188333842
+        ]
+      },
+      "optical_role": "source",
+      "retained_dofs": [],
+      "selected_parameters": [],
+      "source_model": {
+        "m2": 1.0,
+        "model_kind": "GAUSSIAN_BEAM",
+        "polarization": {
+          "angle_deg": 0.0,
+          "kind": "LINEAR"
+        },
+        "power_w": 0.001,
+        "waist_position_mm": 0.0,
+        "waist_radius_mm": 6.0,
+        "wavelength_nm": 3000.0
+      }
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "field-3deg-4000nm",
+        "description": "Collimated Gaussian beam, field 3 deg, 4000 nm."
+      },
+      "instance_id": "SRC2_1",
+      "nominal_pose": {
+        "position_mm": [
+          -4.993147673772869,
+          0.0,
+          0.2616797812147192
+        ],
+        "quaternion_wxyz": [
+          0.486740188333842,
+          0.5129171366417152,
+          0.5129171366417152,
+          0.486740188333842
+        ]
+      },
+      "optical_role": "source",
+      "retained_dofs": [],
+      "selected_parameters": [],
+      "source_model": {
+        "m2": 1.0,
+        "model_kind": "GAUSSIAN_BEAM",
+        "polarization": {
+          "angle_deg": 0.0,
+          "kind": "LINEAR"
+        },
+        "power_w": 0.001,
+        "waist_position_mm": 0.0,
+        "waist_radius_mm": 6.0,
+        "wavelength_nm": 4000.0
+      }
+    },
+    {
+      "custom_part": {
+        "custom_part_key": "field-3deg-5000nm",
+        "description": "Collimated Gaussian beam, field 3 deg, 5000 nm."
+      },
+      "instance_id": "SRC2_2",
+      "nominal_pose": {
+        "position_mm": [
+          -4.993147673772869,
+          0.0,
+          0.2616797812147192
+        ],
+        "quaternion_wxyz": [
+          0.486740188333842,
+          0.5129171366417152,
+          0.5129171366417152,
+          0.486740188333842
+        ]
+      },
+      "optical_role": "source",
+      "retained_dofs": [],
+      "selected_parameters": [],
+      "source_model": {
+        "m2": 1.0,
+        "model_kind": "GAUSSIAN_BEAM",
+        "polarization": {
+          "angle_deg": 0.0,
+          "kind": "LINEAR"
+        },
+        "power_w": 0.001,
+        "waist_position_mm": 0.0,
+        "waist_radius_mm": 6.0,
+        "wavelength_nm": 5000.0
+      }
+    }
+  ],
+  "compute_budget": {
+    "max_interactions_per_path": 96,
+    "max_paths": 8192,
+    "max_trace_steps": 200000,
+    "pupil_points_per_ring": 12,
+    "pupil_ring_count": 8
+  },
+  "materials": [],
+  "model_materials": [
+    {
+      "basis": "Sellmeier dispersion formula of CAF2; copied from public optical catalog 2026-10-28.1",
+      "dispersion": {
+        "b": [
+          "0.5675888",
+          "0.4710914",
+          "3.8484723"
+        ],
+        "c_um2": [
+          "0.00252643",
+          "0.010078333",
+          "1200.556"
+        ],
+        "kind": "SELLMEIER"
+      },
+      "display_name": "Calcium fluoride (CaF2)",
+      "material_id": "CAF2",
+      "valid_band_nm": {
+        "max_nm": "9700",
+        "min_nm": "230",
+        "status": "SPECIFIED"
+      }
+    },
+    {
+      "basis": "Sellmeier dispersion formula of SILICON; copied from public optical catalog 2026-10-28.1",
+      "dispersion": {
+        "b": [
+          "10.6684293",
+          "0.003043475",
+          "1.54133408"
+        ],
+        "c_um2": [
+          "0.0909121907",
+          "1.28766017",
+          "1218816"
+        ],
+        "kind": "SELLMEIER"
+      },
+      "display_name": "Silicon",
+      "material_id": "SILICON",
+      "valid_band_nm": {
+        "max_nm": "11000",
+        "min_nm": "1360",
+        "status": "SPECIFIED"
+      }
+    },
+    {
+      "basis": "Sellmeier dispersion formula of ZNSE; copied from public optical catalog 2026-10-28.1",
+      "dispersion": {
+        "b": [
+          "4.2980149",
+          "0.62776557",
+          "2.8955633"
+        ],
+        "c_um2": [
+          "0.036888196",
+          "0.143476258",
+          "2208.49196"
+        ],
+        "kind": "SELLMEIER"
+      },
+      "display_name": "Zinc selenide (ZnSe)",
+      "material_id": "ZNSE",
+      "valid_band_nm": {
+        "max_nm": "18000",
+        "min_nm": "550",
+        "status": "SPECIFIED"
+      }
+    }
+  ],
+  "observations": [
+    {
+      "absorbing": true,
+      "aperture": {
+        "center_offset_mm": [
+          0.0,
+          0.0
+        ],
+        "obstruction_radius_mm": 0.0,
+        "radius_mm": 6.5,
+        "shape": "circle"
+      },
+      "medium": "air",
+      "observation_id": "image_plane",
+      "pose": {
+        "position_mm": [
+          140.98945069234958,
+          0.0,
+          0.0
+        ],
+        "quaternion_wxyz": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ]
+      }
+    }
+  ],
+  "optical_models": [
+    {
+      "display_name": "midwave-infrared-imager (csv-surface-table/1, source SHA-256 8f575696ab035194b1477f7a87f1c6d3bff41e1fc4c08edd9f8e0205e16a300d)",
+      "model": {
+        "envelope": {
+          "diameter_mm": "60.8474",
+          "kind": "CYLINDER",
+          "status": "DERIVED",
+          "z_max_mm": "43.212573",
+          "z_min_mm": "0"
+        },
+        "members": [
+          {
+            "member_id": "STOP",
+            "model_id": "MW-STOP",
+            "pose": {
+              "position_mm": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "quaternion_wxyz": [
+                1.0,
+                0.0,
+                0.0,
+                0.0
+              ]
+            }
+          },
+          {
+            "member_id": "L1",
+            "model_id": "MW-L1",
+            "pose": {
+              "position_mm": [
+                0.0,
+                0.0,
+                10.0
+              ],
+              "quaternion_wxyz": [
+                1.0,
+                0.0,
+                0.0,
+                0.0
+              ]
+            }
+          },
+          {
+            "member_id": "L2",
+            "model_id": "MW-L2",
+            "pose": {
+              "position_mm": [
+                0.0,
+                0.0,
+                15.29039959098
+              ],
+              "quaternion_wxyz": [
+                1.0,
+                0.0,
+                0.0,
+                0.0
+              ]
+            }
+          },
+          {
+            "member_id": "L3",
+            "model_id": "MW-L3",
+            "pose": {
+              "position_mm": [
+                0.0,
+                0.0,
+                20.82617982351
+              ],
+              "quaternion_wxyz": [
+                1.0,
+                0.0,
+                0.0,
+                0.0
+              ]
+            }
+          },
+          {
+            "member_id": "L4",
+            "model_id": "MW-L4",
+            "pose": {
+              "position_mm": [
+                0.0,
+                0.0,
+                33.13429417197
+              ],
+              "quaternion_wxyz": [
+                1.0,
+                0.0,
+                0.0,
+                0.0
+              ]
+            }
+          },
+          {
+            "member_id": "L5",
+            "model_id": "MW-L5",
+            "pose": {
+              "position_mm": [
+                0.0,
+                0.0,
+                39.72847284096
+              ],
+              "quaternion_wxyz": [
+                1.0,
+                0.0,
+                0.0,
+                0.0
+              ]
+            }
+          }
+        ],
+        "model_kind": "COMPOUND",
+        "model_version": "1",
+        "ports": [
+          {
+            "direction": [
+              "0",
+              "0",
+              "1"
+            ],
+            "point_mm": [
+              "0",
+              "0",
+              "0"
+            ],
+            "port_id": "IN",
+            "role": "INPUT",
+            "status": "DERIVED"
+          },
+          {
+            "direction": [
+              "0",
+              "0",
+              "1"
+            ],
+            "point_mm": [
+              "0",
+              "0",
+              "43.212573"
+            ],
+            "port_id": "OUT",
+            "role": "OUTPUT",
+            "status": "DERIVED"
+          }
+        ]
+      },
+      "model_id": "MW"
+    },
+    {
+      "display_name": "midwave-infrared-imager: aperture stop STOP, surface STO (row 9, csv-surface-table/1)",
+      "model": {
+        "edge_radius_mm": "25",
+        "model_kind": "APERTURE_STOP",
+        "model_version": "1",
+        "opening_radius_mm": "25",
+        "plane_z_mm": "0",
+        "status": "SPECIFIED"
+      },
+      "model_id": "MW-STOP"
+    },
+    {
+      "display_name": "midwave-infrared-imager: element L1, surfaces S1-S2 (rows 10-11, csv-surface-table/1)",
+      "model": {
+        "approximations": [
+          "CATALOG_MATERIAL_DISPERSION",
+          "EDGE_AS_OPAQUE_RIM",
+          "GHOST_REFLECTIONS_NOT_TRACED",
+          "IDEAL_SURFACE_FIGURE",
+          "NOMINAL_PRESCRIPTION"
+        ],
+        "edge_radius_mm": "26.9889",
+        "fidelity": "SURFACE_PRESCRIPTION",
+        "media": [
+          "SILICON"
+        ],
+        "model_kind": "SURFACE_SEQUENCE",
+        "model_version": "2",
+        "status": "SPECIFIED",
+        "surfaces": [
+          {
+            "clear_radius_mm": "26.9889",
+            "radius_mm": "540.427492194",
+            "status": "SPECIFIED",
+            "surface_id": "S1",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "0"
+          },
+          {
+            "clear_radius_mm": "26.7998",
+            "edge_radius_mm": "26.7998",
+            "radius_mm": "332.416733383",
+            "status": "SPECIFIED",
+            "surface_id": "S2",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "2.29039959098"
+          }
+        ],
+        "valid_band_nm": {
+          "max_nm": "5000",
+          "min_nm": "3000",
+          "status": "SPECIFIED"
+        }
+      },
+      "model_id": "MW-L1"
+    },
+    {
+      "display_name": "midwave-infrared-imager: element L2, surfaces S3-S4 (rows 12-13, csv-surface-table/1)",
+      "model": {
+        "approximations": [
+          "CATALOG_MATERIAL_DISPERSION",
+          "EDGE_AS_OPAQUE_RIM",
+          "GHOST_REFLECTIONS_NOT_TRACED",
+          "IDEAL_SURFACE_FIGURE",
+          "NOMINAL_PRESCRIPTION"
+        ],
+        "edge_radius_mm": "28.2268",
+        "fidelity": "SURFACE_PRESCRIPTION",
+        "media": [
+          "ZNSE"
+        ],
+        "model_kind": "SURFACE_SEQUENCE",
+        "model_version": "2",
+        "status": "SPECIFIED",
+        "surfaces": [
+          {
+            "clear_radius_mm": "26.7914",
+            "edge_radius_mm": "26.7914",
+            "radius_mm": "1358.44733278",
+            "status": "SPECIFIED",
+            "surface_id": "S1",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "0"
+          },
+          {
+            "clear_radius_mm": "28.2268",
+            "radius_mm": "1864.18787884",
+            "status": "SPECIFIED",
+            "surface_id": "S2",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "2.53578023253"
+          }
+        ],
+        "valid_band_nm": {
+          "max_nm": "5000",
+          "min_nm": "3000",
+          "status": "SPECIFIED"
+        }
+      },
+      "model_id": "MW-L2"
+    },
+    {
+      "display_name": "midwave-infrared-imager: element L3, surfaces S5-S6 (rows 14-15, csv-surface-table/1)",
+      "model": {
+        "approximations": [
+          "CATALOG_MATERIAL_DISPERSION",
+          "EDGE_AS_OPAQUE_RIM",
+          "GHOST_REFLECTIONS_NOT_TRACED",
+          "IDEAL_SURFACE_FIGURE",
+          "NOMINAL_PRESCRIPTION"
+        ],
+        "edge_radius_mm": "30.3535",
+        "fidelity": "SURFACE_PRESCRIPTION",
+        "media": [
+          "CAF2"
+        ],
+        "model_kind": "SURFACE_SEQUENCE",
+        "model_version": "2",
+        "status": "SPECIFIED",
+        "surfaces": [
+          {
+            "clear_radius_mm": "30.3535",
+            "radius_mm": "69.5334225589",
+            "status": "SPECIFIED",
+            "surface_id": "S1",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "0"
+          },
+          {
+            "clear_radius_mm": "30.315",
+            "edge_radius_mm": "30.315",
+            "radius_mm": "90.9110165232",
+            "status": "SPECIFIED",
+            "surface_id": "S2",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "3.62123568846"
+          }
+        ],
+        "valid_band_nm": {
+          "max_nm": "5000",
+          "min_nm": "3000",
+          "status": "SPECIFIED"
+        }
+      },
+      "model_id": "MW-L3"
+    },
+    {
+      "display_name": "midwave-infrared-imager: element L4, surfaces S7-S8 (rows 16-17, csv-surface-table/1)",
+      "model": {
+        "approximations": [
+          "CATALOG_MATERIAL_DISPERSION",
+          "EDGE_AS_OPAQUE_RIM",
+          "GHOST_REFLECTIONS_NOT_TRACED",
+          "IDEAL_SURFACE_FIGURE",
+          "NOMINAL_PRESCRIPTION"
+        ],
+        "edge_radius_mm": "30.4237",
+        "fidelity": "SURFACE_PRESCRIPTION",
+        "media": [
+          "SILICON"
+        ],
+        "model_kind": "SURFACE_SEQUENCE",
+        "model_version": "2",
+        "status": "SPECIFIED",
+        "surfaces": [
+          {
+            "clear_radius_mm": "30.4237",
+            "radius_mm": "633.767802365",
+            "status": "SPECIFIED",
+            "surface_id": "S1",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "0"
+          },
+          {
+            "clear_radius_mm": "30.2525",
+            "edge_radius_mm": "30.2525",
+            "radius_mm": "-733.921255448",
+            "status": "SPECIFIED",
+            "surface_id": "S2",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "3.59417866899"
+          }
+        ],
+        "valid_band_nm": {
+          "max_nm": "5000",
+          "min_nm": "3000",
+          "status": "SPECIFIED"
+        }
+      },
+      "model_id": "MW-L4"
+    },
+    {
+      "display_name": "midwave-infrared-imager: element L5, surfaces S9-S10 (rows 18-19, csv-surface-table/1)",
+      "model": {
+        "approximations": [
+          "CATALOG_MATERIAL_DISPERSION",
+          "EDGE_AS_OPAQUE_RIM",
+          "GHOST_REFLECTIONS_NOT_TRACED",
+          "IDEAL_SURFACE_FIGURE",
+          "NOMINAL_PRESCRIPTION"
+        ],
+        "edge_radius_mm": "29.7968",
+        "fidelity": "SURFACE_PRESCRIPTION",
+        "media": [
+          "ZNSE"
+        ],
+        "model_kind": "SURFACE_SEQUENCE",
+        "model_version": "2",
+        "status": "SPECIFIED",
+        "surfaces": [
+          {
+            "aspheric_coefficients": [
+              "0.0000000109598385"
+            ],
+            "clear_radius_mm": "29.7968",
+            "conic": "-5",
+            "radius_mm": "338.722828995",
+            "status": "SPECIFIED",
+            "surface_id": "S1",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "0"
+          },
+          {
+            "clear_radius_mm": "28.9284",
+            "edge_radius_mm": "28.9284",
+            "radius_mm": "3736.87506579",
+            "status": "SPECIFIED",
+            "surface_id": "S2",
+            "traced": "TRANSMITTED",
+            "vertex_z_mm": "3.37212588858"
+          }
+        ],
+        "valid_band_nm": {
+          "max_nm": "5000",
+          "min_nm": "3000",
+          "status": "SPECIFIED"
+        }
+      },
+      "model_id": "MW-L5"
+    }
+  ],
+  "project_schema_version": "2.0",
+  "schema": "opensci.project",
+  "targets": [
+    {
+      "maximum": 0.05,
+      "metric": "spot_rms_mm",
+      "observation_id": "image_plane",
+      "parameters": [],
+      "source_id": "SRC0_0",
+      "target_id": "spot_rms_f0deg_3000nm",
+      "unit": "mm",
+      "wavelength_nm": 3000.0
+    },
+    {
+      "maximum": 0.05,
+      "metric": "spot_rms_mm",
+      "observation_id": "image_plane",
+      "parameters": [],
+      "source_id": "SRC0_1",
+      "target_id": "spot_rms_f0deg_4000nm",
+      "unit": "mm",
+      "wavelength_nm": 4000.0
+    },
+    {
+      "maximum": 0.05,
+      "metric": "spot_rms_mm",
+      "observation_id": "image_plane",
+      "parameters": [],
+      "source_id": "SRC0_2",
+      "target_id": "spot_rms_f0deg_5000nm",
+      "unit": "mm",
+      "wavelength_nm": 5000.0
+    },
+    {
+      "maximum": 0.05,
+      "metric": "spot_rms_mm",
+      "observation_id": "image_plane",
+      "parameters": [],
+      "source_id": "SRC1_0",
+      "target_id": "spot_rms_f1.5deg_3000nm",
+      "unit": "mm",
+      "wavelength_nm": 3000.0
+    },
+    {
+      "maximum": 0.05,
+      "metric": "spot_rms_mm",
+      "observation_id": "image_plane",
+      "parameters": [],
+      "source_id": "SRC1_1",
+      "target_id": "spot_rms_f1.5deg_4000nm",
+      "unit": "mm",
+      "wavelength_nm": 4000.0
+    },
+    {
+      "maximum": 0.05,
+      "metric": "spot_rms_mm",
+      "observation_id": "image_plane",
+      "parameters": [],
+      "source_id": "SRC1_2",
+      "target_id": "spot_rms_f1.5deg_5000nm",
+      "unit": "mm",
+      "wavelength_nm": 5000.0
+    },
+    {
+      "maximum": 0.05,
+      "metric": "spot_rms_mm",
+      "observation_id": "image_plane",
+      "parameters": [],
+      "source_id": "SRC2_0",
+      "target_id": "spot_rms_f3deg_3000nm",
+      "unit": "mm",
+      "wavelength_nm": 3000.0
+    },
+    {
+      "maximum": 0.05,
+      "metric": "spot_rms_mm",
+      "observation_id": "image_plane",
+      "parameters": [],
+      "source_id": "SRC2_1",
+      "target_id": "spot_rms_f3deg_4000nm",
+      "unit": "mm",
+      "wavelength_nm": 4000.0
+    },
+    {
+      "maximum": 0.05,
+      "metric": "spot_rms_mm",
+      "observation_id": "image_plane",
+      "parameters": [],
+      "source_id": "SRC2_2",
+      "target_id": "spot_rms_f3deg_5000nm",
+      "unit": "mm",
+      "wavelength_nm": 5000.0
+    }
+  ]
+}

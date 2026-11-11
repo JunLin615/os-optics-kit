@@ -1,0 +1,17 @@
+{
+  "frequencies_cyc_per_mm": [
+    10.0,
+    20.0,
+    30.0,
+    40.0,
+    50.0,
+    60.0,
+    80.0,
+    100.0
+  ],
+  "include_psf_map": false,
+  "launch_grid": 256,
+  "launch_radius_beam_radii": 8.8542,
+  "psf_half_width_um": 250.0,
+  "psf_samples": 256
+}

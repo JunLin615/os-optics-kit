@@ -1,0 +1,11 @@
+{
+  "catalog": null,
+  "engine": "0.13.0",
+  "schema": "os-optics-kit.case-expected",
+  "schema_version": 1,
+  "status": "WARNING",
+  "targets": {
+    "edge_field_spot": "MET",
+    "on_axis_spot": "MET"
+  }
+}

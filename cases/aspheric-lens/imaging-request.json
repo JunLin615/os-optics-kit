@@ -1,0 +1,12 @@
+{
+  "crossing_index": null,
+  "fields": null,
+  "frequencies_cyc_per_mm": null,
+  "include_psf_map": false,
+  "launch_grid": 192,
+  "launch_radius_beam_radii": 1.0,
+  "psf_half_width_um": 250.0,
+  "psf_samples": 128,
+  "reference": "CENTROID",
+  "wavelengths_nm": null
+}
