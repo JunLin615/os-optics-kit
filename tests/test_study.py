@@ -1187,6 +1187,7 @@ class OwnershipTests(unittest.TestCase):
                         store.read_owner(study_dir)
                     except Exception as exc:  # noqa: BLE001
                         problems.append(repr(exc))
+                    time.sleep(0.001)
 
             readers = [threading.Thread(target=reader) for _ in range(2)]
             for thread in readers:
@@ -1213,16 +1214,33 @@ class OwnershipTests(unittest.TestCase):
                     owners = [r for r in results if isinstance(r, dict)]
                     self.assertEqual(len(owners), 1, results)
                     self.assertEqual(sorted(r for r in results if not isinstance(r, dict)), ["STUDY_RUNNING"] * 3)
-                    try:
-                        store.release_execution(study_dir, owners[0])
-                    except Exception as exc:  # noqa: BLE001
-                        problems.append(repr(exc))
+                    store.release_execution(study_dir, owners[0])
+                    self.assertEqual(problems, [], f"round {round_number}")
             finally:
                 stop.set()
                 for thread in readers:
                     thread.join(30)
             self.assertEqual(problems, [])
             self.assertFalse((study_dir / store.OWNER_FILE).exists())
+
+    def test_a_file_held_open_longer_than_a_second_is_retried_until_the_budget_ends(self):
+        calls = []
+
+        def action():  # refused 30 times (the fixed 20 attempts gave up), then accepted
+            calls.append(None)
+            if len(calls) <= 30:
+                raise PermissionError(13, "The process cannot access the file because it is being used")
+            return "done"
+
+        with mock.patch.object(store.time, "sleep") as sleep:
+            self.assertEqual(store._sharing_retry(action), "done")
+        self.assertEqual((len(calls), sleep.call_count), (31, 30))
+        calls.clear()
+        started = time.monotonic()
+        with self.assertRaises(PermissionError):
+            store._sharing_retry(action, budget_s=0.1)
+        self.assertGreaterEqual(time.monotonic() - started, 0.1)
+        self.assertLess(len(calls), 30)
 
 
 class EvaluatorRecordTests(unittest.TestCase):

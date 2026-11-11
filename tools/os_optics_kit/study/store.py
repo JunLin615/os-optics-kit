@@ -606,17 +606,17 @@ def require_not_running(study_dir):
 TAKEOVER_WAIT_S = 10.0
 
 
-def _sharing_retry(action):
-    """``action()``, retried for about a second while Windows refuses it because another process has the file open
-    for a moment (a reader of ``owner.json``, or a removal not finished yet)."""
-    for attempt in range(20):
+def _sharing_retry(action, budget_s=5.0):
+    """``action()``, retried for up to ``budget_s`` seconds while Windows refuses it because another process has
+    the file open for a moment (a reader of ``owner.json``, or a removal not finished yet)."""
+    deadline = time.monotonic() + budget_s
+    while True:
         try:
             return action()
         except PermissionError:
-            if attempt == 19:
+            if time.monotonic() >= deadline:
                 raise
             time.sleep(0.05)
-    return None
 
 
 def _try_lock(fd):
