@@ -51,10 +51,10 @@ project hash, Engine / catalog identity, environment, budget; plan.jsonl and req
 sample, before any run), execute (samples/<id>/project.json, run/ and sample.json; journal.jsonl), aggregate
 (table.csv and summary.json, rows in sample order). The samples are independent: --workers N runs them in N worker
 processes with the same results as one; --plan-only stops after planning (os-optics-kit study run executes the
-plan); --resume continues a planned or interrupted study (samples whose request is unchanged and completed are kept).
-stop_on acts in sample order: every sample after the first one with a listed outcome is recorded STOPPED. The study
-directory must be new or empty (--overwrite replaces the files this command writes there and removes the study's
-plots/ and report/ directories, which describe the previous samples).
+plan); --resume continues a planned or interrupted study (samples whose request is unchanged and that completed with
+the same evaluator are kept). stop_on acts in sample order: every sample after the first one with a listed outcome
+is recorded STOPPED. The study directory must be new or empty (--overwrite replaces the files this command writes
+there and removes the study's plots/ and report/ directories, which describe the previous samples).
 
 Stdout: one compact JSON document (counts per outcome with denominators, best sample or no-feasible outcome, the
 samples whose runs carry warnings, at most five rows with their warnings, execution, paths). Exit 0 completed (or
