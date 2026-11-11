@@ -30,11 +30,13 @@ with the same results.
 
 ## 3. Choose the worker budget
 
-A worker process pays about 4 s and 150 MiB once (Engine import), then runs samples at the pilot's
-speed. Parallel runs pay when samples x seconds per sample is well above that start-up: e.g. 20 samples
-of 0.2 s stay serial; 400 samples or samples of several seconds gain from 4 workers.
-`--workers auto` applies this rule from the plan size; `os-optics-kit study bench` measures it on this
-machine. Keep workers x numerical threads within the CPUs (workers use one thread each) and leave room
+A worker process pays about 4 s and 150 MiB once (Engine import), then runs samples at up to the
+pilot's speed (measured on a 12-CPU desktop: about 90 % with 2 workers, about two thirds with 4).
+Parallel runs pay when samples x seconds per sample is well above that start-up: e.g. 20 samples of
+0.2 s stay serial; 400 samples or samples of several seconds gain from 4 workers. `--workers auto`
+assumes 0.2 s per sample of a new plan (serial up to 31 samples, at most 4 workers) and uses the
+measured `timing.run_s` on `--resume`; when the pilot shows heavier samples, give N yourself.
+`os-optics-kit study bench` measures this machine. Keep workers x numerical threads within the CPUs (workers use one thread each) and leave room
 for other jobs. Do not start one agent per sample: one study runs the whole batch.
 
 ## 4. Run a batch, inspect, refine
@@ -52,10 +54,13 @@ tolerance `--samples` with the same seed keeps the samples already run.
 
 For an external optimiser, hand each independent batch (finite differences, a Sobol or multistart set)
 to `os_optics_kit.study`: `make_request` per design, `plan_study`, `execute_study(dir, workers=N)`,
-`collect_records(dir)` in plan order; keep the dependent steps in your own loop.
+`collect_records(dir)` in plan order, one new directory per batch; keep the dependent steps in your
+own loop. Workers import the calling script: in a script, call these under
+`if __name__ == "__main__":`.
 
 ## 5. Reuse saved results
 
 Presentation never reruns the Engine: `plot sweep DIR --y target:ID`, `report DIR`, `compare RUN DIR`,
-`present init RUN DIR --out PRESENT`. Run studies with `--no-plots --no-report` and present later, or
-re-aggregate with `study aggregate DIR`.
+`present init RUN DIR --out PRESENT`. `sensitivity` and `tolerance` take `--no-plots --no-report`
+to present later (`sweep` and `study candidates` write no plots or report; `study run` follows the
+choice made when planning); re-aggregate with `study aggregate DIR [--no-plots] [--no-report]`.

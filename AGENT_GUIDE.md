@@ -64,7 +64,7 @@ the edited one.
 
 Exit codes: 0 completed or PASS; 1 FAIL, `NO_FEASIBLE`, `NO_MATCH` or a case mismatch; 2 UNKNOWN (also
 a partial run, `PARTIAL`) or `INCOMPLETE`; 3 OUT_OF_MODEL; 4 refused input, with a JSON
-error on stderr; 130 a cancelled study (`study run DIR --resume` continues it). Stdout is compact JSON;
+error on stderr; 130 a cancelled study or Ctrl-C (`study run DIR --resume` continues a study). Stdout is compact JSON;
 details stay in files.
 
 ## Inputs and recovery
@@ -78,8 +78,8 @@ Invalid edits are refused atomically. Repeating an identical `edit` returns `alr
 `--expect-base-hash` refuses a changed base. Set both a study's `max_evaluations` and the Project's
 compute budget, and inspect limited or partial results before raising a limit. Time a pilot before a
 large study and choose a worker budget from it (`skills show study recipe.md`): one study per batch,
-`--workers N` or `auto`, `--time-limit-s` / `--max-memory-mib` per evaluation, workers x threads
-within the CPUs. Report commands,
+`--workers N` (`auto` assumes 0.2 s per sample of a new plan; give N for heavier samples),
+`--time-limit-s` / `--max-memory-mib` per evaluation, workers x threads within the CPUs. Report commands,
 versions, units, selected assessments, freshness and artifact paths.
 
 ## Contribute

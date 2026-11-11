@@ -46,7 +46,9 @@ walkthrough: [English](en/workflows.md) · [简体中文](zh-CN/workflows.md).
 | case `workflow.py` | nominal `PASS` | nominal `FAIL` | `UNKNOWN` | `OUT_OF_MODEL` | `ERROR`, refused |
 
 A study command whose execution was cancelled (Ctrl-C, or `cancel()` of its scheduler)
-prints status `CANCELLED` and exits 130; `study run DIR --resume` continues it.
+prints status `CANCELLED` and exits 130, with any number of workers; its `next` command
+(`study run DIR --resume`) continues it. Ctrl-C outside an execution (planning,
+aggregation) prints the error `INTERRUPTED` and exits 130.
 
 A partial run (execution `PARTIAL`, for example a reached `max_return_analysis_work`
 reported as `RETURN_ANALYSIS_BUDGET`) is `UNKNOWN`, exit 2, even when its targets are met;
@@ -245,15 +247,15 @@ os-optics-kit study status STUDY                              # states, executio
 os-optics-kit study run STUDY --resume                        # after Ctrl-C or a failure
 os-optics-kit study aggregate STUDY --no-plots --no-report    # tables from saved records (no Engine)
 os-optics-kit study candidates A.json B.json C.json --out CAND --targets spot_radius --workers 2
-os-optics-kit study bench --workers 1,2,4 --samples 24        # elapsed, throughput, start-up, memory
+os-optics-kit study bench --samples 24                        # 1, 2, 4 workers (up to the CPUs): elapsed, throughput, start-up, memory
 ```
 
 | Option (tools and `study run`) | Meaning |
 | --- | --- |
-| `--workers N\|auto` | worker processes (spawned once, Engine imported once each); 1 = serial in this process; `auto` = serial unless the plan is large enough to repay about 4 s of start-up per worker, at most 4 workers |
-| `--resume` | keep samples whose record has the plan's `request_hash` and state `COMPLETED` / `REFUSED`; read back a complete run directory without a record; run the rest. A changed Engine build or catalog release is refused (`STUDY_IDENTITY_CHANGED`, field named); a tool run with a changed spec reruns only the changed requests |
+| `--workers N\|auto` | worker processes (spawned once, Engine imported once each); 1 = serial in this process; `auto` = estimated from the samples to run x their run time (with `--resume` the median `timing.run_s` of the study's completed samples, else 0.2 s), serial unless workers (about 4 s start-up each) save at least 10 %, at most 4 workers; give N from a pilot for heavier samples |
+| `--resume` | keep samples whose record has the plan's `request_hash`, state `COMPLETED` / `REFUSED` and the same `evaluator`; read back a complete run directory without a record; run the rest. A tool run with a changed spec reruns only the changed requests; a kept record takes the new plan's labels. `study run`, with or without `--resume`, refuses a changed Engine build or catalog release (`STUDY_IDENTITY_CHANGED`, field named) |
 | `--plan-only` | write the plan and stop (`PLANNED`, exit 0); `study run` executes it with the planning tool's analysis and presentation choice |
-| `--time-limit-s S`, `--max-memory-mib M` | per evaluation, read at Engine checkpoints (each phase change and inside long phases); the run stops at the next checkpoint, state `CANCELLED`, code `TIME_LIMIT` / `MEMORY_LIMIT`; a worker still busy 5 s past its time limit is terminated; the serial scheduler has no other preemption |
+| `--time-limit-s S`, `--max-memory-mib M` | per evaluation, read at Engine checkpoints (each phase change and inside long phases); the run stops at the next checkpoint: state `CANCELLED`, error code `RUN_STOPPED`, problem code `TIME_LIMIT` / `MEMORY_LIMIT` (`error_problems` in `table.csv`); a worker still busy 5 s past its time limit is terminated and recorded the same way; the serial scheduler has no other preemption |
 | `--ray-data full\|summary` | requested outputs: `summary` keeps chief rays only (same results and hashes) |
 | `--scheduler serial\|process`, `--evaluator module:function` | `study run` only: scheduler kind; replace the Engine call by `f(request, sample_dir, limits) -> record` |
 
@@ -264,17 +266,22 @@ line per request in plan order); `requests/<id>.json` (Project with the sample's
 `refusal`, `selected_targets`, `labels`, `outputs`, `seed`, `request_hash`);
 `samples/<id>/sample.json` (the sample record + `state` `COMPLETED | REFUSED | FAILED |
 CANCELLED | NOT_RUN`, `attempts`, `timing` {queued_s, run_s, phase_seconds}, `peak_memory_bytes`,
-`worker`; paths study-relative); `journal.jsonl` (started, finished, failed, cancelled, reused,
-recovered, stopped, ...). `table.csv` and `summary.json` keep plan order, so N workers give the
+`worker`, `evaluator`; paths study-relative); `journal.jsonl` (started, finished, failed,
+cancelled, reused, recovered, stopped, ...); `owner.json` (pid, host and start of the execution
+that owns the study, removed when it ends). `execution.state` is `PLANNED`, `RUNNING`,
+`COMPLETED`, `CANCELLED` or `FAILED`; `study status` reports `RUNNING` only while the owning
+process runs and `INTERRUPTED` once it ended without finishing. `table.csv` and `summary.json` keep plan order, so N workers give the
 same files as one except `seconds`, `timing`, `worker`, peak memory and `study.json` `execution`.
 An Engine refusal is a completed evaluation (outcome `ERROR`); an evaluation that raised is
 `FAILED`; a refused edit is `REFUSED` and never runs. Workers set `OPENBLAS_NUM_THREADS`,
-`OMP_NUM_THREADS`, `MKL_NUM_THREADS` to 1 and `OPENSCI_CATALOG_CHECK_INTERVAL=0`.
+`OMP_NUM_THREADS`, `MKL_NUM_THREADS` to 1 and `OPENSCI_CATALOG_CHECK_INTERVAL=0`, after the
+calling process obtained the catalog release each Project pins.
 
 Python: `from os_optics_kit.study import make_request, plan_study, study_header,
 execute_study, collect_records` hands an independent batch (finite differences, a Sobol or
-multistart set) to the executor; `cases/interop-optimization/optimize_expander.py` runs its
-Sobol samples this way.
+multistart set) to the executor. With more than one worker the executor starts worker
+processes that import the calling script: in a script, call it under
+`if __name__ == "__main__":` (example in [Studies](en/studies.md#candidate-designs-and-external-search-code)).
 
 ## Sweep
 
@@ -549,10 +556,13 @@ worker processes. Output: `DIR/workflow.json`, `DIR/nominal/`,
 | `SPEC_INVALID`, `TARGET_UNKNOWN`, `COLUMN_UNKNOWN`, `NOMINAL_MISMATCH`, `STEP_REQUIRED` | spec structure, unknown target, objective / constraint / derived column the spec cannot produce, `set_*` parameter without its base `nominal`, relative step at nominal 0 | fix the spec as the message states; `known` lists the valid ids or columns |
 | `INPUT_INVALID` | a workflow input cannot build a design | change the named input |
 | `CATALOG_NOT_AVAILABLE` | no catalog release installed | `os-optics catalog sync` (or `catalog import FILE`) |
-| `STUDY_STARTED` | `study run` on a study that already has sample results | `--resume`, or plan it again with `--overwrite` |
-| `STUDY_IDENTITY_CHANGED` | Engine build, catalog release or plan differ from the planned study (`changed` names them) | `--overwrite` to start again with the installed Engine and catalog |
+| `STUDY_STARTED` | `study run` on a study that already has sample results | `--resume`, or plan it again with its planning command and `--overwrite` |
+| `STUDY_IDENTITY_CHANGED` | Engine build, catalog release or plan differ from the planned study (`changed` names them); `study run` refuses it with or without `--resume` | plan it again with its planning command (`sweep`, `sensitivity`, `tolerance`, `study candidates`) and `--overwrite` |
+| `STUDY_RUNNING` | another execution owns the study (`owner.json`; its process still runs) | wait for it or stop it, then `study run DIR --resume` |
 | `STUDY_NOT_PLANNED`, `STUDY_KIND_CHANGED` | the directory holds no plan, or a study of another tool | plan with `--plan-only` / `study candidates`, or choose another `--out` |
+| `PLAN_INVALID`, `REQUEST_INVALID` | `plan.jsonl` or a request file is not a valid plan (sample id, duplicate, hash) | plan it again with its planning command and `--overwrite` |
 | `BUDGET_INVALID` | workers x threads exceed the logical CPUs | fewer `--workers` |
+| `INTERRUPTED` | Ctrl-C outside a study execution; exit 130 | run the command again (a study continues with `study run DIR --resume`) |
 | `EVALUATOR_INVALID` | `--evaluator` cannot be imported, or a worker process needs a named function | give `module:function` of an importable module |
 | sample `state` `FAILED` / `CANCELLED` / `NOT_RUN` | the evaluation raised, was stopped by a limit or a cancellation, or never started | `study run DIR --resume` reruns exactly these samples |
 

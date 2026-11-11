@@ -31,7 +31,8 @@ kind: tool
 
 Commands: `study run DIR [--workers N|auto] [--resume] [--time-limit-s S] [--max-memory-mib M]
 [--scheduler serial|process] [--evaluator module:function]`; `study status DIR`;
-`study aggregate DIR [--no-plots] [--no-report]`; `study bench [--workers 1,2,4] [--samples N]`.
+`study aggregate DIR [--no-plots] [--no-report]`; `study bench [--workers 1,2,4] [--samples N]
+[--repeat N]` (default counts stop at the CPUs).
 The study tools take the same `--workers`, `--resume`, `--plan-only`, `--ray-data full|summary`.
 
 ## Outputs
@@ -40,25 +41,32 @@ The study tools take the same `--workers`, `--resume`, `--plan-only`, `--ray-dat
 limits, state), `plan.jsonl`, `requests/`, `samples/<id>/{project.json, run/, sample.json}`,
 `journal.jsonl`, then `table.csv` and `summary.json` in plan order. Each record has `state`
 (`COMPLETED`, `REFUSED`, `FAILED`, `CANCELLED`, `NOT_RUN`) next to its outcome, `timing` with the
-Engine's phase seconds, `peak_memory_bytes`, `worker`. Exit codes of the planning tool; 130 cancelled.
+Engine's phase seconds, `peak_memory_bytes`, `worker`, `evaluator`. Exit codes of the planning tool;
+130 cancelled (Ctrl-C or the API; running samples `CANCELLED`, the rest `NOT_RUN`).
 
 ## Minimal example
 
+`sweep.json`: see `skills show sweep`.
+
 ```
+os-optics project example --kind focus > project.json
 os-optics-kit sweep sweep.json --out study --plan-only
 os-optics-kit study run study --workers 4
 os-optics-kit study status study
-os-optics-kit study run study --resume          # after Ctrl-C: reruns only what is missing
+os-optics-kit study run study --resume          # after Ctrl-C: runs only what is missing
 os-optics-kit plot sweep study --y target:spot_radius
 ```
 
 ## Limits
 
 - Results equal the serial run (same hashes and values, plan order); only timing fields differ.
-- A worker costs about 4 s and 150 MiB to start; small studies stay serial (`--workers auto`).
+- A worker costs about 4 s and 150 MiB to start. `--workers auto` assumes 0.2 s per sample of a new
+  plan (31 samples or fewer stay serial) and the measured median on `--resume`; at most 4.
 - Time and memory limits act at Engine checkpoints; a worker busy 5 s past its time limit is
   terminated. Workers use one BLAS thread each.
-- Resume refuses a changed Engine build or catalog release; a changed request reruns that sample only.
+- `study run` refuses a changed Engine build or catalog release (plan again with `--overwrite`);
+  resume reruns a changed request, or one another evaluator produced, and nothing else.
+- One execution per study directory: a second one is refused (`STUDY_RUNNING`) while the first runs.
 
 ## Version
 

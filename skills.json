@@ -149,8 +149,8 @@
       "command": "os-optics-kit study",
       "requires": "os-optics>=0.13,<0.14",
       "path": "skills/study/SKILL.md",
-      "tokens": 767,
-      "sha256": "b8a2239f01e16e380396174909e6bb19fba62e127e80265c36780dd09c713006"
+      "tokens": 892,
+      "sha256": "02872d297085f4f5687dc107fa1d6e5669c44656153ea52e3df8513d05b89b36"
     },
     {
       "name": "summary",
