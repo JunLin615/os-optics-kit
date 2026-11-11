@@ -36,8 +36,9 @@ Parallel runs pay when samples x seconds per sample is well above that start-up:
 0.2 s stay serial; 400 samples or samples of several seconds gain from 4 workers. `--workers auto`
 assumes 0.2 s per sample of a new plan (serial up to 31 samples, at most 4 workers) and uses the
 measured `timing.run_s` on `--resume`; when the pilot shows heavier samples, give N yourself.
-`os-optics-kit study bench` measures this machine. Keep workers x numerical threads within the CPUs (workers use one thread each) and leave room
-for other jobs. Do not start one agent per sample: one study runs the whole batch.
+`os-optics-kit study bench` measures this machine. Keep workers x numerical threads within the CPUs
+(workers use one thread each) and leave room for other jobs. Do not start one agent per sample: one
+study runs the whole batch.
 
 ## 4. Run a batch, inspect, refine
 
