@@ -66,9 +66,9 @@ class ResourceBudget:
         if blas_threads is None and workers > 1:
             blas_threads = 1
         if workers * (blas_threads or 1) > cpus:
-            raise wc.WorkflowError("BUDGET_INVALID", f"{workers} workers x {blas_threads or 1} threads exceed the "
-                                   f"{cpus} logical CPUs of this machine", workers=workers,
-                                   blas_threads=blas_threads, cpus=cpus)
+            raise wc.WorkflowError("BUDGET_INVALID", f"{workers} workers x {blas_threads or 1} thread(s) each "
+                                   f"exceed the {cpus} logical CPUs of this machine; give fewer --workers",
+                                   workers=workers, blas_threads=blas_threads, cpus=cpus)
         return cls(workers, blas_threads, _positive(max_memory_mib, "max_memory_mib", integer=True),
                    _positive(time_limit_s, "time_limit_s"))
 

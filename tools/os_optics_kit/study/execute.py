@@ -290,7 +290,10 @@ def execute_study(study_dir, *, workers=1, scheduler=None, evaluator=None, limit
     importable one); ``limits``: ``{"time_limit_s", "max_memory_mib"}`` per evaluation; ``stop_on``: outcome classes
     (default: the study's ``stop_on``); ``on_progress(event)``: called in this process after every sample with
     ``{sample_id, state, outcome, done, total}``; ``blas_threads``: threads per worker (default 1 with several
-    workers). Refuses with ``STUDY_RUNNING`` while another execution owns the study."""
+    workers). Refuses with ``STUDY_RUNNING`` while another execution owns the study.
+
+    With worker processes (``workers`` > 1 or ``scheduler="process"``) each worker imports the calling script, as
+    every ``spawn`` process does: a script calls ``execute_study`` under ``if __name__ == "__main__":``."""
     t0 = time.perf_counter()
     study_dir = Path(study_dir).resolve()
     store.read_study(study_dir)

@@ -8,13 +8,20 @@ Python (an external optimiser handing over a batch of independent evaluations)::
 
     from os_optics_kit.study import make_request, plan_study, study_header, execute_study, collect_records
 
-    requests = [make_request(f"s{i:04d}", document, labels={"parameters": {"x": {"value": x, "unit": "mm"}}})
-                for i, (x, document) in enumerate(batch, start=1)]
-    plan_study("runs/batch-01", study_header("my-optimiser.batch", parameters=[{"name": "x", "unit": "mm"}]),
-               requests)
-    execute_study("runs/batch-01", workers=4)
-    for entry, record in collect_records("runs/batch-01"):
-        ...                                   # record["outcome"], record["targets"], record["state"]
+
+    def evaluate(batch, study_dir, workers=4):  # batch: [(x, Project document)]; a new study_dir per batch
+        requests = [make_request(f"s{i:04d}", document, labels={"parameters": {"x": {"value": x, "unit": "mm"}}})
+                    for i, (x, document) in enumerate(batch, start=1)]
+        plan_study(study_dir, study_header("my-optimiser.batch", parameters=[{"name": "x", "unit": "mm"}]),
+                   requests)
+        execute_study(study_dir, workers=workers)
+        return collect_records(study_dir)    # [(plan entry, record)]: record["outcome"], ["targets"], ["state"]
+
+
+    if __name__ == "__main__":  # worker processes import this script: keep the calls under the guard
+        ...
+
+A complete script is in the studies guide (docs/en/studies.md).
 
 The evaluator (default ``evaluators.run_project``: one ``os_optics.local.run_optical_project`` call per request) and
 the scheduler (``SerialScheduler``, ``ProcessScheduler`` or any object with ``run`` and ``cancel``) are replaceable.
