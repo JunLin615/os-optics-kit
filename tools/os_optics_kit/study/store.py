@@ -578,7 +578,8 @@ def _running_error(study_dir, owner):
     study_dir = Path(study_dir)
     who = (f"process {owner.get('pid')} on {owner.get('host')} since {owner.get('started')}" if owner
            else "another process")
-    hint = "wait for it to finish or stop it, then continue with --resume"
+    hint = ("wait for it to finish or stop it, then run the command again (a stopped execution continues with "
+            "study run DIR --resume)")
     if owner and owner.get("host") != socket.gethostname():
         hint += f"; if that process no longer runs, delete {OWNER_FILE}"
     return wc.WorkflowError("STUDY_RUNNING", f"{study_dir.as_posix()} is being executed by {who}; {hint}",

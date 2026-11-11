@@ -1242,6 +1242,27 @@ class OwnershipTests(unittest.TestCase):
         self.assertGreaterEqual(time.monotonic() - started, 0.1)
         self.assertLess(len(calls), 30)
 
+    def test_every_refused_caller_is_given_the_same_true_next_step(self):
+        with TempDir() as tmp:
+            study_dir = self.plan(tmp / "study", fake_requests([1.0]))
+            owner = store.acquire_execution(study_dir)  # an execution of this (live) process
+            try:
+                callers = {"study run": lambda: execute.execute_study(study_dir, evaluator=FAKE, resume=True),
+                           "planning": lambda: store.plan_study(study_dir, header(), fake_requests([1.0]),
+                                                                resume=True),
+                           "overwrite": lambda: store.prepare_study_dir(study_dir, overwrite=True),
+                           "study aggregate": lambda: study_tool.aggregate_study(study_dir)}
+                for name, call in callers.items():
+                    with self.subTest(caller=name):
+                        with self.assertRaises(wc.WorkflowError) as caught:
+                            call()
+                        self.assertEqual(caught.exception.code, "STUDY_RUNNING")
+                        self.assertTrue(str(caught.exception).endswith(
+                            "; wait for it to finish or stop it, then run the command again (a stopped execution "
+                            "continues with study run DIR --resume)"), str(caught.exception))
+            finally:
+                store.release_execution(study_dir, owner)
+
 
 class EvaluatorRecordTests(unittest.TestCase):
     """What a resume makes of an evaluator without a name, an evaluator that empties its directory, and damaged
