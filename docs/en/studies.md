@@ -32,8 +32,8 @@ the same values and result hashes; only `seconds`, the `timing` of each record, 
 execution block of `study.json` differ. `--workers auto` estimates the elapsed time from the number of samples to
 run and their run time: with `--resume`, the median `timing.run_s` of the study's completed samples; otherwise
 0.2 s per sample. It stays serial unless worker processes (about 4 s of start-up each) save at least 10 %, and
-uses at most 4 workers; a new plan of 31 or fewer samples therefore runs serially. When a pilot shows heavier
-samples, give the worker count yourself.
+uses at most 4 workers; a new plan of 31 or fewer samples therefore runs serially. With `--scheduler serial`,
+`--workers auto` runs serially. When a pilot shows heavier samples, give the worker count yourself.
 
 Each worker uses one numerical-library thread (`OPENBLAS_NUM_THREADS`, `OMP_NUM_THREADS`, `MKL_NUM_THREADS`), so
 workers x threads stay within the logical CPUs; more workers than CPUs are refused. Before the workers start, the
@@ -54,16 +54,20 @@ os-optics-kit study run study --resume         # runs only the samples without a
 
 Ctrl-C stops the whole study with any number of workers: the running samples are cancelled, no other sample
 starts, `study.json` `execution.state` becomes `CANCELLED` and the command exits 130 with a `next` command that
-resumes it. One execution owns a study directory at a time (`owner.json`, removed when it ends): a second
-`study run` or planning command on it is refused with `STUDY_RUNNING` while the first one's process runs, and
-`study status` reports `RUNNING` only while that process runs (`INTERRUPTED` once it ended without finishing; a
-resume takes the study over).
+resumes it. One execution owns a study directory at a time (`owner.json`, removed when it ends; `owner.lock`,
+which stays, lets one process at a time take ownership): while the first one's process runs, a second `study run`,
+a planning command and `study aggregate` on that directory are refused with `STUDY_RUNNING`, and `study status`
+reports `RUNNING` only while that process runs (`INTERRUPTED` once it ended without finishing; a resume takes the
+study over).
 
 Every sample record carries a job `state` next to its requirement outcome: `COMPLETED` (the Engine returned a
 result or refused the design), `REFUSED` (the planner could not build the sample), `FAILED`, `CANCELLED` (a limit
 or a cancellation stopped it) or `NOT_RUN`, and the `evaluator` that produced it. A resume keeps every record whose
 request is unchanged, that completed and that the same evaluator produced; it reads back a run directory that
 finished without its record, and runs the rest. `journal.jsonl` records which samples were reused and which ran.
+An evaluator is identified by its `module:function` name. A function passed from Python that has no such name (a
+lambda, a nested function) has no identity: a resume runs its samples again, and `study status` says so in
+`resume_note`.
 A request is identified by the SHA-256 of its Project, selected targets, requested outputs and seed: rerunning a
 tool with `--resume` and a changed spec runs exactly the samples whose request changed (a kept record takes the
 labels of the new plan), and a larger tolerance `--samples` with the same seed keeps the samples already run.
@@ -107,7 +111,8 @@ With more than one worker the executor starts worker processes that import the c
 under `if __name__ == "__main__":`. Give each batch a new study directory: `execute_study` refuses a directory
 whose samples already ran (`STUDY_STARTED`) unless it is called with `resume=True`. The evaluator (one Engine
 run per request) and the scheduler are parameters of `execute_study`; a caller may pass its own function
-`f(request, sample_dir, limits) -> record`.
+`f(request, sample_dir, limits) -> record`. A scheduler object that was cancelled (`cancel()`, or Ctrl-C during
+its run) runs nothing until its `reset()`: resume with a new scheduler, or with the same one after `reset()`.
 
 ## When parallel runs pay
 

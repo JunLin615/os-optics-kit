@@ -30,7 +30,8 @@ os-optics-kit sweep sweep.json --base project.json --out study --workers 4
 记录的 `timing`、运行它的工作进程以及 `study.json` 中的执行信息不同。`--workers auto` 根据待运行的样本数
 及其运行时间估算总耗时：加 `--resume` 时取本研究已完成样本 `timing.run_s` 的中位数，否则按每个样本 0.2 s
 计。只有当工作进程（每个启动约 4 s）至少节省 10 % 时才并行，最多 4 个；因此 31 个及以下样本的新规划串行
-运行。试验显示样本更耗时时，请自己指定工作进程数。
+运行。指定 `--scheduler serial` 时，`--workers auto` 串行运行。试验显示样本更耗时时，请自己指定
+工作进程数。
 
 每个工作进程只使用一个数值库线程（`OPENBLAS_NUM_THREADS`、`OMP_NUM_THREADS`、`MKL_NUM_THREADS`），使
 工作进程数 x 线程数不超过逻辑 CPU 数；超过时请求被拒绝。工作进程启动之前，命令先取得每个 Project 指定的
@@ -50,14 +51,17 @@ os-optics-kit study run study --resume         # 只运行没有完成记录的�
 
 无论有几个工作进程，Ctrl-C 都会停止整个研究：正在运行的样本被取消，不再启动其他样本，`study.json` 的
 `execution.state` 变为 `CANCELLED`，命令以退出码 130 结束，并给出可续跑的 `next` 命令。同一时间只有一次
-执行占用一个研究目录（`owner.json`，执行结束时删除）：只要前一次执行的进程仍在运行，对该目录再执行
-`study run` 或规划命令都会以 `STUDY_RUNNING` 被拒绝；`study status` 也只在该进程运行期间报告 `RUNNING`
-（进程未完成就结束时报告 `INTERRUPTED`；续跑会接管该研究）。
+执行占用一个研究目录（`owner.json`，执行结束时删除；`owner.lock` 一直保留，保证同一时间只有一个进程
+取得占用）：只要前一次执行的进程仍在运行，对该目录再执行 `study run`、规划命令或 `study aggregate` 都会以
+`STUDY_RUNNING` 被拒绝；`study status` 也只在该进程运行期间报告 `RUNNING`（进程未完成就结束时报告
+`INTERRUPTED`；续跑会接管该研究）。
 
 每条样本记录在结果类别（`outcome`）之外还有一个作业状态 `state`：`COMPLETED`（引擎给出结果或拒绝了该
 设计）、`REFUSED`（规划时无法构建该样本）、`FAILED`、`CANCELLED`（被限制或取消停止）或 `NOT_RUN`，并记录
 产生它的评估器 `evaluator`。续跑时保留请求未变、已完成且由同一评估器产生的记录，读回已完成但缺少记录的
-运行目录，并运行其余样本；`journal.jsonl` 记录哪些样本被复用、哪些实际运行。请求由其 Project、所选目标、
+运行目录，并运行其余样本；`journal.jsonl` 记录哪些样本被复用、哪些实际运行。评估器以其 `module:function`
+名称标识；从 Python 传入、没有这种名称的函数（lambda、嵌套函数）没有标识，续跑会重新运行它产生的样本，
+`study status` 会在 `resume_note` 中说明这一点。请求由其 Project、所选目标、
 请求的输出和种子的 SHA-256 标识：用 `--resume` 和修改后的规格重新运行工具时，只运行请求发生变化的样本
 （保留的记录采用新规划的标签）；公差研究在种子不变时增大 `--samples`，已运行的样本保留。用其他引擎构建
 或目录版本规划的研究，`study run` 无论是否加 `--resume` 都会拒绝（`STUDY_IDENTITY_CHANGED` 指出变化的
@@ -98,7 +102,9 @@ if __name__ == "__main__":
 使用多个工作进程时，执行器启动的工作进程会导入调用它的脚本：请把调用放在 `if __name__ == "__main__":`
 之下。每一批使用新的研究目录：对样本已经运行过的目录，`execute_study` 除非以 `resume=True` 调用，否则会
 拒绝（`STUDY_STARTED`）。评估器（每个请求一次引擎运行）和调度器都是 `execute_study` 的参数；调用方可以
-传入自己的函数 `f(request, sample_dir, limits) -> record`。
+传入自己的函数 `f(request, sample_dir, limits) -> record`。调度器对象一旦被取消（调用 `cancel()`，或在它
+运行期间按 Ctrl-C），在调用其 `reset()` 之前不再运行任何作业：续跑时请使用新的调度器，或先对原调度器调用
+`reset()`。
 
 ## 何时值得并行
 

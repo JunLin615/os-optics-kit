@@ -22,10 +22,11 @@ run        executes the samples that still need a result and aggregates the stud
            (the median of the study's completed samples with --resume, else 0.2 s assumed): serial unless worker
            processes, which start in about 4 s, save time; at most 4 (with --scheduler serial: one). --resume keeps
            every sample whose record has the plan's request hash, state COMPLETED or REFUSED and was produced by
-           the same evaluator, reads back a complete run directory without a record, and runs the rest. With or without --resume, the study's
-           Engine build and catalog release must be the installed ones (STUDY_IDENTITY_CHANGED names the field;
-           plan it again with its planning command and --overwrite). One execution at a time: a second one on the
-           same directory is refused (STUDY_RUNNING) while the first one's process runs. --time-limit-s and
+           the same evaluator, reads back a complete run directory without a record, and runs the rest. With or
+           without --resume, the study's Engine build and catalog release must be the installed ones
+           (STUDY_IDENTITY_CHANGED names the field; plan it again with its planning command and --overwrite). One
+           execution at a time: while the first one's process runs, a second one, a planning command and
+           "aggregate" on the same directory are refused (STUDY_RUNNING). --time-limit-s and
            --max-memory-mib apply per evaluation and stop it at the Engine's next checkpoint (state CANCELLED,
            error code RUN_STOPPED, problem code TIME_LIMIT / MEMORY_LIMIT; a worker process still busy 5 s after
            its time limit is terminated and recorded the same way); there is no other preemption. --evaluator
@@ -33,7 +34,9 @@ run        executes the samples that still need a result and aggregates the stud
            cancellation through the Python API) cancels the running sample, starts no other, records the rest
            NOT_RUN and exits 130; the printed "next" command (run --resume) continues.
 status     plan size, record states, execution block (state RUNNING only while the executing process runs;
-           INTERRUPTED when it ended without finishing), last journal events; never runs the Engine.
+           INTERRUPTED when it ended without finishing), the samples a resume would run, last journal events;
+           resume_note when the last execution's evaluator had no importable module:function name (a resume
+           runs its samples again); never runs the Engine.
 aggregate  rewrites table.csv and summary.json (and the planning tool's analysis, plots and report) from the
            saved records; never runs the Engine; refused (STUDY_RUNNING) while an execution of the study runs.
 candidates plans (and unless --plan-only runs) one sample per Project file, in the order given: parameter
