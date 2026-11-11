@@ -150,14 +150,14 @@
     },
     {
       "name": "tolerance-polarization-workers",
-      "description": "The same tolerance study in two worker processes; results equal the serial study",
+      "description": "The same tolerance study in two worker processes completes",
       "argv": ["{python}", "-m", "os_optics_kit", "tolerance", "cases/polarization-control/studies/tolerance_polarization.json", "--out", "{runs}/tolerance-polarization-workers", "--samples", "20", "--no-plots", "--no-report", "--workers", "2"],
       "expected_status": "COMPLETED",
       "timeout": 300
     },
     {
       "name": "study-resume",
-      "description": "Resume of the completed tolerance study: every sample is reused, nothing runs again",
+      "description": "study run --resume of the completed tolerance study completes",
       "argv": ["{python}", "-m", "os_optics_kit", "study", "run", "{runs}/tolerance-polarization", "--resume"],
       "needs": ["tolerance-polarization"],
       "expected_status": "COMPLETED",

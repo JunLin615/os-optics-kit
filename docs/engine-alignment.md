@@ -70,11 +70,15 @@ the kit works with that build, not that the release on PyPI does.
   sweep, one sensitivity and one tolerance study, and the catalog tool chain (candidates, edit, sweep, move,
   compare, plot, report) of the beam-expander studies.
 - `tolerance-polarization-workers`: the tolerance study in two worker processes; `study-resume`: `study run
-  --resume` of the completed tolerance study (every sample reused).
+  --resume` of the completed tolerance study. Both checks assert that the command completes; equality with the
+  serial study, sample reuse, design workflows and the benchmark with two workers are asserted by
+  `tests/test_study.py`, `tests/test_study_tools.py` and `tests/test_study_workers.py` in `offline-tests`.
 
 Optional checks (full workflow studies, seed verification, external-tool cases with their own pinned
 requirements) run with `--optional NAME` or `--optional all`. A check with a `requirements` file runs in its own
-environment with the engine, the kit and that file.
+environment with the engine, the kit and that file. pip resolves an `os-optics-kit` requirement of that file from
+PyPI before the kit under test replaces it, so a case that pins the kit version being prepared runs once that
+version is published.
 
 ### Add a check
 
