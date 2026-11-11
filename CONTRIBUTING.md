@@ -29,9 +29,10 @@ os-optics-kit contrib tool my_helper.py --name my-tool --dry-run
 ```
 
 `contrib case` normalizes the Project, pins the engine and catalog versions, runs `project check`, `project run`
-and `results targets`, renders the images, writes `CASE.md`, `README.md` and `expected.json`, and produces a
-patch with a pull-request description. `--open-pr` uses your own `gh` login; without it you get a bundle directory
-with the patch, which you can apply and push yourself. Step-by-step instructions, including what to tell your
+and `results targets`, renders the system views with the engine (`os-optics view RUN --no-browser --snapshot DIR`;
+no browser and no `render` extra), writes `CASE.md`, `README.md`, `README.zh-CN.md`, `images.json` and
+`expected.json`, and produces a patch with a pull-request description. `--open-pr` uses your own `gh` login;
+without it you get a bundle directory with the patch, which you can apply and push yourself. Step-by-step instructions, including what to tell your
 agent, are in [Contributing with an agent](docs/contributing-with-an-agent.md).
 
 ## By hand
@@ -48,7 +49,15 @@ agent, are in [Contributing with an agent](docs/contributing-with-an-agent.md).
    python -m pip install --group dev
    ```
 
-3. Make the change, then run the checks CI runs:
+3. Make the change. For a case, render and record its images with the engine (no browser needed):
+   `os-optics-kit cases images my-case` writes the system views and `images.json` (a new case gets `iso`, plus
+   `--section ALL --frame=scene` for a lens case; a recorded case gets its recorded views again, each with its
+   recorded options); `os-optics-kit cases images my-case --figure images/X.png --script SCRIPT.py` records a
+   figure drawn by a case script. Show exactly the recorded images in both READMEs, and keep the language line under
+   each title (`English · [简体中文](README.zh-CN.md)` and `[English](README.md) · 简体中文`). Then regenerate the
+   case index and the README case tables (`os-optics-kit cases index --write` and
+   `python scripts/case_tables.py --write`, then commit `cases.json`, `README.md` and `README.zh-CN.md`) and run the
+   checks CI runs:
 
    ```bash
    python scripts/check_repo.py
@@ -57,14 +66,15 @@ agent, are in [Contributing with an agent](docs/contributing-with-an-agent.md).
    python -m pytest
    os-optics-kit skills index --check     # after changing skills: --write, then commit skills.json
    os-optics-kit cases index --check      # after changing cases:  --write, then commit cases.json
+   python scripts/case_tables.py --check  # after changing cases:  --write, then commit README.md and README.zh-CN.md
    os-optics-kit cases verify my-case     # for every case you added or changed
    ```
 
 4. Commit with a sign-off (`git commit -s`), push to your fork and open a pull request.
 
-For render changes, also install `python -m pip install -e ".[render]"` and Chrome/Chromium, then
-run `python -m pytest tests/test_render_browser.py`. The presentation tests (`tests/test_present*.py`) also
-draw Chinese figures and encode MP4: install `".[plot,render,media]"` and a CJK font (on Linux
+For changes to `render` or `present` (presentation-grade figures; case images never use them), also install
+`python -m pip install -e ".[render]"` and Chrome/Chromium, then run `python -m pytest tests/test_render_browser.py`.
+The presentation tests (`tests/test_present*.py`) also draw Chinese figures and encode MP4: install `".[plot,render,media]"` and a CJK font (on Linux
 `fonts-noto-cjk`; Windows and macOS include one). With `OS_OPTICS_KIT_REQUIRE_PRESENTATION=1` a missing
 browser or encoder fails these tests instead of skipping them. These catalog-free tests check actual PNG
 pixels, camera matrices, labels and capture errors. They skip when optional dependencies are missing;
@@ -84,10 +94,10 @@ branch, run `git rebase --signoff main` and force-push the branch.
 | Lint (`ruff`) and types (`mypy`) | every pull request |
 | Unit tests without the engine, on each Python version in `baseline.json` | every pull request |
 | `scripts/check_repo.py`: Markdown links resolve, no file over 1 MiB and no image over 400 KiB, no run outputs, no machine-specific paths or secrets, JSON parses, `baseline.json` agrees with the package, English and Simplified Chinese pages come in pairs | every pull request |
-| `skills.json` and `cases.json` match the skills and cases | every pull request |
+| `skills.json` and `cases.json` match the skills and cases, and the README case tables match `cases.json` | every pull request |
 | Wheel and source build, `twine check`, contents check, clean `--no-deps` install and command smoke test | every pull request |
 | DCO sign-off of every commit | every pull request |
-| Full test suite, tool workflows and `cases verify` on the published os-optics release and catalog snapshot in `baseline.json`: the cases a pull request changes, all cases on `main` | every pull request, once that os-optics release is on PyPI |
+| Full test suite, tool workflows and `cases verify` on the published os-optics release and catalog snapshot in `baseline.json`: the cases a pull request changes (all cases when it changes a file that `cases verify`, its environment or the CI selection depends on), all cases on `main` and in the merge queue unless the same tree already passed with every case MATCH ([details](docs/engine-alignment.md#in-ci)) | every pull request, push to `main` and merge-queue run, once that os-optics release is on PyPI |
 | Linux, Windows and macOS on every Python version, all cases, and the newest os-optics release as a candidate | weekly |
 | CodeQL | every pull request and weekly |
 
@@ -96,7 +106,15 @@ branch, run `git rebase --signoff main` and force-push the branch.
 A case is accepted when:
 
 - it follows [the case format](docs/case-format.md): `project.json`, `CASE.md` (at most 700 tokens), `README.md`,
-  `expected.json`, and at most four images of at most 400 KiB each, rendered by the engine from the case's own run;
+  `README.zh-CN.md`, `expected.json` and `images.json`;
+- `CASE.md` classifies it: one `class` (`lens`, `free-space` or `integrated-path`), one to three `domain` values,
+  `provenance` and `publication` (with `source` for third-party material), and one to eight `tags` from
+  `os-optics-kit cases vocabulary`;
+- its images, at most five PNG files of at most 400 KiB each, are recorded in `images.json`: one to three system
+  views rendered by the engine from the case's own run (`os-optics-kit cases images NAME`), with a lens section
+  for a `lens` case, and at most three figures drawn by the case's own scripts; result tables are Markdown tables,
+  never screenshots; `README.md` and `README.zh-CN.md` link each other and each show exactly the recorded images, a
+  system view first;
 - `os-optics-kit cases verify NAME` reproduces `expected.json` on the engine version and catalog release it
   declares, which are the ones in `baseline.json`;
 - it shows something the collection does not show yet, and its README explains it in a few paragraphs;
@@ -119,7 +137,8 @@ A skill page follows `templates/SKILL.md`: the required front matter and section
 `baseline.json` records the os-optics range the kit supports, the os-optics version it was verified with, and
 the catalog release (with its SHA-256) the cases run on. Every case declares the engine and catalog it was
 verified with. When a new catalog release or engine version changes a case's outcome, the case is re-verified and
-its `expected.json`, `CASE.md` and images are updated in the same pull request that moves `baseline.json`.
+its `expected.json`, `CASE.md` and images (`os-optics-kit cases images NAME`) are updated in the same pull request
+that moves `baseline.json`.
 [Engine alignment](docs/engine-alignment.md) describes the checks behind this.
 
 ## Conduct and license

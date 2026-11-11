@@ -41,7 +41,8 @@ progress lines (`{"progress": {"asset", "done", "total"}}`) on stderr.
 
 ## Requirements and recovery
 
-- Views need Chrome or Chromium and `os-optics-kit[render]` (`BROWSER_NOT_FOUND`).
+- Animation frames need Chrome or Chromium and `os-optics-kit[render]` (`BROWSER_NOT_FOUND`); a still system
+  view needs neither: `os-optics view RUN --no-browser --snapshot DIR`.
 - MP4 needs `python -m pip install "os-optics-kit[media]"` (`MEDIA_EXTRA_MISSING`) and an even width
   and height; GIF needs only the plot extra.
 - A study sample without a saved run or exact value stays in the playback, labelled as such.

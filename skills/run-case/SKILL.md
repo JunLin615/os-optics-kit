@@ -1,7 +1,7 @@
 ---
 name: run-case
 description: Find an engine-reproducible OS Optics case, copy it, run it, check it against its recorded outcome and adapt it. Use when a worked design close to the user's question exists or a known-good starting Project is needed.
-version: 0.2.0
+version: 0.3.0
 command: os-optics-kit cases
 requires: os-optics>=0.13,<0.14
 kind: guide
@@ -11,8 +11,9 @@ kind: guide
 
 ## When to use
 
-- The user's design resembles a listed case (focusing, beam expansion, polarization, alignment, detector
-  calibration, external optimization, diffraction, quantum-optics export, metasurface model).
+- The user's design resembles a listed case: a lens (imaging, aspheres, infrared, telephoto, light sheet,
+  metasurface) or a free-space path (focusing, beam expansion, polarization, alignment, detector calibration,
+  external optimization, diffraction, quantum-optics export, beam shaping).
 - A known-good Project is needed as a starting point, or the installed engine must be checked against recorded runs.
 
 ## When not to use
@@ -22,20 +23,24 @@ kind: guide
 
 ## Inputs
 
-- A case name from `os-optics-kit cases list` (compact JSON: name, title, summary, engine, catalog, tools, tags).
+- A case name from `os-optics-kit cases list` (compact JSON: name, title, summary, class, domain, provenance,
+  publication, scale, engine, catalog, tools, tags, images). Filters, combined: `--class`, `--domain`,
+  `--provenance`, `--publication`, `--scale`, `--tag`, `--catalog RELEASE|none`; `cases vocabulary` lists the
+  allowed values with English and Chinese labels.
 - A destination directory for the copy.
 - For catalog cases, the catalog release named in the case (`os-optics catalog status`).
 
 ## Outputs
 
-- `DEST/NAME/`: project.json, CASE.md, README.md, expected.json, images and any case scripts or data.
+- `DEST/NAME/`: project.json, CASE.md, both READMEs, expected.json, images.json, images and any case scripts
+  or data. A system view of your own run needs no browser: `os-optics view run --no-browser --snapshot DIR`.
 - `cases verify`: compact JSON per case with `result` MATCH, MISMATCH or ERROR and the differing fields;
   exit 0 when all match, 1 on a mismatch, 4 on refusal.
 
 ## Minimal example
 
 ```bash
-os-optics-kit cases list --tag catalog-free
+os-optics-kit cases list --catalog none --class lens
 os-optics-kit cases show ideal-lens-focus          # read What it shows, Run, Targets first
 os-optics-kit cases copy ideal-lens-focus --dest .
 cd ideal-lens-focus
@@ -57,4 +62,5 @@ rerun, and read the new assessments; the case's expected.json no longer applies 
 
 ## Version
 
+0.3.0 (os-optics-kit 0.3.0): classification filters and vocabulary.
 0.2.0 (os-optics-kit 0.2.0): cases verified with os-optics 0.13.0, catalog 2026-10-28.1.

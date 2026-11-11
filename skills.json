@@ -34,13 +34,13 @@
     {
       "name": "contrib-case",
       "kind": "contribution",
-      "description": "Turn a finished os-optics design into a PR-ready os-optics-kit case: engine-verified project.json, CASE.md, README with rendered images, expected outcome and a git patch. Use when the user wants to share a design as a case.",
-      "version": "0.2.0",
+      "description": "Turn a finished os-optics design into a PR-ready kit case: verified project.json, classified CASE.md, English and Chinese READMEs with engine system views, expected outcome and a git patch. Use to share a design as a case.",
+      "version": "0.3.0",
       "command": "os-optics-kit contrib case",
       "requires": "os-optics>=0.13,<0.14",
       "path": "skills/contrib-case/SKILL.md",
-      "tokens": 746,
-      "sha256": "7eb38847ccf062ac588c261ffad040bd2fdacb2be9379b6842efedfc5ffe9a4e"
+      "tokens": 898,
+      "sha256": "8ffb4530871580cf45c11e6b11c298f1e9ee062a7bdc22ee46e93a2a1f69b3c1"
     },
     {
       "name": "contrib-tool",
@@ -79,34 +79,34 @@
       "name": "plot",
       "kind": "tool",
       "description": "Draw standard PNG and SVG plots from saved results without simulating - sweep curves or two-parameter heatmaps with target bounds, the power distribution of a run, signed bar charts and histograms. Use it to show study or run results.",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "command": "os-optics-kit plot",
       "requires": "os-optics>=0.13,<0.14; os-optics-kit[plot]",
       "path": "skills/plot/SKILL.md",
-      "tokens": 652,
-      "sha256": "9c98e6d7aaba45f97965d453ab6e315e627a5c68de8c7b224b77986dc683a5f8"
+      "tokens": 695,
+      "sha256": "869f3867e0a8a3cb4bdc90b8c604220c6fa879c35619a5fe23fb29d820d4817a"
     },
     {
       "name": "present",
       "kind": "tool",
-      "description": "Prepare slide-ready material from saved runs and studies - system views, result plots, comparisons, animations, an offline gallery and a portable bundle - and restyle it (language, background, text and figure size) from a saved configuration without simulating.",
-      "version": "0.1.0",
+      "description": "Prepare slide-ready material from saved runs and studies - system views, plots, comparisons, animations, an offline gallery and a bundle - and restyle it (language, background, sizes) from a saved configuration without simulating.",
+      "version": "0.2.0",
       "command": "os-optics-kit present",
       "requires": "os-optics>=0.13,<0.14; os-optics-kit[plot]; os-optics-kit[render] for views and animations; os-optics-kit[media] for MP4",
       "path": "skills/present/SKILL.md",
-      "tokens": 887,
-      "sha256": "77c2fd97fc0a40c66a3bbbdc94c47d1c83cb667519c244980ac3a5f0bb834868"
+      "tokens": 891,
+      "sha256": "1ec24321187cb0ff97d95d9cc26d0d3191cff0cfee1ac22cb263aec70ceef362"
     },
     {
       "name": "render",
       "kind": "tool",
-      "description": "Render reproducible 3D figures with camera angles, roll, element framing and a manifest.",
-      "version": "0.1.0",
+      "description": "Render presentation-grade 3D figures with camera angles, roll, element framing and a manifest. Needs Chrome or Chromium; case images and plain system views come from the engine without a browser.",
+      "version": "0.2.0",
       "command": "os-optics-kit render",
       "requires": "os-optics>=0.13,<0.14; os-optics-kit[render]",
       "path": "skills/render/SKILL.md",
-      "tokens": 893,
-      "sha256": "b41934c287d05832eccaa296539309d6323f482426bbac42ebfc805b56cd0a45"
+      "tokens": 880,
+      "sha256": "e285cafca807d9215d7ca91c5690acaa16a842c0cfdee35fac858484142fa1c7"
     },
     {
       "name": "report",
@@ -123,12 +123,12 @@
       "name": "run-case",
       "kind": "guide",
       "description": "Find an engine-reproducible OS Optics case, copy it, run it, check it against its recorded outcome and adapt it. Use when a worked design close to the user's question exists or a known-good starting Project is needed.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "command": "os-optics-kit cases",
       "requires": "os-optics>=0.13,<0.14",
       "path": "skills/run-case/SKILL.md",
-      "tokens": 671,
-      "sha256": "dbcc59a28d98b1445b51997b9f2a5dbe0671baff45c1d705e427cc4bc16313ab"
+      "tokens": 807,
+      "sha256": "1329bc6a32b7673c35223a1af47f03f2efcb00ea16e1612129662f4303d3a6d9"
     },
     {
       "name": "sensitivity",

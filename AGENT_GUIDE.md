@@ -13,32 +13,34 @@ os-optics-kit skills show NAME [PAGE]
 os-optics-kit skills install --dest DIR
 ```
 
-`skills list` prints the index (name, description, command, requirement) as compact JSON. Read one
-skill before using its command; `skills show NAME PAGE` prints a further page it names. `skills install` copies the skill directories and `skills.json` into
-DIR, the skills directory of your agent host; it never overwrites a different file without `--force`.
+`skills list` prints the index as compact JSON. Read a skill before using its command; `skills show NAME PAGE`
+prints a page it names. `skills install` copies the skills and `skills.json` into DIR, your agent host's skills
+directory; it never overwrites a different file without `--force`.
 
 ## Route by task
 
 | Task | Skill / command |
 | --- | --- |
-| Start from a worked design | `run-case`: `os-optics-kit cases list`, `cases copy NAME --dest .`, `cases verify NAME` |
+| Start from a worked design | `run-case`: `cases list --class lens --tag mtf` (values: `cases vocabulary`), `cases copy NAME --dest .`, `cases verify NAME` |
+| Case images / system view (no browser) | `os-optics view RUN --no-browser --snapshot DIR --views iso`; lens section `--section ALL`; kit checkout: `cases images NAME` |
 | Read a run before deciding | `summary RUN` |
 | Discover IDs, units, axes; edit by ID | `edit P.json --describe --ids ID`; `edit P.json --edits OPS.json --out NEW.json --run RUN` |
 | Explore one or two parameters | `sweep SPEC.json --base P.json --out STUDY` |
 | Explain what an edit changed | `compare RUN_A RUN_B --project CURRENT.json --out CMP` |
 | Plots and a report | `plot sweep STUDY --y target:ID`; `report STUDY --project CURRENT.json` |
-| Reproducible 3D figures | `render RUN --out FIGURES --camera 55,22 --background transparent` |
+| Presentation-grade 3D figures (`render` extra + Chrome) | `render RUN --out FIGURES --camera 55,22 --background transparent` |
 | Presentation material | `present` skill: `present init RUN STUDY --out DIR`; `present build DIR/presentation.json` |
-| Restyle without rerunning | `present build DIR/presentation.json --set theme.language=zh-CN --set theme.font_scale=1.3` |
+| Restyle without rerunning | `present build DIR/presentation.json --set theme.language=zh-CN` |
 | Compare saved alternatives | `present init RUN_A RUN_B --labels A,B --out DIR` (target chart, shared-framing views) |
 | Gallery or bundle handoff | `present list DIR`; `present bundle DIR --out X.zip --only ID,...` |
 | Orbit, detail move, sample playback | `present init ... --animate`; fields: `present settings` |
 | Sensitivity, tolerance | `sensitivity SPEC.json --out DIR`; `tolerance SPEC.json --out DIR` |
 | Catalog parts | `candidates --category ... --wavelength-nm ...` |
 | Detector CSV data | `measurements DATA.csv --x ... --signal ... --out DIR` |
-| Share a design or helper | `contrib-case`, `contrib-tool` |
 
-Each command is `os-optics-kit <command>`; `--help` holds its full specification.
+Commands without the `os-optics` prefix are `os-optics-kit <command>`; `--help` holds the full specification.
+Case images and system views need no browser and no `render` extra; `render` and `present` need
+`os-optics-kit[render]` and Chrome or Chromium.
 [Workflow recipes](docs/workflow-recipes.md) give spec keys, outputs and error codes.
 Cases `expansion-focus`, `polarization-control` and `mirror-alignment` include a parameterized
 `workflow.py` (`--list-parameters`, unit-bearing inputs such as `--gap-error-mm 250um`,
@@ -78,9 +80,13 @@ Invalid edits are refused atomically. Repeating an identical `edit` returns `alr
 compute budget, and inspect limited or partial results before raising a limit. Report commands,
 versions, units, selected assessments, freshness and artifact paths.
 
-## Contribute
+## Contribute a case
 
-`os-optics-kit skills show contrib-case` or `contrib-tool`, then `os-optics-kit contrib case
-P.json --name NAME --dry-run`. The user's own GitHub account opens the pull request (`--open-pr`);
-without it the command leaves a bundle with the patch. See
-[contributing with an agent](docs/contributing-with-an-agent.md).
+`os-optics-kit skills show contrib-case`, then `os-optics-kit contrib case P.json --name NAME --class lens
+--domain imaging --tags mtf --dry-run`: it runs the engine, renders the system views browser-free, writes the
+case and patches `cases.json` and the README case tables. By hand in a kit checkout: write `cases/NAME/`;
+`os-optics-kit cases images NAME` records the views (those recorded, else `iso` and a lens section); README.md
+and README.zh-CN.md link each other and show exactly the recorded images; `cases index --write`,
+`python scripts/case_tables.py --write`, `cases index --check`. Values: `cases vocabulary`.
+The user's own GitHub account opens the pull request (`--open-pr`); without it a bundle holds the patch.
+A helper script: `contrib-tool`. See [contributing with an agent](docs/contributing-with-an-agent.md).

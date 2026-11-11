@@ -317,6 +317,23 @@ path and sha256.
 with the theme keys below (`--set language=zh-CN --set font_scale=1.3`); the presentation theme
 writes the caption to `<name>.caption.txt` and the provenance to a separate file.
 
+## System views and case images
+
+```bash
+os-optics view RUN_DIR --no-browser --snapshot DIR --views iso --size 960x540
+os-optics view RUN_DIR --no-browser --snapshot DIR --section ALL --frame scene --size 1200x420
+os-optics-kit cases images NAME [--view V]... [--section ELEMENT|ALL] [--run RUN_DIR]
+os-optics-kit render RUN_DIR --out DIR --camera 55,22 --background transparent
+```
+
+The engine's `os-optics view --snapshot` writes system views as PNG without a browser and without the `render`
+extra: `--views` presets (`iso`, `top`, `front`, `side`, ...), `--camera ANGLE,ELEVATION[,ROLL[,DISTANCE]]`,
+`--focus element:ID`, `--background transparent`, and `--section ELEMENT|ALL` for a true-scale 2D section
+(`ALL`: the whole lens). Case images are made this way: in a kit checkout, `cases images NAME` runs the case
+(or takes a `--run` of it), renders the views and records them in the case's `images.json`. The kit's `render`
+(camera sets with a manifest) and `present` (themed figures, galleries, animations) are presentation tools; they
+need `os-optics-kit[render]` and Chrome or Chromium and are never needed for case images.
+
 ## Presentation material
 
 ```bash
@@ -328,8 +345,8 @@ os-optics-kit present gallery DIR
 os-optics-kit present bundle DIR --out DEST[.zip] [--only ID,...] [--overwrite]
 ```
 
-Needs the plot extra; views and animations need the render extra and Chrome or Chromium
-(`--browser PATH` selects one); MP4 needs the media extra. Nothing is simulated and sources
+Needs the plot extra; its views and animations need the render extra and Chrome or Chromium
+(`--browser PATH` selects one; a plain system view needs neither: `os-optics view --snapshot`, above); MP4 needs the media extra. Nothing is simulated and sources
 are never written. Guide: [English](en/presentation.md) · [简体中文](zh-CN/presentation.md).
 
 `presentation.json` (schema `os-optics-kit.presentation` v1; paths relative to the file):

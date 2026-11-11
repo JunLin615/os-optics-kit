@@ -8,6 +8,7 @@ World up defaults to +Z; use --up-axis X,Y,Z if the optical axis is parallel to 
 
 PNG capture needs Chrome/Chromium and: python -m pip install "os-optics-kit[render]"
 --html-only needs neither. Existing outputs require --overwrite.
+Case images and plain system views need no browser: os-optics view RUN --no-browser --snapshot DIR --views iso
 
 Usage:
   os-optics-kit render RUN_DIR --out DIR --camera 86,8 --camera 55,22 --size 1920x1080

@@ -19,6 +19,9 @@ os-optics catalog sync
 | `render` | 系统视图和动画，另需已安装的 Chrome 或 Chromium |
 | `media` | MP4 动画；GIF 只需要 `plot` |
 
+运行的普通系统视图（例如案例插图）既不需要 `render` 扩展，也不需要浏览器：引擎用
+`os-optics view RUN --no-browser --snapshot DIR --views iso` 直接生成（透镜剖面用 `--section ALL`）。
+
 下面的示例使用目录中的透镜，因此需要 `os-optics catalog sync`。
 
 ## 准备一套演示材料
