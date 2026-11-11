@@ -1320,7 +1320,7 @@ class EvaluatorRecordTests(unittest.TestCase):
 class BenchmarkSlowParallelTests(unittest.TestCase):
     """The benchmark records the parallel runs that were not faster than one worker (measurements replaced)."""
 
-    def run_benchmark(self, execute_s):
+    def run_benchmark(self, execute_s, designs="expander", repeat=1):
         def child(command, **kwargs):
             workers = int(command[-2])
             result = {"design": command[-4], "samples": 2, "workers": workers, "scheduler": "serial"
@@ -1333,8 +1333,18 @@ class BenchmarkSlowParallelTests(unittest.TestCase):
 
         with TempDir() as tmp, mock.patch.object(bench.subprocess, "run", child), \
                 mock.patch.object(resources, "cpu_count", return_value=2):
-            result = bench.run_benchmark(tmp / "bench", workers=[1, 2], samples=2, designs="expander")
+            result = bench.run_benchmark(tmp / "bench", workers=[1, 2], samples=2, designs=designs, repeat=repeat)
             return result, (tmp / "bench" / "bench.md").read_text(encoding="utf-8")
+
+    def test_the_reproduce_line_names_the_installed_command_and_the_options_used(self):
+        for designs, repeat, command in (
+                ("expander", 1, "os-optics-kit study bench --workers 1,2 --samples 2 --design expander`."),
+                ("relay", 3, "os-optics-kit study bench --workers 1,2 --samples 2 --design relay --repeat 3`."),
+                ("both", 1, "os-optics-kit study bench --workers 1,2 --samples 2`.")):
+            with self.subTest(designs=designs, repeat=repeat):
+                _, text = self.run_benchmark({1: 1.0, 2: 0.5}, designs=designs, repeat=repeat)
+                self.assertIn("Reproduce: `" + command, text)
+                self.assertNotIn("scripts/bench_study.py", text)
 
     def test_a_slower_parallel_run_is_recorded(self):
         result, text = self.run_benchmark({1: 1.0, 2: 2.0})

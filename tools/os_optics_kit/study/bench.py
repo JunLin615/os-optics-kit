@@ -276,9 +276,15 @@ def markdown(document):
         if slow else "none") + "."]
     for item in document.get("workers_skipped") or []:
         lines += ["", f"Not run: {item['workers']} workers ({item['reason']})."]
-    lines += ["", "Reproduce: `python scripts/bench_study.py --workers "
-              + ",".join(str(w) for w in sorted({r['workers'] for r in document['runs']}))
-              + f" --samples {document['samples']}`.", ""]
+    designs = sorted({r["design"] for r in document["runs"]})
+    command = ("os-optics-kit study bench --workers "
+               + ",".join(str(w) for w in sorted({r["workers"] for r in document["runs"]}))
+               + f" --samples {document['samples']}")
+    if len(designs) == 1:
+        command += f" --design {designs[0]}"
+    if document["repeat"] > 1:
+        command += f" --repeat {document['repeat']}"
+    lines += ["", f"Reproduce: `{command}`.", ""]
     return "\n".join(lines)
 
 
