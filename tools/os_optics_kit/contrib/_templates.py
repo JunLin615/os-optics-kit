@@ -1,11 +1,14 @@
 """Generated texts of ``os-optics-kit contrib`` that are not contributor templates: the test module of a contributed
 tool and the pull-request descriptions.
 
-The case and skill pages come from the contributor templates templates/CASE.md, templates/README.case.md and
-templates/SKILL.md (``_common.render_template``). Their ``{{key}}`` placeholders:
+The case and skill pages come from the contributor templates templates/CASE.md, templates/README.case.md,
+templates/README.case.zh-CN.md and templates/SKILL.md (``_common.render_template``). Their ``{{key}}`` placeholders:
 
-CASE.md / README.case.md: name, title, summary, what_it_shows, engine, catalog, catalog_text, tools, tags, status,
-targets_rows, results_rows, images, extra_files (``case.prose_values``).
+CASE.md / README.case.md / README.case.zh-CN.md: name, title, summary, what_it_shows, class, domain, provenance,
+publication, source (empty when not given: its ``source: {{source}}`` line is dropped), engine, catalog,
+catalog_text, tools, tags, status, targets_rows, results_rows, images, language_links, extra_files
+(``case.prose_values``; the zh-CN page gets Chinese catalog_text and image captions, and each README the
+language_links line that links the other one).
 SKILL.md: name, description, kind, command, requires, kit_version, when_to_use, when_not_to_use, inputs, outputs,
 example, limits (``tool.skill_values``).
 """
@@ -58,6 +61,16 @@ if __name__ == "__main__":
 PR_BODY_CASE = """## Case `{name}`: {title}
 
 {summary}
+
+### Classification
+
+| Field | Value |
+| --- | --- |
+{classification_rows}
+
+### Images
+
+{images_list}
 
 ### Baseline
 

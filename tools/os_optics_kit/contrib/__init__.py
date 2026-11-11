@@ -1,7 +1,8 @@
 """``os-optics-kit contrib``: prepare a contribution to the kit as a PR-ready patch or a contribution bundle.
 
-``contrib case PROJECT.json --name NAME``: a finished design becomes ``cases/NAME/`` (normalized project.json,
-CASE.md, README.md with engine-rendered images, expected.json), verified by the engine on this device.
+``contrib case PROJECT.json --name NAME --class C --domain D --tags T``: a finished design becomes
+``cases/NAME/`` (normalized project.json, classified CASE.md, README.md and README.zh-CN.md, expected.json, and the
+system views of the engine's browser-free snapshot recorded in images.json), verified by the engine on this device.
 ``contrib tool HELPER.py --name NAME``: a helper with ``main(argv) -> int`` becomes a kit command with its skill page
 and tests.
 
@@ -16,15 +17,19 @@ import sys
 
 USAGE = """usage: os-optics-kit contrib {case,tool} ...
 
-  case PROJECT.json --name NAME [--title T] [--summary S] [--tools a,b] [--tags x,y]
+  case PROJECT.json --name NAME --class C --domain a,b --tags x,y [--provenance P] [--publication P]
+       [--source CITATION] [--title T] [--summary S] [--tools a,b]
        [--repo KIT_CHECKOUT] [--base REF] [--out BUNDLE] [--catalog FILE] [--dry-run] [--open-pr] [--force]
   case --refresh BUNDLE [--repo ...] [--dry-run] [--open-pr]
   tool HELPER.py --name NAME [--command CMD] [--module MODULE] [--description D]
        [--repo KIT_CHECKOUT] [--base REF] [--out BUNDLE] [--dry-run] [--open-pr] [--force]
   tool --refresh BUNDLE [--repo ...] [--dry-run] [--open-pr]
 
-Prepare a case or a tool contribution as a PR-ready patch and bundle. 'os-optics-kit contrib case --help' and
-'os-optics-kit contrib tool --help' for details. Exit codes: 0 ready, 1 verification failed, 4 usage error or refusal.
+Prepare a case or a tool contribution as a PR-ready patch and bundle. Case values: 'os-optics-kit cases
+vocabulary'. Case images come from the engine without a browser or the render extra
+('os-optics view RUN --no-browser --snapshot DIR --views iso'). 'os-optics-kit contrib case --help' and
+'os-optics-kit contrib tool --help' for details. Exit codes: 0 ready, 1 verification failed (or a case view not
+rendered), 4 usage error or refusal.
 """
 
 
