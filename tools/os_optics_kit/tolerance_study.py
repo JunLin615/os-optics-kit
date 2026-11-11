@@ -469,8 +469,8 @@ def aggregate_tolerance(study_dir, *, plots=None, report=None):
     status = "COMPLETED" if counts["by_outcome"]["PASS"] else "NO_FEASIBLE"
     all_rows = [{**nominal_row, "role": "nominal", "feasible": None, "constraint_failures": []}] + \
         [{**r, "role": "sample"} for r in rows]
+    study = agg.finish_study(study_dir, [nominal_row, *rows])  # first: refused while an execution owns the study
     columns = agg.write_table(study_dir, all_rows)
-    study = agg.finish_study(study_dir, [nominal_row, *rows])
     summary = {
         "status": status, "kind": f"{KIND}-summary",
         "sampling": {"generator": GENERATOR, "seed": normalized["seed"], "samples": normalized["samples"],

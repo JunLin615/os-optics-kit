@@ -163,11 +163,14 @@ def write_summary(study_dir, summary):
 
 
 def finish_study(study_dir, rows):
-    """Record the run catalog provenance and the aggregation time in ``study.json``; returns the study."""
-    study = wc.read_json(Path(study_dir) / store.STUDY_FILE)
-    study["catalog"] = wc.run_catalog_identity(rows)
-    study["finished"] = wc.utc_now()
-    store.write_study(study_dir, study)
+    """Record the run catalog provenance and the aggregation time in ``study.json``; returns the study. It holds
+    the study's ownership while it does, so it is refused (``STUDY_RUNNING``) while an execution runs: an
+    aggregation calls it before it writes any other file."""
+    with store.owned(study_dir):
+        study = wc.read_json(Path(study_dir) / store.STUDY_FILE)
+        study["catalog"] = wc.run_catalog_identity(rows)
+        study["finished"] = wc.utc_now()
+        store.write_study(study_dir, study)
     return study
 
 
@@ -188,8 +191,8 @@ def aggregate_generic(study_dir, *, plots=False, report=False):
     for row, (_entry, record) in zip(rows, pairs):
         for key in study.get("row_labels") or []:
             row[key] = record.get(key)
+    study = finish_study(study_dir, rows)  # first: refused while an execution owns the study
     table_columns = write_table(study_dir, rows)
-    study = finish_study(study_dir, rows)
     by_state = state_counts(pairs)
     summary = {
         "status": "COMPLETED", "kind": f"{study.get('kind')}-summary", "counts": counts(rows),

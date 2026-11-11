@@ -35,7 +35,7 @@ run        executes the samples that still need a result and aggregates the stud
 status     plan size, record states, execution block (state RUNNING only while the executing process runs;
            INTERRUPTED when it ended without finishing), last journal events; never runs the Engine.
 aggregate  rewrites table.csv and summary.json (and the planning tool's analysis, plots and report) from the
-           saved records; never runs the Engine.
+           saved records; never runs the Engine; refused (STUDY_RUNNING) while an execution of the study runs.
 candidates plans (and unless --plan-only runs) one sample per Project file, in the order given: parameter
            "candidate" = 1-based index, label "candidate" = file stem; compare, report and present read the
            result like any study.

@@ -402,12 +402,12 @@ def aggregate_sweep(study_dir):
     parameters = normalized["parameters"]
     pairs = agg.collect_records(study_dir)
     rows = [add_derived(row, normalized["derived"]) for row in agg.rows_from_records(study_dir, pairs, parameters)]
-    stopped_by = next((row["sample_id"] for row in rows if row["outcome"] in normalized["stop_on"]), None)
+    stopped_by = (study.get("execution") or {}).get("stopped_by")  # what the execution's stop rule decided
     best, feasible = select_best(rows, normalized["constraints"], normalized["objective"])
     restricted = bool(normalized["constraints"]) or normalized["objective"] is not None
     status = "NO_FEASIBLE" if restricted and feasible == 0 else "COMPLETED"
-    columns = agg.write_table(study_dir, rows)
     study = agg.finish_study(study_dir, rows)
+    columns = agg.write_table(study_dir, rows)
     summary = {
         "status": status, "kind": f"{KIND}-summary", "counts": counts(rows),
         "feasible": feasible, "stopped_by": stopped_by,

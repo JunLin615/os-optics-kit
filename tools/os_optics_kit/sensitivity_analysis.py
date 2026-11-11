@@ -695,11 +695,11 @@ def aggregate_sensitivity(study_dir, *, plots=None, report=None):
     for row in estimate_rows:
         pair = next(p for p in pairs if p["parameter"] == row["parameter"] and p["target"] == row["target"])
         row["rank"] = pair.get("rank")
+    study = agg.finish_study(study_dir, rows)  # first: refused while an execution owns the study
     columns = agg.write_table(study_dir, rows)
     wc.write_csv(study_dir / "sensitivity.csv", estimate_rows, list(estimate_rows[0]) if estimate_rows else [])
     unavailable = [{"parameter": p["parameter"], "target": p["target"]} for p in pairs if p["derivative"] is None]
     status = "INCOMPLETE" if unavailable else "COMPLETED"
-    study = agg.finish_study(study_dir, rows)
     summary = {
         "status": status, "kind": f"{KIND}-summary",
         "method": {"default": "central finite differences", "formulas": METHOD_TEXT,

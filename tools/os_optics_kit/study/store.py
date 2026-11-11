@@ -9,12 +9,15 @@ Layout (``samples/``, ``table.csv`` and ``summary.json`` are what the plot, repo
       samples/<id>/        project.json, run/ (Engine run directory), sample.json (the sample record)
       journal.jsonl        append-only events: planned, started, finished, failed, cancelled, reused, ...
       owner.json           while an execution runs: its process (pid, host, process start), start time and id
+      owner.lock           taken for a moment by whoever takes ownership (never removed)
       table.csv, summary.json   written by the aggregation step, rows in plan order
 
 Writers: one execution at a time owns a study (``acquire_execution``: a second one is refused with
-``STUDY_RUNNING`` while the owner's process lives, and takes over a record whose process is gone); the process that
-evaluates a sample is the only writer of that sample's directory; the owning process (the parent) is the only writer
-of every other file. Files are written to a uniquely named temporary file and moved into place, so a reader never
+``STUDY_RUNNING`` while the owner's process lives, and takes over a record whose process is gone; ``owner.lock``
+makes taking ownership atomic); planning (``plan_study``, the removals of ``prepare_study_dir``) and aggregation
+(``aggregate.finish_study``) hold the ownership while they write, so they are refused while an execution runs. The
+process that evaluates a sample is the only writer of that sample's directory; the owning process (the parent) is
+the only writer of every other file. Files are written to a uniquely named temporary file and moved into place, so a reader never
 sees half a file and ``samples/<id>/sample.json`` marks a finished sample. Every sample id read from ``plan.jsonl``
 or a request is checked before it names a path.
 
@@ -26,6 +29,7 @@ resume. A record kept for an unchanged request takes the labels of the current p
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 from pathlib import Path
@@ -47,7 +51,7 @@ REUSABLE_STATES = ("COMPLETED", "REFUSED")
 STUDY_FILE, PLAN_FILE, JOURNAL_FILE = "study.json", "plan.jsonl", "journal.jsonl"
 REQUESTS_DIR, SAMPLES_DIR = "requests", "samples"
 SAMPLE_FILE, ATTEMPT_FILE = "sample.json", "attempt.json"
-OWNER_FILE = "owner.json"
+OWNER_FILE, OWNER_LOCK = "owner.json", "owner.lock"
 #: What a plan owns in a study directory (removed by an overwrite, next to the planning tool's own files).
 PLAN_FILES = (PLAN_FILE, JOURNAL_FILE)
 PLAN_DIRS = (REQUESTS_DIR,)
@@ -331,7 +335,7 @@ def prepare_study_dir(study_dir, *, overwrite=False, resume=False, files=(), dir
     ``overwrite`` ``files`` / ``dirs`` (the planning tool's outputs) and the plan files are removed first.
     Returns ``(path, resuming)``."""
     study_dir = Path(study_dir)
-    if study_dir.exists() and any(study_dir.iterdir()):
+    if study_dir.exists() and any(item.name != OWNER_LOCK for item in study_dir.iterdir()):
         require_not_running(study_dir)
         if resume and not overwrite and has_study(study_dir):
             return study_dir, True
@@ -339,10 +343,11 @@ def prepare_study_dir(study_dir, *, overwrite=False, resume=False, files=(), dir
             hint = "it holds no planned study to resume; " if resume else ""
             raise wc.WorkflowError("OUTPUT_EXISTS", f"{study_dir} is not empty; {hint}choose a new directory, "
                                    "--resume a planned study or use --overwrite", out=study_dir.as_posix())
-        for name in (*dirs, *PLAN_DIRS, SAMPLES_DIR):
-            remove_tree(study_dir / name)
-        for name in (*files, *PLAN_FILES, STUDY_FILE):
-            (study_dir / name).unlink(missing_ok=True)
+        with owned(study_dir):  # an execution that starts meanwhile is refused, and this removal is refused by one
+            for name in (*dirs, *PLAN_DIRS, SAMPLES_DIR):
+                remove_tree(study_dir / name)
+            for name in (*files, *PLAN_FILES, STUDY_FILE):
+                (study_dir / name).unlink(missing_ok=True)
     study_dir.mkdir(parents=True, exist_ok=True)
     return study_dir, False
 
@@ -354,31 +359,32 @@ def plan_study(study_dir, header, requests, *, resume=False):
     ``installed_catalog`` (``wc.catalog_identity()``). With ``resume`` and an existing study in ``study_dir``, the
     saved Engine build and catalog release must equal the current ones (``STUDY_IDENTITY_CHANGED`` otherwise) and
     the saved ``kind`` must equal the header's; the plan is replaced, and samples whose request is unchanged are
-    reused by the next execution. Returns ``(study, entries)``."""
+    reused by the next execution. Refused (``STUDY_RUNNING``) while an execution runs: it holds the study's
+    ownership while it writes. Returns ``(study, entries)``."""
     study_dir = Path(study_dir)
     entries = [plan_entry(validate_request(request)) for request in requests]
     identity = study_identity(entries, header.get("engine") or {}, header.get("installed_catalog") or {})
-    require_not_running(study_dir)
-    previous = None
-    if resume and has_study(study_dir):
-        previous = read_study(study_dir)
-        if previous.get("kind") != header.get("kind"):
-            raise wc.WorkflowError("STUDY_KIND_CHANGED", f"{study_dir.as_posix()} holds a study of kind "
-                                   f"{previous.get('kind')!r}, not {header.get('kind')!r}; choose another directory "
-                                   "or --overwrite", study_dir=study_dir.as_posix())
-        require_same_identity(previous["identity"], identity, plan=False, study_dir=study_dir)
-    study = {**header, "schema": STUDY_SCHEMA, "schema_version": STUDY_SCHEMA_VERSION, "identity": identity,
-             "execution": {"state": "PLANNED"}}
-    if previous is not None:
-        study["started"] = previous.get("started", study.get("started"))
-        if isinstance(previous.get("execution"), dict):
-            study["execution"] = {**previous["execution"], "state": "PLANNED"}
     study_dir.mkdir(parents=True, exist_ok=True)
-    write_study(study_dir, study)
-    entries = write_plan(study_dir, requests)
-    append_journal(study_dir, "planned", samples=len(entries), plan_hash=identity["plan_hash"],
-                   replaced_plan=bool(previous is not None
-                                      and previous["identity"].get("plan_hash") != identity["plan_hash"]) or None)
+    with owned(study_dir):
+        previous = None
+        if resume and has_study(study_dir):
+            previous = read_study(study_dir)
+            if previous.get("kind") != header.get("kind"):
+                raise wc.WorkflowError("STUDY_KIND_CHANGED", f"{study_dir.as_posix()} holds a study of kind "
+                                       f"{previous.get('kind')!r}, not {header.get('kind')!r}; choose another "
+                                       "directory or --overwrite", study_dir=study_dir.as_posix())
+            require_same_identity(previous["identity"], identity, plan=False, study_dir=study_dir)
+        study = {**header, "schema": STUDY_SCHEMA, "schema_version": STUDY_SCHEMA_VERSION, "identity": identity,
+                 "execution": {"state": "PLANNED"}}
+        if previous is not None:
+            study["started"] = previous.get("started", study.get("started"))
+            if isinstance(previous.get("execution"), dict):
+                study["execution"] = {**previous["execution"], "state": "PLANNED"}
+        write_study(study_dir, study)
+        entries = write_plan(study_dir, requests)
+        append_journal(study_dir, "planned", samples=len(entries), plan_hash=identity["plan_hash"],
+                       replaced_plan=bool(previous is not None
+                                          and previous["identity"].get("plan_hash") != identity["plan_hash"]) or None)
     return study, entries
 
 
@@ -581,31 +587,106 @@ def require_not_running(study_dir):
         raise _running_error(study_dir, owner)
 
 
+#: Seconds a caller waits for ``owner.lock`` (held only while another caller takes ownership).
+TAKEOVER_WAIT_S = 10.0
+
+
+def _sharing_retry(action):
+    """``action()``, retried for about a second while Windows refuses it because another process has the file open
+    for a moment (a reader of ``owner.json``, or a removal not finished yet)."""
+    for attempt in range(20):
+        try:
+            return action()
+        except PermissionError:
+            if attempt == 19:
+                raise
+            time.sleep(0.05)
+    return None
+
+
+def _try_lock(fd):
+    if sys.platform == "win32":
+        import msvcrt
+
+        msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+    else:
+        import fcntl
+
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+
+def _unlock(fd):
+    if sys.platform == "win32":
+        import msvcrt
+
+        os.lseek(fd, 0, os.SEEK_SET)
+        msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+    else:
+        import fcntl
+
+        fcntl.flock(fd, fcntl.LOCK_UN)
+
+
+@contextlib.contextmanager
+def _takeover_lock(study_dir):
+    """Hold ``owner.lock`` (an operating-system lock that ends with its process): one caller at a time reads,
+    replaces and writes ``owner.json``. The file is never removed (removing it would let two callers lock two
+    files)."""
+    fd = _sharing_retry(lambda: os.open(Path(study_dir) / OWNER_LOCK, os.O_CREAT | os.O_RDWR))
+    try:
+        deadline = time.monotonic() + TAKEOVER_WAIT_S
+        while True:
+            try:
+                _try_lock(fd)
+                break
+            except OSError:
+                if time.monotonic() > deadline:
+                    raise _running_error(study_dir, read_owner(study_dir)) from None
+                time.sleep(0.01)
+        try:
+            yield
+        finally:
+            _unlock(fd)
+    finally:
+        os.close(fd)
+
+
 def acquire_execution(study_dir):
     """Take ownership of ``study_dir`` for one execution: write ``owner.json`` (pid, host, process start, time, id).
-    A record whose process is gone is taken over; a live one refuses with ``STUDY_RUNNING``. Returns the record."""
+    A record whose process is gone is taken over; a live one refuses with ``STUDY_RUNNING``. Callers take turns
+    under ``owner.lock``, so of two callers that find the same gone owner exactly one takes over. Returns the
+    record."""
     path = owner_path(study_dir)
     _alive, token = process_state(os.getpid())
     owner = {"pid": os.getpid(), "host": socket.gethostname(), "process_started": token, "started": timestamp(),
              "id": uuid.uuid4().hex}
-    for _attempt in range(3):
-        try:
-            fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        except FileExistsError:
-            current = read_owner(study_dir)
+    with _takeover_lock(study_dir):
+        current = read_owner(study_dir)
+        if current is not None:
             if not _owner_stale(study_dir, current):
-                raise _running_error(study_dir, current) from None
-            if read_owner(study_dir) == current:  # still the stale record just read: take it over
-                path.unlink(missing_ok=True)
-            continue
+                raise _running_error(study_dir, current)
+            _sharing_retry(lambda: path.unlink(missing_ok=True))  # the record of a process that is gone
+        try:
+            fd = _sharing_retry(lambda: os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+        except FileExistsError:  # written by a caller that does not take the lock (another kit version)
+            raise _running_error(study_dir, read_owner(study_dir)) from None
         with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
             handle.write(wc.json_text(owner))
-        return owner
-    raise _running_error(study_dir, read_owner(study_dir))
+    return owner
 
 
 def release_execution(study_dir, owner):
     """Remove the ownership record of this execution (one taken over by another process is left alone)."""
     current = read_owner(study_dir)
     if current and owner and current.get("id") == owner.get("id"):
-        owner_path(study_dir).unlink(missing_ok=True)
+        _sharing_retry(lambda: owner_path(study_dir).unlink(missing_ok=True))
+
+
+@contextlib.contextmanager
+def owned(study_dir):
+    """Hold the ownership of ``study_dir`` for a block of writes (``STUDY_RUNNING`` while an execution runs)."""
+    owner = acquire_execution(study_dir)
+    try:
+        yield owner
+    finally:
+        release_execution(study_dir, owner)
