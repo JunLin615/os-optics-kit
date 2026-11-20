@@ -34,6 +34,34 @@ class EngineControlsTests(unittest.TestCase):
             self.assertEqual((best, count), (None, 0))
             self.assertFalse(row["objective_valid"])
         self.assertEqual(row["target:power"], 1.0)
+        # value_use "reported" ranks the bounded value, and the failure text of the default names the kind.
+        bounded = {"sample_id": "s1", "outcome": "PASS", "target:power": 1.0, "target:power:exact": False,
+                   "target:power:value_kind": "BOUNDED"}
+        best, count = sweep.select_best([bounded], [], {"column": "target:power", "sense": "maximize"})
+        self.assertEqual((best, count, bounded["constraint_failures"]),
+                         (None, 0, ["target:power has no usable value (BOUNDED)"]))
+        best, count = sweep.select_best([bounded], [], {"column": "target:power", "sense": "maximize"}, "reported")
+        self.assertEqual((best["sample_id"], count), ("s1", 1))
+        self.assertEqual(wc.values_used([bounded], ["target:power"], "reported"), {"target:power": {"BOUNDED": 1}})
+
+    def test_value_kinds(self):
+        def use(**fields):
+            return wc.target_value_use({"value": 1.0, "status": "PASS", "assessment": "MET", **fields})["kind"]
+
+        self.assertEqual(use(), "EXACT")
+        self.assertEqual(use(status="FAIL", assessment="UNMET"), "EXACT")
+        self.assertEqual(use(value=None), "NO_VALUE")
+        self.assertEqual(use(value=float("inf")), "NO_VALUE")
+        self.assertEqual(use(applicability_issue_codes=["MODEL_WAVELENGTH_OUTSIDE_BAND"]), "OUTSIDE_MODEL")
+        self.assertEqual(use(status="OUT_OF_MODEL_SCOPE", assessment="INDETERMINATE"), "OUTSIDE_MODEL")
+        self.assertEqual(use(quantity_state="BOUNDED"), "BOUNDED")
+        self.assertEqual(use(quantity_state="UNKNOWN"), "QUANTITY_UNKNOWN")
+        self.assertEqual(use(status="UNKNOWN", assessment="INDETERMINATE"), "UNDECIDED")
+        for kind in wc.VALUE_KINDS:
+            self.assertEqual(wc.value_usable(kind), kind == "EXACT")
+            self.assertEqual(wc.value_usable(kind, "reported"), kind != "NO_VALUE")
+        with self.assertRaises(wc.WorkflowError):
+            wc.value_use_setting("all")
 
     def test_effective_assessment_controls_constraints(self):
         row = {"outcome": "UNKNOWN", "target:p:status": "PASS",
@@ -113,34 +141,39 @@ class EngineControlsTests(unittest.TestCase):
             record = wc.run_sample(limited, directory / "limited_free")
             self.assertEqual(record["execution"]["outcome"], "PARTIAL")
             self.assertFalse(record["requirements"]["declared"])
-            # A calculation that did not complete is never NOT_APPLICABLE (exit 0), even without targets.
+            # Without targets a PARTIAL run is UNKNOWN, not NOT_APPLICABLE, and exits 3 (the calculation did not
+            # complete), as under the Engine's requirements exit contract; the execution is stated beside it.
             self.assertEqual((record["status"], record["outcome"]), ("UNKNOWN", "UNKNOWN"))
             from os_optics_kit import result_summary
             from tests.workflow_fixtures import invoke
             code, summary, error = invoke(result_summary.main, [record["run_dir"]])
-            self.assertEqual((code, error), (2, ""))
+            self.assertEqual((code, error), (3, ""))
             self.assertEqual(summary["outcome"]["execution"]["outcome"], "PARTIAL")
             self.assertEqual(summary["requirement_outcome"], "UNKNOWN")
 
-    def test_partial_execution_is_never_pass(self):
+    def test_partial_execution_is_never_a_pass_and_exits_3(self):
+        """A PARTIAL run did not complete: met targets or none leave it UNKNOWN (not PASS / NOT_APPLICABLE), an
+        unmet or out-of-model target keeps FAIL / OUT_OF_MODEL, and every PARTIAL run exits 3, the Engine's
+        ``requirements`` code for an incomplete calculation."""
         met = [{"id": "t", "assessment": "MET", "status": "PASS"}]
         unmet = [{"id": "t", "assessment": "UNMET", "status": "FAIL"}]
         out = [{"id": "t", "assessment": "INDETERMINATE", "status": "OUT_OF_MODEL_SCOPE"}]
-        for execution, targets, expected in (
-            ({"outcome": "COMPLETED"}, met, "PASS"),
-            ({"outcome": "COMPLETED"}, [], "NOT_APPLICABLE"),
-            ({"outcome": "PARTIAL"}, met, "UNKNOWN"),
-            ({"outcome": "PARTIAL"}, [], "UNKNOWN"),
-            ({"outcome": "PARTIAL"}, unmet, "FAIL"),
-            ({"outcome": "PARTIAL"}, out, "OUT_OF_MODEL"),
-            ({"outcome": "FAILED"}, met, "ERROR"),
-            ({"outcome": "CANCELLED"}, met, "ERROR"),
-            (None, met, "PASS"),
+        for execution, targets, expected, code in (
+            ({"outcome": "COMPLETED"}, met, "PASS", 0),
+            ({"outcome": "COMPLETED"}, [], "NOT_APPLICABLE", 0),
+            ({"outcome": "COMPLETED"}, unmet, "FAIL", 1),
+            ({"outcome": "PARTIAL"}, met, "UNKNOWN", 3),
+            ({"outcome": "PARTIAL"}, [], "UNKNOWN", 3),
+            ({"outcome": "PARTIAL"}, [{"id": "t", "assessment": "INDETERMINATE", "status": "UNKNOWN"}], "UNKNOWN", 3),
+            ({"outcome": "PARTIAL"}, unmet, "FAIL", 3),
+            ({"outcome": "PARTIAL"}, out, "OUT_OF_MODEL", 3),
+            ({"outcome": "FAILED"}, met, "ERROR", 4),
+            ({"outcome": "CANCELLED"}, met, "ERROR", 4),
+            (None, met, "PASS", 0),
         ):
             with self.subTest(execution=execution, targets=targets):
                 self.assertEqual(wc.requirement_outcome("UNKNOWN", execution, [], targets), expected)
-                self.assertEqual(wc.WORKFLOW_EXIT_CODES[expected], {"PASS": 0, "NOT_APPLICABLE": 0, "FAIL": 1,
-                                 "UNKNOWN": 2, "OUT_OF_MODEL": 3, "ERROR": 4}[expected])
+                self.assertEqual(wc.requirement_exit_code(expected, execution, wc.WORKFLOW_EXIT_CODES), code)
 
     def test_objective_validity_and_requirement_feasibility_are_separate(self):
         rows = [

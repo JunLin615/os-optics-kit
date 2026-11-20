@@ -1,4 +1,4 @@
-"""Checks of os_optics_kit.optical_designs with the installed os-optics (the kit requires >=0.12,<0.13).
+"""Checks of os_optics_kit.optical_designs with the installed os-optics (the requirement is `_engine.ENGINE_REQUIREMENT`).
 
 The native designs need no catalog. The catalog variants are skipped when no catalog release is installed.
 Run from the repository root: python -m unittest discover -s tests -v

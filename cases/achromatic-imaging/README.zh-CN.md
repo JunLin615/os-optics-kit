@@ -5,7 +5,12 @@
 一个 75 mm 胶合双透镜对无穷远轴上点在夫琅禾费 F、d、C 三条谱线上成像。核心问题是：在同一固定像面上，
 三个波长能否同时获得小几何光斑和有用的衍射对比度？保存的原生成像分析给出 PSF、子午/弧矢 MTF 和包围能量。
 
-![声明式物镜与像面](images/objective.png)
+![三维视图：光源 SRC、胶合物镜 OBJ、固定像面 `image` 与三种颜色的追迹光束](images/iso.png)
+
+![沿物镜光轴的截面：冠玻璃与火石玻璃镜片、会聚光线与像面](images/section.png)
+
+两幅图都是引擎对 `project.json` 一次运行的无浏览器快照：`os-optics view run --no-browser --snapshot DIR` 加 `--views iso --size 960x540` 运行一次，再加 `--section ALL --frame=scene --size 1200x420` 运行一次。
+在 kit 检出目录中，`os-optics-kit cases images achromatic-imaging` 会按 `images.json` 中的记录原样重新渲染这些视图。
 
 ## 模型与要求
 
@@ -29,10 +34,10 @@ PSF/MTF 需要有界孔径。无界模型返回 UNKNOWN 和 `PUPIL_NOT_BOUNDED`�
 
 结果**逐波长**报告；每幅 PSF 按该波长的透射能量归一化，单位为 1/µm²。记录等入射权重，不把各 MTF 幅值
 平均为多色 MTF。包围能量以峰值为中心、以透射总能量为分母。衍射参考保持相同追迹孔径及振幅，去除相位误差。
-本轴上旋转对称视场的 T/S 曲线在绘图分辨率下重合（差异<0.0001）；线偏振产生微弱的菲涅耳渐晕。
+本轴上旋转对称视场的 T/S 曲线在绘图分辨率下重合（差异<0.0001）；线偏振产生微弱的菲涅耳切趾。
 
 原生 Project 目标为高斯等功率孔径环的 `spot_rms_mm`（每条谱线≤5 µm），以及 d 线
-`spot_centroid_u_mm/v_mm`（±50 µm）。它们用于 `results targets` 和 Kit 原生研究。
+`spot_centroid_u_mm/v_mm`（±50 µm）。它们用于常规 `results targets` 和 Kit 研究。
 独立的**派生成像检查**读取状态为 KNOWN 的原生分析量：均匀孔径几何 RMS≤2 µm、50% 能量半径≤5 µm，
 10/20/40 cycles/mm 处 T/S MTF≥0.85/0.75/0.55。几何光斑限值小于此孔径 7.4–10.0 µm 的艾里第一暗环半径；
 能量与对比度限值保证最长波长仍有实用成像质量。另检查 d 线 EFL 为 75 mm±1%，最小几何 RMS 焦点跨度≤0.06 mm。
@@ -48,8 +53,8 @@ os-optics-kit cases verify achromatic-imaging
 python workflow.py all --out output
 ```
 
-系统视图需要 Chrome/Chromium。也可分别执行 `compute`、`study`、`report`、`present`。新的科学计算使用新输出目录；
-已有研究目录会被拒绝覆盖。
+`all` 最后执行 `present`，生成可选的展示图库，它需要 `render` 扩展和 Chrome/Chromium。
+也可分别执行 `compute`、`study`、`report`、`present`。新的科学计算使用新输出目录；已有研究目录会被拒绝覆盖。
 
 ```bash
 python workflow.py compute --out shifted --image-shift-mm 0.05
@@ -60,10 +65,10 @@ os-optics results imaging output/nominal/run --monitor image --request imaging-r
 ```
 
 最后一条是基线成像计算的直接引擎命令。成像分析会执行密集光线计算；`workflow.py present` 只读取保存的 JSON，
-不追迹。Kit 原生展示支持系统视图；`figures.py` 使用 Kit 主题、来源记录、图库和打包 API，把成像数组转换成
+不追迹。Kit 原生展示类型绘制图库中的三维视图；`figures.py` 使用 Kit 主题、来源记录、图库和打包 API，把成像数组转换成
 PSF/MTF/能量及研究图。完整重绘使用案例的 `present` 命令。`--language en|zh-CN` 和
 `--background light|dark` 组合得到四种展示版本。
-原生 `presentation.json` 描述系统视图；完整图库通过 `assets.json` 登记全部五张图。
+原生 `presentation.json` 描述该三维视图；完整图库通过 `assets.json` 登记全部五张图。
 使用 `os-optics-kit present build output/presentation/presentation.json --out native-view`
 可将原生视图重建到独立图库。`workflow.py report --out output` 从保存结果刷新双语案例表格。
 

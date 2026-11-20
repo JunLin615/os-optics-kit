@@ -1,14 +1,18 @@
 # 可制造厚度的五片中波红外成像镜头
 
+[English](README.md) · [智能体案例说明](CASE.md)
+
 一个中波红外折射成像镜头：Si、ZnSe、CaF2、Si、ZnSe 五片，F/2，EFL 100 mm，半视场 3°，在 3、4、
 5 µm 三个波长上评价。本案例要说明两件事，而且引擎让这两件事同时可见：设计被约束在磨边能做出来
 的厚度范围内；像质由引擎的**标量衍射**模型给出，而不是由弥散斑给出。
 
+![三维视图：九个视场与波长光源、5 片镜头 MW 与像面](images/iso.png)
+
 ## 设计
 
-![系统剖面，真实比例](images/system.png)
+![沿镜头光轴的截面，真实比例：光阑、L1–L5、像面与追迹光线](images/section.png)
 
-光阑在首片之前，开孔 25 mm；对 100 mm 焦距而言这就是 F/2。每片玻璃的中心厚约束在 2–12 mm、
+光阑在首片之前，半口径 25 mm（直径 50 mm）；对 100 mm 焦距而言这就是 F/2。每片玻璃的中心厚约束在 2–12 mm、
 边缘厚约束在 1.5–3 mm，所有空气间隔在边缘处保持正值：
 
 | 片 | 材料 | 通光半径 | 中心厚 | 边缘厚 |
@@ -22,7 +26,7 @@
 ## 引擎给出的结果
 
 九条光束（三个视场 × 三个波长）全部到达像面，运行在模型范围内，没有光束被光阑部分拦截。引擎的
-衍射模型接受了全部九个视场：
+衍射模型接受了全部九条光束：
 
 | 量 | 值 |
 | --- | --- |
@@ -49,13 +53,13 @@ MTF 曲线就是这个被测锥的衍射 MTF。
 
 ![各视场各波长的弥散斑半径](images/spot.png)
 
-## 本案例显式呈现的两个引擎行为
+## 本案例显式呈现的引擎行为
 
 **在这里几何 MTF 是错的指标，而且引擎自己也这么说。** 每个视场的 `geometric_mtf_*` 都返回
 `OUT_OF_MODEL_SCOPE`，原因是 `GEOMETRIC_REGIME_NOT_MET`：*"the wavefront error (0.126 waves
 RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to
-read"*。像质越好，几何 MTF 越不成立——它的前提本来就是大像差。若为一个波前远优于 1 wave 的镜头
-报告光线 MTF，引用的就是引擎拒绝为之背书的量。
+read"*。像质越好，几何 MTF 越不成立——它的前提本来就是大像差。若一个案例为这支镜头报告基于光线的
+MTF，引用的就是引擎拒绝为之背书的量。
 
 **运行状态是 WARNING，这是引擎的性质，不是镜头的缺陷。** 引擎的杂散光检索在玻璃体内沿每条反射
 分支做无界递归，因此任何透射镜头最终都会耗尽路径预算：
@@ -67,8 +71,16 @@ read"*。像质越好，几何 MTF 越不成立——它的前提本来就是大
 | `UNTRACED_REFLECTION` 中的功率 | 0.00900 W 中的 0.00806 W |
 | 像面处功率 | 0.00094 W，每一行 `conserved: true` |
 
-主光束被完整追迹：九个光源全部 `DETECTED`，九条目标全部 MET，未计入的功率是未镀膜表面的部分
-反射，引擎把它记为 sink 而不是追下去。把 `max_paths` 调大只会让运行更久，不会改变答案。
+主光束被完整追迹：九个光源全部 `DETECTED`，九条目标全部 MET。把 `max_paths` 调大只会让运行更久，
+不会改变答案。
+
+**为什么这里有 89.5% 的功率未被追迹，以及它为什么不会使像产生偏差。** 这些表面都未镀膜，而中波
+红外材料的反射很强：n = 3.43 的硅每个面反射 0.30，n = 2.44 的 ZnSe 反射 0.17。十个面串联只透过
+10.5%，引擎把其中每一次反射都记为 `UNTRACED_REFLECTION` sink，而不是继续追下去。逐面的数字与
+菲涅耳公式一致：3 µm 轴上光束在 S1 损失输入的 0.3011，在 S4 损失到达该面功率的 0.175。成像模型
+并不从损失的光出发：它声明的依据是 *each ray carries the irradiance its field keeps to the plane — a
+sample's amplitude, the interfaces' and coatings' transmissions*，因此 Strehl 与 MTF 按各面实际透过
+的振幅加权。未追迹的份额是镀膜问题，而不是追迹问题；目录中为这些材料提供的增透膜会改变它。
 
 ![各视场各波长的波前误差与 Strehl 比](images/wavefront.png)
 
@@ -79,7 +91,15 @@ os-optics project check project.json
 os-optics project run project.json --out-dir run
 os-optics results targets run
 os-optics results imaging run --monitor image_plane --request imaging-request.json
+os-optics view run --no-browser --snapshot views --views iso --size 1280x560
+os-optics view run --no-browser --snapshot views --section ALL --frame=scene --size 1600x700
+python figures.py run --out images
 ```
+
+三维视图与截面是引擎对 `project.json` 一次运行的快照（上面两行 `os-optics view`，选项与记录一致；在 kit 检出中
+由 `os-optics-kit cases images midwave-infrared-imager` 按 `images.json` 中的记录原样重新渲染）。`figures.py` 用同一条
+`results imaging` 调用从这次运行画出 MTF、弥散斑与波前图（matplotlib 随
+`pip install "os-optics-kit[plot]"` 安装）。
 
 `data/engine-midwave.json` 收录了引擎为这次运行产出的每一个量，连同它的状态、依据，以及引擎拒绝给出
 时的 `reason` 与 `message` 原文。`expected.json` 记录运行状态与每条目标的判定。

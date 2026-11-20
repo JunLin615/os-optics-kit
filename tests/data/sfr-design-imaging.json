@@ -1,0 +1,580 @@
+{
+ "schema": "opensci.analysis_result",
+ "schema_version": "1.0",
+ "analysis": "IMAGING",
+ "analysis_version": "1.1",
+ "identity": {
+  "physical": {
+   "engine_build_id": "0.13.0+3d35df1120bed843",
+   "engine_input_hash": "527c41c24d3b63d5ca07ab1b8e232061d213d74b7bdb86ef62407e9e7a572b61",
+   "run_result_hash": "0e296c906dd9b81378b91712fa26fd5d976e899229a8739836b9199ad93d1ad5",
+   "settings_hash": "3e190b00a6408ffaf5cb816c7b661c8f77ecec485779eb2ccbd2c6584eb44f29"
+  },
+  "requirements": null
+ },
+ "execution": {
+  "outcome": "COMPLETED",
+  "termination": "COMPLETED",
+  "reason": "",
+  "complete": true,
+  "budgets": {
+   "limits": {},
+   "exhausted": [],
+   "exhausted_by_phase": {},
+   "affected_source_ids": [],
+   "untraced_power_W": null,
+   "affected_path_ids": [],
+   "affected_observation_ids": []
+  }
+ },
+ "settings": {
+  "request": {
+   "fields": null,
+   "wavelengths_nm": null,
+   "crossing_index": null,
+   "launch_grid": 256,
+   "launch_radius_beam_radii": 8.8542,
+   "psf_samples": 256,
+   "psf_half_width_um": 250.0,
+   "frequencies_cyc_per_mm": [
+    10.0,
+    20.0,
+    30.0,
+    40.0,
+    50.0,
+    60.0,
+    80.0,
+    100.0
+   ],
+   "reference": "CENTROID",
+   "include_psf_map": false
+  },
+  "monitor": "image_plane",
+  "random_seed": null,
+  "sampling": "a square grid of rays over the launch disc, deterministic"
+ },
+ "models": [],
+ "quantities": [
+  {
+   "quantity_id": "SRC0#0.geometric_mtf_tangential",
+   "name": "geometric MTF, tangential",
+   "unit": null,
+   "scope": {
+    "configuration_id": null,
+    "observation_id": "image_plane",
+    "field_id": null,
+    "source_id": "SRC0",
+    "path_id": null,
+    "surface_id": null,
+    "wavelength_nm": 587.5618
+   },
+   "state": "OUT_OF_MODEL_SCOPE",
+   "origin": "MODELED",
+   "value": null,
+   "values_ref": null,
+   "interval": null,
+   "basis": "SRC0#0.geometric_mtf",
+   "convergence": null,
+   "reason": "GEOMETRIC_REGIME_NOT_MET",
+   "message": "the wavefront error (0.328 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+   "missing": [],
+   "depends_on": [],
+   "source": null
+  },
+  {
+   "quantity_id": "SRC0#0.geometric_mtf_sagittal",
+   "name": "geometric MTF, sagittal",
+   "unit": null,
+   "scope": {
+    "configuration_id": null,
+    "observation_id": "image_plane",
+    "field_id": null,
+    "source_id": "SRC0",
+    "path_id": null,
+    "surface_id": null,
+    "wavelength_nm": 587.5618
+   },
+   "state": "OUT_OF_MODEL_SCOPE",
+   "origin": "MODELED",
+   "value": null,
+   "values_ref": null,
+   "interval": null,
+   "basis": "SRC0#0.geometric_mtf",
+   "convergence": null,
+   "reason": "GEOMETRIC_REGIME_NOT_MET",
+   "message": "the wavefront error (0.328 waves RMS) is below 1.0 wave: diffraction sets the MTF here, and the diffraction MTF is the one to read",
+   "missing": [],
+   "depends_on": [],
+   "source": null
+  },
+  {
+   "quantity_id": "SRC0#0.mtf_tangential",
+   "name": "mtf, tangential (null beyond the map's Nyquist frequency)",
+   "unit": null,
+   "scope": {
+    "configuration_id": null,
+    "observation_id": "image_plane",
+    "field_id": null,
+    "source_id": "SRC0",
+    "path_id": null,
+    "surface_id": null,
+    "wavelength_nm": 587.5618
+   },
+   "state": "KNOWN",
+   "origin": "MODELED",
+   "value": null,
+   "values_ref": "SRC0#0.mtf_tangential",
+   "interval": null,
+   "basis": "SRC0#0.diffraction",
+   "convergence": {
+    "method": "REFINEMENT",
+    "parameter": "launch_grid 256 doubled",
+    "coarse": null,
+    "fine": null,
+    "difference": 0.000196682205,
+    "resolution": null,
+    "converged": true
+   },
+   "reason": null,
+   "message": "",
+   "missing": [],
+   "depends_on": [],
+   "source": null
+  },
+  {
+   "quantity_id": "SRC0#0.mtf_sagittal",
+   "name": "mtf, sagittal (null beyond the map's Nyquist frequency)",
+   "unit": null,
+   "scope": {
+    "configuration_id": null,
+    "observation_id": "image_plane",
+    "field_id": null,
+    "source_id": "SRC0",
+    "path_id": null,
+    "surface_id": null,
+    "wavelength_nm": 587.5618
+   },
+   "state": "KNOWN",
+   "origin": "MODELED",
+   "value": null,
+   "values_ref": "SRC0#0.mtf_sagittal",
+   "interval": null,
+   "basis": "SRC0#0.diffraction",
+   "convergence": {
+    "method": "REFINEMENT",
+    "parameter": "launch_grid 256 doubled",
+    "coarse": null,
+    "fine": null,
+    "difference": 0.000205599222,
+    "resolution": null,
+    "converged": true
+   },
+   "reason": null,
+   "message": "",
+   "missing": [],
+   "depends_on": [],
+   "source": null
+  },
+  {
+   "quantity_id": "SRC0#0.diffraction_limited_mtf_tangential",
+   "name": "diffraction limited mtf, tangential (null beyond the map's Nyquist frequency)",
+   "unit": null,
+   "scope": {
+    "configuration_id": null,
+    "observation_id": "image_plane",
+    "field_id": null,
+    "source_id": "SRC0",
+    "path_id": null,
+    "surface_id": null,
+    "wavelength_nm": 587.5618
+   },
+   "state": "KNOWN",
+   "origin": "MODELED",
+   "value": null,
+   "values_ref": "SRC0#0.diffraction_limited_mtf_tangential",
+   "interval": null,
+   "basis": "SRC0#0.diffraction",
+   "convergence": {
+    "method": "REFINEMENT",
+    "parameter": "launch_grid 256 doubled",
+    "coarse": null,
+    "fine": null,
+    "difference": 0.00014874028,
+    "resolution": null,
+    "converged": true
+   },
+   "reason": null,
+   "message": "",
+   "missing": [],
+   "depends_on": [],
+   "source": null
+  },
+  {
+   "quantity_id": "SRC0#0.diffraction_limited_mtf_sagittal",
+   "name": "diffraction limited mtf, sagittal (null beyond the map's Nyquist frequency)",
+   "unit": null,
+   "scope": {
+    "configuration_id": null,
+    "observation_id": "image_plane",
+    "field_id": null,
+    "source_id": "SRC0",
+    "path_id": null,
+    "surface_id": null,
+    "wavelength_nm": 587.5618
+   },
+   "state": "KNOWN",
+   "origin": "MODELED",
+   "value": null,
+   "values_ref": "SRC0#0.diffraction_limited_mtf_sagittal",
+   "interval": null,
+   "basis": "SRC0#0.diffraction",
+   "convergence": {
+    "method": "REFINEMENT",
+    "parameter": "launch_grid 256 doubled",
+    "coarse": null,
+    "fine": null,
+    "difference": 0.000158845099,
+    "resolution": null,
+    "converged": true
+   },
+   "reason": null,
+   "message": "",
+   "missing": [],
+   "depends_on": [],
+   "source": null
+  },
+  {
+   "quantity_id": "SRC1#0.geometric_mtf_tangential",
+   "name": "geometric MTF, tangential",
+   "unit": null,
+   "scope": {
+    "configuration_id": null,
+    "observation_id": "image_plane",
+    "field_id": null,
+    "source_id": "SRC1",
+    "path_id": null,
+    "surface_id": null,
+    "wavelength_nm": 587.5618
+   },
+   "state": "KNOWN",
+   "origin": "MODELED",
+   "value": null,
+   "values_ref": "SRC1#0.geometric_mtf_tangential",
+   "interval": null,
+   "basis": "SRC1#0.geometric_mtf",
+   "convergence": {
+    "method": "REFINEMENT",
+    "parameter": "launch_grid 256 doubled",
+    "coarse": null,
+    "fine": null,
+    "difference": 0.000136420275,
+    "resolution": null,
+    "converged": true
+   },
+   "reason": null,
+   "message": "",
+   "missing": [],
+   "depends_on": [],
+   "source": null
+  },
+  {
+   "quantity_id": "SRC1#0.geometric_mtf_sagittal",
+   "name": "geometric MTF, sagittal",
+   "unit": null,
+   "scope": {
+    "configuration_id": null,
+    "observation_id": "image_plane",
+    "field_id": null,
+    "source_id": "SRC1",
+    "path_id": null,
+    "surface_id": null,
+    "wavelength_nm": 587.5618
+   },
+   "state": "KNOWN",
+   "origin": "MODELED",
+   "value": null,
+   "values_ref": "SRC1#0.geometric_mtf_sagittal",
+   "interval": null,
+   "basis": "SRC1#0.geometric_mtf",
+   "convergence": {
+    "method": "REFINEMENT",
+    "parameter": "launch_grid 256 doubled",
+    "coarse": null,
+    "fine": null,
+    "difference": 0.000163354079,
+    "resolution": null,
+    "converged": true
+   },
+   "reason": null,
+   "message": "",
+   "missing": [],
+   "depends_on": [],
+   "source": null
+  },
+  {
+   "quantity_id": "SRC1#0.mtf_tangential",
+   "name": "mtf, tangential (null beyond the map's Nyquist frequency)",
+   "unit": null,
+   "scope": {
+    "configuration_id": null,
+    "observation_id": "image_plane",
+    "field_id": null,
+    "source_id": "SRC1",
+    "path_id": null,
+    "surface_id": null,
+    "wavelength_nm": 587.5618
+   },
+   "state": "KNOWN",
+   "origin": "MODELED",
+   "value": null,
+   "values_ref": "SRC1#0.mtf_tangential",
+   "interval": null,
+   "basis": "SRC1#0.diffraction",
+   "convergence": {
+    "method": "REFINEMENT",
+    "parameter": "launch_grid 256 doubled",
+    "coarse": null,
+    "fine": null,
+    "difference": 0.000171832957,
+    "resolution": null,
+    "converged": true
+   },
+   "reason": null,
+   "message": "",
+   "missing": [],
+   "depends_on": [],
+   "source": null
+  },
+  {
+   "quantity_id": "SRC1#0.mtf_sagittal",
+   "name": "mtf, sagittal (null beyond the map's Nyquist frequency)",
+   "unit": null,
+   "scope": {
+    "configuration_id": null,
+    "observation_id": "image_plane",
+    "field_id": null,
+    "source_id": "SRC1",
+    "path_id": null,
+    "surface_id": null,
+    "wavelength_nm": 587.5618
+   },
+   "state": "KNOWN",
+   "origin": "MODELED",
+   "value": null,
+   "values_ref": "SRC1#0.mtf_sagittal",
+   "interval": null,
+   "basis": "SRC1#0.diffraction",
+   "convergence": {
+    "method": "REFINEMENT",
+    "parameter": "launch_grid 256 doubled",
+    "coarse": null,
+    "fine": null,
+    "difference": 0.000114144884,
+    "resolution": null,
+    "converged": true
+   },
+   "reason": null,
+   "message": "",
+   "missing": [],
+   "depends_on": [],
+   "source": null
+  },
+  {
+   "quantity_id": "SRC1#0.diffraction_limited_mtf_tangential",
+   "name": "diffraction limited mtf, tangential (null beyond the map's Nyquist frequency)",
+   "unit": null,
+   "scope": {
+    "configuration_id": null,
+    "observation_id": "image_plane",
+    "field_id": null,
+    "source_id": "SRC1",
+    "path_id": null,
+    "surface_id": null,
+    "wavelength_nm": 587.5618
+   },
+   "state": "KNOWN",
+   "origin": "MODELED",
+   "value": null,
+   "values_ref": "SRC1#0.diffraction_limited_mtf_tangential",
+   "interval": null,
+   "basis": "SRC1#0.diffraction",
+   "convergence": {
+    "method": "REFINEMENT",
+    "parameter": "launch_grid 256 doubled",
+    "coarse": null,
+    "fine": null,
+    "difference": 0.000166693399,
+    "resolution": null,
+    "converged": true
+   },
+   "reason": null,
+   "message": "",
+   "missing": [],
+   "depends_on": [],
+   "source": null
+  },
+  {
+   "quantity_id": "SRC1#0.diffraction_limited_mtf_sagittal",
+   "name": "diffraction limited mtf, sagittal (null beyond the map's Nyquist frequency)",
+   "unit": null,
+   "scope": {
+    "configuration_id": null,
+    "observation_id": "image_plane",
+    "field_id": null,
+    "source_id": "SRC1",
+    "path_id": null,
+    "surface_id": null,
+    "wavelength_nm": 587.5618
+   },
+   "state": "KNOWN",
+   "origin": "MODELED",
+   "value": null,
+   "values_ref": "SRC1#0.diffraction_limited_mtf_sagittal",
+   "interval": null,
+   "basis": "SRC1#0.diffraction",
+   "convergence": {
+    "method": "REFINEMENT",
+    "parameter": "launch_grid 256 doubled",
+    "coarse": null,
+    "fine": null,
+    "difference": 0.000155417083,
+    "resolution": null,
+    "converged": true
+   },
+   "reason": null,
+   "message": "",
+   "missing": [],
+   "depends_on": [],
+   "source": null
+  }
+ ],
+ "arrays": {
+  "conventions": {
+   "plane": "the point spread function, the spot and the MTF lie on the plane normal to the image-space axis (the rays' mean direction) through the reference point",
+   "axes": "tangential: the projection of the image plane's normal on that plane (the image plane's u axis on axis); sagittal: axis x tangential",
+   "units": "um for positions, cycles/mm for frequencies, waves at the field's wavelength for the wavefront, 1/um^2 for the normalized point spread function"
+  },
+  "SRC0#0.frequencies_cyc_per_mm": [
+   10.0,
+   20.0,
+   30.0,
+   40.0,
+   50.0,
+   60.0,
+   80.0,
+   100.0
+  ],
+  "SRC0#0.mtf_tangential": [
+   0.965643655,
+   0.901452638,
+   0.81200233,
+   0.703934984,
+   0.585444435,
+   0.465205691,
+   0.249985766,
+   0.0995215923
+  ],
+  "SRC0#0.mtf_sagittal": [
+   0.966285497,
+   0.903172971,
+   0.815143745,
+   0.708701705,
+   0.591865378,
+   0.473123661,
+   0.259825762,
+   0.109444995
+  ],
+  "SRC0#0.diffraction_limited_mtf_tangential": [
+   0.981615994,
+   0.963266432,
+   0.94496286,
+   0.926702384,
+   0.908501034,
+   0.89035164,
+   0.854203984,
+   0.818266259
+  ],
+  "SRC0#0.diffraction_limited_mtf_sagittal": [
+   0.981988258,
+   0.963958348,
+   0.945923709,
+   0.927884582,
+   0.909860288,
+   0.891845754,
+   0.855849726,
+   0.819921642
+  ],
+  "SRC1#0.frequencies_cyc_per_mm": [
+   10.0,
+   20.0,
+   30.0,
+   40.0,
+   50.0,
+   60.0,
+   80.0,
+   100.0
+  ],
+  "SRC1#0.geometric_mtf_tangential": [
+   0.860862373,
+   0.678509969,
+   0.486997138,
+   0.318787152,
+   0.223519209,
+   0.211152204,
+   0.17575773,
+   0.0907383564
+  ],
+  "SRC1#0.geometric_mtf_sagittal": [
+   0.814758653,
+   0.399356768,
+   0.0451787125,
+   0.0624488469,
+   0.0245667107,
+   0.120554147,
+   0.0288183701,
+   0.0167407325
+  ],
+  "SRC1#0.mtf_tangential": [
+   0.858126848,
+   0.66988067,
+   0.500482646,
+   0.349142686,
+   0.247476116,
+   0.202375869,
+   0.161677572,
+   0.106869505
+  ],
+  "SRC1#0.mtf_sagittal": [
+   0.797871596,
+   0.376249869,
+   0.0312510105,
+   0.0597465454,
+   0.0397719619,
+   0.140450239,
+   0.0318037275,
+   0.0240051853
+  ],
+  "SRC1#0.diffraction_limited_mtf_tangential": [
+   0.981643738,
+   0.963281461,
+   0.944925033,
+   0.926574023,
+   0.908249009,
+   0.889939554,
+   0.853378966,
+   0.816911387
+  ],
+  "SRC1#0.diffraction_limited_mtf_sagittal": [
+   0.981418259,
+   0.962879892,
+   0.944393741,
+   0.925957411,
+   0.907586812,
+   0.889273116,
+   0.852814666,
+   0.816583539
+  ]
+ },
+ "completeness": null,
+ "issues": []
+}

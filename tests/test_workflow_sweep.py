@@ -7,7 +7,8 @@ import csv
 import json
 import unittest
 
-from tests.workflow_fixtures import TempDir, by_id, expander, invoke, quiet_environment, requires_engine
+from tests.workflow_fixtures import (HAS_MATPLOTLIB, TempDir, by_id, expander, invoke, quiet_environment,
+                                     requires_engine)
 
 quiet_environment()
 
@@ -82,6 +83,28 @@ class MixedOutcomeSweepTests(unittest.TestCase):
         self.assertEqual(best["objective"]["unit"], "mm")
         self.assertEqual(self.summary["status"], "COMPLETED")
 
+    def test_reported_values_are_used_with_their_kind(self):
+        rows = [dict(r) for r in self.summary["rows"]]
+        for r in rows:
+            if "target:spot_radius:value_kind" in r:
+                self.assertEqual(r["target:spot_radius:exact"], r["target:spot_radius:value_kind"] == "EXACT")
+        self.assertNotIn("value_use", self.summary)  # the default leaves the summary as it was
+        objective = MIXED_SPEC["objective"]
+        _best, exact_count = sp.select_best(rows, [], objective)
+        _best, reported_count = sp.select_best(rows, [], objective, "reported")
+        used = wc.values_used(rows, ["target:spot_radius"], "reported")["target:spot_radius"]
+        self.assertEqual(sum(used.values()), reported_count)
+        self.assertGreater(reported_count, exact_count)
+        self.assertEqual(used.get("EXACT"), exact_count)
+        from os_optics_kit import compare_runs as cr
+
+        exact = cr.compare([self.dir / "study"])
+        reported = cr.compare([self.dir / "study"], value_use="reported")
+        self.assertNotIn("value_use", exact)
+        self.assertEqual(reported["value_use"], "reported")
+        spot = next(t for t in reported["targets"] if t["id"] == "spot_radius")
+        self.assertTrue(all("value_kind" in c for c in spot["runs"].values() if not c.get("missing")))
+
     def test_files_and_study_record(self):
         study = wc.read_json(self.dir / "study" / "study.json")
         self.assertEqual(study["base_project"]["project_hash"], wc.check(self.base)["project_hash"])
@@ -120,6 +143,70 @@ class SweepSpecTests(unittest.TestCase):
             sp.run_sweep(spec, self.dir / "study", base=expander())
         self.assertEqual(caught.exception.code, "BUDGET_EXCEEDED")
         self.assertFalse((self.dir / "study").exists())
+
+    def test_cap_is_optional(self):
+        spec = {key: value for key, value in MIXED_SPEC.items() if key != "max_evaluations"}
+        sp.run_sweep(spec, self.dir / "study", base=expander(), plan_only=True)
+        study = wc.read_json(self.dir / "study" / "study.json")
+        self.assertEqual(study["budget"], {"max_evaluations": None, "samples": 6})
+        self.assertIsNone(sp.normalize_spec({**spec, "max_evaluations": None})["max_evaluations"])
+        for bad in (0, -1, 2.5, True, "6"):
+            with self.assertRaises(wc.WorkflowError) as caught:
+                sp.normalize_spec({**spec, "max_evaluations": bad})
+            self.assertEqual(caught.exception.code, "SPEC_INVALID", bad)
+
+    def test_build_refusal_is_one_error_sample(self):
+        def build(values):
+            if values["f3"] < 0:
+                raise wc.WorkflowError("INPUT_INVALID", "f3 must be positive")
+            return expander(f3=values["f3"])
+
+        summary = sp.run_sweep({"parameters": [{"name": "f3", "unit": "mm", "values": [-1.0, 100.0]}]},
+                               self.dir / "study", build=build)
+        rows = {r["param:f3"]: r for r in summary["rows"]}
+        self.assertEqual((rows[-1.0]["outcome"], rows[-1.0]["error_stage"], rows[-1.0]["error_code"]),
+                         ("ERROR", "build", "INPUT_INVALID"))
+        self.assertNotEqual(rows[100.0]["outcome"], "ERROR")
+
+    def test_three_parameter_grid(self):
+        spec = {"parameters": [
+            {"name": "l2_x", "unit": "mm", "values": [200.0, 201.0],
+             "ops": [{"op": "set_component_pose", "instance_id": "L2", "position_mm": ["$value", 0, 0]}]},
+            {"name": "l3_x", "unit": "mm", "values": [300.0, 302.0],
+             "ops": [{"op": "set_component_pose", "instance_id": "L3", "position_mm": ["$value", 0, 0]}]},
+            {"name": "wavelength", "unit": "nm", "values": [780.0, 800.0],
+             "ops": [{"op": "set_source_model", "instance_id": "SRC", "changes": {"wavelength_nm": "$value"}}]}],
+            "objective": {"column": "target:spot_radius", "sense": "minimize"}}
+        summary = sp.run_sweep(spec, self.dir / "study", base=expander())
+        rows = summary["rows"]
+        self.assertEqual(len(rows), 8)
+        grid = [(r["param:l2_x"], r["param:l3_x"], r["param:wavelength"]) for r in rows]
+        self.assertEqual(grid, [(a, b, c) for a in (200.0, 201.0) for b in (300.0, 302.0) for c in (780.0, 800.0)])
+        self.assertEqual([r["sample_id"] for r in rows], [f"s{i:04d}" for i in range(1, 9)])
+        valued = [r for r in rows if isinstance(r.get("target:spot_radius"), float) and r["feasible"]]
+        best = min(valued, key=lambda r: r["target:spot_radius"])
+        self.assertEqual(summary["best"]["sample_id"], best["sample_id"])
+        with open(self.dir / "study" / "table.csv", newline="", encoding="utf-8") as handle:
+            header = next(csv.reader(handle))
+        self.assertEqual([c for c in header if c.startswith("param:") and c.count(":") == 1],
+                         ["param:l2_x", "param:l3_x", "param:wavelength"])
+        if not HAS_MATPLOTLIB:
+            return
+        from os_optics_kit import plot_results as pr
+
+        with self.assertRaises(wc.WorkflowError) as caught:
+            pr.plot_sweep(self.dir / "study", "target:spot_radius")
+        self.assertEqual(caught.exception.code, "PLOT_NEEDS_SLICE")
+        self.assertEqual([f["name"] for f in caught.exception.details["free"]], ["l2_x", "l3_x", "wavelength"])
+        result = pr.plot_sweep(self.dir / "study", "target:spot_radius", fix={"wavelength": 800.0, "l3_x": 302})
+        self.assertEqual(result["fixed"], {"l3_x": 302.0, "wavelength": 800.0})
+        sliced = [r for r in rows if r["param:wavelength"] == 800.0 and r["param:l3_x"] == 302.0]
+        self.assertEqual(result["points"], len(sliced))
+        heatmap = pr.plot_sweep(self.dir / "study", "target:spot_radius", fix={"wavelength": 780.0})
+        self.assertIn("heatmap_", heatmap["out"]["png"])
+        code, _out, err = invoke(pr.main, ["sweep", str(self.dir / "study"), "--y", "target:spot_radius",
+                                           "--fix", "wavelength=780", "--fix", "l2_x=200", "--name", "cli"])
+        self.assertEqual(code, 0, err)
 
     def test_unit_error_is_refused_before_running(self):
         spec = {"parameters": [{"name": "w", "unit": "deg", "values": [1.0],

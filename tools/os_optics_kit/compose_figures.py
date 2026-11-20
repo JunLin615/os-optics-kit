@@ -54,6 +54,8 @@ SYSTEM_VIEW_RATIO = 1.4
 LAYOUT_SCHEMA = "os-optics-kit.compose-layout"
 TARGETS_SCHEMA = "os-optics-kit.targets-plot"
 MAX_TARGET_COLUMNS = 3
+#: value labels may widen a target panel's value range to at most this multiple of its data range
+MAX_LABEL_ROOM = 3.0
 #: states of a run's value on a target panel; only the first three have a position on the value axis
 VALUE_STATES = ("exact", "bounded", "inexact")
 SCALE_CHOICES = "auto | true | false | [min, max] in display units"
@@ -889,9 +891,15 @@ def _choose_sides(items, markers, frame_box, renderer, dpi):
 
 def settle_target_labels(fig, infos, *, adjust_limits=True):
     """Give the value labels of target panels room: beside their point on the side that keeps them off the other
-    points and labels, and (unless the range is fixed) enough head- and footroom inside the axes."""
+    points and labels, and (unless the range is fixed) enough head- and footroom inside the axes. The room never
+    widens a value range beyond ``MAX_LABEL_ROOM`` times the drawn range (an axes shorter than its labels would
+    otherwise grow it without bound); such a panel is marked ``cramped``. Run names that overlap are wrapped at a
+    space first; if they still overlap the panel is marked ``names_overlap``."""
     from matplotlib.transforms import Bbox
 
+    base = {id(info): info["ax"].get_ylim() for info in infos}
+    for info in infos:
+        info["names_overlap"] = not separate_tick_labels(fig, info["ax"])
     for _round in range(4):
         fig.canvas.draw()
         renderer = fig.canvas.get_renderer()
@@ -916,15 +924,61 @@ def settle_target_labels(fig, infos, *, adjust_limits=True):
             pad = 0.25 * info["marker_pt"] * fig.dpi / 72
             top = max(b.y1 for b in taken) + pad - frame_box.y1
             bottom = frame_box.y0 - (min(b.y0 for b in taken) - pad)
-            if top > 0.5 or bottom > 0.5:
+            if (top > 0.5 or bottom > 0.5) and not info.get("cramped"):
                 low, high = ax.get_ylim()
                 per_px = (high - low) / max(frame_box.height - max(top, 0) - max(bottom, 0), 1.0)
-                ax.set_ylim(low - max(bottom, 0) * per_px, high + max(top, 0) * per_px)
+                new_low, new_high = low - max(bottom, 0) * per_px, high + max(top, 0) * per_px
+                base_low, base_high = base[id(info)]
+                added = (base_low - new_low) + (new_high - base_high)
+                allowed = (MAX_LABEL_ROOM - 1.0) * (base_high - base_low)
+                if added > allowed:  # the labels do not fit this axes: widen as far as allowed, no further
+                    share = allowed / added
+                    new_low = base_low - (base_low - new_low) * share
+                    new_high = base_high + (new_high - base_high) * share
+                    info["cramped"] = True
+                ax.set_ylim(new_low, new_high)
                 changed = True
         if not changed:
             break
     for info in infos:
         info["y_limits"] = [float(v) for v in info["ax"].get_ylim()]
+
+
+def separate_tick_labels(fig, ax):
+    """Run names under a narrow target panel: wrap them at a space when neighbours overlap. False when they still
+    overlap."""
+    labels = [label for label in ax.get_xticklabels() if label.get_text()]
+    if len(labels) < 2:
+        return True
+
+    def overlapping():
+        fig.canvas.draw()
+        renderer = fig.canvas.get_renderer()
+        boxes = sorted((label.get_window_extent(renderer) for label in labels), key=lambda box: box.x0)
+        return any(left.x1 - 2 > right.x0 for left, right in zip(boxes, boxes[1:]))
+
+    if not overlapping():
+        return True
+    texts = []
+    for label in labels:
+        value = label.get_text()
+        if " " in value and "\n" not in value:
+            middle = len(value) // 2
+            cut = min((i for i, c in enumerate(value) if c == " "), key=lambda i: abs(i - middle))
+            value = value[:cut] + "\n" + value[cut + 1:]
+        texts.append(value)
+    styles = [(label.get_color(), label.get_fontweight()) for label in labels]
+    ax.set_xticks(ax.get_xticks(), texts)  # through the formatter: a redraw keeps the wrapped text
+    labels = [label for label in ax.get_xticklabels() if label.get_text()]
+    for label, (color, weight) in zip(labels, styles):
+        label.set_color(color)
+        label.set_fontweight(weight)
+    return not overlapping()
+
+
+def crowded(info):
+    """A target panel whose value labels or run names do not fit (see settle_target_labels)."""
+    return bool(info.get("cramped") or info.get("names_overlap"))
 
 
 def fit_axis_text(fig, axes):
@@ -1119,7 +1173,10 @@ def build_targets_plot(asset, ctx, theme, out):
                "missing": [{"target": p["target"], "source": e["source"]} for p in data["panels"]
                            for e in p["entries"] if e["state"] == "missing"],
                "split_by_unit": sorted({p["target"] for p in data["panels"] if p["split_by_unit"]}),
-               "text_fits": not overflow, **({"text_outside": [t for t, _b in overflow][:10]} if overflow else {})}
+               "text_fits": not overflow and not any(crowded(i) for i in info),
+               **({"text_outside": [t for t, _b in overflow][:10]} if overflow else {}),
+               **({"labels_cramped": [i["target"] for i in info if crowded(i)]}
+                  if any(crowded(i) for i in info) else {})}
     return {"files": files, "data_files": [data_file], "title": title, "caption": caption,
             "sources": [r["source"] for r in data["runs"]], "details": details}
 
@@ -1671,7 +1728,8 @@ def _compose_texts(asset, panels, ctx, scales, framing, framing_detail, layout):
                 if what == "y" and scale.get("exact"):
                     key = "caption.shared_axis_exact"
                 sentences.append(text(key, lang, low=_fmt(scale["limits"][0]), high=_fmt(scale["limits"][1]),
-                                      unit=scale.get("unit") or ""))
+                                      unit=pres.unit_text(scale.get("unit")) if scale.get("unit") and
+                                      scale.get("unit") not in wc.UNITLESS else ""))
         caption[lang] = (" " if lang == "en" else "").join(s.replace(" 。", "。").replace(" .", ".")
                                                            for s in sentences)
     return title, caption
@@ -1792,6 +1850,8 @@ def build_compose(asset, ctx):
             _arrow(fig, boxes[0]["content"], boxes[1]["content"], theme)
         overflow = text_overflow(fig, cell_pad=geometry.gap_px / 2)
         covered = legends_over_data(fig, panels, facts)
+        cramped = [panel.index for panel, fact in zip(panels, facts)
+                   if any(crowded(i) for i in fact.get("targets", []))]
         written = save_figure(fig, out, asset["id"], theme)
     panel_records = []
     for panel, box, fact in zip(panels, boxes, facts):
@@ -1837,8 +1897,9 @@ def build_compose(asset, ctx):
     details = {"layout": layout, "panels": [{"asset": r["asset"], "mode": r["mode"], "label": r["label"][language],
                                              "cell_px": r["cell_px"]} for r, _f in panel_records],
                "scales": scales, "framing": framing, **({"framing_detail": framing_detail} if framing_detail else {}),
-               "text_fits": not overflow and not covered,
+               "text_fits": not overflow and not covered and not cramped,
                **({"text_outside": [t for t, _b in overflow][:10]} if overflow else {}),
+               **({"labels_cramped": cramped} if cramped else {}),
                **({"legend_over_data": covered} if covered else {})}
     return {"files": files, "data_files": [data_file], "title": title, "caption": caption,
             "sources": list(dict.fromkeys(s for p in panels for s in (p.entry.get("sources") or []))),

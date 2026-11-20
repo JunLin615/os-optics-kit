@@ -6,6 +6,8 @@ The kit's tools take a design from a first run to a documented study: edit compo
 parameters, compare saved runs, plot and report the results, and estimate sensitivities and tolerances. Every step
 saves its projects and runs, prints a compact JSON summary and keeps the complete data in files. Three cases with
 parameterized workflows apply the same steps to beam expansion and focusing, polarization control and alignment.
+Sweeps, sensitivity and tolerance studies can run in parallel worker processes and be resumed; see
+[studies](studies.md).
 
 ## Before you start
 
@@ -13,7 +15,7 @@ parameterized workflows apply the same steps to beam expansion and focusing, pol
 python -m pip install "os-optics[protected]" "os-optics-kit[plot]"
 ```
 
-os-optics-kit 0.3.x works with os-optics 0.13; the numbers below come from os-optics 0.13.0 and, for catalog
+os-optics-kit 0.4.x works with os-optics 0.13; the numbers below come from os-optics 0.13.0 and, for catalog
 designs, catalog release `2026-10-28.1`. Each section copies a case with `os-optics-kit cases copy NAME --dest .`
 and runs its commands inside the case directory. Sections 1–3 use catalog components and need
 `os-optics catalog sync`; sections 4 and 5 use catalog-free ideal elements. Read each new run's own identities and
@@ -38,7 +40,7 @@ interrupted-response retries.
 
 ### Choose computation limits
 
-A study's `max_evaluations` limits the number of designs; each Project's `compute_budget` limits work inside one
+A study's optional `max_evaluations` limits the number of designs; each Project's `compute_budget` limits work inside one
 design. The [working budget example](../workflow-recipes.md#computation-budgets) limits the three-lens design to one
 interaction per path, then raises the limit to eight. The limited run retains its artifacts and reports partial
 execution and indeterminate affected targets. Changing the budget makes the old result historical. Inspect those
@@ -199,7 +201,7 @@ calculation and writes a report. Show all inputs with units and defaults with `p
 Output layout of `--out DIR`: `DIR/workflow.json` (full summary), `DIR/nominal/` (project, run, closed-form
 comparison, power plot), `DIR/studies/<parameter>/` (one project and run per sample, `table.csv`, comparison, plots,
 report) and `DIR/report/report.md`, which links everything. The exit code reflects the nominal design (0 PASS,
-1 FAIL, 2 UNKNOWN, 3 OUT_OF_MODEL); study samples that miss are counted in the summary.
+1 FAIL, 2 UNKNOWN, 3 OUT_OF_MODEL or a PARTIAL nominal run); study samples that miss are counted in the summary.
 
 ### 5.1 Beam expansion and focusing
 

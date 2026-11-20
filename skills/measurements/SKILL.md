@@ -23,7 +23,7 @@ kind: tool
 ## Inputs
 
 - `INPUT.csv`: UTF-8 CSV with a unique header row.
-- Required: `--out NEW_DIR` (must not exist), `--x COL`, `--signal COL`, `--background COL`,
+- Required: `--out DIR` (new or empty; `--overwrite` replaces this command's five files), `--x COL`, `--signal COL`, `--background COL`,
   `--x-unit U`, `--signal-unit U`.
 - Optional: `--reference COL --reference-background COL --reference-unit U`, `--minimum-reference V`,
   `--maximum-rmse V` (response units).

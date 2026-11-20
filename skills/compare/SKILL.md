@@ -21,13 +21,16 @@ kind: tool
 ## Inputs
 
 - `PATH ...`: run directories (each holds `manifest.json`) or study directories written by `sweep`.
-- `--labels a,b`, `--reference LABEL` (default: first run), `--targets a,b` (ids deciding outcomes).
-- `--project CURRENT.json`: report freshness CURRENT / HISTORICAL / UNDETERMINED with engine reasons.
+- `--labels a,b`, `--reference LABEL` (default: first run), `--targets a,b` (ids deciding outcomes),
+  `--value-use reported` (deltas of every finite value; each cell names its `value_kind`).
+- `--project CURRENT.json`: report freshness CURRENT / HISTORICAL / UNDETERMINED with engine reasons;
+  the samples of a study share one record (`study_freshness`).
 - `--out DIR`: also write `compare.json` and `compare.csv`.
 
 ## Outputs
 
-Stdout: runs with outcome, status, freshness and identity; targets by ID with values, units, statuses
+Stdout: runs with outcome, status, freshness, `integrity` (whether the run's files verify) and identity;
+a run directory the Engine cannot read is an `ERROR` entry (`RUN_NOT_READABLE`); targets by ID with values, units, statuses
 and deltas to the reference; observation planes (power, arriving beams); input differences keyed by
 object ID (at most 8 runs and 10 differences shown; the files hold everything).
 Exit 0 compared, 4 invalid input.

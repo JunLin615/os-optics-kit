@@ -86,8 +86,16 @@ STATUS_COLORS = {"NOT_APPLICABLE": "#3b6fa1", "PASS": "#0ca30c", "FAIL": "#d03b3
 
 #: font families tried after the theme's own list; the first installed family covering a character draws it
 LATIN_FONTS = ["DejaVu Sans", "Arial", "Helvetica", "Liberation Sans"]
+#: Simplified Chinese families: Linux packages first, then those that ship with Windows and macOS. Without any of
+#: them, another installed font that draws Chinese is used (``cjk_families``).
 CJK_FONTS = ["Noto Sans CJK SC", "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", "PingFang SC",
-             "Hiragino Sans GB", "WenQuanYi Zen Hei", "SimHei", "Noto Sans CJK JP", "Noto Sans CJK TC"]
+             "Hiragino Sans GB", "Heiti SC", "STHeiti", "Songti SC", "Arial Unicode MS", "WenQuanYi Zen Hei",
+             "WenQuanYi Micro Hei", "SimHei", "DengXian", "SimSun", "Noto Sans CJK JP", "Noto Sans CJK TC"]
+#: macOS keeps some Chinese system fonts (PingFang) in downloadable asset folders matplotlib does not search
+MACOS_FONT_ASSETS = "/System/Library/AssetsV2"
+MACOS_CJK_FILES = ("PingFang", "Hiragino Sans GB", "STHeiti", "Songti", "Lantinghei")
+#: characters a font must draw to count as a Chinese font when none of CJK_FONTS is installed
+CJK_PROBE = "中文图表的数值标题，（）"
 
 #: unit display conversions offered by theme.units ({"mm": "um"}); values are converted by workflow_common.convert
 DISPLAY_UNITS = ("nm", "um", "mm", "m", "W", "mW", "uW", "rad", "mrad", "urad", "deg")
@@ -481,27 +489,79 @@ def resolve_theme(theme=None, overrides=None):
 # --------------------------------------------------------------------------------------------- fonts
 
 _FONT_CACHE: dict[str, Any] = {}
+#: lighter faces draw figure text too thin (a variable Noto Sans SC registers as weight 100)
+_LIGHTEST_WEIGHT = 250
+#: at most this many Chinese families found by their glyphs (``cjk_families``) join the theme's font list
+_DISCOVERED_CJK = 3
+
+
+def _register_macos_fonts(font_manager):
+    """Add the Chinese system fonts macOS keeps in asset folders, which matplotlib does not search (PingFang)."""
+    assets = Path(MACOS_FONT_ASSETS)
+    if not assets.is_dir():
+        return
+    known = {entry.fname for entry in font_manager.fontManager.ttflist}
+    for path in sorted(assets.glob("com_apple_MobileAsset_Font*/*/AssetData/*")):
+        if path.name.startswith(MACOS_CJK_FILES) and path.suffix.lower() in (".ttc", ".ttf", ".otf") \
+                and str(path) not in known:
+            try:
+                font_manager.fontManager.addfont(path)
+            except (OSError, RuntimeError, ValueError):
+                continue
 
 
 def _font_index():
-    """``{family name: font file}`` of matplotlib's font list (first file per family)."""
+    """``{family name: (font file, face index)}`` of matplotlib's font list.
+
+    Each family maps to its first upright regular-weight face or, for a family without one, its first light face
+    (the text weight of macOS's Hiragino Sans GB is W3, a light face). Families installed only in thin, bold or italic faces
+    are left out: matplotlib would draw body text with them."""
     if "index" not in _FONT_CACHE:
         import logging
+        import sys
 
         from matplotlib import font_manager
 
         # findfont notices about the weights of installed families do not help the reader of a figure
         logging.getLogger("matplotlib.font_manager").setLevel(logging.ERROR)
+        if sys.platform == "darwin":
+            _register_macos_fonts(font_manager)
 
-        index: dict[str, str] = {}
+        regular: dict[str, tuple[str, int]] = {}
+        light: dict[str, tuple[str, int]] = {}
         for entry in font_manager.fontManager.ttflist:
-            # only upright regular-weight files: a family installed only as Thin or Bold is not used for body text
             weight = entry.weight if isinstance(entry.weight, int) else {"normal": 400, "regular": 400,
                                                                           "book": 400}.get(str(entry.weight), 0)
-            if entry.style == "normal" and 350 <= weight <= 500:
-                index.setdefault(entry.name, entry.fname)
-        _FONT_CACHE["index"] = index
+            if entry.style != "normal":
+                continue
+            face = (entry.fname, int(getattr(entry, "index", 0) or 0))  # .ttc collections hold several faces
+            if 350 <= weight <= 500:
+                regular.setdefault(entry.name, face)
+            elif _LIGHTEST_WEIGHT <= weight < 350:
+                light.setdefault(entry.name, face)
+        _FONT_CACHE["index"] = {**light, **regular}
     return _FONT_CACHE["index"]
+
+
+def cjk_families():
+    """The installed families that draw Simplified Chinese (needs matplotlib).
+
+    Those of ``CJK_FONTS`` in order; without any of them, up to three installed families whose glyphs cover
+    ``CJK_PROBE``, by name, so a Chinese font with a name the list does not know is still used."""
+    if "cjk" not in _FONT_CACHE:
+        index = _font_index()
+        found = [name for name in CJK_FONTS if name in index and _draws(index[name], CJK_PROBE)]
+        if not found:
+            faces = set()
+            for name in sorted(set(index) - set(CJK_FONTS)):
+                if len(found) == _DISCOVERED_CJK:
+                    break
+                # one name per face: matplotlib also lists a font under its alternative family names
+                if index[name] not in faces and _draws(index[name], CJK_PROBE):
+                    found.append(name)
+                    faces.add(index[name])
+        _FONT_CACHE["cjk"] = found
+    return _FONT_CACHE["cjk"]
 
 
 def installed_families(requested, language):
@@ -509,31 +569,52 @@ def installed_families(requested, language):
 
     Without matplotlib (``--help``, gallery-only use) the requested list plus defaults is returned unchanged."""
     # Latin text takes the first Latin family; Chinese characters fall back to the first installed CJK family.
-    wanted = [*requested, *LATIN_FONTS, *CJK_FONTS]
     try:
         index = _font_index()
     except ImportError:
-        return list(dict.fromkeys(wanted))
+        return list(dict.fromkeys([*requested, *LATIN_FONTS, *CJK_FONTS]))
+    wanted = [*requested, *LATIN_FONTS, *cjk_families()]
     found = [name for name in dict.fromkeys(wanted) if name in index]
     return found or ["DejaVu Sans"]
 
 
-def _charmap(path):
-    key = f"cmap:{path}"
-    if key not in _FONT_CACHE:
-        from matplotlib.ft2font import FT2Font
+def _open_face(face):
+    """``FT2Font`` of one face (file, index) of a font file or collection; None when it cannot be read."""
+    from matplotlib.ft2font import FT2Font
 
+    path, number = face
+    try:
         try:
-            _FONT_CACHE[key] = set(FT2Font(path).get_charmap())
-        except (OSError, RuntimeError):
-            _FONT_CACHE[key] = set()
+            return FT2Font(path, face_index=number)
+        except TypeError:  # matplotlib < 3.11 indexes (and opens) the first face of a collection only
+            return FT2Font(path)
+    except (OSError, RuntimeError, ValueError):
+        return None
+
+
+def _draws(face, text):
+    """Whether the face has its own glyph for every character of ``text`` (without reading its character map).
+
+    A fallback font that maps whole Unicode blocks to one placeholder (matplotlib bundles "Last Resort
+    High-Efficiency") does not draw the text: its characters share a glyph."""
+    font = _open_face(face)
+    if font is None:
+        return False
+    glyphs = {char: font.get_char_index(ord(char)) for char in set(text)}
+    return all(glyphs.values()) and len(set(glyphs.values())) == len(glyphs)
+
+
+def _charmap(face):
+    key = f"cmap:{face[0]}#{face[1]}"
+    if key not in _FONT_CACHE:
+        font = _open_face(face)
+        _FONT_CACHE[key] = set(font.get_charmap()) if font is not None else set()
     return _FONT_CACHE[key]
 
 
 def has_cjk_font():
-    """Whether an installed regular-weight font draws Simplified Chinese (needs matplotlib)."""
-    return not missing_glyphs(["中文"], [name for name in CJK_FONTS if name in _font_index()]) \
-        if any(name in _font_index() for name in CJK_FONTS) else False
+    """Whether an installed regular- or light-weight font draws Simplified Chinese (needs matplotlib)."""
+    return bool(cjk_families())
 
 
 def missing_glyphs(strings, families):
@@ -716,6 +797,18 @@ def source_kind(path):
     return None
 
 
+def require_study_results(path, **details):
+    """Refuse a planned study that has no result to present (``study.progress``: ``STUDY_NOT_RUN``,
+    ``STUDY_INCOMPLETE``, ``STUDY_NOT_AGGREGATED``, ``STUDY_RUNNING``) with its next command as ``recovery``;
+    nothing for another directory."""
+    from .study import progress
+
+    error = progress.reading_error(path)
+    if error is not None:
+        raise PresentationError(error.code, str(error), recovery=error.details.get("next"), **error.details,
+                                **details)
+
+
 def resolve_source(spec_dir, source_id, entry):
     """``Source`` for ``sources.<id>``; refuses a missing or unreadable path with a recovery step."""
     path = Path(entry["path"])
@@ -723,6 +816,7 @@ def resolve_source(spec_dir, source_id, entry):
     path = Path(os.path.normpath(os.path.abspath(path if path.is_absolute() else Path(spec_dir) / path)))
     kind = source_kind(path)
     if kind is None:
+        require_study_results(path, source=source_id)
         raise PresentationError(
             "SOURCE_MISSING", f"source {source_id!r}: {entry['path']} is not a saved run or study directory",
             recovery=f"point sources.{source_id}.path at a run directory (it holds manifest.json) or a study "

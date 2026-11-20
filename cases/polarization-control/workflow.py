@@ -95,7 +95,7 @@ def config():
 
     return {"workflow": "polarization_control", "design": "polarization_control",
             "info": D.DESIGN_INFO["polarization_control"], "builder": D.polarization_control, "checks": checks,
-            "reference_method": REFERENCE, "default_studies": DEFAULT_STUDIES, "max_evaluations": 40,
+            "reference_method": REFERENCE, "default_studies": DEFAULT_STUDIES,
             "choices": {"retarder_model": ["ZERO_ORDER", "ACHROMATIC"]}}
 
 

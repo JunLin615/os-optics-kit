@@ -77,9 +77,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: ${{ matrix.python }}
+      # Windows and macOS include Chinese fonts (Microsoft YaHei; PingFang SC, Hiragino Sans GB, Songti SC), which
+      # the kit must find on its own: they are not replaced by an installed one there.
       - name: Chinese fonts for the figure tests
         if: runner.os == 'Linux'
         run: |
@@ -88,6 +90,8 @@ jobs:
       - name: Tests, tools and every case against the verified engine and the pinned catalog
         env:
           OPTIONAL: ${{ inputs.optional || '' }}
+          # every runner has a Chinese font: a test that draws Chinese fails instead of skipping without one
+          OS_OPTICS_KIT_REQUIRE_CJK_FONT: "1"
         run: |
           args=(--out run-alignment)
           if [[ -n "$OPTIONAL" ]]; then
@@ -129,7 +133,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: ${{ matrix.python }}
       - name: Chinese fonts for the figure tests
@@ -141,6 +145,7 @@ jobs:
         env:
           VERSION: ${{ needs.setup.outputs.candidate_version }}
           OPTIONAL: ${{ inputs.optional || '' }}
+          OS_OPTICS_KIT_REQUIRE_CJK_FONT: "1"
         run: |
           args=(--engine "$VERSION" --out run-alignment)
           if [[ -n "$OPTIONAL" ]]; then

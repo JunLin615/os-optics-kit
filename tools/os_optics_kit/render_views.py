@@ -8,6 +8,7 @@ World up defaults to +Z; use --up-axis X,Y,Z if the optical axis is parallel to 
 
 PNG capture needs Chrome/Chromium and: python -m pip install "os-optics-kit[render]"
 --html-only needs neither. Existing outputs require --overwrite.
+Case images and plain system views need no browser: os-optics view RUN --no-browser --snapshot DIR --views iso
 
 Usage:
   os-optics-kit render RUN_DIR --out DIR --camera 86,8 --camera 55,22 --size 1920x1080
@@ -28,6 +29,7 @@ import re
 import shutil
 import sys
 
+from ._engine import install_hint
 from .result_summary import json_cli_stdout
 
 PROG = "os-optics-kit render"
@@ -504,7 +506,7 @@ def run(args):
         from os_optics.viewer.page import standalone_html
     except ImportError:
         raise RenderError("ENGINE_NOT_INSTALLED",
-                          "this command needs the os-optics engine's viewer: python -m pip install \"os-optics>=0.13,<0.14\"") from None
+                          f"this command needs the os-optics engine's viewer: {install_hint()}") from None
 
     try:
         scene = load_view(args.run_dir)
@@ -577,8 +579,8 @@ class ViewScene:
             from os_optics.viewer import load_view, view_document
             from os_optics.viewer.page import standalone_html
         except ImportError:
-            raise RenderError("ENGINE_NOT_INSTALLED", "this command needs the os-optics engine's viewer: "
-                              "python -m pip install \"os-optics>=0.13,<0.14\"") from None
+            raise RenderError("ENGINE_NOT_INSTALLED",
+                              f"this command needs the os-optics engine's viewer: {install_hint()}") from None
         try:
             self.scene = load_view(run_dir)
         except Exception as error:  # noqa: BLE001 - the engine's refusal is the message

@@ -2,11 +2,15 @@
 name: interop-metasurface
 title: Metasurface lens as a tabulated virtual component
 summary: A TiO2 nanopillar metalens (f = 200 um at 532 nm, 100 um diameter) is characterized with RCWA (grcwa) and angular-spectrum focusing, fitted as a TABULATED_THIN_LENS with stated errors and domain, and checked in the engine on held-out test cases and out-of-domain counterexamples.
+class: lens
+domain: nanophotonics, diffraction
+provenance: self-built
+publication: own-work
 engine: 0.13.0
 catalog: none
 project: project.json
 tools: none
-tags: catalog-free, interop, metasurface, rcwa, tabulated-thin-lens, model-validation
+tags: metasurface, tabulated-thin-lens, model-validation, rcwa, interop, grcwa
 license: MIT
 ---
 
@@ -17,7 +21,7 @@ license: MIT
 ± 1.4 µm, spot radius ± 8.1 %, power ± 19 %, with tool versions and the unit-cell library SHA-256 as evidence) and
 the plane `after` 0.3 mm behind it. The 100 µm aperture clips 0.4 % of the beam: status WARNING with
 `GAUSSIAN_TRUNCATION`. Steps: 1 unit cells (grcwa), 2 focusing, 3 fit with convergence spread, 4 engine check.
-Verified run: the engine reproduces the model's thin-lens focus to 4e-16; all test cases stay inside the stated
+Result: the engine reproduces the model's thin-lens focus to 4e-16; all test cases stay inside the stated
 errors (largest: 0.32 µm, 4.3 %, 15.7 %); 450 nm, 5°, 8°, 20° and an unvalidated metric are OUT_OF_MODEL_SCOPE with
 the target INDETERMINATE. Outcome WITHIN_TOLERANCE.
 
@@ -36,7 +40,7 @@ python step3_fit_model.py ms
 python step4_engine_check.py ms
 ```
 
-Steps 1–4 took 24 minutes in the verified run; steps 1 and 2 never import the engine.
+Steps 1–4 take about 24 minutes; steps 1 and 2 never import the engine.
 
 ## Targets
 
@@ -46,12 +50,12 @@ Steps 1–4 took 24 minutes in the verified run; steps 1 and 2 never import the 
 
 ## Baseline
 
-os-optics 0.13.0, no catalog: run status WARNING (`expected.json`). Steps 1–4 verified on Python 3.14.7 with the
+os-optics 0.13.0, no catalog: run status WARNING (`expected.json`). Steps 1–4 ran on Python 3.14.7 with the
 pinned versions in `requirements-metasurface.txt`.
 
 ## Files
 
-- `project.json`, `expected.json`: the design with the fitted model and its verified outcome.
+- `project.json`, `expected.json`: the design with the fitted model and its outcome.
 - `step1_unit_cells.py` … `step4_engine_check.py`: the four steps.
 - `requirements-metasurface.txt`: pinned third-party packages (grcwa: GPLv3).
-- `README.md`, `README.zh-CN.md`, `images/section.png`: the illustrated page.
+- `README.md`, `README.zh-CN.md`: the illustrated pages; `images.json` records the system views in `images/`.

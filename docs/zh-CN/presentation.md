@@ -19,6 +19,9 @@ os-optics catalog sync
 | `render` | 系统视图和动画，另需已安装的 Chrome 或 Chromium |
 | `media` | MP4 动画；GIF 只需要 `plot` |
 
+运行的普通系统视图（例如案例插图）既不需要 `render` 扩展，也不需要浏览器：引擎用
+`os-optics view RUN --no-browser --snapshot DIR --views iso` 直接生成（透镜剖面用 `--section ALL`）。
+
 下面的示例使用目录中的透镜，因此需要 `os-optics catalog sync`。
 
 ## 准备一套演示材料
@@ -148,7 +151,8 @@ os-optics-kit present build compare/presentation.json
 
 - 每个运行一张视图，全部使用同一取景范围（`framing_sources`），系统以同一比例显示；
 - `targets-compare`（图类型 `targets`）：每个目标在各运行中的取值，以及界限和判定；
-- `views-compare`（类型 `compose`）：视图并排，两个运行时布局为 `before-after`，更多时为 `row`。
+- `views-compare`（类型 `compose`）：视图以 `row` 布局并排；第二个运行是第一个运行调整后的结果时，把 `layout`
+  改为 `before-after`。
 
 组合图按顺序列出各分图，每个分图可带标签：
 

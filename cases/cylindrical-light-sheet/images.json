@@ -1,0 +1,39 @@
+{
+  "images": [
+    {
+      "file": "images/iso.png",
+      "kind": "system-view",
+      "options": [
+        "--views",
+        "iso",
+        "--size",
+        "960x540"
+      ],
+      "sha256": "ab74299f5068e2d5e3c0c6aa4c65afabeb59242c4f3d22cefa78a0c10dbde30e",
+      "view": "iso"
+    },
+    {
+      "file": "images/section.png",
+      "kind": "system-view",
+      "options": [
+        "--section",
+        "ALL",
+        "--frame=scene",
+        "--size",
+        "1200x420"
+      ],
+      "sha256": "94e442cae68a23405c2f50f7e1d38e971da9d386216313bec61c49d79552ad5f",
+      "view": "section"
+    }
+  ],
+  "project_sha256": "872d4ded8208d216be1e8c76c1f8a4e4986c5c55a40c960a14090d0d3c8cadcd",
+  "run": {
+    "catalog": null,
+    "engine": "0.13.0",
+    "engine_input_hash": "a87eb9ede61b2f61415b78244311fb876ba4307740750546e8aa3399677dba13",
+    "project_hash": "a86411a9101deb736fc2785e1bce403cc1be21c87f16ad6dde3db3535f54ec09",
+    "scene_content_hash": "1cd9c05cb090c5d618512c39ca2535c19ffbc66d5b3143d612249fd5cb36a362"
+  },
+  "schema": "os-optics-kit.case-images",
+  "schema_version": 1
+}

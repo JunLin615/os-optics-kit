@@ -1,17 +1,21 @@
 # A five-element 3-5 µm imager with manufacturable element thicknesses
 
+[简体中文](README.zh-CN.md) · [Agent case sheet](CASE.md)
+
 A refractive imager for the mid-wave infrared band: five elements of Si, ZnSe, CaF2, Si and ZnSe,
 F/2, EFL 100 mm, half field 3°, evaluated at 3, 4 and 5 µm. The point of the case is the pair of
 constraints the engine makes visible at once: the design is held to thicknesses a grinding shop can
 produce, and the resulting image quality is reported by the engine's **scalar diffraction** model
 rather than by ray spread.
 
+![3D view: the nine field and wavelength sources, the five-element lens MW and the image plane](images/iso.png)
+
 ## The design
 
-![System section, true scale](images/system.png)
+![Section through the lens axis, true scale: the stop, L1–L5, the image plane and the traced rays](images/section.png)
 
-The stop sits ahead of the first element with a 25 mm opening, which sets F/2 for a 100 mm focal
-length. Every glass element is held to a 2-12 mm centre thickness and a 1.5-3 mm edge thickness, and
+The stop sits ahead of the first element with a 25 mm semi-diameter (50 mm across), which sets F/2
+for a 100 mm focal length. Every glass element is held to a 2-12 mm centre thickness and a 1.5-3 mm edge thickness, and
 every air gap stays positive at the rim:
 
 | element | material | clear radius | centre thickness | edge thickness |
@@ -57,7 +61,7 @@ constraint in this case forbids.
 
 ![Ray spot radius per field and wavelength](images/spot.png)
 
-## Two engine behaviours this case makes explicit
+## Engine behaviours this case makes explicit
 
 **The geometric MTF is the wrong metric here, and the engine says so.** Every field's
 `geometric_mtf_*` quantity comes back `OUT_OF_MODEL_SCOPE` with the reason
@@ -100,7 +104,15 @@ os-optics project check project.json
 os-optics project run project.json --out-dir run
 os-optics results targets run
 os-optics results imaging run --monitor image_plane --request imaging-request.json
+os-optics view run --no-browser --snapshot views --views iso --size 1280x560
+os-optics view run --no-browser --snapshot views --section ALL --frame=scene --size 1600x700
+python figures.py run --out images
 ```
+
+The 3D view and the section are the engine's snapshots of a run of `project.json` (the two `os-optics view`
+lines above, with the recorded options; in a kit checkout `os-optics-kit cases images midwave-infrared-imager`
+re-renders them exactly as recorded in `images.json`). `figures.py` draws the MTF, spot and wavefront figures
+from that run with the same `results imaging` call (matplotlib comes with `pip install "os-optics-kit[plot]"`).
 
 `data/engine-midwave.json` holds every quantity the engine produced for this run, with its state, basis
 and — where the engine declined it — the reason and message verbatim. `expected.json` holds the run

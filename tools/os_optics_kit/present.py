@@ -32,7 +32,9 @@ directory. gallery rewrites index.html and contact-sheet.png. bundle copies sele
 data, provenance and redraw settings with an offline gallery into a directory or .zip (relative links only).
 
 Needs matplotlib (os-optics-kit[plot]); views and animations need Chrome/Chromium and os-optics-kit[render];
-MP4 needs os-optics-kit[media]. Stdout: one compact JSON document; progress lines on stderr.
+MP4 needs os-optics-kit[media]. A plain system view or case image needs no browser:
+os-optics view RUN --no-browser --snapshot DIR --views iso.
+Stdout: one compact JSON document; progress lines on stderr.
 Exit codes: 0 done; 2 INCOMPLETE: some assets were not built (a missing source, target or panel, or a missing
 font, browser or media extra), each named in missing[] with a recovery step; 4 refused specification, setting or
 output directory.
@@ -330,8 +332,12 @@ def build_plot_sweep(asset, ctx, theme, out):
         raise pres.PresentationError("SPEC_INVALID", f"asset {asset['id']}: a sweep plot needs a study source")
     summary = wc.read_json(source.path / "summary.json")
     y = _required(asset, "y")
-    rows, unit, parameters = pr.study_column(summary, y)
-    data = {"study": source.id, "y": y, "unit": unit, "parameters": parameters,
+    fix = asset.get("fix")
+    if fix is not None and (not isinstance(fix, dict) or not all(isinstance(v, (int, float)) and not
+                                                                  isinstance(v, bool) for v in fix.values())):
+        raise pres.PresentationError("SPEC_INVALID", f"asset {asset['id']}: fix maps parameter names to numbers")
+    rows, unit, parameters = pr.study_column(summary, y, fix)
+    data = {"study": source.id, "y": y, "unit": unit, "parameters": parameters, "fix": fix,
             "rows": [{key: row.get(key) for key in row if key == "sample_id" or key == "outcome" or key == y
                       or key.startswith(f"{y}:") or key.startswith("param:")} for row in rows]}
     data_file = wc.write_json(out / "data.json", data)
@@ -342,7 +348,7 @@ def build_plot_sweep(asset, ctx, theme, out):
     title = {lang: pres.text("title.sweep", lang, y=names[lang][0], x=names[lang][1]) for lang in pres.LANGUAGES}
     caption = {lang: pr.sweep_caption(lang, rows, y, names[lang][0], names[lang][1]) for lang in pres.LANGUAGES}
     result = pr.plot_sweep(source.path, y, out_dir=out, name=asset["id"], style=style,
-                           caption_text=pres.caption_text(asset, theme, caption))
+                           caption_text=pres.caption_text(asset, theme, caption), fix=fix)
     files = {"image": Path(result["out"]["png"])}
     for kind in ("svg", "pdf"):
         if kind in result["out"]:
@@ -806,6 +812,7 @@ def init(paths, out_dir, *, labels=None, title=None, theme=None, settings=(), an
     for index, path in enumerate(paths):
         kind = pres.source_kind(path)
         if kind is None:
+            pres.require_study_results(path)  # a planned study not executed (or in part) names the command to run
             raise pres.PresentationError("SOURCE_MISSING", f"{Path(path).name} is not a saved run or study directory",
                                          recovery="pass run directories (manifest.json) or sweep study directories "
                                                   "(summary.json)")

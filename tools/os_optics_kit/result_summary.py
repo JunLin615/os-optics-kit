@@ -2,10 +2,14 @@
 
 Usage: os-optics-kit summary RUN_DIR [--details]   (or: python -m os_optics_kit summary RUN_DIR)
 
-Exit codes follow requirement_outcome: 0 all selected targets met or none declared,
-1 an unmet target, 2 indeterminate or a partial run (PARTIAL),
-3 selected target outside its model, 4 invalid input/artifact or failed computation.
-Raw aggregate status is preserved separately.
+A run whose files do not match their recorded hashes is summarized as stored: "integrity" holds consistent false
+and the problems, and one JSON line {"warning": {"code": "RUN_INTEGRITY_FAILED", ...}} goes to stderr.
+Exit codes follow the os-optics requirements exit contract: 0 the run completed and every target is met, or none
+is declared; 1 an unmet target; 2 an indeterminate target or a target that does not apply; 3 a target reads a
+quantity outside its model, or the run did not complete (execution PARTIAL: a compute budget was reached); 4
+invalid input or artifact, or a FAILED or CANCELLED run. requirement_outcome is the class of the declared targets'
+assessments; a PARTIAL run is never PASS or NOT_APPLICABLE (UNKNOWN when its targets are met or none is declared),
+and outcome.execution names the budgets it reached. The aggregate status is in "status".
 """
 
 from __future__ import annotations
@@ -26,6 +30,19 @@ EXIT_CODES = {
     "FAIL": 1, "UNKNOWN": 2, "OUT_OF_MODEL_SCOPE": 3, "OUT_OF_MODEL": 3, "ERROR": 4,
 }
 ERROR_EXIT = 4
+#: Exit code of a run whose calculation did not complete (execution ``PARTIAL``: a compute budget was reached),
+#: whatever its class: the os-optics ``requirements`` exit contract's code for an incomplete calculation.
+EXECUTION_INCOMPLETE_EXIT = 3
+
+
+def requirement_exit_code(label, execution=None, exit_codes=None):
+    """Exit code of a run's class or status ``label`` (a key of ``exit_codes``, default ``EXIT_CODES``) under the
+    os-optics ``requirements`` exit contract: ``EXECUTION_INCOMPLETE_EXIT`` when ``execution`` (the run's
+    ``outcome.execution``) is ``PARTIAL`` and the label is not an error, else the label's code."""
+    code = (exit_codes or EXIT_CODES)[label]
+    if code != ERROR_EXIT and isinstance(execution, dict) and execution.get("outcome") == "PARTIAL":
+        return EXECUTION_INCOMPLETE_EXIT
+    return code
 
 
 #: where --help goes while a command's own prints are redirected to stderr (set by ``json_cli_stdout``)
@@ -70,14 +87,12 @@ def summarize_results(results, *, artifacts=None, details=False):
     """Return JSON-safe results using the public RunResults API; never simulate.
 
     All targets and diagnostics are retained. Only the power overview is reduced;
-    complete power entries and rays remain in the supplied artifact files.
+    complete power entries and rays remain in the supplied artifact files. ``integrity``
+    (``checked``, ``consistent``, ``problems``) states whether the run's files match their recorded hashes; a run
+    that does not verify is summarized as stored, with that record.
     """
-    from os_optics.results import ResultsError
-
     description = results.describe()
     integrity = description["integrity"]
-    if integrity["checked"] and not integrity["consistent"]:
-        raise ResultsError("RUN_INTEGRITY_FAILED", "; ".join(integrity["problems"]))
     statuses = description["status"]
     status = statuses.get("validation_status")
     if status is None:
@@ -141,11 +156,17 @@ def summarize_run(directory, *, details=False):
 
 
 def emit_cli(workflow, *, exit_status_key="requirement_outcome"):
-    """Emit JSON using the caller's declared outcome field for the exit code."""
+    """Emit JSON using the caller's declared outcome field for the exit code; for ``requirement_outcome`` a run whose
+    ``outcome.execution`` is PARTIAL exits ``EXECUTION_INCOMPLETE_EXIT`` (``requirement_exit_code``)."""
     try:
         with json_cli_stdout():
             summary = workflow()
-        code = EXIT_CODES[summary[exit_status_key]]
+        if exit_status_key == "requirement_outcome":
+            outcome = summary.get("outcome")
+            code = requirement_exit_code(summary[exit_status_key],
+                                         outcome.get("execution") if isinstance(outcome, dict) else None)
+        else:
+            code = EXIT_CODES[summary[exit_status_key]]
         output = json.dumps(summary, ensure_ascii=True, allow_nan=False, separators=(",", ":"))
     except SystemExit as exc:  # --help
         return exit_status(exc)
@@ -162,7 +183,13 @@ def main(argv=None):
         parser.add_argument("directory", type=Path, help="Saved local run directory")
         parser.add_argument("--details", action="store_true", help="Include the complete power ledger")
         args = parser.parse_args(argv)
-        return summarize_run(args.directory, details=args.details)
+        summary = summarize_run(args.directory, details=args.details)
+        integrity = summary["integrity"]
+        if integrity["checked"] and not integrity["consistent"]:
+            print(json.dumps({"warning": {"code": "RUN_INTEGRITY_FAILED", "problems": integrity["problems"],
+                                          "check": f'os-optics project verify "{args.directory}"'}},
+                             ensure_ascii=True, separators=(",", ":")), file=sys.stderr)
+        return summary
 
     return emit_cli(workflow)
 

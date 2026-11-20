@@ -1,6 +1,6 @@
 """Real viewer regressions, using the catalog-free ideal-lens-focus case.
 
-Install ``os-optics==0.12.0``, ``os-optics-kit[render]`` and pytest, with Chrome/Chromium
+Install the verified ``os-optics`` of ``baseline.json``, ``os-optics-kit[render]`` and pytest, with Chrome/Chromium
 installed, then run ``python -m pytest tests/test_render_browser.py``. Missing optional
 dependencies skip these checks; when available, all output stays in pytest's temporary directory.
 """

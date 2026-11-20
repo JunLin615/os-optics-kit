@@ -2,11 +2,15 @@
 name: interop-diffraction
 title: Diffraction at a declared stop, handed off to external codes
 summary: A 532 nm TEM00 beam (1 mm waist, 1 mW) passes a 1.2 mm radius stop and an ideal f = 200 mm lens. The engine's transverse-plane handoff feeds LightPipes, prysm, POPPY and Diffractio, which compute the diffracted focus the paraxial Gaussian result cannot give after truncation.
+class: free-space
+domain: diffraction, gaussian-beam
+provenance: self-built
+publication: own-work
 engine: 0.13.0
 catalog: none
 project: project.json
 tools: none
-tags: catalog-free, interop, diffraction, aperture-stop, gaussian-beam, lightpipes, handoff
+tags: aperture-stop, handoff, interop, lightpipes, prysm, poppy
 license: MIT
 ---
 
@@ -55,4 +59,5 @@ os-optics 0.13.0, no catalog: run status WARNING (`expected.json`). External sid
 - `project.json`, `expected.json`: the 1.2 mm stop design and its verified outcome.
 - `opensci_handoff.py`, `external_focus.py`, `tem00_field.py`, `hankel_reference.py`: both sides and the reference.
 - `requirements-diffraction.txt`, `requirements-diffractio.txt`: pinned third-party packages.
-- `README.md`, `README.zh-CN.md`, `images/`: the illustrated page.
+- `README.md`, `README.zh-CN.md`: the illustrated pages; `images.json` records `images/iso.png`
+  (`os-optics-kit cases images interop-diffraction`).

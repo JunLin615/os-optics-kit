@@ -59,7 +59,7 @@ def compute(out):
 
 
 def sweep_spec(values):
-    return {'max_evaluations': len(values), 'targets': ['spot_radius'],
+    return {'targets': ['spot_radius'],
             'parameters': [{'name': 'lens_shift', 'unit': 'mm', 'values': values,
                             'ops': placement_ops('$value')}],
             'objective': {'column': 'target:spot_radius', 'sense': 'minimize'}}

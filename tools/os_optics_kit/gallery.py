@@ -65,6 +65,9 @@ GALLERY_TEXT: dict[str, dict[str, str]] = {
         "previous": "Previous",
         "next": "Next",
         "close": "Close",
+        "play": "Play",
+        "pause": "Pause",
+        "seek": "Playback position",
         "open": "Open {id}",
         "position": "{index} of {count}",
         "status.written": "Drawn",
@@ -126,6 +129,9 @@ GALLERY_TEXT: dict[str, dict[str, str]] = {
         "previous": "上一项",
         "next": "下一项",
         "close": "关闭",
+        "play": "播放",
+        "pause": "暂停",
+        "seek": "播放位置",
         "open": "打开 {id}",
         "position": "{index} / {count}",
         "status.written": "已绘制",
@@ -552,9 +558,14 @@ def _truncate(text_artist, renderer, width_px):
     text_artist.set_text(full[:low].rstrip() + "…")
 
 
+#: lightest face weight the contact sheet draws with (thin and extra-light faces are dropped)
+LIGHTEST_WEIGHT = 250
+
+
 def regular_families(families):
     """``families`` without those installed only in thin weights (a variable Noto Sans SC registers as weight 100
-    and would draw every Chinese character hairline-thin); unchanged when nothing else would remain."""
+    and would draw every Chinese character hairline-thin); unchanged when nothing else would remain. A family whose
+    heaviest face is light (250-349) is kept, as the figures' font discovery accepts it."""
     try:
         from matplotlib import font_manager
     except ImportError:
@@ -563,7 +574,7 @@ def regular_families(families):
     for entry in font_manager.fontManager.ttflist:
         weight = entry.weight if isinstance(entry.weight, int) else font_manager.weight_dict.get(entry.weight, 400)
         weights.setdefault(entry.name, set()).add(int(weight))
-    kept = [family for family in families if family not in weights or max(weights[family]) >= 350]
+    kept = [family for family in families if family not in weights or max(weights[family]) >= LIGHTEST_WEIGHT]
     return kept or list(families)
 
 
@@ -1040,6 +1051,11 @@ padding:5px 12px;border-radius:8px;cursor:pointer}
 .vbody{flex:1;display:flex;min-height:0}
 .stage{flex:1;display:flex;align-items:center;justify-content:center;padding:20px;min-width:0;background:var(--thumb)}
 .stage img,.stage video{max-width:100%;max-height:100%;object-fit:contain;display:block}
+.stage .media{display:flex;flex-direction:column;align-items:stretch;gap:8px;max-width:100%;max-height:100%;
+min-height:0}
+.stage .media video{min-height:0;cursor:pointer}
+.vctl{display:flex;align-items:center;gap:12px}
+.vctl input{flex:1;accent-color:var(--accent)}
 .stage .problem{max-width:560px;height:auto;border-radius:10px}
 aside{width:390px;flex:none;overflow:auto;border-left:1px solid var(--line);padding:16px 20px 28px;font-size:14px}
 aside h2{font-size:12.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:20px 0 6px;
@@ -1103,6 +1119,39 @@ aside{width:auto;border-left:0;border-top:1px solid var(--line)}
     });
     (kids || []).forEach(function (kid) { if (kid) { node.appendChild(kid); } });
     return node;
+  }
+  function videoPlayer(a) {
+    // controls below the video, so they never cover the parameter values in the frame's bottom line
+    var video = el("video", {id: "full-video", src: a.media.src, poster: a.media.poster, playsinline: "",
+                             preload: "metadata", "aria-label": loc(a.title)});
+    var play = el("button", {cls: "btn", type: "button", id: "video-play", text: t("play")});
+    var seek = el("input", {type: "range", id: "video-seek", min: "0", max: "1000", value: "0", step: "1",
+                            "aria-label": t("seek")});
+    var time = el("span", {cls: "pos", id: "video-time"});
+    function clock(s) {
+      s = Math.max(0, Math.floor(s || 0));
+      return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2);
+    }
+    function sync() {
+      var d = video.duration || 0;
+      play.textContent = video.paused ? t("play") : t("pause");
+      if (d) { seek.value = String(Math.round(1000 * video.currentTime / d)); }
+      time.textContent = clock(video.currentTime) + " / " + clock(d);
+    }
+    function toggle() {
+      if (video.paused) { video.play(); } else { video.pause(); }
+      sync();
+    }
+    play.addEventListener("click", toggle);
+    video.addEventListener("click", toggle);
+    seek.addEventListener("input", function () {
+      if (video.duration) { video.currentTime = video.duration * Number(seek.value) / 1000; }
+    });
+    ["play", "pause", "timeupdate", "loadedmetadata", "ended"].forEach(function (name) {
+      video.addEventListener(name, sync);
+    });
+    sync();
+    return el("div", {cls: "media"}, [video, el("div", {cls: "vctl"}, [play, seek, time])]);
   }
   function bytes(n) {
     if (n === null || n === undefined) { return ""; }
@@ -1185,8 +1234,7 @@ aside{width:auto;border-left:0;border-top:1px solid var(--line)}
     var stage = document.getElementById("stage");
     stage.textContent = "";
     if (a.built && a.media && a.media.type === "video") {
-      stage.appendChild(el("video", {id: "full-video", src: a.media.src, poster: a.media.poster, controls: "",
-                                     playsinline: "", preload: "metadata", "aria-label": loc(a.title)}));
+      stage.appendChild(videoPlayer(a));
     } else if (a.built && a.media) {
       stage.appendChild(el("img", {id: "full-image", src: a.media.src, alt: loc(a.title) || a.id}));
     } else if (!a.built) {
@@ -1267,6 +1315,7 @@ aside{width:auto;border-left:0;border-top:1px solid var(--line)}
   document.getElementById("close").addEventListener("click", hide);
   document.addEventListener("keydown", function (ev) {
     if (current < 0 || ev.altKey || ev.ctrlKey || ev.metaKey) { return; }
+    if (ev.target && ev.target.id === "video-seek" && ev.key !== "Escape") { return; }  // the slider's own keys
     if (ev.key === "Escape") { ev.preventDefault(); hide(); }
     else if (ev.key === "ArrowLeft") { ev.preventDefault(); show(current - 1); }
     else if (ev.key === "ArrowRight") { ev.preventDefault(); show(current + 1); }

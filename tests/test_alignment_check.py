@@ -3,6 +3,7 @@
 import hashlib
 import io
 import json
+import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -263,15 +264,18 @@ class AlignmentRunnerTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
-        self.root = Path(self.temporary.name) / "repository"
+        # The runner works with resolved paths, so the expected paths are resolved too: the temporary directory can
+        # be an alias of its real path (/var -> /private/var on macOS, an 8.3 short name such as RUNNER~1 on Windows).
+        base = Path(self.temporary.name).resolve()
+        self.root = base / "repository"
         (self.root / "scripts").mkdir(parents=True)
         (self.root / "tools" / "os_optics_kit").mkdir(parents=True)
         (self.root / "tools" / "os_optics_kit" / "_version.py").write_text('__version__ = "0.1.0"\n',
                                                                            encoding="utf-8")
-        self.out = Path(self.temporary.name) / "evidence"
+        self.out = base / "evidence"
         (self.root / "scripts" / "requirements-alignment.txt").write_text("pytest\n", encoding="utf-8")
         (self.root / "requirements-topic.txt").write_text("scipy\n", encoding="utf-8")
-        self.catalog = Path(self.temporary.name) / "release.json"
+        self.catalog = base / "release.json"
         self.catalog.write_text(json.dumps({"catalog_version": CATALOG_VERSION, "products": []}), encoding="utf-8")
         self.catalog_sha256 = hashlib.sha256(self.catalog.read_bytes()).hexdigest()
         self.baseline = {"schema": "os-optics-kit.baseline", "schema_version": 1, "kit_version": "0.1.0",
@@ -371,6 +375,24 @@ class AlignmentRunnerTests(unittest.TestCase):
         self.assertEqual((rows["summary-missing-run"]["status"], rows["summary-missing-run"]["exit_code"]),
                          ("PASS", 4))
         self.assertEqual(rows["cases-verify"]["status"], "PASS")
+
+    def test_aliased_paths_are_resolved_before_use(self):
+        # A path through a symbolic link (like macOS /var -> /private/var) names the same files as the real path;
+        # the runner works with the real path, so its commands and containment checks never mix the two spellings.
+        alias = self.root.parent.with_name(self.root.parent.name + "-alias")
+        try:
+            os.symlink(self.root.parent, alias, target_is_directory=True)
+        except (OSError, NotImplementedError):
+            self.skipTest("symbolic links are not available")
+        self.addCleanup(lambda: os.rmdir(alias) if os.name == "nt" else alias.unlink())
+        runner = alignment.AlignmentCheck(alias / "repository", alias / "evidence")
+        self.assertEqual((runner.root, runner.out), (self.root, self.out))
+        with patch.object(alignment.subprocess, "run", side_effect=self.fake_processes()) as commands:
+            report = runner.run()
+        self.assertEqual(report["status"], "PASS", [row for row in report["checks"] if row["status"] == "FAIL"])
+        self.assertEqual(self.calls(commands, "--report")[0].args[0][-1], str(self.out / "logs" / "install-engine.json"))
+        self.assertTrue(Path(self.calls(commands, "--report")[0].args[0][0]).is_relative_to(self.out / ".venv"))
+        self.assertFalse([call for call in commands.call_args_list if str(alias) in " ".join(call.args[0])])
 
     def test_latest_candidate_is_resolved_and_kept_even_outside_the_declared_range(self):
         runner = alignment.AlignmentCheck(self.root, self.out, "latest")

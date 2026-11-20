@@ -3,10 +3,12 @@
 python scripts/engine_release.py                    # the verified engine of baseline.json
 python scripts/engine_release.py --candidate latest # the newest release, if newer than the verified one
 python scripts/engine_release.py --candidate 0.13.0
+python scripts/engine_release.py --require-published  # the release build: the verified engine must be on PyPI
 
 Writes ``run=true|false`` and ``version=X`` to $GITHUB_OUTPUT (or --github-output) and one line to the job summary
 when nothing runs. Prints one compact JSON document. Exit 0 whether or not the release exists; 1 when PyPI cannot
-be read.
+be read, and with --require-published also when the verified engine is not on PyPI (a kit that requires an
+unpublished engine cannot be installed).
 """
 
 from __future__ import annotations
@@ -78,7 +80,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--candidate", help="latest or an exact version instead of the verified engine")
     parser.add_argument("--github-output", type=Path, default=os.environ.get("GITHUB_OUTPUT") or None)
     parser.add_argument("--summary", type=Path, default=os.environ.get("GITHUB_STEP_SUMMARY") or None)
+    parser.add_argument("--require-published", action="store_true",
+                        help="exit 1 when the verified engine of baseline.json is not on PyPI")
     args = parser.parse_args(argv)
+    if args.require_published and args.candidate:
+        parser.error("--require-published checks the verified engine; it takes no --candidate")
     try:
         verified = json.loads((ROOT / "baseline.json").read_text(encoding="utf-8"))["engine"]["verified_version"]
         result = decide(verified, args.candidate or None)
@@ -94,6 +100,10 @@ def main(argv: list[str] | None = None) -> int:
             with args.summary.open("a", encoding="utf-8") as summary:
                 summary.write(result["message"] + "\n")
     print(json.dumps(result, separators=(",", ":")))
+    if args.require_published and not result["run"]:
+        print(f"os-optics {result['version']} must be on PyPI before a kit release that requires it is built; "
+              "publish the engine release first", file=sys.stderr)
+        return 1
     return 0
 
 

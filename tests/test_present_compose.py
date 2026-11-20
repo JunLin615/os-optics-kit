@@ -24,6 +24,7 @@ from os_optics_kit import compose_figures as cf
 from os_optics_kit import presentation as pres
 from os_optics_kit import present
 from os_optics_kit import workflow_common as wc
+from tests.font_fixtures import CJK_FONT_MISSING, REQUIRE_CJK_FONT, require_chinese_font
 
 REQUIRE = os.environ.get("OS_OPTICS_KIT_REQUIRE_PRESENTATION") == "1"
 HAS_ENGINE = find_spec("os_optics") is not None
@@ -397,8 +398,8 @@ class DrawingTests(unittest.TestCase):
         from matplotlib.text import Text
 
         theme = pres.resolve_theme({"language": "zh-CN", "background": "dark", "size": "4k"})
-        if chinese_fonts_missing(theme) and not REQUIRE:
-            self.skipTest("no installed font covers Chinese")
+        if chinese_fonts_missing(theme) and not REQUIRE_CJK_FONT:
+            self.skipTest(CJK_FONT_MISSING)
         fig, _info = self.draw(theme, targets_document(theme))
         try:
             strings = [t.get_text() for t in fig.findobj(Text)]
@@ -541,6 +542,43 @@ class SyntheticComposeTests(unittest.TestCase):
         self.assertIn("Final (L2 moved), Start and Target values", result["caption"]["en"])
         self.assertIn("最终（L2 已移动）", result["title"]["zh-CN"])
 
+    def test_targets_in_a_small_cell_keep_their_value_range_and_report_crowding(self):
+        # regression: a targets plot in a half-size grid cell with values in um widened its value axis to about
+        # 1e7 um, because the label room was divided by an axes height of about one pixel
+        self.spec["theme"] = {"preset": "presentation", "units": {"mm": "um"}}
+        self.ctx = self._rebind()
+        for name in ("targets", "targets-um"):  # re-made in the display unit of the theme
+            data = targets_document(self.ctx.theme)
+            self.ctx._built[name]["_abs"]["data"] = wc.write_json(self.ctx.asset_dir(name) / "data.json", data)
+        _asset, result = self.build(layout="grid", columns=2, panels=[
+            {"asset": "targets"}, {"asset": "view-a"}, {"asset": "view-b"}])
+        layout = wc.read_json(self.dir / "assets" / "combo" / "layout.json")
+        waist, spot = layout["panels"][0]["y_limits"]
+        # at most MAX_LABEL_ROOM times the drawn range (values and bounds 1440..2100 um, 10 % margins)
+        self.assertLess(waist[1] - waist[0], cf.MAX_LABEL_ROOM * (2100.0 - 1440.0) * 1.2 + 1e-6)
+        self.assertGreater(waist[0], 0.0)  # values 1440 and 2000 um: nothing near zero or 1e7
+        self.assertLess(waist[1], 4000.0)
+        self.assertLess(spot[1] - spot[0], cf.MAX_LABEL_ROOM * 20.0 * 1.2 + 1e-6)
+        if not result["details"]["text_fits"]:  # labels that do not fit are reported, not hidden
+            self.assertEqual(result["details"]["labels_cramped"], [1])
+        _asset, result = self.build(layout="grid", columns=2, panels=[
+            {"asset": "view-a"}, {"asset": "view-b"}, {"asset": "targets", "span": 2}])
+        self.assertTrue(result["details"]["text_fits"])
+        self.assertNotIn("labels_cramped", result["details"])
+
+    def test_shared_axis_caption_prints_the_display_unit(self):
+        self.spec["theme"] = {"preset": "presentation", "units": {"mm": "um"}}
+        self.ctx = self._rebind()
+        data = targets_document(self.ctx.theme)
+        self.ctx._built["targets"]["_abs"]["data"] = wc.write_json(self.ctx.asset_dir("targets") / "data.json", data)
+        _asset, result = self.build(layout="row", shared={"y": True}, panels=[{"asset": "targets"}])
+        self.assertTrue(result["details"]["scales"]["y"]["applied"])
+        self.assertEqual(result["details"]["scales"]["y"]["unit"], "um")  # the code stays in the record
+        for language in ("en", "zh-CN"):
+            caption = result["caption"][language]
+            self.assertIn("µm", caption)
+            self.assertNotRegex(caption, r"\bum\b")
+
     def test_duplicate_default_labels_name_each_plot(self):
         for name in ("targets", "targets-um"):
             self.ctx._built[name]["sources"] = ["s"]
@@ -564,8 +602,8 @@ class SyntheticComposeTests(unittest.TestCase):
     def test_chinese_dark_4k(self):
         self.spec["theme"] = {"preset": "presentation", "language": "zh-CN", "background": "dark", "size": "4k"}
         self.ctx = self._rebind()
-        if chinese_fonts_missing(self.ctx.theme) and not REQUIRE:
-            self.skipTest("no installed font covers Chinese")
+        if chinese_fonts_missing(self.ctx.theme) and not REQUIRE_CJK_FONT:
+            self.skipTest(CJK_FONT_MISSING)
         _asset, result = self.build(layout="system-plot", panels=[{"asset": "view-a"}, {"asset": "targets"}])
         self.assertEqual(pres.image_size(result["files"]["image"]), [3840, 2160])
         self.assertTrue(result["details"]["text_fits"])
@@ -700,7 +738,12 @@ class PresentBuildTests(unittest.TestCase):
         for role in ("image", "svg", "layout", "panel-1", "panel-1-svg", "panel-2", "data"):
             self.assertIn(role, entry["files"])
         self.assertEqual(entry["depends_on"], ["targets", "power-nominal"])
-        self.assertTrue(entry["details"]["text_fits"])
+        # four targets of three runs stacked in a half-width cell: their value labels crowd the short axes. That is
+        # reported, not hidden by widening the value axes (which used to span 250-500 mm for values below 5 mm)
+        layout = wc.read_json(self.spec_dir / entry["files"]["layout"]["path"])
+        for low, high in layout["panels"][0]["y_limits"]:
+            self.assertLess(high - low, 20.0)
+        self.assertEqual(entry["details"]["text_fits"], "labels_cramped" not in entry["details"])
 
     @needs(has_browser(), "needs Chrome/Chromium and playwright")
     def test_views_before_after_and_system_plot(self):
@@ -714,6 +757,7 @@ class PresentBuildTests(unittest.TestCase):
         self.assertGreater(cells[0][2], cells[1][2])  # the view is wider
 
     def test_relabel_reorder_rebuild_reuses_the_rest(self):
+        require_chinese_font(self)
         spec = pres.load_spec(self.spec_dir / pres.SPEC_FILE)
         compose = pres.find_asset(spec, "result-pair")
         compose["panels"] = [{"asset": "power-nominal", "label": {"en": "Power", "zh-CN": "功率"}},

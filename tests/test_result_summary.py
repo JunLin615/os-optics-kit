@@ -21,7 +21,7 @@ if HAS_ENGINE:
     from os_optics.contracts import (
         PowerBudget, TargetResult, ValidationIssue, ValidationResult, ValidationSummary,
     )
-    from os_optics.results import ResultsError, RunResults, results_from_engine
+    from os_optics.results import RunResults, results_from_engine
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -56,6 +56,29 @@ class ResultSummaryTests(unittest.TestCase):
                 code, stdout, stderr = invoke(lambda: summary)
                 self.assertEqual((code, stderr), (4, ""))
                 self.assertEqual(json.loads(stdout)["outcome"]["execution"]["outcome"], state)
+
+    @requires_engine
+    def test_partial_execution_is_unknown_and_exits_3(self):
+        """A PARTIAL run (a compute budget was reached) did not complete: without targets it is UNKNOWN, not
+        NOT_APPLICABLE, and it exits 3, the Engine's ``requirements`` code for an incomplete calculation."""
+        results = results_from_engine(engine_result("WARNING"))
+        native = results.targets()
+        native["outcome"] = {"execution": {"outcome": "PARTIAL", "budgets": {"exhausted": ["max_trace_steps"]}},
+                             "requirements": {}}
+        with patch.object(RunResults, "targets", return_value=native):
+            summary = summarize_results(results)
+        self.assertEqual(summary["requirement_outcome"], "UNKNOWN")
+        code, stdout, stderr = invoke(lambda: summary)
+        self.assertEqual((code, stderr), (3, ""))
+        self.assertEqual(json.loads(stdout)["outcome"]["execution"]["outcome"], "PARTIAL")
+
+    def test_exit_code_of_a_partial_run_comes_before_its_class(self):
+        for outcome, completed in (("UNKNOWN", 2), ("FAIL", 1), ("OUT_OF_MODEL", 3)):
+            for execution, expected in (("COMPLETED", completed), ("PARTIAL", 3)):
+                with self.subTest(outcome=outcome, execution=execution):
+                    code, _stdout, stderr = invoke(lambda: {"status": "WARNING", "requirement_outcome": outcome,
+                                                            "outcome": {"execution": {"outcome": execution}}})
+                    self.assertEqual((code, stderr), (expected, ""))
 
     @requires_engine
     def test_all_scientific_statuses_produce_json_and_matching_exit_codes(self):
@@ -166,13 +189,17 @@ class ResultSummaryTests(unittest.TestCase):
         self.assertIsNone(summary["validation_status"])
 
     @requires_engine
-    def test_integrity_failure_never_emits_a_scientific_summary(self):
+    def test_integrity_failure_is_summarized_with_its_record(self):
+        from os_optics_kit.result_summary import EXIT_CODES
+
         results = RunResults(engine_result(), integrity_problems=("simulation_result hash mismatch",))
-        with self.assertRaises(ResultsError):
-            summarize_results(results)
+        summary = summarize_results(results)
+        self.assertEqual(summary["integrity"], {"checked": True, "consistent": False,
+                                                "problems": ["simulation_result hash mismatch"]})
+        self.assertEqual(summary["status"], "PASS")
         code, stdout, stderr = invoke(lambda: summarize_results(results))
-        self.assertEqual((code, stdout), (4, ""))
-        self.assertEqual(json.loads(stderr)["error"]["code"], "RUN_INTEGRITY_FAILED")
+        self.assertEqual((code, stderr), (EXIT_CODES[summary["requirement_outcome"]], ""))
+        self.assertFalse(json.loads(stdout)["integrity"]["consistent"])
 
     @requires_engine
     def test_unknown_future_status_fails_closed(self):

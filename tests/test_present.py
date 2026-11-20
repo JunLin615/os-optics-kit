@@ -19,6 +19,7 @@ from unittest import mock
 
 from os_optics_kit import presentation as pres
 from os_optics_kit import present
+from tests.font_fixtures import require_chinese_font
 
 ROOT = Path(__file__).resolve().parents[1]
 REQUIRE = os.environ.get("OS_OPTICS_KIT_REQUIRE_PRESENTATION") == "1"
@@ -311,6 +312,7 @@ class BuildTests(unittest.TestCase):
             code, result, _ = call(["build", str(out / "presentation.json"), "--no-gallery", "--quiet"])
             self.assertEqual(result["counts"]["reused"], len(spec["assets"]))
             # follow-up: white background, Chinese labels, larger text, 4k; saved in presentation.json
+            require_chinese_font(self)
             code, result, err = call(["build", str(out / "presentation.json"), "--no-gallery", "--quiet",
                                       "--set", "theme.language=zh-CN", "--set", "theme.background=light",
                                       "--set", "theme.font_scale=1.4", "--set", "theme.size=4k",
@@ -439,6 +441,7 @@ class BuildTests(unittest.TestCase):
     def test_plot_command_theme(self):
         from os_optics_kit import plot_results as pr
 
+        require_chinese_font(self)
         out = self.root / "plot-theme"
         code = pr.main(["sweep", str(self.study), "--y", next(iter(present._study_targets(self.study))),
                         "--out", str(out), "--name", "zh", "--theme", "presentation", "--set", "language=zh-CN",

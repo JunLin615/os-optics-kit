@@ -46,6 +46,7 @@ class RepositoryTree(unittest.TestCase):
         self.write("docs/en/guide.md", "See [the case](../../cases/demo/CASE.md#run) and [top](#guide).\n")
         self.write("docs/zh-CN/guide.md", "见[案例](../../cases/demo/CASE.md)。\n")
         self.write("cases/demo/CASE.md", "---\nname: demo\n---\n## Run\n")
+        self.write("CHANGELOG.md", "# Changelog\n\n## 0.1.0\n\nRequires `os-optics>=0.12,<0.13`.\n\n### Added\n\n- x\n")
         (self.root / "cases/demo/images").mkdir(parents=True)
         (self.root / "cases/demo/images/plot.png").write_bytes(b"\x89PNG\r\n\x1a\n" + b"\0" * 100)
 
@@ -108,6 +109,45 @@ class RepositoryCheckTests(RepositoryTree):
         self.assertEqual(self.problems("pins"), [("pins", "docs/en/guide.md", 1), ("pins", "docs/en/guide.md", 1),
                                                  ("pins", "docs/en/guide.md", 3), ("pins", "docs/en/guide.md", 4),
                                                  ("pins", "docs/en/guide.md", 4)])
+
+    def test_engine_ranges_must_equal_the_baseline_requirement(self):
+        self.write("docs/en/guide.md", 'Requires `os-optics>=0.12,<0.13`; "os-optics[protected] >= 0.12, < 0.14";\n'
+                                       "the kit range os-optics-kit>=0.2,<0.3 is not an engine range;\n"
+                                       'os-optics==0.12.0 is a pin; ["os-optics<0.13,>=0.12"]\n'
+                                       "recover with python -m pip install \"os-optics>=0.11,<0.12\"\n")
+        self.write("tests/test_x.py", '"os-optics>=0.6,<0.7"\n')
+        self.write("scripts/x.py", '"os-optics>=0.7,<0.8"\n')
+        self.write("CHANGELOG.md", "# Changelog\n\n## 0.1.0\n\nRequires `os-optics>=0.12,<0.13`.\n\n"
+                                   "## 0.0.9\n\nRequires `os-optics>=0.11,<0.12`.\n")
+        self.assertEqual(self.problems("ranges"), [("ranges", "docs/en/guide.md", 1),
+                                                   ("ranges", "docs/en/guide.md", 4)])
+        self.assertEqual(self.problems(), [("ranges", "docs/en/guide.md", 1), ("ranges", "docs/en/guide.md", 4)])
+
+    def test_changelog_has_a_section_for_the_kit_version_newest_first(self):
+        for text, fragment in (
+            (None, "missing"),
+            ("# Changelog\n\n## 0.0.9\n\n- x\n", "no section '## 0.1.0'"),
+            ("# Changelog\n\n## 0.0.9\n\n## 0.1.0\n", "follows 0.0.9"),
+            ("# Changelog\n\n## 0.1.0\n\n## 0.1.0\n", "appears twice"),
+            ("# Changelog\n\n## Unreleased\n\n## 0.1.0\n", "not a release version"),
+            ("# Changelog\n\n## 0.2.0\n\n## 0.1.0\n", "comes first"),
+        ):
+            with self.subTest(fragment=fragment):
+                if text is None:
+                    (self.root / "CHANGELOG.md").unlink()
+                else:
+                    self.write("CHANGELOG.md", text)
+                messages = [item["message"] for item in check_repo.run_checks(self.root)["problems"]
+                            if item["check"] == "changelog"]
+                self.assertTrue(any(fragment in message for message in messages), messages)
+                self.write("CHANGELOG.md", "# Changelog\n\n## 0.1.0\n")
+                self.assertEqual(self.problems("changelog"), [])
+        self.write("CHANGELOG.md", "# Changelog\n\n## 0.1.0\n\n### Added\n\n## 0.0.10\n\n## 0.0.9\n")
+        self.assertEqual(self.problems("changelog"), [])
+        # a version bump without its section fails
+        self.write("baseline.json", json.dumps(dict(BASELINE, kit_version="0.1.1")))
+        self.write("tools/os_optics_kit/_version.py", '__version__ = "0.1.1"\n')
+        self.assertEqual(self.problems("changelog"), [("changelog", "CHANGELOG.md", None)])
 
     def test_language_pairs(self):
         (self.root / "README.zh-CN.md").unlink()
@@ -173,8 +213,16 @@ class RepositoryStateTests(unittest.TestCase):
 
     def test_this_repository_has_no_size_path_secret_json_or_baseline_problems(self):
         problems = [item for item in check_repo.run_checks(ROOT)["problems"]
-                    if item["check"] in {"size", "forbidden", "paths", "secrets", "json", "baseline", "pins"}]
+                    if item["check"] in {"size", "forbidden", "paths", "secrets", "json", "baseline", "pins",
+                                         "ranges", "changelog"}]
         self.assertEqual(problems, [])
+
+    def test_the_source_archive_carries_the_changelog(self):
+        import tomllib
+        include = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["tool"]["hatch"]["build"][
+            "targets"]["sdist"]["include"]
+        self.assertIn("CHANGELOG.md", include)
+        self.assertIn("CHANGELOG.md", check_dist.SDIST_REQUIRED)
 
 
 class DistributionCheckTests(unittest.TestCase):
@@ -313,6 +361,16 @@ class EngineReleaseTests(unittest.TestCase):
             self.assertEqual(output.read_text(), "run=false\nversion=0.12.0\n")
             self.assertEqual(summary.read_text(), "not yet\n")
 
+    def test_require_published_fails_the_release_build_for_an_unpublished_engine(self):
+        for run, code in ((False, 1), (True, 0)):
+            with self.subTest(run=run), patch.object(engine_release, "decide", return_value={
+                    "run": run, "version": "0.12.0", "verified": "0.12.0", "message": None if run else "not yet"}), \
+                    patch("sys.stdout", io.StringIO()), patch("sys.stderr", io.StringIO()) as stderr:
+                self.assertEqual(engine_release.main(["--require-published"]), code)
+                self.assertEqual("publish the engine release first" in stderr.getvalue(), not run)
+        with patch("sys.stderr", io.StringIO()), self.assertRaises(SystemExit):
+            engine_release.main(["--require-published", "--candidate", "latest"])
+
 
 class WorkflowTests(unittest.TestCase):
     """Text-level guarantees of the workflows; full validation is actionlint's job."""
@@ -335,6 +393,68 @@ class WorkflowTests(unittest.TestCase):
                 self.assertEqual(text.count("uses: actions/checkout@"), text.count("persist-credentials: false"))
                 self.assertIn("timeout-minutes:", text)
 
+    def job(self, workflow, name):
+        """The text of one job of a workflow (from its key to the next job key)."""
+        import re
+        text = self.workflows()[workflow]
+        match = re.search(rf"(?ms)^  {re.escape(name)}:\n.*?(?=^  [\w-]+:\n|\Z)", text)
+        self.assertIsNotNone(match, name)
+        return match.group(0)
+
+    def step(self, job_text, name):
+        import re
+        match = re.search(rf"(?ms)^      - name: {re.escape(name)}\n.*?(?=^      - |\Z)", job_text)
+        self.assertIsNotNone(match, name)
+        return match.group(0)
+
+    def test_ci_verifies_cases_on_one_path_once_per_tree(self):
+        engine = self.job("ci.yml", "engine")
+        self.assertIn("name: Engine checks (published os-optics)", engine)
+        self.assertIn("python scripts/check_alignment.py --out run-alignment --skip cases-verify", engine)
+        self.assertEqual(engine.count("check_alignment.py"), 1)
+        self.assertIn("    permissions:\n      contents: read\n", engine)
+        self.assertRegex(engine, r"\n      actions: read\n")
+        verify = self.step(engine, "Verify cases")
+        self.assertIn("run-alignment/.venv/bin/python -m os_optics_kit cases verify \"${names[@]}\" --jobs 4", verify)
+        self.assertIn("--out run-alignment/cases > run-alignment/cases-verify.json", verify)
+        self.assertIn("OPENSCI_CATALOG_DIR: ${{ github.workspace }}/run-alignment/.catalog", verify)
+        self.assertIn('exit "$status"', verify)
+        # The summary's exit code (non-zero for a document that is not MATCH) fails the step when verify exited 0.
+        self.assertIn('--exit "$status" || summary=$?', verify)
+        self.assertIn("if (( status == 0 )); then status=$summary; fi", verify)
+        self.assertNotIn("GITHUB_TOKEN", verify)
+        self.assertEqual(engine.count("cases verify"), 1)  # no per-case loop
+        lookup = self.step(engine, "Look for a full verification of this tree")
+        self.assertIn("GITHUB_TOKEN: ${{ github.token }}", lookup)
+        self.assertIn("github.event_name != 'pull_request'", lookup)
+        self.assertEqual(engine.count("github.token"), 1)
+        record = self.step(engine, "Record the full verification of this tree")
+        self.assertIn("steps.cases.outputs.all == 'true'", record)
+        self.assertIn("steps.verify.outcome == 'success'", record)
+        upload = self.step(engine, "Upload the verified-tree record")
+        self.assertIn("name: ${{ steps.record.outputs.name }}", upload)
+        self.assertIn("scripts/changed_cases.py --event", self.step(engine, "Cases to verify"))
+        # The token permission and the alignment check's cases-verify stay where they belong.
+        for job in ("setup", "ruff", "mypy", "tests", "repository", "package", "dco"):
+            with self.subTest(job=job):
+                self.assertNotIn("actions: read", self.job("ci.yml", job))
+        # The scheduled runs keep verifying every case through the default check cases-verify.
+        self.assertNotIn("cases-verify", self.workflows()["scheduled.yml"])
+        self.assertIn("check_alignment.py", self.workflows()["scheduled.yml"])
+
+    def test_required_check_names_and_the_case_table_check(self):
+        text = self.workflows()["ci.yml"]
+        for name in ("Read baseline", "Lint (ruff)", "Types (mypy)", "Unit tests (Python ${{ matrix.python }}, no engine)",
+                     "Repository, skills and cases", "Build and install the package", "DCO sign-off",
+                     "Engine checks (published os-optics)"):
+            with self.subTest(name=name):
+                self.assertIn(f"    name: {name}\n", text)
+        repository = self.job("ci.yml", "repository")
+        table = self.step(repository, "README case tables are current")
+        self.assertIn("if: ${{ !cancelled() }}", table)
+        self.assertIn("run: python scripts/case_tables.py --check", table)
+        self.assertLess(repository.index("cases index --check"), repository.index("case_tables.py --check"))
+
     def test_only_the_scheduled_reporter_writes_issues_and_only_release_gets_an_oidc_token(self):
         workflows = self.workflows()
         self.assertEqual(sum(text.count("issues: write") for text in workflows.values()), 1)
@@ -342,6 +462,16 @@ class WorkflowTests(unittest.TestCase):
         self.assertIn("github.event_name == 'schedule'", workflows["scheduled.yml"])
         self.assertEqual([name for name, text in workflows.items() if "id-token: write" in text], ["release.yml"])
         self.assertIn("environment:", workflows["release.yml"])
+
+    def test_release_builds_only_merged_commits_with_a_published_engine(self):
+        release = self.workflows()["release.yml"]
+        build = release[release.index("  build:"):release.index("  publish:")]
+        self.assertIn("fetch-depth: 0", build)
+        self.assertIn('git merge-base --is-ancestor "$GITHUB_SHA" origin/main', build)
+        self.assertIn("python scripts/engine_release.py --require-published", build)
+        # both guards run before anything is built
+        self.assertLess(build.index("--require-published"), build.index("python -m build"))
+        self.assertLess(build.index("merge-base"), build.index("python -m build"))
 
 
 if __name__ == "__main__":

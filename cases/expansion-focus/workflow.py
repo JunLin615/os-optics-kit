@@ -73,7 +73,7 @@ def config():
 
     return {"workflow": "beam_expansion_focus", "design": "expander_focus", "info": D.DESIGN_INFO["expander_focus"],
             "builder": D.expander_focus, "checks": checks, "reference_method": REFERENCE,
-            "default_studies": DEFAULT_STUDIES, "max_evaluations": 40}
+            "default_studies": DEFAULT_STUDIES}
 
 
 def main(argv=None):

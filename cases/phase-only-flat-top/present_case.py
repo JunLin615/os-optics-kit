@@ -118,7 +118,7 @@ def native_view(root, out, settings):
                                         theme, [], [files["camera"]], out,
                                         extra={"origin": "Saved native run through the official public renderer",
                                                "native_identity": identity, "native_present_build_supported": False,
-                                               "reason": "present 0.3.0 cannot pass Y up for a Z-axis view"})
+                                               "reason": "the present view asset cannot pass Y up for a Z-axis view"})
     write_json(folder / "provenance.json", provenance)
     captions = {}
     for language, value in caption.items():

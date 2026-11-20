@@ -37,7 +37,7 @@
     },
     {
       "custom_part": {
-        "custom_part_key": "ideal-f100",
+        "custom_part_key": "ideal-f50",
         "description": "Ideal thin lens f = 50 mm"
       },
       "instance_id": "LENS",
@@ -54,7 +54,7 @@
           0.5
         ]
       },
-      "optical_model_id": "ideal-f100",
+      "optical_model_id": "ideal-f50",
       "optical_role": "lens",
       "retained_dofs": [],
       "selected_parameters": []
@@ -120,7 +120,7 @@
           "status": "DESIGN_BASIS"
         }
       },
-      "model_id": "ideal-f100"
+      "model_id": "ideal-f50"
     }
   ],
   "project_schema_version": "2.0",

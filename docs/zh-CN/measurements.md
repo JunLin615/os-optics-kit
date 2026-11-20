@@ -19,8 +19,8 @@ os-optics-kit measurements data/detector_response.csv --x input_power_mW --signa
 os-optics-kit measurements data/reference_drift.csv --x time_s --signal signal_V --background dark_V --x-unit s --signal-unit V --reference reference_V --reference-background reference_dark_V --reference-unit V --maximum-rmse 0.000000000001 --out run-reference
 ```
 
-每条命令向标准输出写入一个紧凑 JSON 对象。每次运行必须使用**新的输出目录**；
-已存在的目录会被拒绝，以保留先前结果。两个示例均因排除刻意设置的无效行而返回
+每条命令向标准输出写入一个紧凑 JSON 对象。输出目录必须是新的或空的（否则为
+`OUTPUT_EXISTS`）；`--overwrite` 替换本命令写入的五个文件，目录中的其他文件保留。两个示例均因排除刻意设置的无效行而返回
 `WARNING`，退出码为 0，RMSE 目标均通过。目标未通过时也会保存完整分析结果。
 
 | 示例 | 总行数 / 可用 / 排除 | 预期拟合关系 | 检查容差 |

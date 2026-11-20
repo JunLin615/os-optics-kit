@@ -22,7 +22,8 @@ kind: tool
 ## Inputs
 
 - `PATH ...`: one study directory (from `sweep`, `sensitivity` or `tolerance`), or run directories.
-- `--project CURRENT.json`: freshness of every run (a historical PASS is labelled `HISTORICAL PASS`).
+- `--project CURRENT.json`: freshness of every run (a historical PASS is labelled `HISTORICAL PASS`); a
+  study gets one record (`CURRENT` when its base Project or a sample is the current Project).
 - `--plots PNG_OR_DIR ...`: plot files or directories to link.
 - `--changes NEW.changes.json`: the change record written by `edit`.
 - `--out DIR`: default `STUDY_DIR/report`, or `./report` for run directories.

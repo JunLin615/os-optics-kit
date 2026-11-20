@@ -12,7 +12,9 @@ Checks every tracked or new (not ignored) file:
   baseline    baseline.json matches pyproject.toml, tools/os_optics_kit/_version.py and the engine requirement
               of tools/os_optics_kit/_engine.py
   pins        exact os-optics / os-optics-kit pins in documents equal the baseline; no retired host or name
-  pairs       English and Simplified Chinese documents come in pairs (README.md / README.zh-CN.md, docs/en / docs/zh-CN)
+  ranges      every os-optics range written out (os-optics>=A,<B) equals the baseline's engine.requirement
+  changelog   CHANGELOG.md has a section "## X.Y.Z" for the baseline's kit_version, newest first
+  pairs      English and Simplified Chinese documents come in pairs (README.md / README.zh-CN.md, docs/en / docs/zh-CN)
 
 Prints one compact JSON document; exit 0 when there is no problem, 1 otherwise.
 """
@@ -71,8 +73,17 @@ VERSION = r"(\d+(?:\.\d+)+(?:(?:a|b|rc)\d+|\.post\d+|\.dev\d+)?)(?![\w+]|\.\d)"
 ENGINE_PIN = re.compile(r"(?<![\w-])os-optics(?:\[[\w,\s-]+\])?==" + VERSION)
 KIT_PIN = re.compile(r"(?<![\w-])os-optics-kit(?:\[[\w,\s-]+\])?==" + VERSION)
 RETIRED_PIN = re.compile(r"(?<![\w-])(?:" + "|".join(map(re.escape, RETIRED_NAMES)) + r")(?:\[[\w,\s-]+\])?==")
+# A range of the engine written out: "os-optics>=0.13,<0.14", "os-optics[protected] >= 0.13, < 0.14" (not the
+# kit's own "os-optics-kit>=...", not an exact "==" pin, which ENGINE_PIN checks).
+ENGINE_RANGE = re.compile(r"(?<![\w-])os-optics(?:\[[\w,\s-]+\])?\s*((?:>=|<=|~=|!=|>|<)\s*\d[\w.]*"
+                          r"(?:\s*,\s*(?:>=|<=|~=|!=|==|>|<)\s*\d[\w.]*)*)")
 # Install pins are checked everywhere except here: tests and these scripts use made-up versions on purpose.
 PIN_EXEMPT = ("tests/", "scripts/")
+CHANGELOG = "CHANGELOG.md"
+# The changelog records the ranges of earlier releases; it is the one document allowed to state another range.
+RANGE_EXEMPT = (CHANGELOG,)
+RELEASE_HEADING = re.compile(r"^## (\S+)[ \t]*$", re.M)
+RELEASE_VERSION = re.compile(r"\d+\.\d+\.\d+(?:(?:a|b|rc)\d+|\.post\d+|\.dev\d+)?")
 
 LINK = re.compile(r"!?\[(?:[^\[\]]|\[[^\]]*\])*\]\(\s*<?([^)\s>]+)>?(?:\s+(?:\"[^\"]*\"|'[^']*'))?\s*\)")
 REFERENCE = re.compile(r"^\s{0,3}\[[^\]]+\]:\s*<?(\S+?)>?(?:\s+.*)?$", re.M)
@@ -209,6 +220,51 @@ def check_pins(name: str, text: str, baseline: dict, problems: Problems) -> None
     for match in RETIRED_PIN.finditer(text):
         problems.add("pins", name, "pin of the former engine distribution name; use os-optics",
                      line_of(text, match.start()))
+
+
+def check_ranges(name: str, text: str, baseline: dict, problems: Problems) -> None:
+    requirement = (baseline.get("engine") or {}).get("requirement")
+    if not isinstance(requirement, str) or name in RANGE_EXEMPT:
+        return
+    for match in ENGINE_RANGE.finditer(text):
+        if specifier_clauses(match.group(1)) != specifier_clauses(requirement):
+            stated = re.sub(r"\s+", "", match.group(1))
+            problems.add("ranges", name, f"os-optics range {stated} differs from baseline.json engine.requirement "
+                                         f"{requirement}",
+                         line_of(text, match.start()))
+
+
+def check_changelog(root: Path, baseline: dict, problems: Problems) -> None:
+    """A section ``## X.Y.Z`` per release, newest first; the newest is the baseline's ``kit_version``."""
+    path = root / CHANGELOG
+    if not path.is_file():
+        problems.add("changelog", CHANGELOG, "missing; it holds one section per release, newest first")
+        return
+    text = path.read_text(encoding="utf-8")
+    headings = [(match.group(1), line_of(text, match.start())) for match in RELEASE_HEADING.finditer(text)]
+    previous = None
+    seen = set()
+    releases = []
+    for version, line in headings:
+        if not RELEASE_VERSION.fullmatch(version):
+            problems.add("changelog", CHANGELOG, f"section heading {version!r} is not a release version", line)
+            continue
+        releases.append((version, line))
+        if version in seen:
+            problems.add("changelog", CHANGELOG, f"section {version} appears twice", line)
+        elif previous is not None and _version_tuple(version) >= _version_tuple(previous):
+            problems.add("changelog", CHANGELOG, f"section {version} follows {previous}; list releases newest "
+                                                 "first", line)
+        seen.add(version)
+        previous = version
+    kit = baseline.get("kit_version")
+    if not isinstance(kit, str):
+        return
+    if kit not in seen:
+        problems.add("changelog", CHANGELOG, f"no section '## {kit}' for kit_version {kit} of baseline.json")
+    elif releases[0][0] != kit:
+        problems.add("changelog", CHANGELOG, f"the first section is {releases[0][0]}; the newest release "
+                                             f"{kit} (kit_version of baseline.json) comes first", releases[0][1])
 
 
 def check_json(root: Path, name: str, problems: Problems) -> None:
@@ -370,6 +426,8 @@ def run_checks(root: Path) -> dict:
             check_links(root, name, text, problems)
         if in_pin_scope(name):
             check_pins(name, text, baseline, problems)
+            check_ranges(name, text, baseline, problems)
+    check_changelog(root, baseline, problems)
     check_pairs(names, problems)
     items = sorted(problems.items, key=lambda item: (item["check"], item["path"], item["line"] or 0))
     return {"status": "FAIL" if items else "PASS", "files": len(names), "problems": items}

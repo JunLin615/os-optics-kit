@@ -2,14 +2,17 @@
 histograms with bounds, and the power distribution of one run. PNG and SVG (and PDF with a theme).
 
 Usage:
-  os-optics-kit plot sweep STUDY_DIR --y target:spot_radius [--out DIR] [--theme T] [--set KEY=VALUE ...]
+  os-optics-kit plot sweep STUDY_DIR --y target:spot_radius [--fix NAME=VALUE ...] [--out DIR] [--theme T]
+                      [--set KEY=VALUE ...]
   os-optics-kit plot power RUN_DIR [--out DIR] [--theme T]
   os-optics-kit plot bars DATA.json [--out DIR]        # {"labels", "values", "unit", "title", "ylabel"?}
   os-optics-kit plot histogram DATA.json [--out DIR]   # {"values", "unit", "title", "xlabel"?,
                                                        #  "bounds"?: {"minimum", "maximum"}, "bins"?}
 
-sweep: one parameter gives a curve of the column against the parameter; two parameters give a heatmap (first
-parameter on x). Columns: "target:<id>", "derived:<name>" or "param:<name>" as in os-optics-kit sweep. Every
+sweep: one free parameter gives a curve of the column against the parameter; two give a heatmap (first parameter
+on x). --fix NAME=VALUE (repeatable, parameter unit) keeps the samples with that value; a parameter with one value
+among the kept samples is not an axis and is named in the caption; more than two free parameters are refused
+(PLOT_NEEDS_SLICE, with the free parameters and their value counts). Columns: "target:<id>", "derived:<name>" or "param:<name>" as in os-optics-kit sweep. Every
 sample is marked by its outcome (PASS, FAIL, UNKNOWN, OUT_OF_MODEL, ERROR) with its own marker and label; samples
 without a value are never omitted: on a curve they are drawn as hollow markers on a dotted line below the lowest
 value, labelled "samples without an exact value" (that position carries no value), with their own legend entry per outcome;
@@ -230,7 +233,10 @@ def finish(fig, out_dir, name, style, provenance_text, caption_text=None):
 
 
 def _study(study_dir):
+    from .study import progress
+
     study_dir = Path(study_dir)
+    progress.require_results(study_dir)  # a planned study not executed (or in part) names the command to run
     summary_path = study_dir / "summary.json"
     if not summary_path.is_file():
         raise wc.WorkflowError("STUDY_NOT_READABLE", f"{study_dir} has no summary.json", path=study_dir.as_posix())
@@ -263,14 +269,61 @@ def _band(ax, bounds, style, unit=None, horizontal=True):
                  label=style.t(key, value=f"{value:.6g}") if low is None or high is None else None)
 
 
-def study_column(summary, y):
-    """Plotted values of a study column: rows, unit and the parameters (shared with compose and animate)."""
+def _same_value(a, b):
+    return isinstance(a, (int, float)) and isinstance(b, (int, float)) and math.isclose(a, b, rel_tol=1e-9,
+                                                                                      abs_tol=1e-12)
+
+
+def select_slice(rows, parameters, fix=None):
+    """The rows of a slice and its axes: ``fix`` ``{name: value}`` (parameter unit) keeps the rows with those
+    parameter values. A parameter with one value among the kept rows is not an axis. Returns ``(rows, free
+    parameters, {fixed name: value})``; more than two free parameters raise ``PLOT_NEEDS_SLICE``."""
+    fix = dict(fix or {})
+    names = [p["name"] for p in parameters]
+    unknown = [name for name in fix if name not in names]
+    if unknown:
+        raise wc.WorkflowError("BAD_ARGUMENT", f"--fix names {unknown}, which are not parameters of the study; "
+                               f"parameters: {names}", unknown=unknown, parameters=names)
+    kept = [r for r in rows if all(_same_value(r.get(f"param:{name}"), value) for name, value in fix.items())]
+    if not kept:
+        raise wc.WorkflowError("BAD_ARGUMENT", f"no sample has {fix}", fix=fix, values={
+            name: sorted({r.get(f"param:{name}") for r in rows if r.get(f"param:{name}") is not None})
+            for name in fix})
+    free, fixed = [], {}
+    for parameter in parameters:
+        values = {r.get(f"param:{parameter['name']}") for r in kept}
+        if len(values) > 1:
+            free.append(parameter)
+        else:
+            fixed[parameter["name"]] = next(iter(values))
+    if not free:  # one sample: drawn as a point over the first parameter
+        free = [parameters[0]]
+        fixed.pop(parameters[0]["name"], None)
+    if len(free) > 2:
+        raise wc.WorkflowError("PLOT_NEEDS_SLICE", f"the selected samples vary {len(free)} parameters; a plot "
+                               "shows one (curve) or two (heatmap): fix the others with --fix NAME=VALUE",
+                               free=[{"name": p["name"], "unit": p["unit"],
+                                      "values": len({r.get(f'param:{p["name"]}') for r in kept})} for p in free])
+    return kept, free, fixed
+
+
+def fixed_text(fixed, parameters):
+    """``name = value unit`` of the parameters a slice holds fixed ('' when none)."""
+    units = {p["name"]: p.get("unit") for p in parameters}
+    return "; ".join(f"{name} = {value:.6g}{' ' + units[name] if units.get(name) else ''}"
+                     if isinstance(value, (int, float)) else f"{name} = {value}" for name, value in fixed.items())
+
+
+def study_column(summary, y, fix=None):
+    """Plotted values of a study column: rows of the slice ``fix`` (``select_slice``), unit and the free
+    parameters (shared with compose and animate)."""
     rows = summary["rows"]
     if not rows or not any(y in row for row in rows):
         raise wc.WorkflowError("COLUMN_UNKNOWN", f"column {y!r} is not in the study table; columns: "
                                f"{[c for c in summary['columns'] if ':' in c and not c.endswith(':unit')]}")
     unit = next((row.get(f"{y}:unit") for row in rows if row.get(f"{y}:unit")), None)
-    return rows, unit, summary["parameters"]
+    kept, free, _fixed = select_slice(rows, summary["parameters"], fix)
+    return kept, unit, free
 
 
 def sweep_caption(language, rows, y, y_name, x_name):
@@ -281,20 +334,29 @@ def sweep_caption(language, rows, y, y_name, x_name):
     return pres.text("caption.sweep_plain", language, y=y_name, x=x_name, count=len(rows))
 
 
-def plot_sweep(study_dir, y, *, out_dir=None, name=None, theme=None, size=None, caption_text=None, style=None):
-    """Curve (1 parameter) or heatmap (2 parameters) of column ``y`` from a study's summary.json."""
+def plot_sweep(study_dir, y, *, out_dir=None, name=None, theme=None, size=None, caption_text=None, style=None,
+               fix=None):
+    """Curve (one free parameter) or heatmap (two) of column ``y`` from a study's summary.json; ``fix``
+    ``{name: value}`` selects a slice of a study with more parameters (``select_slice``), and the parameters it holds
+    fixed are named in the caption."""
     summary_path, summary = _study(study_dir)
-    rows, unit, parameters = study_column(summary, y)
+    rows, unit, parameters = study_column(summary, y, fix)
+    fixed = {p["name"]: rows[0].get(f"param:{p['name']}") for p in summary["parameters"] if p not in parameters}
+    held = fixed_text(fixed, summary["parameters"])
     out_dir = Path(out_dir) if out_dir else Path(study_dir) / "plots"
     style = style or Style(theme, size)
     releases = sorted({r["catalog_version"] for r in rows if r.get("catalog_version")})
     text = caption(summary_path, out_dir, engine_build=summary["identity"]["engine"]["engine_build_id"],
                    catalog_version=", ".join(releases) or None, language=style.language)
+    if held:
+        text = f"{held} | {text}"
     stem = name or ("sweep_" if len(parameters) == 1 else "heatmap_") + y.replace(":", "_")
     bounds = _bounds(study_dir, rows, y.split(":", 1)[1]) if y.startswith("target:") else None
     if caption_text is None and not style.legacy and len(parameters) == 1:
         caption_text = sweep_caption(style.language, rows, y, style.name(y),
                                      style.name(f"param:{parameters[0]['name']}"))
+        if held:
+            caption_text = f"{caption_text} ({held})"
     with styled(style) as plt:
         if len(parameters) == 1:
             fig, ax = style.figure(plt, (6.4, 4.2))
@@ -302,7 +364,7 @@ def plot_sweep(study_dir, y, *, out_dir=None, name=None, theme=None, size=None, 
         else:
             fig, ax = style.figure(plt, (6.4, 4.8))
             info = draw_heatmap(fig, ax, rows, parameters, y, unit, bounds, style)
-        return {**info, "bounds": bounds, "unit": unit,
+        return {**info, "bounds": bounds, "unit": unit, "fixed": fixed,
                 "out": finish(fig, out_dir, stem, style, text, caption_text)}
 
 
@@ -617,6 +679,20 @@ def theme_from_arguments(theme_arg, settings):
     return pres.resolve_theme(base, overrides)
 
 
+def parse_fix(items):
+    """``--fix NAME=VALUE`` options as ``{name: number}``."""
+    out = {}
+    for item in items or []:
+        name, sep, value = str(item).partition("=")
+        try:
+            out[name.strip()] = float(value)
+        except ValueError:
+            sep = ""
+        if not sep or not name.strip():
+            raise wc.WorkflowError("BAD_ARGUMENT", f"--fix {item!r}: expected NAME=NUMBER")
+    return out
+
+
 def main(argv=None):
     def workflow():
         parser = wc.ArgumentParser(prog=PROG, description=__doc__,
@@ -624,6 +700,9 @@ def main(argv=None):
         parser.add_argument("kind", choices=["sweep", "power", "bars", "histogram"], help="Plot kind")
         parser.add_argument("path", type=Path, help="Study directory, run directory or data JSON")
         parser.add_argument("--y", help="sweep: column to plot (target:<id>, derived:<name>)")
+        parser.add_argument("--fix", action="append", metavar="NAME=VALUE",
+                            help="sweep: keep the samples with this parameter value (parameter unit; repeatable); "
+                                 "a plot shows one or two free parameters")
         parser.add_argument("--out", type=Path, help="Output directory")
         parser.add_argument("--name", help="Output file stem")
         parser.add_argument("--theme", help="presentation, report, or a JSON file with a theme or a presentation.json")
@@ -633,7 +712,8 @@ def main(argv=None):
         if args.kind == "sweep":
             if not args.y:
                 raise ValueError("sweep needs --y COLUMN")
-            result = plot_sweep(args.path, args.y, out_dir=args.out, name=args.name, theme=theme)
+            result = plot_sweep(args.path, args.y, out_dir=args.out, name=args.name, theme=theme,
+                                fix=parse_fix(args.fix))
         elif args.kind == "power":
             result = plot_power(args.path, out_dir=args.out, name=args.name or "power_distribution", theme=theme)
         else:

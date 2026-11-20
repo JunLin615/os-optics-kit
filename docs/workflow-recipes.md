@@ -2,7 +2,7 @@
 
 [Agent guide](../AGENT_GUIDE.md). English-only reference for the kit's tools
 (`os-optics-kit <command>`) and the case workflows; read only the section the task needs.
-Each command's `--help` holds its complete specification. os-optics-kit 0.3.x works with
+Each command's `--help` holds its complete specification. os-optics-kit 0.4.x works with
 os-optics 0.13 ([installation](https://github.com/JunLin615/os-optics/blob/main/docs/en/installation.md));
 the quoted results come from os-optics 0.13.0 and catalog release `2026-10-28.1`. Human
 walkthrough: [English](en/workflows.md) · [简体中文](zh-CN/workflows.md).
@@ -15,14 +15,20 @@ walkthrough: [English](en/workflows.md) · [简体中文](zh-CN/workflows.md).
   --run` writes a valid edit and the Engine refuses the run, stdout reports
   `run.status` `RUN_REFUSED` with its `problems` (exit 4).
 - Inputs are never modified. Edit, study and workflow commands refuse an existing output
-  (`OUTPUT_EXISTS`) unless `--overwrite`; on a study directory `--overwrite` also removes
-  its `plots/` and `report/`, which describe the previous samples.
+  (`OUTPUT_EXISTS`) unless `--overwrite` (or, for a planned study, `--resume`); on a study
+  directory `--overwrite` also removes its `plots/` and `report/`, which describe the
+  previous samples.
 - Numbers keep their schema unit (`_mm`, `_nm`, `_w`/`_W`, `_deg`, `_rad`; target bounds
   in the target's `unit`) or are written `{"value": 250, "unit": "um"}` with `nm`, `um`,
   `mm`, `m`, `deg`, `rad`, `mrad`, `urad`, `W`, `mW`, `uW`. Quaternions `[w, x, y, z]`
   are unitless; rotation angles are degrees unless given as a quantity.
 - Paths in stdout are as given on the command line; paths recorded inside a study are
   relative to its study directory.
+- Every saved run is read with its `integrity` record (`checked`, `consistent`, `problems`):
+  `summary`, `compare` and `report` show a run whose files do not match their recorded
+  hashes as stored, with that record (`summary` also writes the warning
+  `RUN_INTEGRITY_FAILED` on stderr; a report lists such runs under Diagnostics). A study
+  resume runs such a sample again instead of adopting it.
 - `installed_catalog` describes the local cache only. Run and study catalog identity
   comes from saved results; a catalog-free run retains a null `catalog_version` even
   with a catalog installed. A study's `catalog_versions` preserves distinct run
@@ -30,43 +36,60 @@ walkthrough: [English](en/workflows.md) · [简体中文](zh-CN/workflows.md).
 
 | Command | Exit 0 | 1 | 2 | 3 | 4 |
 | --- | --- | --- | --- | --- | --- |
-| `summary` | `PASS`, `WARNING`, `NOT_APPLICABLE` | `FAIL` | `UNKNOWN`, including a partial run (`PARTIAL`) | `OUT_OF_MODEL`, `OUT_OF_MODEL_SCOPE` | error, including a `FAILED` or `CANCELLED` run |
-| `edit` | `EDITED`, `ALREADY_APPLIED`, `DESCRIBED`; with `--run` outcome `PASS` or `NOT_APPLICABLE` | outcome `FAIL` | outcome `UNKNOWN` | outcome `OUT_OF_MODEL` | refused, `RUN_REFUSED` |
-| `sweep` | `COMPLETED` | `NO_FEASIBLE` (constraints given, none met) | | | refused |
-| `sensitivity` | `COMPLETED` | | `INCOMPLETE` (a derivative unavailable) | | refused |
-| `tolerance` | `COMPLETED` (at least one PASS), `DRAWN`, `REPRODUCED` | `NO_FEASIBLE` (no PASS), `MISMATCH` | | | refused |
-| `compare`, `plot`, `report` | `COMPLETED` | | | | invalid input |
+| `summary` | `PASS`, `NOT_APPLICABLE` | `FAIL` | `UNKNOWN` | `OUT_OF_MODEL`; a `PARTIAL` run | error, including a `FAILED` or `CANCELLED` run |
+| `edit` | `EDITED`, `ALREADY_APPLIED`, `DESCRIBED`; with `--run` outcome `PASS` or `NOT_APPLICABLE` | outcome `FAIL` | outcome `UNKNOWN` | outcome `OUT_OF_MODEL`; a `PARTIAL` run | refused, `RUN_REFUSED` |
+| `sweep` | `COMPLETED`, `PLANNED` | `NO_FEASIBLE` (constraints given, none met) | | | refused |
+| `sensitivity` | `COMPLETED`, `PLANNED` | | `INCOMPLETE` (a derivative unavailable) | | refused |
+| `tolerance` | `COMPLETED` (at least one PASS), `DRAWN`, `PLANNED`, `REPRODUCED` | `NO_FEASIBLE` (no PASS), `MISMATCH` | | | refused |
+| `study run`, `study aggregate` | as the planning tool (candidates: `COMPLETED`) | as the planning tool | as the planning tool; `INCOMPLETE` (`study aggregate` of a study executed in part) | | refused |
+| `study status`, `study bench` | `DESCRIBED`, `BENCHMARKED` | | | | refused |
+| `compare`, `plot`, `report` | `COMPLETED` | | | | invalid input, a study with nothing to read (`STUDY_NOT_RUN`, ...) |
 | `present build` | `COMPLETED` | | `INCOMPLETE` (an asset has a missing input or could not be drawn) | | refused |
 | `candidates` | `COMPLETED` | `NO_MATCH` | | | invalid input, no catalog |
 | `measurements` | `PASS`, `WARNING` | `FAIL` (RMSE bound exceeded) | `UNKNOWN` (no fit) | | error |
+| `sfr` | `PASS`, `WARNING` | | `UNKNOWN` (too many empty ESF bins) | | refused input |
 | `cases verify` | every case matches `expected.json` | a case differs | | | usage error, unknown case, no engine |
-| case `workflow.py` | nominal `PASS` | nominal `FAIL` | `UNKNOWN` | `OUT_OF_MODEL` | `ERROR`, refused |
+| case `workflow.py` | nominal `PASS` | nominal `FAIL` | `UNKNOWN` | `OUT_OF_MODEL`; a `PARTIAL` nominal run | `ERROR`, refused |
 
-A partial run (execution `PARTIAL`, for example a reached `max_return_analysis_work`
-reported as `RETURN_ANALYSIS_BUDGET`) is `UNKNOWN`, exit 2, even when its targets are met;
-an unmet selected target keeps `FAIL`, exit 1. A `FAILED` or `CANCELLED` run is `ERROR`,
-exit 4. For a `RETURN_ANALYSIS_BUDGET` run these are the codes of
-`os-optics project run --status-contract aggregate`; under its default `requirements`
-contract the engine exits 3 for it.
+A study command whose execution was cancelled (Ctrl-C, or `cancel()` of its scheduler)
+prints status `CANCELLED` and exits 130, with any number of workers; its `next` command
+(`study run DIR --resume`) continues it. Ctrl-C outside an execution (planning,
+aggregation) prints the error `INTERRUPTED` and exits 130.
 
-`edit --run` uses the outcome of its selected targets. It retains the
-engine's execution, requirements, quantity validity and issue fields. Outcome classes
-are workflow routing summaries; inspect those fields for the scientific meaning.
+A partial run (execution `PARTIAL`: a compute budget was reached) did not complete. It is
+never `PASS` or `NOT_APPLICABLE`: a run whose selected targets are all met, or that selects
+none, is `UNKNOWN`, for example a reached `max_return_analysis_work`
+(`RETURN_ANALYSIS_BUDGET`) with every target `MET`; an unmet or out-of-model target keeps
+`FAIL` or `OUT_OF_MODEL`. `summary`, `edit --run` and a case `workflow.py` (by its nominal
+run) exit 3 for a partial run whatever its class, the os-optics `requirements` exit code
+for a calculation that did not complete. The
+execution outcome and the exhausted budgets stay in the record (`outcome.execution`; in a
+study the columns `execution_outcome` and `budgets_exhausted` and the count
+`by_execution`); the sweep constraint `{"execution": ["COMPLETED"]}` makes only complete
+runs feasible. A `FAILED` or `CANCELLED` run is `ERROR`, exit 4.
+
+`edit --run` exits by the outcome of its selected targets (3 for a partial run); execution, requirements,
+quantity states and issues are in `run`.
 
 ## Outcome classes
 
 Selected requirements determine a sample's class:
 
 1. `ERROR`: an edit, load or run was refused, or the sample was not run.
-2. `OUT_OF_MODEL`: a selected target depends on a quantity outside its model. A missing selected target ID is `UNKNOWN`.
-3. `FAIL`: at least one selected requirement is unmet; other indeterminate requirements remain listed.
-4. `UNKNOWN`: no selected requirement is unmet, but one is indeterminate or its quantity is unavailable.
-5. `PASS`: all selected requirements are met.
-6. `NOT_APPLICABLE`: no selected requirement applies, including a target-free run. A mixture of applicable and not-applicable targets stays explicit as `UNKNOWN`.
+2. `FAIL`: at least one selected requirement is unmet; out-of-model and indeterminate requirements remain listed per target.
+3. `OUT_OF_MODEL`: no selected requirement is unmet, and a selected target depends on a quantity outside its model. A missing selected target ID is `UNKNOWN`.
+4. `UNKNOWN`: no selected requirement is unmet or out of its model, but one is indeterminate, its quantity is unavailable, or it is assessed `NOT_APPLICABLE`.
+5. `PASS`: every selected requirement is met and the run completed.
+6. `NOT_APPLICABLE`: no target is selected, including a target-free run, and the run completed.
 
 Unrelated scope findings remain in the record without invalidating an otherwise
-usable selected quantity. A bounded quantity retains its interval and is not an exact
-objective or derivative input. `objective_valid` is separate from `feasible`: an exact
+usable selected quantity. Each target value has a `value_kind` (table column
+`target:<id>:value_kind`): `EXACT`, `BOUNDED`, `QUANTITY_UNKNOWN`, `OUTSIDE_MODEL`,
+`UNDECIDED` (the metric could not be graded) or `NO_VALUE`. By default (`value_use:
+"exact"`) only `EXACT` values are objectives, derivative inputs, statistics and compare
+deltas; `value_use: "reported"` (sweep, sensitivity and tolerance specs, `compare
+--value-use reported`) uses every finite value and counts the kinds used per target
+(`values_used`; a sensitivity estimate names the kind of each side). `objective_valid` is separate from `feasible`: an exact
 objective may be usable even when a requirement is unmet. Every requested sample stays
 in the table, including invalid edits, partial runs and indeterminate results.
 
@@ -102,7 +125,7 @@ Absolute assignments are unchanged when reapplied, but relative moves accumulate
 
 ## Computation budgets
 
-Study `max_evaluations` caps the number of designs. A Project `compute_budget` caps work
+A study's optional `max_evaluations` caps the number of designs. A Project `compute_budget` caps work
 inside each design. Inspect effective limits in `project check` or `capabilities`.
 To see a limited run with the catalog-free expansion design, copy its case
 (`os-optics-kit cases copy expansion-focus --dest .`, then `cd expansion-focus`; its
@@ -227,22 +250,75 @@ Retry and concurrency:
   in-place `--expect-hash` example above). It refuses with
   `BASE_CHANGED` and the `current_hash` when BASE has changed since that result.
 
+## Study execution
+
+`sweep`, `sensitivity`, `tolerance` and `study candidates` are compositions of four steps
+that read and write one study directory: plan, execute, aggregate, present.
+
+```bash
+os-optics-kit sweep SPEC.json --out STUDY --plan-only        # plan: study.json, plan.jsonl, requests/
+os-optics-kit study run STUDY --workers 4                     # execute + aggregate
+os-optics-kit study status STUDY                              # states, execution, journal (no Engine)
+os-optics-kit study run STUDY --resume                        # after Ctrl-C or a failure
+os-optics-kit study aggregate STUDY --no-plots --no-report    # tables from saved records (no Engine)
+os-optics-kit study candidates A.json B.json C.json --out CAND --targets spot_radius --workers 2
+os-optics-kit study bench --samples 24                        # 1, 2, 4 workers (up to the CPUs): elapsed, throughput, start-up, memory
+```
+
+| Option (tools and `study run`) | Meaning |
+| --- | --- |
+| `--workers N\|auto` | worker processes (spawned once, Engine imported once each); 1 = serial in this process; `auto` = estimated from the samples to run x their run time (with `--resume` the median `timing.run_s` of the study's completed samples, else 0.2 s), serial unless workers (about 4 s start-up each) save at least 10 %, at most 4 workers; every worker is counted at serial speed and start-up and memory are fixed estimates, so give N from a pilot for heavier samples |
+| `--resume` | keep samples whose record has the plan's `request_hash`, state `COMPLETED` / `REFUSED` and the same `evaluator` (an evaluator passed from Python without a `module:function` name keeps none: `study status` shows `resume_note`); read back a complete run directory without a record; run the rest. A tool run with a changed spec reruns only the changed requests; a kept record takes the new plan's labels. `study run`, with or without `--resume`, refuses a changed Engine build or catalog release (`STUDY_IDENTITY_CHANGED`, field named) |
+| `--plan-only` | write the plan and stop (`PLANNED`, exit 0); `study run` executes it with the planning tool's analysis and presentation choice |
+| `--time-limit-s S`, `--max-memory-mib M` | per evaluation, read at Engine checkpoints (each phase change and inside long phases); the run stops at the next checkpoint: state `CANCELLED`, error code `RUN_STOPPED`, problem code `TIME_LIMIT` / `MEMORY_LIMIT` (`error_problems` in `table.csv`); a worker still busy 5 s past its time limit is terminated and recorded the same way; the serial scheduler has no other preemption |
+| `--ray-data full\|summary` | requested outputs: `summary` keeps chief rays only (same results and hashes) |
+| `--scheduler serial\|process`, `--evaluator module:function` | `study run` only: scheduler kind (`serial` with `--workers auto` runs serially); replace the Engine call by `f(request, sample_dir, limits) -> record` |
+
+Files: `study.json` (tool keys + `schema` `os-optics-kit.study`, `identity` {plan hash,
+Engine version and build, catalog version and sha256, kit version}, `execution` {scheduler,
+workers, BLAS threads, limits, evaluator, state, counts, worker start-up}); `plan.jsonl` (one
+line per request in plan order); `requests/<id>.json` (Project with the sample's edits,
+`refusal`, `selected_targets`, `labels`, `outputs`, `seed` (null in the shipped tools, which draw random values while planning; `sample_seed(seed, sample_id)` for an evaluator of your own), `request_hash`);
+`samples/<id>/sample.json` (the sample record + `state` `COMPLETED | REFUSED | FAILED |
+CANCELLED | NOT_RUN`, `attempts`, `timing` {queued_s, run_s, phase_seconds}, `peak_memory_bytes`,
+`worker`, `evaluator`; paths study-relative); `journal.jsonl` (started, finished, failed,
+cancelled, reused, recovered, stopped, aggregated, ...); `owner.json` (pid, host and start of the execution
+that owns the study, removed when it ends); `owner.lock` (lets one process at a time take
+ownership; never removed). While an execution owns the study, a second execution, a planning
+command and `study aggregate` are refused with `STUDY_RUNNING`. `execution.state` is
+`PLANNED`, `RUNNING`, `COMPLETED`, `CANCELLED` or `FAILED`; `study status` reports `RUNNING`
+only while the owning process runs and `INTERRUPTED` once it ended without finishing.
+`table.csv` and `summary.json` keep plan order, so N workers give the same files as one
+except `seconds`, `timing`, `worker`, peak memory and `study.json` `execution`.
+An Engine refusal is a completed evaluation (outcome `ERROR`); an evaluation that raised is
+`FAILED`; a refused edit is `REFUSED` and never runs. Workers set `OPENBLAS_NUM_THREADS`,
+`OMP_NUM_THREADS`, `MKL_NUM_THREADS` to 1 and `OPENSCI_CATALOG_CHECK_INTERVAL=0`, after the
+calling process obtained the catalog release each Project pins.
+
+Python: `from os_optics_kit.study import make_request, plan_study, study_header,
+execute_study, collect_records` hands an independent batch (finite differences, a Sobol or
+multistart set) to the executor. With more than one worker the executor starts worker
+processes that import the calling script: in a script, call it under
+`if __name__ == "__main__":` (example in [Studies](en/studies.md#candidate-designs-and-external-search-code)).
+A scheduler object passed to `execute_study` and cancelled runs nothing until its `reset()`.
+
 ## Sweep
 
 ```bash
-os-optics-kit sweep SPEC.json [--base BASE.json] --out STUDY_DIR
+os-optics-kit sweep SPEC.json [--base BASE.json] --out STUDY_DIR [--workers N|auto] [--resume] [--plan-only]
 ```
 
 | Key | Meaning |
 | --- | --- |
 | `base_project` | Project file relative to the spec; `--base` overrides |
-| `parameters` | 1 or 2 entries `{name, unit?, values \| range {start, stop, count}, ops}`; two give the full grid, first outermost |
-| `max_evaluations` | required; refused with `BUDGET_EXCEEDED` before any run when the sample count exceeds it |
+| `parameters` | one or more entries `{name, unit?, values \| range {start, stop, count}, ops}`; several give the full grid, first outermost |
+| `max_evaluations` | optional (default: no cap); a stated cap the sample count exceeds is refused with `BUDGET_EXCEEDED` before any run |
 | `targets` | ids deciding each sample's outcome (default all) |
 | `constraints` | all must hold: `{"outcome": [...]}`, `{"target": ID, "assessment": ["MET"]}`, `{"column": C, "min"?, "max"?}` (quantities convert to the column unit) |
 | `objective` | `{"column": C, "sense": "minimize" \| "maximize"}` over feasible samples (finite exact objective with applicable dependencies, every explicit constraint met) |
 | `derived` | `{"name", "op": add \| sub \| mul \| div \| abs \| abs_diff, "a", "b", "unit"?}`; `unit` applies to its constraints, objective, table and plots |
-| `stop_on` | outcome classes that stop the sweep; remaining samples become `ERROR` (default none) |
+| `value_use` | `exact` (default) or `reported`: which target values are operands (Outcome classes) |
+| `stop_on` | outcome classes that stop the sweep; every sample after the first listed outcome in sample order becomes `ERROR` / `STOPPED` (default none); a sample stopped by the study's own cancellation (Ctrl-C, `cancel()`) does not count |
 
 Placeholders in `ops`: `"$value"` becomes `{"value": v, "unit": <parameter unit>}`;
 `{"$value": {"scale": s, "offset": o}}` becomes `o + s·v`. Each sample applies its ops to
@@ -278,6 +354,13 @@ The command uses engine freshness: `CURRENT`, `HISTORICAL` or `UNDETERMINED`, pr
 reasons such as `PHYSICS_CHANGED`, `TARGETS_CHANGED`, `OTHER_PROJECT_CHANGED`,
 `CATALOG_CHANGED` and `RUN_UNVERIFIED`. A budget change is `PHYSICS_CHANGED`.
 
+A study against `--project` has one freshness record (`section.freshness` in a report,
+`study_freshness` in a comparison): `CURRENT` when its base Project or one of its samples
+is the current Project (`current_samples` get the engine's run freshness), `HISTORICAL`
+when neither is (the best sample and, in a comparison, every sample outcome are then
+labelled `HISTORICAL`), `UNDETERMINED` for a study planned without a base Project. Each
+sample is a perturbed design, so samples carry no label of their own.
+
 An unchanged Project and lowered input can remain current across engine builds;
 `engine_build_matches` reports that distinction. A historical result keeps its
 original assessment, displayed as e.g. `HISTORICAL PASS`, and is not an assessment of
@@ -295,7 +378,8 @@ os-optics-kit report RUN_A RUN_B --project CURRENT.json --out REPORT_DIR
 
 `plot` needs the plot extra: `python -m pip install "os-optics-kit[plot]"`.
 
-`sweep` draws a curve (one parameter) or heatmap (two) with axis units, the target
+`sweep` draws a curve (one free parameter) or heatmap (two; `--fix NAME=VALUE` selects a
+slice of a larger grid and the caption names the fixed values) with axis units, the target
 bounds (a band on the curve, dashed lines on the heatmap colour bar) and every sample's
 outcome marker; samples without an exact value are hollow markers on a dotted line labelled
 "samples without an exact value" below the lowest value (the position carries no value), with
@@ -317,6 +401,23 @@ path and sha256.
 with the theme keys below (`--set language=zh-CN --set font_scale=1.3`); the presentation theme
 writes the caption to `<name>.caption.txt` and the provenance to a separate file.
 
+## System views and case images
+
+```bash
+os-optics view RUN_DIR --no-browser --snapshot DIR --views iso --size 960x540
+os-optics view RUN_DIR --no-browser --snapshot DIR --section ALL --frame scene --size 1200x420
+os-optics-kit cases images NAME [--view V]... [--section ELEMENT|ALL] [--run RUN_DIR]
+os-optics-kit render RUN_DIR --out DIR --camera 55,22 --background transparent
+```
+
+The engine's `os-optics view --snapshot` writes system views as PNG without a browser and without the `render`
+extra: `--views` presets (`iso`, `top`, `front`, `side`, ...), `--camera ANGLE,ELEVATION[,ROLL[,DISTANCE]]`,
+`--focus element:ID`, `--background transparent`, and `--section ELEMENT|ALL` for a true-scale 2D section
+(`ALL`: the whole lens). Case images are made this way: in a kit checkout, `cases images NAME` runs the case
+(or takes a `--run` of it), renders the views and records them in the case's `images.json`. The kit's `render`
+(camera sets with a manifest) and `present` (themed figures, galleries, animations) are presentation tools; they
+need `os-optics-kit[render]` and Chrome or Chromium and are never needed for case images.
+
 ## Presentation material
 
 ```bash
@@ -328,8 +429,8 @@ os-optics-kit present gallery DIR
 os-optics-kit present bundle DIR --out DEST[.zip] [--only ID,...] [--overwrite]
 ```
 
-Needs the plot extra; views and animations need the render extra and Chrome or Chromium
-(`--browser PATH` selects one); MP4 needs the media extra. Nothing is simulated and sources
+Needs the plot extra; its views and animations need the render extra and Chrome or Chromium
+(`--browser PATH` selects one; a plain system view needs neither: `os-optics view --snapshot`, above); MP4 needs the media extra. Nothing is simulated and sources
 are never written. Guide: [English](en/presentation.md) · [简体中文](zh-CN/presentation.md).
 
 `presentation.json` (schema `os-optics-kit.presentation` v1; paths relative to the file):
@@ -408,24 +509,44 @@ without a `--range`, `--near` or `--sort` field, per field), `shown` and `omitte
 471 plano-convex lenses valid at 780 nm. Use a returned `optical_sku` in
 `set_component_product`.
 
+## Slanted-edge SFR
+
+```bash
+os-optics-kit sfr edge.png --roi X,Y,W,H --pixel-pitch-um 3.45 --out sfr-run
+os-optics-kit sfr edge.png --roi X,Y,W,H --pixel-pitch-um 3.45 --design imaging.json --design-line SRC0#0 --out sfr-cmp
+```
+
+ISO 12233 e-SFR of one edge in the ROI, no engine needed. Read `edge.angle_deg`,
+`edge.fit_residual_rms_px`, `sfr.sfr50_cy_per_px`, `sfr.sfr_at_nyquist` and `issues`
+(`EDGE_ANGLE_SHALLOW`, `CLIPPED_PIXELS`, `EMPTY_BINS`, ...). Values are used as linear
+unless `--oecf gamma|srgb|table`. `--design` takes the JSON of
+`os-optics results imaging RUN --monitor PLANE` or a `frequency,value` CSV with
+`--design-unit`; a cy/mm curve needs the pixel pitch (`PIXEL_PITCH_REQUIRED`). The
+measured SFR is a system magnitude, the design curve signed optical MTF without pixel
+aperture, sampling or processing: report both with `comparison.json`'s
+`input_differences`, never one as the other. See [SFR](en/sfr.md).
+
 ## Sensitivity
 
 ```bash
-os-optics-kit sensitivity SPEC.json --out STUDY_DIR [--base BASE.json] [--no-plots] [--no-report]
+os-optics-kit sensitivity SPEC.json --out STUDY_DIR [--base BASE.json] [--no-plots] [--no-report] [--workers N]
 ```
 
 | Key | Meaning |
 | --- | --- |
 | `base_project` or `design` | Project file, or `{"builder": NAME, "arguments": {...}}` from `os_optics_kit.optical_designs` (catalog-free) |
 | `targets` | target ids to differentiate (unknown ids refused: `TARGET_UNKNOWN`) |
-| `parameters` | `{name, unit, ops, nominal = 0, steps (≥ 2; numbers, quantities or {"relative": r}), scale?}` |
+| `parameters` | `{name, unit, ops, nominal?, steps (≥ 1; numbers, quantities or {"relative": r}; with one step the consistency check is unavailable: `consistency` null, flag `STEP_CHECK_UNAVAILABLE`), scale?}` |
 | `consistency_threshold` | relative difference of two step estimates that is flagged (default 0.01) |
 | `resolution` | per-target change treated as none, e.g. `{"far_position_u": {"value": 1, "unit": "nm"}}` |
-| `max_evaluations` | required; 1 + 2·(total steps) must fit |
+| `max_evaluations` | optional cap (default: none); 1 + 2·(total steps) must fit a stated cap |
 
-`"$value"` is nominal + perturbation. For a `transform` translation or rotation keep
-`nominal` 0 (the ops move by the step); for a `set_*` op give the field's base value as
-`nominal`, otherwise `NOMINAL_MISMATCH`. Default steps: 0.01 and 0.1 mm, 0.01° and 0.1°,
+`"$value"` is nominal + perturbation. For a `transform` translation or rotation the
+nominal is 0 (the ops move by the step). For a `set_*` op an omitted `nominal` is the base
+Project's value of the field the ops write, converted to the parameter's unit
+(`nominal_source: "base"` in `study.json` and `summary.json`); fields with different base
+values are refused (`NOMINAL_AMBIGUOUS`). A stated `nominal` must reproduce the base
+(`NOMINAL_MISMATCH` lists the base values otherwise). Default steps: 0.01 and 0.1 mm, 0.01° and 0.1°,
 relative 1e-3 and 1e-2. Method: central difference at each step, forward or backward
 (labelled, with the reason) when one side is ERROR, out of model or without an exact valid selected quantity;
 second difference reported; flags `STEP_DEPENDENT`, `NEAR_EXTREMUM` (use the second
@@ -438,7 +559,7 @@ target unit per parameter unit. With `scale`, `scaled` = D·s and the ranking us
 ## Tolerance
 
 ```bash
-os-optics-kit tolerance SPEC.json --out STUDY_DIR [--seed N] [--samples N] [--zero-tolerance] [--draw-only]
+os-optics-kit tolerance SPEC.json --out STUDY_DIR [--seed N] [--samples N] [--zero-tolerance] [--draw-only] [--workers N]
 os-optics-kit tolerance --verify-seed STUDY_DIR
 ```
 
@@ -446,15 +567,16 @@ os-optics-kit tolerance --verify-seed STUDY_DIR
 | --- | --- |
 | `base_project` or `design` | as for sensitivity |
 | `targets` | all selected target assessments must be `MET` for a sample to PASS |
-| `samples`, `seed`, `max_evaluations` | sample count (nominal run extra), integer seed, budget ≥ samples + 1 |
-| `parameters` | `{name, unit, ops, nominal = 0, distribution}`, sampled independently in this order |
+| `samples`, `seed`, `max_evaluations` | sample count (nominal run extra), integer seed, optional cap ≥ samples + 1 |
+| `parameters` | `{name, unit, ops, nominal?, distribution}`, sampled independently in this order; `nominal` as in `sensitivity` |
 | `distribution` | `{"kind": "uniform", "low", "high"}` or `{"kind": "normal", "sigma", "mean_offset" = 0, "truncate_sigma" \| "bounds": [low, high]}` (offsets in the parameter unit; normal bounds holding less than 1e-9 of the distribution are refused with `SPEC_INVALID`) |
 
 Offsets come from `numpy.random.Generator(PCG64(seed))`, one uniform number per sample
 and parameter, row by row; `samples.csv` and `sampling.json` are written before any run.
 The same seed and spec give byte-identical `samples.csv`, and the first n samples of a
 larger run are the same; `--verify-seed` redraws and compares. `--zero-tolerance`
-reproduces the nominal project and result hashes exactly. Stdout: counts per outcome
+reproduces the nominal project and result hashes exactly. `--resume` with a larger
+`--samples` and the same seed keeps the samples already run. Stdout: counts per outcome
 class with denominators, target-value statistics over exact valid selected quantities
 (count stated), `samples_with_warnings`, sampling assumptions. Specs:
 `cases/*/studies/tolerance_*.json`.
@@ -477,8 +599,9 @@ Engine values with an independent closed-form reference and writes reports.
 `--list-parameters` prints every input with unit, default, meaning and role. Inputs take
 a bare number in the option's unit or a unit suffix (`--gap-error-mm 250um`,
 `--min-power-w 0.85mW`). `--study NAME=V1,V2` or `NAME=START..STOP:COUNT` (repeatable)
-replaces the default studies; `--max-evaluations` (default 40) bounds nominal plus all
-samples before anything runs. Output: `DIR/workflow.json`, `DIR/nominal/`,
+replaces the default studies; `--max-evaluations N` (default: no bound) bounds nominal plus all
+samples before anything runs; `--workers N` runs the samples of every study in one pool of N
+worker processes. Output: `DIR/workflow.json`, `DIR/nominal/`,
 `DIR/studies/<NAME>/` (sweep study, `compare/`, `plots/`, `closed_form.json`, `report/`),
 `DIR/report/report.md`. Exit follows the nominal outcome; study samples are counted in
 `studies[].counts` and `pass_fraction` ("n/N"). The mirror-alignment workflow's
@@ -494,10 +617,24 @@ samples before anything runs. Output: `DIR/workflow.json`, `DIR/nominal/`,
 | `PROJECT_OP_INVALID` with `TRANSFORM_REFUSED` | transform selector, frame or pivot cannot be applied | inspect the named operation and its problems |
 | `PROJECT_REJECTED` | the Engine check refuses the edited Project; `problems` list codes and locations | change the offending values |
 | `RUN_REFUSED` (`run.status`) | the edit was written but the Engine refused the run | read `run.problems`; adjust geometry or models |
-| `BUDGET_EXCEEDED` | more evaluations than `max_evaluations` | fewer values or a deliberate larger budget |
-| `SPEC_INVALID`, `TARGET_UNKNOWN`, `COLUMN_UNKNOWN`, `NOMINAL_MISMATCH`, `STEP_REQUIRED` | spec structure, unknown target, objective / constraint / derived column the spec cannot produce, `set_*` parameter without its base `nominal`, relative step at nominal 0 | fix the spec as the message states; `known` lists the valid ids or columns |
-| `INPUT_INVALID` | a workflow input cannot build a design | change the named input |
+| `BUDGET_EXCEEDED` | more evaluations than a stated `max_evaluations` | fewer values, a larger cap, or no cap |
+| `SPEC_INVALID`, `TARGET_UNKNOWN`, `COLUMN_UNKNOWN`, `NOMINAL_MISMATCH`, `NOMINAL_AMBIGUOUS`, `STEP_REQUIRED` | spec structure, unknown target, objective / constraint / derived column the spec cannot produce, a stated `nominal` that is not the base value, `set_*` fields with different base values, relative step at nominal 0 | fix the spec as the message states; `known` lists the valid ids or columns |
+| `INPUT_INVALID` | a workflow input cannot build the nominal design (a study value that cannot be built is one `ERROR` sample with `error_stage` `build`; the other values run) | change the named input |
 | `CATALOG_NOT_AVAILABLE` | no catalog release installed | `os-optics catalog sync` (or `catalog import FILE`) |
+| `STUDY_STARTED` | `study run` on a study that already has sample results | `--resume`, or plan it again with its planning command and `--overwrite` |
+| `STUDY_IDENTITY_CHANGED` | Engine build, catalog release or plan differ from the planned study (`changed` names them); `study run` refuses it with or without `--resume` | plan it again with its planning command (`sweep`, `sensitivity`, `tolerance`, `study candidates`) and `--overwrite` |
+| `STUDY_RUNNING` | another execution owns the study (`owner.json`; its process still runs): `study run`, planning and `study aggregate` are refused, and a reader of a study whose samples are not all recorded yet | wait for it or stop it, then run the command again (a stopped execution continues with `study run DIR --resume`) |
+| `STUDY_LOCK_UNAVAILABLE` | the file system of the study directory does not support file locks (`owner.lock`) | use a study directory on a local disk |
+| `STUDY_NOT_PLANNED`, `STUDY_KIND_CHANGED` | the directory holds no plan, or a study of another tool | plan with `--plan-only` / `study candidates`, or choose another `--out` |
+| `PLAN_INVALID`, `REQUEST_INVALID` | `plan.jsonl` or a request file is not a valid plan (sample id, duplicate, hash) | plan it again with its planning command and `--overwrite` |
+| `BUDGET_INVALID` | workers x threads exceed the logical CPUs | fewer `--workers` |
+| `INTERRUPTED` | Ctrl-C outside a study execution; exit 130 | run the command again (a study continues with `study run DIR --resume`) |
+| `EVALUATOR_INVALID` | `--evaluator` cannot be imported, or a worker process needs a named function | give `module:function` of an importable module |
+| `STUDY_NOT_RUN` | a reader (`study aggregate`, `plot sweep`, `report`, `compare`, `present`) got a planned study none of whose samples has a result | `next`: `study run DIR` (`--resume` after a cancellation) |
+| `STUDY_INCOMPLETE` | a reader other than `study aggregate` got a study executed in part and not aggregated since; `without_result` lists the samples | `next`: `study run DIR --resume`; or `study aggregate DIR` (exit 2 `INCOMPLETE`, the other samples as `NOT_RUN` rows) |
+| `STUDY_NOT_AGGREGATED` | every sample has a result, no `summary.json` | `study aggregate DIR` |
+| sample `state` `FAILED` / `CANCELLED` / `NOT_RUN` | the evaluation raised, was stopped by a limit or a cancellation, or never started | `study run DIR --resume` reruns exactly these samples |
 
 An `ERROR` sample inside a study is recorded with its stage and code in `table.csv`; the
-other samples still run.
+other samples still run. `study status DIR` lists the samples a resume would run, its
+`progress` (`NOT_RUN`, `PARTIAL`, `EXECUTED`) and the `next` command.

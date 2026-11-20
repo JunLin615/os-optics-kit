@@ -15,10 +15,14 @@ What it provides:
   W/mW/uW; anything else raises ``WorkflowError`` (``UNIT_UNKNOWN`` / ``UNIT_INCOMPATIBLE``) before any run;
 * ``check`` (``json_api.check_project``) and ``run_sample``: one in-process run into a sample directory, returned as
   a sample record whatever happens (an Engine refusal at load or at run is recorded, never raised);
-* selected-requirement shorthand: ERROR (no result), OUT_OF_MODEL (selected target applicability),
-  UNKNOWN (indeterminate, or a partial run), FAIL (unmet), PASS (all selected targets met),
-  NOT_APPLICABLE (no selected requirements); full execution, quantity states and target assessments are retained
-  independently;
+* the requirement class of a sample, from the Engine's assessments of the selected targets: ERROR (no result),
+  FAIL (a selected requirement is unmet), OUT_OF_MODEL (a selected target reads a quantity outside its model),
+  UNKNOWN (a selected requirement is indeterminate or does not apply), PASS (every selected requirement is met),
+  NOT_APPLICABLE (no target is selected, including a target-free run). The execution outcome (COMPLETED or
+  PARTIAL, with the exhausted budgets) is a separate fact of the record. A PARTIAL run did not complete: it is
+  never PASS or NOT_APPLICABLE (UNKNOWN when its selected targets are met or none is selected), keeps FAIL /
+  OUT_OF_MODEL, and exits 3 whatever its class (``requirement_exit_code``), as under the Engine's ``requirements`` exit
+  contract;
 * ``freshness`` delegates to the Engine's CURRENT / HISTORICAL / UNDETERMINED decision with its reasons;
 * sha256 / JSON / CSV writers (LF line endings) and bounded-output helpers.
 
@@ -41,10 +45,13 @@ import time
 
 from .result_summary import ArgumentParser  # noqa: F401 - the tools' parser (usage errors exit 4)
 from .result_summary import EXIT_CODES, ERROR_EXIT, error_document, exit_status, json_cli_stdout, summarize_results
+from .result_summary import EXECUTION_INCOMPLETE_EXIT, requirement_exit_code  # noqa: F401 - used by the tools
 
 OUTCOMES = ("ERROR", "OUT_OF_MODEL", "UNKNOWN", "FAIL", "PASS", "NOT_APPLICABLE")
 #: Exit codes of the workflow tools: the run statuses of result_summary plus the study / edit outcomes.
 WORKFLOW_EXIT_CODES = {**EXIT_CODES, "COMPLETED": 0, "EDITED": 0, "ALREADY_APPLIED": 0, "NO_FEASIBLE": 1}
+#: Exit code of a command stopped by Ctrl-C.
+INTERRUPTED_EXIT = 130
 
 
 class WorkflowError(Exception):
@@ -57,6 +64,21 @@ class WorkflowError(Exception):
 
     def as_dict(self):
         return {"code": self.code, "message": str(self), **json_safe(self.details)}
+
+
+def evaluation_cap(spec, count, what):
+    """The optional ``max_evaluations`` of a study spec: ``None`` (absent or null: no cap) or a positive integer;
+    a stated cap smaller than the ``count`` planned Engine runs refuses the request (``BUDGET_EXCEEDED``) before
+    any run. ``what`` describes the count in the refusal."""
+    budget = spec.get("max_evaluations")
+    if budget is None:
+        return None
+    if isinstance(budget, bool) or not isinstance(budget, int) or budget < 1:
+        raise WorkflowError("SPEC_INVALID", "max_evaluations must be a positive integer or null (no cap)")
+    if count > budget:
+        raise WorkflowError("BUDGET_EXCEEDED", f"{what}, more than max_evaluations {budget}; nothing was run",
+                            samples=count, max_evaluations=budget)
+    return budget
 
 
 # --------------------------------------------------------------------------------------------- units
@@ -359,10 +381,15 @@ def target_bounds(target):
 
 
 def classify(status, model_scope_issues, targets, selected=None, out_of_model_issues=()):
-    """Selected requirement shorthand; execution and individual quantity evidence remain separate.
+    """Requirement class of a run from the Engine's assessments of the selected targets.
 
-    Unrelated scope findings never invalidate a selected target. Assessments are
-    supplied by the Engine after resolving each target's actual dependencies.
+    In this order: ``ERROR`` without a result; ``NOT_APPLICABLE`` when no target is selected; ``UNKNOWN`` when a
+    selected id is not in the run; ``FAIL`` when a selected target is ``UNMET``; ``OUT_OF_MODEL`` when a selected
+    target carries model-applicability codes or the status ``OUT_OF_MODEL_SCOPE``; ``UNKNOWN`` when one is
+    ``INDETERMINATE`` or has no assessment; ``PASS`` when every selected target is ``MET``; else ``UNKNOWN``: a
+    selected target assessed ``NOT_APPLICABLE`` is not met, alone or beside met ones, as under the Engine's
+    ``requirements`` exit contract. Scope findings on quantities no selected target reads do not change the class;
+    the per-target rows keep every assessment and code.
     """
     if status is None:
         return "ERROR"
@@ -373,24 +400,24 @@ def classify(status, model_scope_issues, targets, selected=None, out_of_model_is
     selected_rows = [rows.get(target_id) for target_id in chosen]
     if any(row is None for row in selected_rows):
         return "UNKNOWN"
-    if any(row.get("applicability_issue_codes") or row.get("status") == "OUT_OF_MODEL_SCOPE"
-           for row in selected_rows):
-        return "OUT_OF_MODEL"
     assessments = [row.get("assessment") for row in selected_rows]
     if "UNMET" in assessments:
         return "FAIL"
+    if any(row.get("applicability_issue_codes") or row.get("status") == "OUT_OF_MODEL_SCOPE"
+           for row in selected_rows):
+        return "OUT_OF_MODEL"
     if "INDETERMINATE" in assessments or any(value is None for value in assessments):
         return "UNKNOWN"
-    if all(value == "NOT_APPLICABLE" for value in assessments):
-        return "NOT_APPLICABLE"
     return "PASS" if all(value == "MET" for value in assessments) else "UNKNOWN"
 
 
 def requirement_outcome(status, execution, model_scope_issues, targets, selected=None, out_of_model_issues=()):
-    """``classify`` with the execution applied: a FAILED or CANCELLED calculation is ERROR, and a PARTIAL one (a
-    budget reached, e.g. RETURN_ANALYSIS_BUDGET) is never PASS or NOT_APPLICABLE but UNKNOWN (for
-    RETURN_ANALYSIS_BUDGET the code of the Engine's aggregate status contract); an unmet or out-of-model selected
-    target keeps FAIL / OUT_OF_MODEL."""
+    """``classify`` for a run record: a ``FAILED`` or ``CANCELLED`` calculation has no result and is ``ERROR``; a
+    ``PARTIAL`` one (a compute budget was reached) did not complete and is never ``PASS`` or ``NOT_APPLICABLE``
+    but ``UNKNOWN``, as under the Engine's ``requirements`` exit contract, while an unmet or out-of-model selected
+    target keeps ``FAIL`` / ``OUT_OF_MODEL``. What a reached budget left undecided is ``INDETERMINATE`` on the
+    targets it affects; ``execution`` stays beside the class, and ``requirement_exit_code`` gives every ``PARTIAL``
+    run exit 3."""
     state = (execution or {}).get("outcome")
     if state in ("FAILED", "CANCELLED"):
         return "ERROR"
@@ -400,17 +427,79 @@ def requirement_outcome(status, execution, model_scope_issues, targets, selected
     return outcome
 
 
-def target_value_is_exact(target):
-    """Whether this target's numeric value can be used as an exact study operand.
+def record_outcome(record):
+    """The requirement class of a saved sample record, derived again from its targets, execution and selected
+    targets (``requirement_outcome``), so a record written by an earlier kit release is classed by the same rule; a
+    record with an error stays ``ERROR``."""
+    if record.get("error") or record.get("status") is None:
+        return "ERROR"
+    return requirement_outcome(record.get("status"), record.get("execution"), record.get("model_scope_issues") or [],
+                               record.get("targets") or [], record.get("selected_targets"),
+                               record.get("out_of_model_issues") or [])
 
-    Bounds and dependency-specific applicability stay in the record even when
-    they cannot be ranked or differentiated as exact scalar values.
-    """
-    return (isinstance(target.get("value"), (int, float)) and not isinstance(target.get("value"), bool)
-            and math.isfinite(target["value"]) and not target.get("applicability_issue_codes")
-            and target.get("status") in ("PASS", "WARNING", "FAIL")
-            and target.get("assessment") in ("MET", "UNMET")
-            and target.get("quantity_state") not in ("BOUNDED", "UNKNOWN", "OUT_OF_MODEL_SCOPE"))
+
+#: What a reported target value is, as a study operand (``target_value_use``).
+VALUE_KINDS = ("EXACT", "BOUNDED", "QUANTITY_UNKNOWN", "OUTSIDE_MODEL", "UNDECIDED", "NO_VALUE")
+#: Which values a study uses: ``exact`` (EXACT only, the default) or ``reported`` (every finite value).
+VALUE_USES = ("exact", "reported")
+
+
+def target_value_use(target):
+    """``{usable, kind, codes}`` of a target row's value as a study operand under the default ``exact`` rule.
+
+    ``kind``: ``NO_VALUE`` (no finite number), ``OUTSIDE_MODEL`` (model-applicability codes or status / quantity
+    state ``OUT_OF_MODEL_SCOPE``), ``BOUNDED`` or ``QUANTITY_UNKNOWN`` (the quantity state), ``UNDECIDED`` (the
+    target's status is not PASS / WARNING / FAIL: the metric could not be graded) or ``EXACT``. ``codes``: the
+    target's applicability and issue codes. Bounds and applicability stay in the record whatever the kind."""
+    value = target.get("value")
+    codes = sorted({*(target.get("applicability_issue_codes") or []), *(target.get("issue_codes") or [])})
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+        kind = "NO_VALUE"
+    elif target.get("applicability_issue_codes") or "OUT_OF_MODEL_SCOPE" in (target.get("status"),
+                                                                             target.get("quantity_state")):
+        kind = "OUTSIDE_MODEL"
+    elif target.get("quantity_state") == "BOUNDED":
+        kind = "BOUNDED"
+    elif target.get("quantity_state") == "UNKNOWN":
+        kind = "QUANTITY_UNKNOWN"
+    elif target.get("status") not in ("PASS", "WARNING", "FAIL"):
+        kind = "UNDECIDED"
+    else:
+        kind = "EXACT"
+    return {"usable": kind == "EXACT", "kind": kind, "codes": codes}
+
+
+def value_usable(kind, value_use="exact"):
+    """Whether a value of ``kind`` is used under ``value_use`` (``VALUE_USES``)."""
+    return kind == "EXACT" if value_use == "exact" else kind not in (None, "NO_VALUE")
+
+
+def value_use_setting(value):
+    """The validated ``value_use`` of a spec or option (``None`` -> ``exact``)."""
+    if value is None:
+        return "exact"
+    if value not in VALUE_USES:
+        raise WorkflowError("SPEC_INVALID", f"value_use must be one of {list(VALUE_USES)}", value_use=value)
+    return value
+
+
+def values_used(rows, columns, value_use):
+    """``{column: {kind: count}}`` of the rows whose value of each ``target:`` column is used under ``value_use``."""
+    out = {}
+    for column in columns:
+        counts = {}
+        for row in rows:
+            kind = row.get(f"{column}:value_kind")
+            if value_usable(kind, value_use):
+                counts[kind] = counts.get(kind, 0) + 1
+        out[column] = dict(sorted(counts.items()))
+    return out
+
+
+def target_value_is_exact(target):
+    """Whether this target's numeric value can be used as an exact study operand (``target_value_use`` kind
+    ``EXACT``)."""
+    return target_value_use(target)["kind"] == "EXACT"
 
 
 def error_record(stage, code, problems, *, sample_dir=None, project_file=None, seconds=0.0, selected=None):
@@ -437,13 +526,16 @@ def _empty_record(sample_dir, project_file, selected):
     }
 
 
-def run_sample(document, sample_dir, *, targets=None, write_run=True):
+def run_sample(document, sample_dir, *, targets=None, write_run=True, monitor=None, ray_data="full"):
     """Save ``document`` as ``sample_dir/project.json``, run it in-process into ``sample_dir/run`` and return the
     sample record. Never raises for an Engine refusal: a refusal at load (``stage: "load"``) or at run (``stage:
     "run"``) gives an ``ERROR`` record with the Engine's problem codes. ``targets``: the target ids that decide the
-    outcome (default: all targets of the run)."""
+    outcome (default: all targets of the run). ``monitor``: an ``os_optics.run_monitor.RunMonitor`` passed to the
+    run; a run it stops gives an ``ERROR`` record with code ``RUN_STOPPED`` (problem code = the stop cause:
+    ``CALLER``, ``MEMORY_LIMIT``, ``ARTIFACT_LIMIT``). ``ray_data``: ``full`` or ``summary`` (chief rays only)."""
     from os_optics.local import LocalRunError, load_project, run_optical_project
     from os_optics.results import load_run
+    from os_optics.run_control import RunStopped
 
     sample_dir = Path(sample_dir)
     sample_dir.mkdir(parents=True, exist_ok=True)
@@ -458,8 +550,14 @@ def run_sample(document, sample_dir, *, targets=None, write_run=True):
                             project_file=project_file, seconds=time.perf_counter() - started, selected=targets)
     record["identity"]["project_hash"] = project.content_hash()
     try:
-        run = run_optical_project(project, output_dir=run_dir if write_run else None)
+        run = run_optical_project(project, output_dir=run_dir if write_run else None, monitor=monitor,
+                                  ray_data=ray_data)
         summary = summarize_results(load_run(run))
+    except RunStopped as exc:
+        problem = {"code": exc.cause, "message": exc.message, "phase": exc.phase}
+        record.update({"error": {"stage": "run", "code": "RUN_STOPPED", "problems": [problem]},
+                       "seconds": time.perf_counter() - started})
+        return record
     except LocalRunError as exc:
         record.update({"error": {"stage": "run", "code": "RUN_REFUSED", "problems": _problems(exc)},
                        "seconds": time.perf_counter() - started})
@@ -524,11 +622,17 @@ def sample_from_summary(summary, selected=None):
     }
 
 
-def read_saved_run(run_dir, selected=None):
-    """Summary + sample fields of a saved run directory (never reruns)."""
+def read_saved_run(run_dir, selected=None, *, require_integrity=False):
+    """Summary + sample fields of a saved run directory (never reruns). The summary's ``integrity`` states whether
+    the run's files verify; with ``require_integrity`` a run that does not verify is refused
+    (``RUN_INTEGRITY_FAILED``), for a reader that would adopt the run as a result."""
     from .result_summary import summarize_run
 
     summary = summarize_run(run_dir)
+    integrity = summary.get("integrity") or {}
+    if require_integrity and integrity.get("checked") and not integrity.get("consistent"):
+        raise WorkflowError("RUN_INTEGRITY_FAILED", "; ".join(integrity.get("problems") or []),
+                            run_dir=Path(run_dir).as_posix(), problems=integrity.get("problems"))
     fields = sample_from_summary(summary, selected)
     identity = summary.get("identity") or {}
     fields["identity"] = {key: identity.get(key) for key in (
@@ -553,17 +657,23 @@ def freshness(project, run_dir, *, verify=True):
 
 # --------------------------------------------------------------------------------------------- CLI output
 
-def emit(workflow, exit_codes=None):
+def emit(workflow, exit_codes=None, *, execution_of=None):
     """Run ``workflow``; one compact JSON document on stdout (exit code from its ``status``), diagnostics on
-    stderr; any exception -> ``{"error": {...}}`` on stderr, empty stdout, exit 4."""
+    stderr; any exception -> ``{"error": {...}}`` on stderr, empty stdout, exit 4. ``execution_of(summary)``: the
+    ``execution`` of the run the status classes, if any; a PARTIAL one exits ``EXECUTION_INCOMPLETE_EXIT``
+    (``requirement_exit_code``)."""
     exit_codes = exit_codes or WORKFLOW_EXIT_CODES
     try:
         with json_cli_stdout():
             summary = workflow()
-        code = exit_codes[summary["status"]]
+        execution = execution_of(summary) if execution_of is not None else None
+        code = requirement_exit_code(summary["status"], execution, exit_codes)
         output = json.dumps(json_safe(summary), ensure_ascii=True, allow_nan=False, separators=(",", ":"))
     except SystemExit as exc:  # --help
         return exit_status(exc)
+    except KeyboardInterrupt:  # Ctrl-C outside a study execution (which handles it itself)
+        print(json.dumps({"error": {"code": "INTERRUPTED", "message": "interrupted (Ctrl-C)"}}), file=sys.stderr)
+        return INTERRUPTED_EXIT
     except Exception as exc:  # noqa: BLE001 - every failure becomes a JSON error
         error = exc.as_dict() if isinstance(exc, WorkflowError) else error_document(exc)
         print(json.dumps({"error": json_safe(error)}, ensure_ascii=True), file=sys.stderr)

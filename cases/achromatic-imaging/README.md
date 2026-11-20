@@ -6,7 +6,14 @@ A 75 mm cemented doublet images a distant on-axis point at the Fraunhofer F, d a
 whether one fixed image plane gives a small geometric spot and useful diffraction contrast across all three
 colours. The saved native imaging analysis supplies the PSF, tangential/sagittal MTF and encircled energy.
 
-![Declared objective and image plane](images/objective.png)
+![3D view: the source SRC, the cemented objective OBJ and the fixed image plane `image` with the three traced colours](images/iso.png)
+
+![Section through the objective axis: crown and flint elements, the converging rays and the image plane](images/section.png)
+
+Both images are the engine's browser-free snapshots of a run of `project.json`:
+`os-optics view run --no-browser --snapshot DIR` with `--views iso --size 960x540`, and again with
+`--section ALL --frame=scene --size 1200x420`. In a kit checkout,
+`os-optics-kit cases images achromatic-imaging` re-renders exactly these views as recorded in `images.json`.
 
 ## Model and requirement
 
@@ -54,7 +61,8 @@ os-optics-kit cases verify achromatic-imaging
 python workflow.py all --out output
 ```
 
-Chrome/Chromium is needed for the system view. Run stages separately with `compute`, `study`, `report` and `present`.
+`all` ends with `present`, an optional presentation gallery that needs the `render` extra and Chrome/Chromium.
+Run stages separately with `compute`, `study`, `report` and `present`.
 Choose a new directory for a new scientific run; existing study directories are refused.
 
 ```bash
@@ -67,10 +75,10 @@ os-optics results imaging output/nominal/run --monitor image --request imaging-r
 
 The last command is the direct Engine equivalent of the saved baseline imaging calculation. Imaging performs
 a dense ray calculation; `workflow.py present` instead reads the saved JSON without tracing. Kit's native
-presentation types cover the system view; `figures.py` adapts the imaging arrays into PSF/MTF/energy and study
+presentation types draw the gallery's 3D view; `figures.py` adapts the imaging arrays into PSF/MTF/energy and study
 panels using Kit's theme, provenance, gallery and bundle APIs. Use the case's `present` command to redraw the
 complete set. `--language en|zh-CN` and `--background light|dark` provide four variants.
-The native `presentation.json` describes the system view; the full gallery registers all five assets in
+The native `presentation.json` describes that 3D view; the full gallery registers all five assets in
 `assets.json`. Rebuild the native view into its own gallery with
 `os-optics-kit present build output/presentation/presentation.json --out native-view`.
 `workflow.py report --out output` refreshes the bilingual case tables from saved results.

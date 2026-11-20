@@ -20,8 +20,9 @@ os-optics-kit measurements data/detector_response.csv --x input_power_mW --signa
 os-optics-kit measurements data/reference_drift.csv --x time_s --signal signal_V --background dark_V --x-unit s --signal-unit V --reference reference_V --reference-background reference_dark_V --reference-unit V --maximum-rmse 0.000000000001 --out run-reference
 ```
 
-Each command writes one compact JSON document to stdout. Choose a **new output
-directory** for each run; existing directories are rejected to preserve results.
+Each command writes one compact JSON document to stdout. The output directory must be
+new or empty (`OUTPUT_EXISTS` otherwise); `--overwrite` replaces the five files this
+command writes and leaves any other file there.
 Both examples return `WARNING` and exit 0 because deliberate bad rows are excluded;
 both RMSE targets pass. Their full results are saved even if a target fails.
 

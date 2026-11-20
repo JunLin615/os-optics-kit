@@ -1,12 +1,19 @@
 # Catalog beam expander
 
+[简体中文](README.zh-CN.md) · [Agent case sheet](CASE.md)
+
 Two catalog plano-convex lenses (f = 50 mm and 100 mm, N-BK7, 12.7 mm diameter) expand a 780 nm Gaussian beam with a
-1 mm waist radius twice. The target `expanded_waist` asks for an output waist radius of 1.9961 mm ± 1 %, a measure
+1 mm waist radius twice. The target `expanded_waist` asks for an output waist radius of 1.99612 mm ± 1 %, a measure
 of collimation. The components pin catalog release 2026-10-28.1.
 
-![Section along the lens axis: L1 focuses, L2 collimates, the plane output receives the expanded beam](images/section.png)
+![3D view: the source SRC, the catalog lenses L1 and L2 and the plane `output` with the traced beam](images/iso.png)
 
-![Isometric view of the expander](images/iso.png)
+![Section through the lens axis: L1 focuses the beam, L2 collimates it, the plane `output` receives the expanded beam](images/section.png)
+
+Both images are the engine's browser-free snapshots of a run of `project.json`:
+`os-optics view run --no-browser --snapshot DIR` with `--views iso --size 960x540`, and again with
+`--section ALL --frame=scene --size 1200x420`. In a kit checkout, `os-optics-kit cases images beam-expander`
+re-renders exactly these views as recorded in `images.json`.
 
 ## Run it
 

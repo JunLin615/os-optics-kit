@@ -1,12 +1,19 @@
 # Beam expansion and focusing
 
+[简体中文](README.zh-CN.md) · [Agent case sheet](CASE.md)
+
 A 780 nm Gaussian beam with a 0.5 mm waist radius is expanded three times by two ideal thin lenses (f = 50 mm and
 150 mm) and focused by a third lens (f = 100 mm). The design is catalog-free and fully parameterized: `workflow.py`
 rebuilds it from your inputs and studies one parameter at a time.
 
-![Section along the beam: L1 and L2 expand the beam, L3 focuses it onto the plane focus](images/section.png)
+![3D view: the source SRC, the expander lenses L1 and L2, the plane `collimated`, the focusing lens L3 and the plane `focus` with the traced beam](images/iso.png)
 
-![Isometric view of the expander and the focusing lens](images/iso.png)
+![Section along the beam: L1 and L2 expand the beam, L3 focuses it onto the plane `focus`](images/section.png)
+
+Both images are the engine's browser-free snapshots of a run of `project.json`:
+`os-optics view run --no-browser --snapshot DIR` with `--views iso --size 960x540`, and again with
+`--section ALL --frame=scene --size 1200x420`. In a kit checkout, `os-optics-kit cases images expansion-focus`
+re-renders exactly these views as recorded in `images.json`.
 
 ## Run it
 
@@ -14,6 +21,7 @@ rebuilds it from your inputs and studies one parameter at a time.
 os-optics-kit cases copy expansion-focus --dest .
 cd expansion-focus
 os-optics project run project.json --out-dir run
+os-optics results targets run
 python workflow.py --out wf
 ```
 

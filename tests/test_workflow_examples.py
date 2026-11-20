@@ -92,7 +92,7 @@ class StudySyntaxTests(unittest.TestCase):
             parameters = D.DESIGN_INFO[design]["parameters"]
             parsed = [dw.parse_study(text, parameters) for text in module.DEFAULT_STUDIES]
             self.assertEqual(sum(len(s["values"]) for s in parsed), samples, design)
-            self.assertLessEqual(1 + samples + 1, module.config()["max_evaluations"])
+            self.assertNotIn("max_evaluations", module.config())  # no cap unless --max-evaluations states one
 
     def test_help_is_english_on_stdout(self):
         for case in ("expansion-focus", "polarization-control", "mirror-alignment"):
@@ -210,9 +210,18 @@ class BeamExpansionFocusTests(unittest.TestCase):
         self.assertEqual((code, out), (4, None))
         self.assertEqual(json.loads(err.strip().splitlines()[-1])["error"]["code"], "BUDGET_EXCEEDED")
         self.assertFalse((self.dir / "budget").exists())
-        code, out, err = invoke(bef.main, ["--out", str(self.dir / "bad"), "--study", "f3_mm=0"])
+        # A study value the builder refuses is one ERROR sample; the other values run and the exit follows the
+        # nominal design.
+        code, out, err = invoke(bef.main, ["--out", str(self.dir / "bad"), "--study", "f3_mm=0,100"])
+        self.assertEqual((code, out["status"]), (0, "PASS"), err)
+        study = wc.read_json(self.dir / "bad" / "studies" / "f3_mm" / "summary.json")
+        self.assertEqual((study["counts"]["by_outcome"]["ERROR"], study["counts"]["by_outcome"]["PASS"]), (1, 1))
+        refused = next(r for r in study["rows"] if r["outcome"] == "ERROR")
+        self.assertEqual((refused["param:f3_mm"], refused["error_stage"], refused["error_code"]),
+                         (0.0, "build", "INPUT_INVALID"))
+        code, out, err = invoke(bef.main, ["--out", str(self.dir / "bad-nominal"), "--f3-mm", "0", "--no-studies"])
         self.assertEqual((code, json.loads(err.strip().splitlines()[-1])["error"]["code"]), (4, "INPUT_INVALID"))
-        self.assertFalse((self.dir / "bad").exists())
+        self.assertFalse((self.dir / "bad-nominal").exists())
         code, _out, err = invoke(bef.main, ["--out", str(self.dir / "wf"), "--no-studies"])
         self.assertEqual((code, json.loads(err.strip().splitlines()[-1])["error"]["code"]), (4, "OUTPUT_EXISTS"))
         code, out, _err = invoke(bef.main, ["--list-parameters"])
@@ -496,10 +505,12 @@ class CatalogBeamExpanderDemoTests(unittest.TestCase):
         self.assertEqual((code, out["run"]["outcome"]), (0, "PASS"), err)
         self.assertEqual(out["run"]["targets"][0]["value"], rows[6]["target:expanded_waist"])
 
-    def test_return_analysis_budget_is_unknown_with_met_targets(self):
+    def test_return_analysis_budget_partial_run_is_not_a_pass(self):
         """os-optics 0.13: a run whose return-light analysis reaches max_return_analysis_work is PARTIAL
-        (RETURN_ANALYSIS_BUDGET); its targets may be MET, yet the outcome is UNKNOWN (exit 2), like the Engine's
-        aggregate status contract."""
+        (RETURN_ANALYSIS_BUDGET) while its targets are MET: the calculation did not complete, so the class is
+        UNKNOWN and the exit code 3, as under the Engine's requirements exit contract; the targets stay MET and the
+        execution with the exhausted budget is stated beside the class; a sweep constraint on the execution or on
+        the class marks such a sample infeasible."""
         from os_optics_kit import result_summary
 
         with TempDir() as d:
@@ -507,13 +518,25 @@ class CatalogBeamExpanderDemoTests(unittest.TestCase):
                 {"op": "set_compute_budget", "compute_budget": {"max_return_analysis_work": 1}}]})
             code, out, err = invoke(ep.main, [str(self.dir / "base-run" / "project.json"), "--edits", str(edits),
                                               "--out", str(d / "limited.json"), "--run", str(d / "limited-run")])
-            self.assertEqual((code, out["run"]["outcome"]), (2, "UNKNOWN"), err)
+            self.assertEqual((code, out["status"], out["run"]["outcome"]), (3, "UNKNOWN", "UNKNOWN"), err)
             self.assertEqual(out["run"]["execution"]["outcome"], "PARTIAL")
             self.assertIn("max_return_analysis_work", out["run"]["execution"]["budgets"]["exhausted"])
             self.assertEqual({t["assessment"] for t in out["run"]["targets"]}, {"MET"})
             code, summary, err = invoke(result_summary.main, [str(d / "limited-run")])
-            self.assertEqual((code, summary["status"], summary["requirement_outcome"]), (2, "UNKNOWN", "UNKNOWN"), err)
+            self.assertEqual((code, summary["status"], summary["requirement_outcome"]), (3, "UNKNOWN", "UNKNOWN"), err)
             self.assertIn("RETURN_ANALYSIS_BUDGET", {issue["code"] for issue in summary["issues"]})
+            from os_optics_kit.study import aggregate as agg
+
+            _summary, fields = wc.read_saved_run(d / "limited-run")
+            record = {**fields, "error": None, "selected_targets": None}
+            row = agg.row_from_record("s0000", {}, [], record, d)
+            self.assertEqual((row["outcome"], row["execution_outcome"]), ("UNKNOWN", "PARTIAL"))
+            self.assertIn("max_return_analysis_work", row["budgets_exhausted"])
+            self.assertEqual(agg.counts([row])["by_execution"], {"PARTIAL": 1})
+            self.assertEqual(sp.constraint_failures({**row, "feasible": None}, [{"execution": ["COMPLETED"]}]),
+                             ["execution in ['COMPLETED']"])
+            self.assertEqual(sp.constraint_failures({**row, "feasible": None}, [{"outcome": ["PASS"]}]),
+                             ["outcome in ['PASS']"])
 
     def test_comparison_plots_and_report(self):
         d = self.dir

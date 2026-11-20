@@ -1,10 +1,10 @@
 """Check built os-optics-kit distributions before they are installed or published.
 
-python scripts/check_dist.py dist [--version 0.3.0]
+python scripts/check_dist.py dist [--version 0.4.0]
 
 For every wheel and source archive in the directory: the version matches (default: tools/os_optics_kit/_version.py),
 the wheel carries the package, the skills, the cases, their indexes, the contributor templates and baseline.json, it declares the os-optics
-requirement of baseline.json, and no member is a run output, 3D scene, key, catalog release, file over 1 MiB or
+requirement of baseline.json, the source archive carries CHANGELOG.md, and no member is a run output, 3D scene, key, catalog release, file over 1 MiB or
 image over 400 KiB. Prints one compact JSON document; exit 0 when clean, 1 otherwise.
 """
 
@@ -30,8 +30,8 @@ WHEEL_REQUIRED = ("os_optics_kit/__init__.py", "os_optics_kit/__main__.py", "os_
                   "os_optics_kit/_data/templates/CASE.md", "os_optics_kit/_data/templates/README.case.md",
                   "os_optics_kit/_data/templates/SKILL.md")
 WHEEL_FORBIDDEN_TOP = ("tests/", "scripts/", ".github/", "docs/", "tools/")
-SDIST_REQUIRED = ("pyproject.toml", "LICENSE", "README.md", "baseline.json", "tools/os_optics_kit/cli.py",
-                  "templates/CASE.md", "scripts/check_repo.py")
+SDIST_REQUIRED = ("pyproject.toml", "LICENSE", "README.md", "CHANGELOG.md", "baseline.json",
+                  "tools/os_optics_kit/cli.py", "templates/CASE.md", "scripts/check_repo.py")
 
 
 def member_problems(name: str, size: int) -> list[str]:

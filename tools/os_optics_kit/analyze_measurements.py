@@ -5,7 +5,9 @@ Usage:
                              --signal-unit U [--reference COL --reference-background COL --reference-unit U]
                              [--minimum-reference V] [--maximum-rmse V]
 
-Original inputs are never modified. Output directories must not already exist. The engine is not needed; the plot
+Original inputs are never modified. The output directory must be new or empty (OUTPUT_EXISTS otherwise); with
+--overwrite the five files this command writes are replaced, after the input was read and validated, and other files
+in the directory stay. The engine is not needed; the plot
 needs matplotlib (python -m pip install "os-optics-kit[plot]"), checked before any output is written
 (PLOT_EXTRA_MISSING otherwise). Writes original-input.csv, processed.csv, measurements.png, provenance.json and
 summary.json. Stdout: the compact summary. Exit 0 PASS / WARNING (fit done; WARNING: rows excluded or constant
@@ -253,12 +255,23 @@ def _plot(records, fit, config, path, input_name, input_hash):
     figure.savefig(path, dpi=140, metadata={"Description": f"Input SHA-256: {input_hash}; see provenance.json"})
 
 
-def analyze_measurements(input_path, output_dir, config):
-    """Create a new auditable analysis bundle and return its compact JSON summary."""
+class OutputExists(ValueError):
+    """The output directory holds files and --overwrite was not given."""
+
+    code = "OUTPUT_EXISTS"
+
+
+OUTPUT_FILES = ("original-input.csv", "processed.csv", "measurements.png", "provenance.json", "summary.json")
+
+
+def analyze_measurements(input_path, output_dir, config, *, overwrite=False):
+    """Create an auditable analysis bundle in a new or empty ``output_dir`` and return its compact JSON summary;
+    ``overwrite`` replaces this command's own files in a non-empty one (other files stay)."""
     config.validate()
     input_path, output_dir = Path(input_path).resolve(), Path(output_dir).resolve()
-    if output_dir.exists():
-        raise ValueError("Output directory already exists; choose a new path to preserve earlier results")
+    if output_dir.exists() and (not output_dir.is_dir() or (any(output_dir.iterdir()) and not overwrite)):
+        raise OutputExists(f"{output_dir} is not empty; choose a new path to keep the earlier results, or give "
+                           "--overwrite to replace this command's files there")
     data = input_path.read_bytes()
     input_hash = _sha256(data)
     header, records = preprocess_csv(data, config)
@@ -301,7 +314,7 @@ def analyze_measurements(input_path, output_dir, config):
     require_matplotlib()
     import matplotlib
 
-    output_dir.mkdir(parents=True, exist_ok=False)
+    output_dir.mkdir(parents=True, exist_ok=True)
     Path(artifacts["original_input"]).write_bytes(data)
     audit_fields = ["record", "line_end", "used", "reasons", "extra_cells", "x", "corrected_signal",
                     "corrected_reference", "response", "fit_response", "residual", "input_sha256"]
@@ -341,7 +354,9 @@ def main(argv=None):
     def workflow():
         parser = ArgumentParser(prog=PROG, description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
         parser.add_argument("input", type=Path, help="UTF-8 CSV with a unique header row")
-        parser.add_argument("--out", required=True, type=Path, help="New output directory (must not exist)")
+        parser.add_argument("--out", required=True, type=Path, help="Output directory (new or empty)")
+        parser.add_argument("--overwrite", action="store_true",
+                            help="replace this command's five files in a non-empty --out (other files stay)")
         for name in ("x", "signal", "background"):
             parser.add_argument("--" + name, required=True, help=f"Name of the {name} column")
         parser.add_argument("--x-unit", required=True, help="Unit for the independent variable, e.g. mW or s")
@@ -352,8 +367,8 @@ def main(argv=None):
         parser.add_argument("--minimum-reference", type=float, default=0, help="Exclude corrected reference <= this nonnegative value (reference units; default 0)")
         parser.add_argument("--maximum-rmse", type=float, help="Optional maximum fit RMSE in response units; unmet bound exits 1")
         args = vars(parser.parse_args(argv))
-        input_path, output_dir = args.pop("input"), args.pop("out")
-        return analyze_measurements(input_path, output_dir, MeasurementConfig(**args))
+        input_path, output_dir, overwrite = args.pop("input"), args.pop("out"), args.pop("overwrite")
+        return analyze_measurements(input_path, output_dir, MeasurementConfig(**args), overwrite=overwrite)
 
     return emit_cli(workflow, exit_status_key="status")
 

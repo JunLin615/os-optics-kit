@@ -1,7 +1,7 @@
 {
   "schema": "os-optics-kit.skills",
   "schema_version": 1,
-  "kit_version": "0.3.0",
+  "kit_version": "0.4.0",
   "token_estimate": "ceil(characters/4)",
   "budgets": {
     "SKILL.md": 900,
@@ -28,19 +28,19 @@
       "command": "os-optics-kit compare",
       "requires": "os-optics>=0.13,<0.14",
       "path": "skills/compare/SKILL.md",
-      "tokens": 525,
-      "sha256": "7a26feb61835cb83f92fbed33f85a0518dfd7aaccce1a45850deafec21813024"
+      "tokens": 595,
+      "sha256": "bd5a54019e9e5322f28267d6115299037cd6d0bd843a2a94865796c05de61175"
     },
     {
       "name": "contrib-case",
       "kind": "contribution",
-      "description": "Turn a finished os-optics design into a PR-ready os-optics-kit case: engine-verified project.json, CASE.md, README with rendered images, expected outcome and a git patch. Use when the user wants to share a design as a case.",
-      "version": "0.2.0",
+      "description": "Turn a finished os-optics design into a PR-ready kit case: verified project.json, classified CASE.md, English and Chinese READMEs with engine system views, expected outcome and a git patch. Use to share a design as a case.",
+      "version": "0.3.0",
       "command": "os-optics-kit contrib case",
       "requires": "os-optics>=0.13,<0.14",
       "path": "skills/contrib-case/SKILL.md",
-      "tokens": 746,
-      "sha256": "7eb38847ccf062ac588c261ffad040bd2fdacb2be9379b6842efedfc5ffe9a4e"
+      "tokens": 898,
+      "sha256": "e5e0fd29b90c8bfb3d999d1c058093ee6fa818b60e4e96356bf53096adcea128"
     },
     {
       "name": "contrib-tool",
@@ -72,41 +72,41 @@
       "command": "os-optics-kit measurements",
       "requires": "os-optics-kit[plot]",
       "path": "skills/measurements/SKILL.md",
-      "tokens": 571,
-      "sha256": "4bd2593b9ac141c5b66d55c18d3dff8c0524e9e7db14ca6a7a5f5a8bf2f12061"
+      "tokens": 582,
+      "sha256": "6c66e2edd54bbc815033e42b1faebfa401880b9f96f299f79517c68b57ffff0e"
     },
     {
       "name": "plot",
       "kind": "tool",
       "description": "Draw standard PNG and SVG plots from saved results without simulating - sweep curves or two-parameter heatmaps with target bounds, the power distribution of a run, signed bar charts and histograms. Use it to show study or run results.",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "command": "os-optics-kit plot",
       "requires": "os-optics>=0.13,<0.14; os-optics-kit[plot]",
       "path": "skills/plot/SKILL.md",
-      "tokens": 652,
-      "sha256": "9c98e6d7aaba45f97965d453ab6e315e627a5c68de8c7b224b77986dc683a5f8"
+      "tokens": 725,
+      "sha256": "e0202f1256d8838170e4c2b670ee36076d428931c8176efae787f2b71ab2f197"
     },
     {
       "name": "present",
       "kind": "tool",
-      "description": "Prepare slide-ready material from saved runs and studies - system views, result plots, comparisons, animations, an offline gallery and a portable bundle - and restyle it (language, background, text and figure size) from a saved configuration without simulating.",
-      "version": "0.1.0",
+      "description": "Prepare slide-ready material from saved runs and studies - system views, plots, comparisons, animations, an offline gallery and a bundle - and restyle it (language, background, sizes) from a saved configuration without simulating.",
+      "version": "0.2.1",
       "command": "os-optics-kit present",
       "requires": "os-optics>=0.13,<0.14; os-optics-kit[plot]; os-optics-kit[render] for views and animations; os-optics-kit[media] for MP4",
       "path": "skills/present/SKILL.md",
-      "tokens": 887,
-      "sha256": "77c2fd97fc0a40c66a3bbbdc94c47d1c83cb667519c244980ac3a5f0bb834868"
+      "tokens": 900,
+      "sha256": "b26b4ffa48b833bd72db704b585c5faff31bc197f055169d7769cfea4309c6c2"
     },
     {
       "name": "render",
       "kind": "tool",
-      "description": "Render reproducible 3D figures with camera angles, roll, element framing and a manifest.",
-      "version": "0.1.0",
+      "description": "Render presentation-grade 3D figures with camera angles, roll, element framing and a manifest. Needs Chrome or Chromium; case images and plain system views come from the engine without a browser.",
+      "version": "0.2.0",
       "command": "os-optics-kit render",
       "requires": "os-optics>=0.13,<0.14; os-optics-kit[render]",
       "path": "skills/render/SKILL.md",
-      "tokens": 893,
-      "sha256": "b41934c287d05832eccaa296539309d6323f482426bbac42ebfc805b56cd0a45"
+      "tokens": 880,
+      "sha256": "8c561c6bbff87a2ec7c6a864d00741339384ac3f0dca04f818302d568bf670fc"
     },
     {
       "name": "report",
@@ -116,63 +116,85 @@
       "command": "os-optics-kit report",
       "requires": "os-optics>=0.13,<0.14",
       "path": "skills/report/SKILL.md",
-      "tokens": 505,
-      "sha256": "a2fe9a58fce876f5fb1ced06fadbcc239312d32a434a722acbc1fc750d97e788"
+      "tokens": 529,
+      "sha256": "e5bdc62951466a356b2336d3d2dca1242b7d9978938a20ea365bb7ad1adc7671"
     },
     {
       "name": "run-case",
       "kind": "guide",
       "description": "Find an engine-reproducible OS Optics case, copy it, run it, check it against its recorded outcome and adapt it. Use when a worked design close to the user's question exists or a known-good starting Project is needed.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "command": "os-optics-kit cases",
       "requires": "os-optics>=0.13,<0.14",
       "path": "skills/run-case/SKILL.md",
-      "tokens": 671,
-      "sha256": "dbcc59a28d98b1445b51997b9f2a5dbe0671baff45c1d705e427cc4bc16313ab"
+      "tokens": 807,
+      "sha256": "0de68f32fa9f47def371c0673147c53c171905e38b3e08c195881ae94e943b0d"
     },
     {
       "name": "sensitivity",
       "kind": "tool",
       "description": "Finite-difference sensitivity of selected targets to explicit design parameters, with two step sizes checked against each other and every sample saved; ranks parameters per target. Use it to find which positions, angles or values a target depends on most.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "command": "os-optics-kit sensitivity",
       "requires": "os-optics>=0.13,<0.14",
       "path": "skills/sensitivity/SKILL.md",
-      "tokens": 669,
-      "sha256": "3415d3db4447df0463fc4bd44a1abc5570c64fbfe4aa127c13183e73f4a027fb"
+      "tokens": 800,
+      "sha256": "bb0edcc7e0346c558e451e07c2c38052c7c34ee0cf93916f1fcf9605a59064f2"
+    },
+    {
+      "name": "sfr",
+      "kind": "tool",
+      "description": "Measure the slanted-edge SFR (ISO 12233 e-SFR) of an image region, with edge angle, fit residuals, SFR50 and SFR at Nyquist; optionally put a saved os-optics imaging MTF on the same axes with the input differences stated. No engine run needed.",
+      "version": "0.1.0",
+      "command": "os-optics-kit sfr",
+      "requires": "os-optics-kit[plot] for PNG/TIFF and plots",
+      "path": "skills/sfr/SKILL.md",
+      "tokens": 744,
+      "sha256": "7f429554b8aeff495e2ad63c6b4e38323a26777ce006807554f4da01334242f9"
+    },
+    {
+      "name": "study",
+      "kind": "tool",
+      "description": "Run independent Engine evaluations as a resumable study, serially or in worker processes; plan, execute, aggregate and present as separate steps. Use it for sweeps, tolerance samples, candidate Projects and batches handed over by your own search code.",
+      "version": "0.2.0",
+      "command": "os-optics-kit study",
+      "requires": "os-optics>=0.13,<0.14",
+      "path": "skills/study/SKILL.md",
+      "tokens": 899,
+      "sha256": "e43ad05a59a876fc31bbdba6cb5427cd2aea3202fbe08a46b515ea274298b726"
     },
     {
       "name": "summary",
       "kind": "tool",
-      "description": "Read a saved os-optics run directory into one compact JSON document (targets, assessments, power budget, issues, identity) with an exit code per requirement outcome. Use it after every run before deciding anything.",
+      "description": "Read a saved os-optics run directory into one compact JSON document (targets, assessments, power budget, issues, identity) with an exit code per requirement outcome. It returns the execution, every target's assessment and the integrity record of the run.",
       "version": "0.2.0",
       "command": "os-optics-kit summary",
       "requires": "os-optics>=0.13,<0.14",
       "path": "skills/summary/SKILL.md",
-      "tokens": 560,
-      "sha256": "8508a89fc3f41b661d3f8cccb96ad3de23a9a02d092327bfca66227c65720c64"
+      "tokens": 633,
+      "sha256": "fb10f58f78ba37de54f81ef3c6db05f31b4102e8ffcc3655a73b13c649ca2445"
     },
     {
       "name": "sweep",
       "kind": "tool",
       "description": "Run a bounded one- or two-parameter sweep of a Project from a JSON spec; every sample's Project and run are saved, counted by outcome, and ranked by an optional objective under constraints. Use it to explore a design parameter.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "command": "os-optics-kit sweep",
       "requires": "os-optics>=0.13,<0.14",
       "path": "skills/sweep/SKILL.md",
-      "tokens": 597,
-      "sha256": "f5927339dcd03db69d1cc2885fa4e4b58f6e6a3f223cf876508194bd7bbb08c9"
+      "tokens": 763,
+      "sha256": "5755c9cb1a52cdd2a845befd6354c50b20207827dc1aa79eaa2c78c46eb44791"
     },
     {
       "name": "tolerance",
       "kind": "tool",
       "description": "Seeded tolerance study - draw independent offsets from declared uniform or truncated-normal distributions, save the sample set before any run, run and count every sample, and report target distributions. Use it to estimate how often a design meets its targets.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "command": "os-optics-kit tolerance",
       "requires": "os-optics>=0.13,<0.14",
       "path": "skills/tolerance/SKILL.md",
-      "tokens": 654,
-      "sha256": "cf47fa92dbfa93db025f84b29453012df3f0dd698042ad5e7c7245a7d177d1ae"
+      "tokens": 787,
+      "sha256": "63c552cfd9b16a11633a94ab1b13721d033b4292b8d68fc666aa3e6689dc6f02"
     }
   ]
 }

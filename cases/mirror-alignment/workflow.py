@@ -259,7 +259,7 @@ def config():
     D = _designs()
     return {"workflow": "alignment_analysis", "design": "alignment", "info": D.DESIGN_INFO["alignment"],
             "builder": D.alignment, "checks": checks, "reference_method": REFERENCE,
-            "default_studies": DEFAULT_STUDIES, "max_evaluations": 40, "configure": configure,
+            "default_studies": DEFAULT_STUDIES, "configure": configure,
             "analysis_keys": ["far_u_mm", "far_v_mm", "pointing_u_mrad", "pointing_v_mrad"],
             "compact_analysis": True}
 

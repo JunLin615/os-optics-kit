@@ -2,11 +2,15 @@
 name: polarization-control
 title: Polarization control with a half-wave plate and a polarizer
 summary: A linearly polarized 1030 nm beam passes a rotatable half-wave plate and a linear polarizer. At 22.5 deg the plate turns the polarization to 45 deg and 0.891 mW of 1 mW reaches the detector. The workflow studies plate angle and wavelength against Jones calculus and Malus' law.
+class: free-space
+domain: polarization
+provenance: self-built
+publication: own-work
 engine: 0.13.0
 catalog: none
 project: project.json
 tools: edit, sweep, compare, plot, report, sensitivity, tolerance
-tags: catalog-free, polarization, waveplate, polarizer, jones-calculus, parameter-study
+tags: waveplate, polarizer, parameter-sweep, independent-reference
 license: MIT
 ---
 
@@ -51,4 +55,4 @@ os-optics 0.13.0, no catalog: run status PASS (`expected.json`).
 - `project.json`, `expected.json`: the nominal design and its verified outcome.
 - `workflow.py`: the parameterized workflow (`--list-parameters`, `--study NAME=V1,V2`, `--no-studies`).
 - `studies/`: threshold edit, two-parameter sweep, sensitivity and tolerance specs.
-- `README.md`, `README.zh-CN.md`, `images/iso.png`: the illustrated page.
+- `README.md`, `README.zh-CN.md`: the illustrated pages; `images.json` records `images/iso.png`.

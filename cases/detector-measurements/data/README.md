@@ -1,5 +1,7 @@
 # Synthetic measurement data and attribution
 
+[简体中文](README.zh-CN.md)
+
 The readings in these two CSV files are synthetic: constructed from the formulas
 below with known answers, for the `os-optics-kit measurements` analysis of this
 case ([README](../README.md)).

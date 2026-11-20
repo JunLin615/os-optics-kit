@@ -2,6 +2,8 @@
 
 Usage:
   os-optics-kit sensitivity SPEC.json --out STUDY_DIR [--base BASE.json] [--overwrite] [--no-plots] [--no-report]
+                            [--workers N|auto] [--resume] [--plan-only] [--time-limit-s S] [--max-memory-mib M]
+                            [--ray-data full|summary]
 
 SPEC.json (keys; quantities are a bare number in the stated unit or {"value": x, "unit": "u"}):
   {
@@ -13,23 +15,29 @@ SPEC.json (keys; quantities are a bare number in the stated unit or {"value": x,
       {"name": "L2_axial", "unit": "mm",         # unit of nominal, steps, scale and the "$value" placeholder
        "ops": [{"op": "transform", "selector": {"ids": ["L2"]}, "frame": {"component": "L2"},
                 "translation_mm": [0, 0, "$value"]}],
-       "nominal": 0,                             # parameter value of the base Project (default 0: the ops move by
-                                                 # the perturbation; give the field's value for set_* ops)
-       "steps": [0.01, 0.1],                     # >= 2 distinct step sizes h (or {"relative": r}: r * |nominal|)
+       "nominal": 0,                             # parameter value of the base Project; omitted: read from the
+                                                 # field the set_* ops write, 0 for transform ops
+       "steps": [0.01, 0.1],                     # >= 1 distinct step sizes h (or {"relative": r}: r * |nominal|);
+                                                 # the step-consistency check needs two (default: two steps)
        "scale": {"value": 50, "unit": "um"}}     # optional normalization scale, e.g. the parameter's tolerance
     ],
     "consistency_threshold": 0.01,               # relative difference of the two step estimates that is flagged
     "resolution": {"spot_radius": {"value": 1e-9, "unit": "mm"}},   # optional: target change treated as none
-    "max_evaluations": 20                        # required; refused before any run when 1 + 2 * steps exceeds it
+    "max_evaluations": 20,                       # optional cap (default: none); refused before any run when
+                                                 # 1 + 2 * steps exceeds it
+    "value_use": "exact"                         # target values used: "exact" (default) or "reported" (every
+                                                 # finite value; each estimate names the kinds it used)
   }
 
 Parameters use the edit vocabulary of os-optics-kit edit and the placeholder syntax of os-optics-kit sweep ("$value"
 or {"$value": {"scale", "offset"}}), substituted with nominal + perturbation. Position: op "transform" with
 "translation_mm" and an explicit "frame" (e.g. {"component": "L2"}: along the element's own axes). Angle: op
 "transform" with "rotation": {"axis": [...], "angle_deg": "$value"} and explicit "frame" and "pivot" (angle units
-deg/rad/mrad/urad). Scalar fields: set_* ops with "nominal" equal to the base value. Before any run the ops of every
-parameter at zero perturbation must reproduce the base Project hash (else NOMINAL_MISMATCH), every sample's ops must
-normalize (unit errors refused) and the base Project must pass json_api.check_project.
+deg/rad/mrad/urad). Scalar fields: set_* ops; an omitted "nominal" is the base Project's value of the field the ops
+write (converted to the parameter's unit, a {"$value": {scale, offset}} rule inverted; nominal_source "base"), and
+fields with different base values refuse the parameter (NOMINAL_AMBIGUOUS). Before any run a stated nominal must
+reproduce the base Project hash at zero perturbation (else NOMINAL_MISMATCH, with the base values), every sample's
+ops must normalize (unit errors refused) and the base Project must pass json_api.check_project.
 Default steps when "steps" is omitted: 0.01 and 0.1 mm for translations, 0.01 and 0.1 deg for rotations, relative
 1e-3 and 1e-2 of |nominal| for other fields.
 
@@ -59,9 +67,14 @@ step), summary.json, plots/ (sensitivity bars and tornado per target, PNG + SVG;
 os-optics-kit[plot] extra, otherwise summary.json records why no plot was written) and report/ (report.md,
 report.json as written by os-optics-kit report).
 
+Execution: the samples are planned (study.json, plan.jsonl, requests/) before any run and are independent:
+--workers N runs them in N worker processes with the same results as one; --plan-only stops after planning
+(os-optics-kit study run executes the plan, with the plots and report chosen here); --resume continues a planned or
+interrupted study. The finite differences, plots and report are computed from the saved samples.
+
 Stdout: one compact JSON document (nominal values, per-target ranking with derivatives, units, methods, flags,
-outcome counts, unusable samples, paths). Exit 0 completed (every derivative has a value), 2 some derivative
-unavailable, 4 refused spec or invalid input.
+outcome counts, unusable samples, execution, paths). Exit 0 completed (every derivative has a value) or planned, 2
+some derivative unavailable, 4 refused spec or invalid input, 130 cancelled (the study can be resumed).
 """
 
 from __future__ import annotations
@@ -70,17 +83,17 @@ import argparse
 import copy
 import math
 from pathlib import Path
-import shutil
 import time
 
 from . import workflow_common as wc
 from . import sweep_parameters as sweep
 from ._engine import matplotlib_missing_message
-from .edit_project import EditError, apply_edits, normalize_ops
+from .edit_project import EditError, apply_edits
+from .study import aggregate as agg, execute as ex, options as opts, requests as rq, store
 
 PROG = "os-optics-kit sensitivity"
 KIND = "opensci-example.sensitivity"
-EXIT_CODES = {**wc.WORKFLOW_EXIT_CODES, "INCOMPLETE": 2}
+EXIT_CODES = {**wc.WORKFLOW_EXIT_CODES, "INCOMPLETE": 2, **opts.EXIT_CODES}
 DEFAULT_THRESHOLD = 0.01
 #: target changes at or below this fraction of the target's magnitude are treated as floating-point round-off
 ROUNDOFF_RELATIVE = 64 * 2.220446049250313e-16
@@ -131,8 +144,12 @@ def resolve_base(spec, *, spec_dir=None, base=None, base_path=None, build=None):
     raise wc.WorkflowError("SPEC_INVALID", "give base_project or design in the spec, or --base")
 
 
-def common_parameter(parameter, index, *, build=None):
-    """Name, unit, nominal (in the parameter's unit) and op templates of one parameter."""
+def common_parameter(parameter, index, *, build=None, base=None):
+    """Name, unit, nominal (in the parameter's unit), its source and op templates of one parameter.
+
+    ``nominal_source``: ``given`` (stated in the spec), ``base`` (omitted, read from the field its set_* ops edit in
+    the ``base`` document, ``base_nominal``) or ``default`` (omitted: 0, for transform ops, which move by the
+    perturbation, for a build function, and without a base document)."""
     if not isinstance(parameter, dict):
         raise wc.WorkflowError("SPEC_INVALID", f"parameters[{index}] must be an object")
     name = parameter.get("name")
@@ -142,14 +159,93 @@ def common_parameter(parameter, index, *, build=None):
     if unit is not None and unit not in wc.UNITLESS and unit not in KNOWN_UNITS:
         raise wc.WorkflowError("UNIT_UNKNOWN", f"parameter {name!r}: unknown unit {unit!r}; known: "
                                f"{list(KNOWN_UNITS)} or omitted for a plain number", unit=unit, parameter=name)
-    nominal = quantity(parameter.get("nominal", 0.0), unit, f"parameter {name} nominal")
     ops = parameter.get("ops")
     if build is None:
         if not isinstance(ops, list) or not ops:
             raise wc.WorkflowError("SPEC_INVALID", f"parameter {name!r}: ops must be a non-empty list of op templates")
         if sweep.substitute(ops, 0.0, unit) == sweep.substitute(ops, 1.0, unit):
             raise wc.WorkflowError("SPEC_INVALID", f"parameter {name!r}: the ops contain no \"$value\" placeholder")
-    return {"name": name, "unit": unit, "nominal": nominal, "ops": ops or []}
+    if "nominal" in parameter:
+        nominal, source = quantity(parameter["nominal"], unit, f"parameter {name} nominal"), "given"
+    else:
+        found = None if build is not None or base is None else base_nominal(base, {"name": name, "unit": unit,
+                                                                                    "ops": ops})
+        nominal, source = (0.0, "default") if found is None else (found, "base")
+    return {"name": name, "unit": unit, "nominal": nominal, "nominal_source": source, "ops": ops or []}
+
+
+#: placeholder values of the two probe edits ``base_nominal`` applies to find the fields a parameter's ops write
+_PROBES = (1.0, 2.0)
+
+
+def _written_fields(before, after, document):
+    """``{(kind, id, path, index): (base value, written value, field unit)}`` of the numeric fields that differ."""
+    from .edit_project import TARGET_VALUE_KEYS, _affected
+
+    targets = {t.get("target_id"): t for t in after.get("targets") or []}
+    out = {}
+    for entry in _affected(before, after):
+        for field in entry["fields"]:
+            key = field["path"].split(".")[-1]
+            unit = (targets.get(entry["id"], {}).get("unit") if entry["kind"] == "target"
+                    and key in TARGET_VALUE_KEYS else wc.field_unit(key))
+            old, new = field["before"], field["after"]
+            pairs = (list(enumerate(zip(old, new))) if isinstance(old, list) and isinstance(new, list)
+                     and len(old) == len(new) else [(None, (old, new))])
+            for index, (a, b) in pairs:
+                if a != b and isinstance(b, (int, float)) and not isinstance(b, bool):
+                    out[(entry["kind"], entry["id"], field["path"], index)] = (a, b, unit)
+    return out
+
+
+def base_nominal(document, parameter):
+    """The parameter value that reproduces ``document``: read from the scalar fields its set_* ops write (a
+    ``changes`` field of set_source_model / set_observation / set_target, a ``position_mm`` component of
+    set_component_pose / set_observation_pose, a compute_budget field), converted from the field's schema unit (the
+    target's unit for target bounds) to the parameter's unit, with a ``{"$value": {scale, offset}}`` rule inverted.
+    ``None`` for transform ops (they move by the perturbation) and when no written field has a number in the base.
+    Placeholders whose fields give different values refuse the parameter (``NOMINAL_AMBIGUOUS``)."""
+    ops, unit, name = parameter["ops"], parameter["unit"], parameter["name"]
+    if any(isinstance(op, dict) and op.get("op") == "transform" for op in ops):
+        return None
+    probes = []
+    for value in _PROBES:
+        try:
+            probes.append(apply_edits(document, sweep.substitute(copy.deepcopy(ops), value, unit),
+                                      validate=False)["project"])
+        except EditError as exc:
+            raise wc.WorkflowError("SPEC_INVALID", f"parameter {name!r}: {exc}", parameter=name,
+                                   error=exc.as_dict()) from None
+    first, second = (_written_fields(document, probe, document) for probe in probes)
+    candidates = {}
+    for key in sorted(set(first) | set(second), key=repr):
+        base_value, _, field_unit = (first.get(key) or second[key])
+        if isinstance(base_value, bool) or not isinstance(base_value, (int, float)):
+            continue
+        if key not in first or key not in second:
+            continue  # a probe value equal to the base value: the field is still found by the other probe
+        written = [first[key][1], second[key][1]]
+
+        def in_parameter_unit(value, field_unit=field_unit):
+            if field_unit is None or unit is None or unit in wc.UNITLESS:
+                return float(value)
+            return float(wc.convert(value, field_unit, unit, path=f"parameter {name} nominal"))
+
+        x_base = in_parameter_unit(base_value)
+        x1, x2 = (in_parameter_unit(v) for v in written)
+        if math.isclose(x1, _PROBES[0], rel_tol=1e-12) and math.isclose(x2, _PROBES[1], rel_tol=1e-12):
+            nominal = x_base  # plain "$value": the field holds the parameter value itself
+        else:
+            slope = (x2 - x1) / (_PROBES[1] - _PROBES[0])
+            nominal = _PROBES[0] + (x_base - x1) / slope
+        candidates[".".join(str(part) for part in key if part is not None)] = nominal
+    if not candidates:
+        return None
+    values = sorted(set(candidates.values()))
+    if len(values) > 1:
+        raise wc.WorkflowError("NOMINAL_AMBIGUOUS", f"parameter {name!r}: the fields its ops write hold different "
+                               "base values; state the parameter's nominal", parameter=name, base_values=candidates)
+    return values[0]
 
 
 def quantity(value, unit, path):
@@ -202,12 +298,21 @@ def check_base(document, parameters, *, build=None):
         except EditError as exc:
             raise wc.WorkflowError("SPEC_INVALID", f"parameter {parameter['name']!r}: {exc}",
                                    parameter=parameter["name"], error=exc.as_dict()) from None
+        if parameter.get("nominal_source") == "base":
+            continue  # the nominal was read from the base: the zero-offset ops write the base values back
         if wc.check(zero).get("project_hash") != checked["project_hash"]:
             mismatched.append(parameter["name"])
     if mismatched:
+        base_values = {}
+        for parameter in parameters:
+            if parameter["name"] in mismatched:
+                try:
+                    base_values[parameter["name"]] = base_nominal(document, parameter)
+                except wc.WorkflowError as exc:
+                    base_values[parameter["name"]] = exc.details.get("base_values")
         raise wc.WorkflowError("NOMINAL_MISMATCH", "at zero perturbation the ops of these parameters change the base "
-                               "Project; set each parameter's nominal to the base value of the field it edits",
-                               parameters=mismatched)
+                               "Project; set each parameter's nominal to the base value of the field it edits, or "
+                               "omit it to use the base value", parameters=mismatched, base_values=base_values)
     return checked
 
 
@@ -228,37 +333,48 @@ def target_units(document):
     return {t.get("target_id"): t.get("unit") for t in document.get("targets") or []}
 
 
-def prepare_dir(study_dir, overwrite):
-    """A new or empty study directory; with ``overwrite`` this script family's files are removed first."""
-    study_dir = Path(study_dir)
-    if study_dir.exists() and any(study_dir.iterdir()):
-        if not overwrite:
-            raise wc.WorkflowError("OUTPUT_EXISTS", f"{study_dir} is not empty; choose a new directory or use "
-                                   "--overwrite", out=study_dir.as_posix())
-        for name in STUDY_DIRS:
-            shutil.rmtree(study_dir / name, ignore_errors=True)
-        for name in STUDY_FILES:
-            (study_dir / name).unlink(missing_ok=True)
-    study_dir.mkdir(parents=True, exist_ok=True)
-    return study_dir
+def prepare_dir(study_dir, overwrite, resume=False):
+    """A new or empty study directory (or, with ``resume``, a planned study to continue); with ``overwrite`` this
+    script family's files are removed first. Returns ``(study_dir, resuming)``."""
+    return store.prepare_study_dir(study_dir, overwrite=overwrite, resume=resume, files=STUDY_FILES, dirs=STUDY_DIRS)
 
 
-def run_one(base, parameters, offsets, sample_dir, *, build, targets):
-    """Edit, run and record one sample (parameters missing from ``offsets`` stay at nominal); never raises for a
-    refused edit or run."""
-    started = time.perf_counter()
+def offset_request(sample_id, base, parameters, offsets, *, build, targets, labels, outputs=None):
+    """The request of one sample (parameters missing from ``offsets`` stay at nominal); a refused edit gives a
+    refused request (stage ``edit``), as does a build function's refusal (stage ``build``). ``labels`` gain
+    ``parameters``: value, offset and unit of every parameter."""
+    labels = {**labels, "parameters": {p["name"]: {"value": p["nominal"] + offsets.get(p["name"], 0.0),
+                                                   "offset": offsets.get(p["name"], 0.0), "unit": p["unit"]}
+                                       for p in parameters}}
     try:
         document = offset_document(base, parameters, offsets, build=build)
-    except EditError as exc:
-        Path(sample_dir).mkdir(parents=True, exist_ok=True)
-        record = wc.error_record("edit", exc.code, [exc.as_dict()], sample_dir=sample_dir,
-                                 seconds=time.perf_counter() - started, selected=targets)
-    else:
-        record = wc.run_sample(document, sample_dir, targets=targets)
-    record["parameters"] = {p["name"]: {"value": p["nominal"] + offsets.get(p["name"], 0.0),
-                                        "offset": offsets.get(p["name"], 0.0), "unit": p["unit"]}
-                            for p in parameters}
-    return record
+    except wc.WorkflowError as exc:
+        stage = "edit" if isinstance(exc, EditError) else "build"
+        return rq.make_request(sample_id, None, labels=labels, selected_targets=targets, outputs=outputs,
+                               refusal={"stage": stage, "code": exc.code, "problems": [exc.as_dict()]})
+    return rq.make_request(sample_id, document, labels=labels, selected_targets=targets, outputs=outputs)
+
+
+def execute(study_dir, kind, *, aggregate, workers=1, scheduler=None, evaluator=None, limits=None, resume=False,
+            on_progress=None):
+    """Execute a planned study and aggregate it with ``aggregate(study_dir)``; a cancelled execution returns the
+    CANCELLED document instead."""
+    execution = ex.execute_study(study_dir, workers=workers, scheduler=scheduler, evaluator=evaluator, limits=limits,
+                                 resume=resume, on_progress=on_progress)
+    if execution.state == "CANCELLED":
+        return opts.cancelled_summary(study_dir, kind, execution)
+    return aggregate(study_dir)
+
+
+def presentation_choice(study, plots, report):
+    """``(plots, report)``: the arguments, or what the planning tool recorded in ``study.json`` ``present``."""
+    present = study.get("present") or {}
+    return (present.get("plots", True) if plots is None else plots,
+            present.get("report", True) if report is None else report)
+
+
+def execution_seconds(study):
+    return float((study.get("execution") or {}).get("seconds") or 0.0)
 
 
 def problem_codes(problems):
@@ -272,7 +388,7 @@ def problem_codes(problems):
     return codes
 
 
-def target_value(record, target_id):
+def target_value(record, target_id, value_use="exact", kinds=None):
     """``(value, None)`` when ``record`` gives a usable value of ``target_id``, else ``(None, reason)``."""
     outcome = record["outcome"]
     if outcome == "ERROR":
@@ -282,29 +398,22 @@ def target_value(record, target_id):
     row = next((t for t in record.get("targets") or [] if t["id"] == target_id), None)
     if row is None:
         return None, "NO_VALUE (target not in the run)"
-    if not wc.target_value_is_exact(row):
-        codes = ", ".join(row.get("issue_codes") or []) or "no issue code"
-        return None, f"NO_VALUE (status {row.get('status')}, {codes})"
+    use = wc.target_value_use(row)
+    if kinds is not None:
+        kinds.append(use["kind"])
+    if not wc.value_usable(use["kind"], value_use):
+        codes = ", ".join(use["codes"]) or "no issue code"
+        return None, f"{use['kind']} (status {row.get('status')}, {codes})"
     return row["value"], None
 
 
 def append_report(study_dir, *, plots, title, lines, extra, artifacts=()):
     """build_report report of the study with a study-specific section, extra artifacts and a JSON key."""
-    import inspect
-
     from .build_report import build_report
 
     out_dir = Path(study_dir) / "report"
-    if "sections" in inspect.signature(build_report).parameters:
-        report = build_report([study_dir], out_dir=out_dir, plots=plots or None,
-                              sections=[{"title": title, "lines": lines}], artifacts=list(artifacts))
-    else:  # build_report without caller sections: insert the section before Diagnostics
-        report = build_report([study_dir], out_dir=out_dir, plots=plots or None)
-        text = (out_dir / "report.md").read_text(encoding="utf-8")
-        section = "\n".join([f"## {title}", ""] + lines + [""]) + "\n"
-        marker = "## Diagnostics"
-        text = text.replace(marker, section + marker, 1) if marker in text else text + "\n" + section
-        wc.write_text_atomic(out_dir / "report.md", text)
+    report = build_report([study_dir], out_dir=out_dir, plots=plots or None,
+                          sections=[{"title": title, "lines": lines}], artifacts=list(artifacts))
     document = wc.read_json(out_dir / "report.json")
     document.update(extra)
     wc.write_json(out_dir / "report.json", document)
@@ -359,8 +468,8 @@ def _steps(parameter, raw, common):
             raw, source = [{"value": 0.01, "unit": "deg"}, {"value": 0.1, "unit": "deg"}], "default rotation"
         else:
             raw, source = [{"relative": 1e-3}, {"relative": 1e-2}], "default relative"
-    if not isinstance(raw, list) or len(raw) < 2:
-        raise wc.WorkflowError("SPEC_INVALID", f"parameter {name!r}: steps must list at least two step sizes")
+    if not isinstance(raw, list) or not raw:
+        raise wc.WorkflowError("SPEC_INVALID", f"parameter {name!r}: steps must list one or more step sizes")
     steps = []
     for i, item in enumerate(raw):
         if isinstance(item, dict) and set(item) == {"relative"}:
@@ -378,15 +487,16 @@ def _steps(parameter, raw, common):
     return sorted(steps), source
 
 
-def normalize_spec(spec, *, build=None):
+def normalize_spec(spec, *, build=None, base=None):
     """Validated parameters, steps, scales, budget; raises WorkflowError (SPEC_INVALID, UNIT_*, BUDGET_EXCEEDED,
-    STEP_REQUIRED) before anything runs."""
+    STEP_REQUIRED, NOMINAL_AMBIGUOUS) before anything runs. ``base``: the base Project, from which an omitted
+    nominal is read (``common_parameter``)."""
     parameters = spec.get("parameters")
     if not isinstance(parameters, list) or not parameters:
         raise wc.WorkflowError("SPEC_INVALID", "parameters must list at least one parameter")
     out, names = [], set()
     for index, parameter in enumerate(parameters):
-        common = common_parameter(parameter, index, build=build)
+        common = common_parameter(parameter, index, build=build, base=base)
         if common["name"] in names:
             raise wc.WorkflowError("SPEC_INVALID", f"duplicate parameter name {common['name']!r}")
         names.add(common["name"])
@@ -398,15 +508,9 @@ def normalize_spec(spec, *, build=None):
     if isinstance(threshold, bool) or not isinstance(threshold, (int, float)) or not threshold > 0:
         raise wc.WorkflowError("SPEC_INVALID", "consistency_threshold must be a positive number")
     samples = 1 + 2 * sum(len(p["steps"]) for p in out)
-    budget = spec.get("max_evaluations")
-    if isinstance(budget, bool) or not isinstance(budget, int) or budget < 1:
-        raise wc.WorkflowError("SPEC_INVALID", "max_evaluations must be a positive integer")
-    if samples > budget:
-        raise wc.WorkflowError("BUDGET_EXCEEDED", f"the study needs {samples} runs (1 nominal + 2 per step), more "
-                               f"than max_evaluations {budget}; nothing was run", samples=samples,
-                               max_evaluations=budget)
+    budget = wc.evaluation_cap(spec, samples, f"the study needs {samples} runs (1 nominal + 2 per step)")
     return {"parameters": out, "samples": samples, "max_evaluations": budget, "targets": spec.get("targets"),
-            "consistency_threshold": float(threshold)}
+            "consistency_threshold": float(threshold), "value_use": wc.value_use_setting(spec.get("value_use"))}
 
 
 def target_resolution(raw, targets, units):
@@ -547,73 +651,102 @@ def rank(entries):
 
 # --------------------------------------------------------------------------------------------- study
 
-def run_sensitivity(spec, study_dir, *, base=None, build=None, base_path=None, spec_dir=None, overwrite=False,
-                    plots=True, report=True):
-    """Run the study described by ``spec`` (module docstring) and write the study directory; returns the summary.
-
-    ``base``: the base Project document; ``build(values) -> ProjectDocumentV2``: Python alternative to op templates
-    (``values``: parameter name -> nominal + perturbation, in the parameter's unit; nominal = build of the
-    nominals). Without either, the spec's ``design`` or ``base_project`` is used."""
-    t_start = time.perf_counter()
-    normalized = normalize_spec(spec, build=build)
-    parameters = normalized["parameters"]
+def plan_sensitivity(spec, study_dir, *, base=None, build=None, base_path=None, spec_dir=None, overwrite=False,
+                     resume=False, plots=True, report=True, outputs=None):
+    """Validate ``spec`` and write the planned study: s0000 nominal, then per parameter and step the -h and +h
+    samples, every request written before any run. Returns the study directory."""
     document, base_info = resolve_base(spec, spec_dir=spec_dir, base=base, base_path=base_path, build=build)
+    normalized = normalize_spec(spec, build=build, base=document)
+    parameters = normalized["parameters"]
     if build is not None:
         document = build({p["name"]: p["nominal"] for p in parameters})
     checked = check_base(document, parameters, build=build)
     targets = selected_targets(document, normalized["targets"])
     units = target_units(document)
     resolution = target_resolution(spec.get("resolution"), targets, units)
-    samples = plan(parameters)
-    if build is None:  # unit and op errors in any sample are spec errors: refuse before running anything
-        by_name = {p["name"]: p for p in parameters}
-        for _sid, name, _step, _side, offset in samples[1:]:
-            normalize_ops(document, parameter_ops(by_name[name], offset))
-    started = wc.utc_now()
-    study_dir = prepare_dir(study_dir, overwrite)
-    study = {
-        "kind": KIND, "spec": spec,
-        "normalized": {**normalized, "targets": targets,
-                       "parameters": [{**p, "values": sorted({s * k for s in p["steps"] for k in (-1.0, 1.0)})}
-                                      for p in parameters]},
-        "base_project": {**base_info, "project_hash": checked["project_hash"],
-                         "engine_input_hash": checked["engine_input_hash"],
-                         "document_sha256": wc.canonical_digest(document)},
-        "engine": wc.engine_identity(), "installed_catalog": wc.catalog_identity(),
-        "catalog": wc.run_catalog_identity([]), "environment": wc.environment(),
-        "seed": None, "sampling": "deterministic finite-difference plan",
-        "budget": {"max_evaluations": normalized["max_evaluations"], "samples": normalized["samples"]},
-        "stop_on": [], "started": started,
-    }
-    wc.write_json(study_dir / "study.json", study)
+    samples = plan(parameters)  # check_base validated every parameter's ops: the units do not depend on the value
+    requests = []
+    for sample_id, name, step, side, offset in samples:
+        labels = {"role": side, "perturbed_parameter": name, "step": step}
+        if name is None:
+            requests.append(offset_request(sample_id, document, parameters, {}, build=None, targets=targets,
+                                           labels=labels, outputs=outputs))
+        else:
+            requests.append(offset_request(sample_id, document, parameters, {name: offset}, build=build,
+                                           targets=targets, labels=labels, outputs=outputs))
+    study_dir, resuming = prepare_dir(study_dir, overwrite, resume)
+    header = store.study_header(
+        KIND, spec=spec,
+        normalized={**normalized, "targets": targets,
+                    "parameters": [{**p, "values": sorted({s * k for s in p["steps"] for k in (-1.0, 1.0)})}
+                                   for p in parameters]},
+        base_project={**base_info, "project_hash": checked["project_hash"],
+                      "engine_input_hash": checked["engine_input_hash"],
+                      "document_sha256": wc.canonical_digest(document)},
+        seed=None, sampling="deterministic finite-difference plan",
+        budget={"max_evaluations": normalized["max_evaluations"], "samples": normalized["samples"]},
+        stop_on=[], analysis={"target_units": units, "resolution": resolution},
+        present={"plots": bool(plots), "report": bool(report)})
+    store.plan_study(study_dir, header, requests, resume=resuming)
+    return study_dir
+
+
+def run_sensitivity(spec, study_dir, *, base=None, build=None, base_path=None, spec_dir=None, overwrite=False,
+                    plots=True, report=True, workers=1, scheduler=None, evaluator=None, limits=None, resume=False,
+                    plan_only=False, outputs=None, on_progress=None):
+    """Plan, execute and analyse the study described by ``spec`` (module docstring); returns the summary.
+
+    ``base``: the base Project document; ``build(values) -> ProjectDocumentV2``: Python alternative to op templates
+    (``values``: parameter name -> nominal + perturbation, in the parameter's unit; nominal = build of the
+    nominals). Without either, the spec's ``design`` or ``base_project`` is used. Execution arguments as in
+    ``sweep_parameters.run_sweep``."""
+    study_dir = plan_sensitivity(spec, study_dir, base=base, build=build, base_path=base_path, spec_dir=spec_dir,
+                                 overwrite=overwrite, resume=resume, plots=plots, report=report, outputs=outputs)
+    if plan_only:
+        return opts.planned_summary(study_dir, KIND)
+    return execute(study_dir, KIND, aggregate=aggregate_sensitivity, workers=workers, scheduler=scheduler,
+                   evaluator=evaluator, limits=limits, resume=resume, on_progress=on_progress)
+
+
+def aggregate_sensitivity(study_dir, *, plots=None, report=None):
+    """Finite differences, ranking, ``table.csv``, ``sensitivity.csv``, ``summary.json`` and (as planned, or as
+    given) plots and report from the saved samples of a sensitivity study; no Engine run."""
+    t_start = time.perf_counter()
+    study_dir = Path(study_dir)
+    study = store.read_study(study_dir)
+    plots, report = presentation_choice(study, plots, report)
+    normalized = study["normalized"]
+    parameters = normalized["parameters"]
+    targets = normalized["targets"]
+    units = study["analysis"]["target_units"]
+    resolution = study["analysis"]["resolution"]
     records, rows = {}, []
     by_name = {p["name"]: p for p in parameters}
-    for sample_id, name, step, side, offset in samples:
-        sample_dir = study_dir / "samples" / sample_id
-        if name is None:
-            record = run_one(document, parameters, {}, sample_dir, build=None, targets=targets)
-        else:
-            record = run_one(document, parameters, {name: offset}, sample_dir, build=build, targets=targets)
-        record.update({"sample_id": sample_id, "role": side, "perturbed_parameter": name, "step": step})
-        wc.write_json(sample_dir / "sample.json", record)
+    for entry, record in agg.collect_records(study_dir):
+        sample_id, name = entry["sample_id"], record.get("perturbed_parameter")
         records[sample_id] = record
-        row = sweep.row_from_record(sample_id, {p["name"]: offset if p["name"] == name else 0.0 for p in parameters},
-                                    parameters, record, study_dir)
-        row.update({"role": side, "perturbed_parameter": name, "step": step,
+        offset = ((record.get("parameters") or {}).get(name) or {}).get("offset") if name is not None else 0.0
+        row = agg.row_from_record(sample_id, {p["name"]: offset if p["name"] == name else 0.0 for p in parameters},
+                                  parameters, record, study_dir)
+        row.update({"role": record.get("role"), "perturbed_parameter": name, "step": record.get("step"),
                     "step_unit": None if name is None else by_name[name]["unit"]})
         rows.append(row)
+    value_use = normalized.get("value_use", "exact")
     sweep.select_best(rows, [], None)  # no requirement constraints; per-target validity is assessed separately
     nominal = records["s0000"]
     pairs, estimate_rows = [], []
     for parameter in parameters:
-        ids = {(s[2], s[3]): s[0] for s in samples if s[1] == parameter["name"]}
+        ids = {(r.get("step"), r.get("role")): sid for sid, r in records.items()
+               if r.get("perturbed_parameter") == parameter["name"]}
         for target_id in targets:
-            f0, nominal_reason = target_value(nominal, target_id)
+            nominal_kind = []
+            f0, nominal_reason = target_value(nominal, target_id, value_use, nominal_kind)
             estimates = []
             for step in parameter["steps"]:
                 plus, minus = records[ids[(step, "plus")]], records[ids[(step, "minus")]]
-                f_plus, reason_plus = target_value(plus, target_id)
-                f_minus, reason_minus = target_value(minus, target_id)
+                plus_kind, minus_kind = [], []
+                f_plus, reason_plus = target_value(plus, target_id, value_use, plus_kind)
+                f_minus, reason_minus = target_value(minus, target_id, value_use, minus_kind)
                 applied_plus = plus["parameters"][parameter["name"]]["value"]
                 applied_minus = minus["parameters"][parameter["name"]]["value"]
                 if nominal_reason is not None:
@@ -628,6 +761,10 @@ def run_sensitivity(spec, study_dir, *, base=None, build=None, base_path=None, s
                             "plus_sample": plus["sample_id"], "minus_sample": minus["sample_id"],
                             "plus_outcome": plus["outcome"], "minus_outcome": minus["outcome"],
                             "unusable": reasons}
+                if value_use != "exact":  # the kind of each value the estimate used
+                    estimate["value_kinds"] = {"nominal": next(iter(nominal_kind), None),
+                                               "minus": next(iter(minus_kind), None),
+                                               "plus": next(iter(plus_kind), None)}
                 estimates.append(estimate)
             assessed = assess(estimates, normalized["consistency_threshold"], parameter["scale"],
                               resolution.get(target_id))
@@ -649,14 +786,11 @@ def run_sensitivity(spec, study_dir, *, base=None, build=None, base_path=None, s
     for row in estimate_rows:
         pair = next(p for p in pairs if p["parameter"] == row["parameter"] and p["target"] == row["target"])
         row["rank"] = pair.get("rank")
-    columns = sweep._columns(rows)
-    wc.write_csv(study_dir / "table.csv", rows, columns)
+    study = agg.finish_study(study_dir, rows)  # first: refused while an execution owns the study
+    columns = agg.write_table(study_dir, rows)
     wc.write_csv(study_dir / "sensitivity.csv", estimate_rows, list(estimate_rows[0]) if estimate_rows else [])
     unavailable = [{"parameter": p["parameter"], "target": p["target"]} for p in pairs if p["derivative"] is None]
     status = "INCOMPLETE" if unavailable else "COMPLETED"
-    study["catalog"] = wc.run_catalog_identity(rows)
-    study["finished"] = wc.utc_now()
-    wc.write_json(study_dir / "study.json", study)
     summary = {
         "status": status, "kind": f"{KIND}-summary",
         "method": {"default": "central finite differences", "formulas": METHOD_TEXT,
@@ -680,20 +814,21 @@ def run_sensitivity(spec, study_dir, *, base=None, build=None, base_path=None, s
                     "targets": [{k: t.get(k) for k in ("id", "value", "unit", "status", "assessment", "quantity_state", "power_upper_bound_W")} for t in nominal["targets"]
                                 if t["id"] in targets],
                     "run_dir": rows[0]["run_dir"]},
-        "parameters": [{"name": p["name"], "unit": p["unit"], "nominal": p["nominal"], "steps": p["steps"],
+        "parameters": [{"name": p["name"], "unit": p["unit"], "nominal": p["nominal"],
+                        "nominal_source": p.get("nominal_source"), "steps": p["steps"],
                         "steps_source": p["steps_source"], "scale": p["scale"]} for p in parameters],
         "consistency_threshold": normalized["consistency_threshold"],
+        **({"value_use": value_use} if value_use != "exact" else {}),
         "selected_targets": targets, "sensitivities": pairs, "ranking": ranking, "unavailable": unavailable,
-        "counts": sweep.counts(rows), "feasible": sum(1 for r in rows if r["feasible"]),
+        "counts": agg.counts(rows), "feasible": sum(1 for r in rows if r["feasible"]),
         "constraints": [], "objective": None, "best": None, "no_feasible": None, "stopped_by": None,
-        "targets": sweep._target_units(rows), "columns": columns, "rows": rows,
-        "identity": {"engine": study["engine"], **study["catalog"],
-                     "base_project_hash": checked["project_hash"]},
+        "targets": agg.target_units(rows), "columns": columns, "rows": rows,
+        "identity": agg.identity(study, rows, study["base_project"]["project_hash"]),
         "paths": {"study_dir": study_dir.as_posix(), "study": "study.json", "table": "table.csv",
                   "sensitivity_table": "sensitivity.csv", "summary": "summary.json", "samples": "samples"},
         "seconds": None,
     }
-    wc.write_json(study_dir / "summary.json", summary)
+    agg.write_summary(study_dir, summary)
     skipped = matplotlib_missing() if plots else "plots disabled"
     if skipped is None:
         summary["plots"] = plot_sensitivity(study_dir, summary)
@@ -706,8 +841,8 @@ def run_sensitivity(spec, study_dir, *, base=None, build=None, base_path=None, s
                                           extra={"sensitivity": _report_extra(summary)},
                                           artifacts=[(study_dir / "sensitivity.csv", "sensitivity table")])
         summary["paths"]["report"] = "report/report.md"
-    summary["seconds"] = round(time.perf_counter() - t_start, 3)
-    wc.write_json(study_dir / "summary.json", summary)
+    summary["seconds"] = round(execution_seconds(study) + time.perf_counter() - t_start, 3)
+    agg.write_summary(study_dir, summary)
     return summary
 
 
@@ -881,12 +1016,15 @@ def compact(summary, limit=TOP_UNUSABLE):
     return {"status": summary["status"], "method": "central finite differences (one-sided where labelled)",
             "nominal": {k: summary["nominal"][k] for k in ("outcome", "status", "targets", "parameters")},
             "sensitivities": by_target, "unavailable": summary["unavailable"],
-            "counts": {"samples": summary["counts"]["requested"], "by_outcome": summary["counts"]["by_outcome"]},
+            "counts": {"samples": summary["counts"]["requested"], "by_outcome": summary["counts"]["by_outcome"],
+                       "by_execution": summary["counts"]["by_execution"]},
             "unusable_samples": shown["shown"], "unusable_omitted": shown["omitted"],
             "identity": {"engine_version": summary["identity"]["engine"]["engine_version"],
                          "engine_build_id": summary["identity"]["engine"]["engine_build_id"],
                          "catalog_version": summary["identity"]["catalog_version"]},
-            "seconds": summary["seconds"], "paths": summary["paths"]}
+            "seconds": summary["seconds"],
+            "execution": opts.execution_brief((summary.get("paths") or {}).get("study_dir")),
+            "paths": summary["paths"]}
 
 
 def main(argv=None):
@@ -899,12 +1037,14 @@ def main(argv=None):
         parser.add_argument("--overwrite", action="store_true", help="Replace the files this command writes in --out")
         parser.add_argument("--no-plots", action="store_true", help="Do not write plots")
         parser.add_argument("--no-report", action="store_true", help="Do not write report/")
+        opts.add_execution_options(parser)
         args = parser.parse_args(argv)
         spec = wc.read_json(args.spec)
         base = wc.read_json(args.base) if args.base else None
         summary = run_sensitivity(spec, args.out, base=base, base_path=args.base, spec_dir=args.spec.parent,
-                                  overwrite=args.overwrite, plots=not args.no_plots, report=not args.no_report)
-        return compact(summary)
+                                  overwrite=args.overwrite, plots=not args.no_plots, report=not args.no_report,
+                                  **opts.execution_arguments(args))
+        return summary if summary["status"] in opts.EXIT_CODES else compact(summary)
 
     return wc.emit(workflow, EXIT_CODES)
 

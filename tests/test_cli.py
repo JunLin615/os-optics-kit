@@ -11,10 +11,10 @@ import unittest
 from unittest.mock import patch
 
 from os_optics_kit import _engine, cli, interop
-from tests.workflow_fixtures import KIT, ROOT, TempDir
+from tests.workflow_fixtures import KIT, ROOT, TempDir, requires_numpy
 
 TOOLS = ("summary", "edit", "sweep", "compare", "plot", "report", "sensitivity", "tolerance", "candidates",
-         "measurements")
+         "measurements", "sfr", "study")
 # Runs a kit command in a child process in which the engine (and optionally matplotlib) cannot be imported, even
 # when it is installed: any attempt raises ModuleNotFoundError, like a missing distribution.
 BLOCKED_RUN = """import sys
@@ -127,6 +127,35 @@ class LazyImportTests(unittest.TestCase):
         self.assertEqual(error["code"], "PLOT_EXTRA_MISSING")
         self.assertIn("os-optics-kit[plot]", error["message"])
 
+    def test_sfr_without_numpy_is_a_structured_error(self):
+        help_ = run_blocked(["os_optics", "numpy"], "sfr", "--help")
+        self.assertEqual(help_.returncode, 0, help_.stderr)
+        with TempDir() as tmp:
+            done = run_blocked(["os_optics", "numpy"], "sfr", str(tmp / "edge.npy"), "--out", str(tmp / "a"))
+            self.assertFalse((tmp / "a").exists())
+        self.assertEqual((done.returncode, done.stdout), (4, ""))
+        self.assertEqual(json.loads(done.stderr)["error"]["code"], "NUMPY_MISSING")
+
+    @requires_numpy
+    def test_sfr_needs_neither_the_engine_nor_the_plot_extra_with_no_plot(self):
+        from os_optics_kit.sfr import synthetic_edge
+
+        blocked = ["os_optics", "matplotlib", "PIL"]
+        with TempDir() as tmp:
+            import numpy as np
+
+            np.save(tmp / "edge.npy", synthetic_edge((60, 48), 5.0, 0.5))
+            (tmp / "edge.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+            done = run_blocked(blocked, "sfr", str(tmp / "edge.npy"), "--out", str(tmp / "a"), "--no-plot")
+            self.assertEqual(done.returncode, 0, done.stderr)
+            self.assertEqual(json.loads(done.stdout)["status"], "PASS")
+            plotted = run_blocked(blocked, "sfr", str(tmp / "edge.npy"), "--out", str(tmp / "b"))
+            png = run_blocked(blocked, "sfr", str(tmp / "edge.png"), "--out", str(tmp / "c"), "--no-plot")
+            self.assertFalse((tmp / "b").exists())
+            self.assertFalse((tmp / "c").exists())
+        self.assertEqual((plotted.returncode, json.loads(plotted.stderr)["error"]["code"]), (4, "PLOT_EXTRA_MISSING"))
+        self.assertEqual((png.returncode, json.loads(png.stderr)["error"]["code"]), (4, "IMAGE_READER_MISSING"))
+
 
 class EngineRequirementTests(unittest.TestCase):
     def test_requirement_matches_the_package_dependency(self):
@@ -182,13 +211,33 @@ class NoCasePathsTests(unittest.TestCase):
 
     def test_tool_sources_do_not_reference_cases(self):
         package = ROOT / "tools" / "os_optics_kit"
-        for path in sorted(package.glob("*.py")):
+        scanned = []
+        for path in sorted(package.rglob("*.py")):
+            relative = path.relative_to(package)
             if path.name in ("cases.py", "_resources.py"):
                 continue  # the cases command and the data locator serve the case collection itself
+            if relative.parts[0] == "contrib":
+                continue  # "contrib case" writes a new case into cases/NAME by design
+            scanned.append(relative.as_posix())
             text = path.read_text(encoding="utf-8")
-            with self.subTest(module=path.name):
+            with self.subTest(module=relative.as_posix()):
                 self.assertNotRegex(text, r"examples[/.]")
                 self.assertNotRegex(text, r"cases/|cases_dir|\"cases\"\s*/")
+        self.assertIn("study/execute.py", scanned)
+
+
+class StudyMessageTests(unittest.TestCase):
+    """Messages of the study commands name options that exist on the command that prints them."""
+
+    def test_worker_budget_refusal_names_the_option(self):
+        from os_optics_kit import workflow_common as wc
+        from os_optics_kit.study.resources import ResourceBudget
+
+        with self.assertRaises(wc.WorkflowError) as caught:
+            ResourceBudget.resolve(4, cpus=2)
+        self.assertEqual(caught.exception.code, "BUDGET_INVALID")
+        self.assertIn("4 workers x 1 thread(s) each exceed the 2 logical CPUs", str(caught.exception))
+        self.assertIn("give fewer --workers", str(caught.exception))
 
 
 if __name__ == "__main__":

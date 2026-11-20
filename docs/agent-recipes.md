@@ -4,7 +4,7 @@
 getting-started walkthrough is available in
 [English](https://github.com/JunLin615/os-optics/blob/main/docs/en/getting-started.md) and
 [Simplified Chinese](https://github.com/JunLin615/os-optics/blob/main/docs/zh-CN/getting-started.md).
-These recipes use os-optics 0.13 with os-optics-kit 0.2; the quoted results come from
+These recipes use os-optics 0.13 with os-optics-kit 0.4; the quoted results come from
 os-optics 0.13.0 and catalog release `2026-10-28.1`.
 The same edits by ID, with unit conversion, a change record and retry safety, are
 available without writing Python through `os-optics-kit edit`
@@ -83,21 +83,18 @@ The target metric remains `waist_radius_x_mm`: an interval on the propagated
 beam's waist radius, not its radius at the observation plane. Changing the metric
 requires selecting a compatible unit and bound.
 
-Schema validation by `load_project` checks the document; it is not a physics or
-model-validity pass. The run evaluates those and its summary preserves all outcomes.
-Check `run-adapted/project.json` to confirm the saved inputs, `targets` to assess
-the interval, and `issues` / `model_scope_issues` before using the result.
-The original pinned catalog references and original run remain unchanged.
+`load_project` checks the document against the Project schema; the run reports model
+validity in `issues` and `model_scope_issues`, the saved inputs in
+`run-adapted/project.json` and each target's assessment in `targets`. The original pinned
+catalog references and original run remain unchanged.
 
 On catalog `2026-10-28.1`, the combined edits above produce a waist radius near
 `1.1149 mm`: the `1.8–2.2 mm` interval is **not met**, so the recipe and saved
 summary exit with code `1`. This is a completed simulation with a failing design,
-not a command error. Inspect the result before deciding which edit to revise;
-different catalog releases may change the numerical outcome.
+not a command error. Another catalog release can give another number.
 
 To exercise a non-passing target, change the interval to `minimum=0.0,
-maximum=0.001` and write to `run-adapted-strict`. Do not relax a customer's target
-merely to obtain `PASS`. Changing orientation requires a valid quaternion; adding
+maximum=0.001` and write to `run-adapted-strict`. Changing orientation requires a valid quaternion; adding
 or replacing catalog optics requires checking their supported model and band in
 the [catalog guide](https://github.com/JunLin615/os-optics/blob/main/docs/en/catalog.md).
 
@@ -127,8 +124,8 @@ schema above. Preserve the full request/result/rays, and summarize the public
 Use `os-optics-kit measurements` ([measurement guide](en/measurements.md)) for
 background subtraction, reference normalization, and response fitting without a
 simulation. Supply
-explicit column names and units; use a fresh output directory. It preserves input
-bytes, every row's exclusion reasons, and fit residuals. Compare the fitted values
-and your configured RMSE bound alongside the diagnostics before drawing a
-scientific conclusion. The two synthetic datasets of the detector-measurements case
+explicit column names and units and a new or empty output directory (`--overwrite`
+replaces its own files). It preserves input bytes, every row's exclusion reasons and fit
+residuals, and reports the fitted values, the RMSE against the configured bound and the
+diagnostics. The two synthetic datasets of the detector-measurements case
 have known answers for checking the analysis.

@@ -96,14 +96,18 @@ def split_list(value: str | None) -> list[str]:
 # templates; HTML comments in them are guidance for people filling them by hand and are dropped when filled.
 
 COMMENT_RE = re.compile(r"[ \t]*<!--.*?-->[ \t]*\n?", re.S)
+#: a front matter line whose whole value is one placeholder (``source: {{source}}``): dropped when it fills empty
+OPTIONAL_LINE_RE = re.compile(r"^[a-z][a-z0-9_]*: \{\{\s*([a-z_]+)\s*\}\}[ \t]*\n", re.M)
 
 
 def fill_template(template: str, values: dict[str, str]) -> str:
-    """``template`` without its HTML comments, every ``{{key}}`` replaced; KeyError names unknown keys."""
+    """``template`` without its HTML comments, every ``{{key}}`` replaced; KeyError names unknown keys. A
+    ``key: {{value}}`` line whose value fills empty is left out (an optional front matter key)."""
     text = re.sub(r"\n{3,}", "\n\n", COMMENT_RE.sub("", template.replace("\r\n", "\n")))
     unknown = sorted({m.group(1) for m in PLACEHOLDER_RE.finditer(text)} - set(values))
     if unknown:
         raise KeyError(", ".join(unknown))
+    text = OPTIONAL_LINE_RE.sub(lambda m: "" if not str(values[m.group(1)]).strip() else m.group(0), text)
     filled = PLACEHOLDER_RE.sub(lambda m: values[m.group(1)], text)
     return filled.rstrip("\n") + "\n"
 

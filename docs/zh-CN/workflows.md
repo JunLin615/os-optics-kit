@@ -6,6 +6,7 @@
 比较已保存的运行、绘图并生成报告，以及估计灵敏度和公差。每一步都会保存各自的项目和运行，输出一个
 紧凑的 JSON 摘要，并把完整数据保存在文件中。三个带参数化工作流程的案例把同样的步骤用于扩束与聚焦、
 偏振控制和光路对准。
+扫描、灵敏度和公差研究可以在并行工作进程中运行并可续跑，见[研究](studies.md)。
 
 ## 准备工作
 
@@ -13,7 +14,7 @@
 python -m pip install "os-optics[protected]" "os-optics-kit[plot]"
 ```
 
-os-optics-kit 0.3.x 与 os-optics 0.13 配合使用；下文数值来自 os-optics 0.13.0，涉及目录元件的设计采用
+os-optics-kit 0.4.x 与 os-optics 0.13 配合使用；下文数值来自 os-optics 0.13.0，涉及目录元件的设计采用
 目录版本 `2026-10-28.1`。每一节先用 `os-optics-kit cases copy NAME --dest .` 复制一个案例，再在案例
 目录中运行命令。第 1–3 节使用目录元件，需要 `os-optics catalog sync`；第 4、5 节使用无需目录的理想
 元件。每次新运行仍应读取其实际标识与目标判定：引擎或目录改变时，目录内容和结果标识可能不同。
@@ -36,7 +37,7 @@ os-optics results freshness run --project project.json
 
 ### 选择计算限额
 
-研究的 `max_evaluations` 限制设计数量，各 Project 的 `compute_budget` 限制单次设计内的工作量。
+研究可选的 `max_evaluations` 限制设计数量（默认不限），各 Project 的 `compute_budget` 限制单次设计内的工作量。
 [预算示例](../workflow-recipes.md#computation-budgets)先将三透镜设计限制为每路径一次相互作用，
 再将上限提高到八次。受限运行仍保存文件，并报告部分完成及受影响目标无法判定。
 修改预算会使旧结果成为历史结果。选择更大的限额前应检查这些信息，并保留两次运行以便比较。
@@ -185,7 +186,7 @@ os-optics-kit tolerance studies/tolerance_expander.json --out tolerance-zero --z
 
 `--out DIR` 的输出结构：`DIR/workflow.json`（完整摘要）、`DIR/nominal/`（项目、运行、解析对照、功率图）、
 `DIR/studies/<参数>/`（每个样本的项目和运行、`table.csv`、比较结果、图、报告）以及链接全部内容的
-`DIR/report/report.md`。退出码反映标称设计（0 PASS、1 FAIL、2 UNKNOWN、3 OUT_OF_MODEL）；研究中未通过的
+`DIR/report/report.md`。退出码反映标称设计（0 PASS、1 FAIL、2 UNKNOWN、3 OUT_OF_MODEL 或标称运行为 PARTIAL）；研究中未通过的
 样本计入摘要。
 
 ### 5.1 扩束与聚焦

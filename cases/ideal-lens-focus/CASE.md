@@ -2,11 +2,15 @@
 name: ideal-lens-focus
 title: Gaussian focus of an ideal thin lens
 summary: A 532 nm Gaussian beam with a 1 mm waist radius is focused by an ideal thin lens (f = 100 mm); the 1/e^2 radius in the back focal plane must stay below 50 um. Catalog-free: the lens is the engine's native ideal thin lens.
+class: lens
+domain: gaussian-beam
+provenance: self-built
+publication: own-work
 engine: 0.13.0
 catalog: none
 project: project.json
 tools: summary
-tags: catalog-free, gaussian-beam, focusing, ideal-lens, python-api
+tags: ideal-lens, focusing, python-api
 license: MIT
 ---
 
@@ -46,4 +50,5 @@ os-optics 0.13.0, no catalog: run status PASS, every target MET (`expected.json`
 - `project.json`: the Project with its target.
 - `expected.json`: the verified status and target assessments.
 - `ideal_lens_focus.py`: the same design through the low-level request API.
-- `README.md`, `README.zh-CN.md`, `images/section.png`: the illustrated page.
+- `README.md`, `README.zh-CN.md`: the illustrated pages; `images.json` records `images/iso.png` and
+  `images/section.png` (`os-optics-kit cases images ideal-lens-focus`).

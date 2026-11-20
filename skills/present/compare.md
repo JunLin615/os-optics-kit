@@ -6,9 +6,9 @@ from the saved runs through `compare`, and views from the engine viewer.
 ## Start
 
 `present init RUN_A RUN_B [RUN_C] --labels "Before,After" --out DIR` adds a view per run with one
-shared framing (`framing_sources`), a `targets` plot of all runs and a composition of the views
-(`before-after` for two runs, `row` for more). With a study as well, `system-and-result` pairs a
-view with a study curve.
+shared framing (`framing_sources`), a `targets` plot of all runs and a `row` of the views; set its
+`layout` to `before-after` when the second run is the changed first. With a study as well,
+`system-and-result` pairs a view with a study curve.
 
 ## Target comparison plot
 
@@ -46,5 +46,6 @@ is not exact "no value"; neither is drawn as zero.
 
 `details` of the compose entry in `assets.json` states what was applied: `scales` (shared range, or a
 reason such as `UNITS_DIFFER`), `framing` (`shared` or `independent` with a recovery step) and
-`text_fits`. Each panel is also written as `panel-<n>.png` (plots also `.svg`), and `layout.json`
+`text_fits`; `labels_cramped` lists target panels too small for their value labels: give them a
+`span`, larger `heights` or a layout of their own. Each panel is also written as `panel-<n>.png` (plots also `.svg`), and `layout.json`
 records order, labels, spacing, applied scales and pixel boxes for slide editing.

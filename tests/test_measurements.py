@@ -159,9 +159,25 @@ class MeasurementArtifactTests(unittest.TestCase):
             self.assertEqual(records[8]["_analysis_residual"], "")
             self.assertEqual(records[0]["_analysis_input_sha256"], provenance["input"]["sha256"])
             before = {role: path.read_bytes() for role, path in artifacts.items()}
-            with self.assertRaisesRegex(ValueError, "already exists"):
+            with self.assertRaises(ValueError) as caught:
                 analyze_measurements(source, Path(directory) / "out", DETECTOR)
+            self.assertEqual(caught.exception.code, "OUTPUT_EXISTS")
+            self.assertIn("--overwrite", str(caught.exception))
             self.assertEqual(before, {role: path.read_bytes() for role, path in artifacts.items()})
+            # --overwrite: a refused analysis leaves the earlier files intact; an accepted one replaces only its own
+            foreign = Path(directory) / "out" / "notes.txt"
+            foreign.write_text("kept", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                analyze_measurements(source, Path(directory) / "out", replace(DETECTOR, x="no_such_column"),
+                                     overwrite=True)
+            self.assertEqual(before, {role: path.read_bytes() for role, path in artifacts.items()})
+            again = analyze_measurements(source, Path(directory) / "out", DETECTOR, overwrite=True)
+            self.assertEqual(again["targets"], [])
+            self.assertEqual(foreign.read_text(encoding="utf-8"), "kept")
+            self.assertEqual(json.loads(artifacts["summary"].read_text()), again)
+            empty = Path(directory) / "empty"
+            empty.mkdir()
+            self.assertEqual(analyze_measurements(source, empty, DETECTOR)["status"], "WARNING")  # empty: accepted
 
     def test_insufficient_or_degenerate_data_produce_unknown_and_keep_audit(self):
         for content in ("x,s,b\n", "x,s,b\n0,,0\n", "x,s,b\n1,2,0\n1,3,0\n1,4,0\n"):

@@ -164,6 +164,19 @@ class SensitivityAgainstClosedFormTests(unittest.TestCase):
         self.assertLess(abs(mrad["derivative"] / (expected * 180.0 / math.pi / 1000.0) - 1.0), 1e-6)
         self.assertAlmostEqual(mrad["scaled"], mrad["derivative"] * 1.0, places=18)
 
+    def test_one_step_reports_the_derivative_without_the_step_check(self):
+        summary = sa.run_sensitivity({
+            "targets": ["transmitted_power"],
+            "parameters": [{"name": "hwp_angle", "unit": "deg", "steps": [0.01], "ops": rotate("HWP", [0, 0, 1])}]},
+            self.dir / "one-step", base=D.polarization_control(hwp_angle_deg=10.0), plots=False, report=False)
+        self.assertEqual(summary["counts"]["requested"], 3)
+        entry = pair(summary, "hwp_angle", "transmitted_power")
+        self.assertEqual((entry["method"], entry["primary_step"]), ("central", 0.01))
+        self.assertLess(abs(entry["derivative"] / malus_slope_w_per_deg(10.0) - 1.0), 1e-6)
+        self.assertIsNone(entry["consistency"])
+        self.assertEqual(entry["flags"], ["STEP_CHECK_UNAVAILABLE"])
+        self.assertIsNotNone(entry["second_difference"])
+
     def test_extremum_reports_second_difference(self):
         entry = pair(self.peak, "hwp_angle", "transmitted_power")
         self.assertIn("NEAR_EXTREMUM", entry["flags"])
@@ -226,6 +239,8 @@ class SensitivityVisibilityTests(unittest.TestCase):
         wavelength = pair(self.summary, "wavelength", "spot_radius")
         self.assertEqual([e["method"] for e in wavelength["estimates"]], ["central", "backward"])
         self.assertIn("MODEL_WAVELENGTH_OUTSIDE_BAND", wavelength["estimates"][1]["unusable"][0])
+        self.assertTrue(wavelength["estimates"][1]["unusable"][0].startswith("+h: OUTSIDE_MODEL"),
+                        wavelength["estimates"][1]["unusable"])
         self.assertEqual(wavelength["method"], "central")
         self.assertIn("METHOD_DIFFERS", wavelength["flags"])
         shift = pair(self.summary, "L2_axial", "spot_radius")
@@ -290,13 +305,60 @@ class SensitivityRefusalTests(unittest.TestCase):
         self.refused(self.spec(scale={"value": 1, "unit": "mW"}), "UNIT_INCOMPATIBLE")
 
     def test_spec_refusals(self):
-        self.refused(self.spec(steps=[0.1]), "SPEC_INVALID")
+        self.refused(self.spec(steps=[]), "SPEC_INVALID")
+        self.refused(self.spec(steps=0.1), "SPEC_INVALID")
+        self.refused(self.spec(steps=[0.1, 0.1]), "SPEC_INVALID")
         self.refused(self.spec(steps=[0.1, -0.2]), "SPEC_INVALID")
         self.refused({**self.spec(), "max_evaluations": 4}, "BUDGET_EXCEEDED")
         self.refused({**self.spec(), "targets": ["nope"]}, "TARGET_UNKNOWN")
-        error = self.refused(self.spec(unit="nm", ops=WAVELENGTH_OPS, steps=[0.5, 5]), "NOMINAL_MISMATCH")
+        error = self.refused(self.spec(unit="nm", ops=WAVELENGTH_OPS, nominal=0, steps=[0.5, 5]), "NOMINAL_MISMATCH")
         self.assertEqual(error.details["parameters"], ["p"])
-        self.refused(self.spec(unit="nm", ops=WAVELENGTH_OPS, steps=None), "STEP_REQUIRED")
+        self.assertEqual(error.details["base_values"], {"p": 780.0})
+        self.refused(self.spec(unit="nm", ops=WAVELENGTH_OPS, nominal=0, steps=None), "STEP_REQUIRED")
+        two_fields = [{"op": "set_source_model", "instance_id": "SRC",
+                       "changes": {"wavelength_nm": "$value", "power_w": "$value"}}]
+        error = self.refused(self.spec(unit=None, ops=two_fields, steps=[0.5, 5]), "NOMINAL_AMBIGUOUS")
+        self.assertEqual(sorted(error.details["base_values"].values()), [1e-3, 780.0])
+
+    def test_nominal_defaults_to_the_base_value(self):
+        derived = sa.normalize_spec(self.spec(unit="um", ops=WAVELENGTH_OPS, steps=[0.001, 0.01]), base=self.base)
+        parameter = derived["parameters"][0]
+        self.assertEqual((parameter["nominal"], parameter["nominal_source"]), (0.78, "base"))
+        rule = [{"op": "set_source_model", "instance_id": "SRC",
+                 "changes": {"wavelength_nm": {"$value": {"scale": 2.0, "offset": 100.0}}}}]
+        self.assertEqual(sa.normalize_spec(self.spec(unit="nm", ops=rule), base=self.base)["parameters"][0]["nominal"],
+                         340.0)  # 100 + 2 * 340 = 780 nm
+        moved = sa.normalize_spec(self.spec(), base=self.base)["parameters"][0]
+        self.assertEqual((moved["nominal"], moved["nominal_source"]), (0.0, "default"))  # a transform moves by h
+        # The derived nominal plans the same requests as the stated one.
+        hashes = []
+        for name, nominal in (("derived", None), ("stated", {"value": 780, "unit": "nm"})):
+            spec = self.spec(unit="um", ops=WAVELENGTH_OPS, steps=[0.001, 0.01])
+            if nominal is not None:
+                spec["parameters"][0]["nominal"] = nominal
+            sa.run_sensitivity(spec, self.dir / name, base=self.base, plots=False, report=False, plan_only=True)
+            hashes.append([json.loads(line)["request_hash"] for line in
+                           (self.dir / name / "plan.jsonl").read_text(encoding="utf-8").splitlines()])
+        self.assertEqual(hashes[0], hashes[1])
+        self.assertEqual(len(hashes[0]), 5)
+
+    def test_tolerance_nominal_from_the_base_is_redrawn(self):
+        spec = {"samples": 4, "seed": 3, "parameters": [
+            {"name": "wl", "unit": "nm", "ops": WAVELENGTH_OPS,
+             "distribution": {"kind": "uniform", "low": -1, "high": 1}}]}
+        ts.draw_tolerance(spec, self.dir / "tolerance", base=self.base)
+        study = wc.read_json(self.dir / "tolerance" / "study.json")
+        self.assertEqual([(p["nominal"], p["nominal_source"]) for p in study["normalized"]["parameters"]],
+                         [(780.0, "base")])
+        self.assertEqual(ts.verify_samples(self.dir / "tolerance")["status"], "REPRODUCED")
+
+    def test_cap_is_optional(self):
+        spec = self.spec()
+        del spec["max_evaluations"]
+        self.assertIsNone(sa.normalize_spec(spec)["max_evaluations"])
+        self.assertIsNone(ts.normalize_spec({"samples": 10, "seed": 1, "parameters": [
+            {"name": "p", "unit": "mm", "ops": translate("L2", [0, 0, "$value"]),
+             "distribution": {"kind": "uniform", "low": -1, "high": 1}}]})["max_evaluations"])
 
     def test_default_steps(self):
         normalized = sa.normalize_spec({"max_evaluations": 20, "parameters": [
@@ -325,6 +387,22 @@ class HelpTests(unittest.TestCase):
 
 @requires_numpy
 class ToleranceSamplingTests(unittest.TestCase):
+    def test_distribution_value_use(self):
+        rows = [{"outcome": "PASS", "target:t": 1.0, "target:t:exact": True, "target:t:value_kind": "EXACT",
+                 "target:t:status": "PASS"},
+                {"outcome": "UNKNOWN", "target:t": 3.0, "target:t:exact": False, "target:t:value_kind": "BOUNDED",
+                 "target:t:status": "UNKNOWN"},
+                {"outcome": "ERROR", "target:t": None}]
+        exact = ts.target_distributions(rows, ["t"], {"t": "mm"})["t"]
+        self.assertEqual((exact["count"], exact["max"], exact["denominator"]), (1, 1.0, 3))
+        self.assertNotIn("values_used", exact)
+        reported = ts.target_distributions(rows, ["t"], {"t": "mm"}, "reported")["t"]
+        self.assertEqual((reported["count"], reported["max"]), (2, 3.0))
+        self.assertEqual(reported["values_used"], {"BOUNDED": 1, "EXACT": 1})
+        self.assertIsNone(ts.normalize_spec({"samples": 1, "seed": 0, "value_use": "reported", "parameters": [
+            {"name": "p", "unit": "mm", "ops": translate("L2", [0, 0, "$value"]),
+             "distribution": {"kind": "uniform", "low": -1, "high": 1}}]})["max_evaluations"])
+
     PARAMETERS = [{"name": "a", "unit": "mm", "nominal": 0.0,
                    "distribution": {"kind": "uniform", "low": -2.0, "high": 1.0, "bounds": [-2.0, 1.0]}},
                   {"name": "b", "unit": "deg", "nominal": 22.5,

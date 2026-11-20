@@ -302,6 +302,13 @@ class PlaybackTextTests(unittest.TestCase):
     def test_every_text_key_has_both_languages(self):
         self.assertEqual(set(an.TEXT["en"]), set(an.TEXT["zh-CN"]))
 
+    def test_playback_title_reads_like_the_sweep_plot_title(self):
+        # the Chinese title was "光斑半径 随 位移", an unfinished phrase next to the sweep plot's "...的变化"
+        for language in ("en", "zh-CN"):
+            self.assertEqual(an.text("title.playback", language, y="光斑半径", x="透镜位移"),
+                             pr.text("title.sweep", language, y="光斑半径", x="透镜位移"))
+        self.assertEqual(an.text("title.playback", "zh-CN", y="光斑半径", x="透镜位移"), "光斑半径随透镜位移的变化")
+
 
 class SettingsTests(unittest.TestCase):
     def test_defaults_and_refusals(self):

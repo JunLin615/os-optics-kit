@@ -87,7 +87,7 @@ def native_spec(paths, data, theme, out):
 
 
 def system_asset(out, root, theme_settings):
-    # present 0.3.0 has no up_axis field; its default Z up is parallel to this
+    # The present view asset has no up_axis field; its default Z up is parallel to this
     # model's real Z optical axis. The public renderer accepts the required Y up.
     from os_optics_kit.render_views import camera_direction, left_to_right, render_shots
 
@@ -111,7 +111,7 @@ def system_asset(out, root, theme_settings):
                                         extra={"origin": "Saved native run through the official public renderer",
                                                "native_identity": read_json(root / "metrics.json")["engine_identity"],
                                                "native_present_build_supported": False,
-                                               "reason": "present 0.3.0 view cannot pass nonparallel up_axis for Z models"})
+                                               "reason": "the present view asset cannot pass a nonparallel up_axis for Z-axis models"})
     write_json(folder / "provenance.json", provenance)
     captions = {}
     for language, value in caption.items():

@@ -245,8 +245,6 @@ def edit_file(base_path, ops, out_path, *, changes_path=None, overwrite=False, e
     if changes_path.resolve() in (base_path.resolve(), out_path.resolve()):
         raise EditError("BAD_ARGUMENT", "the change record must differ from both the base and output Project files")
     document = wc.read_json(base_path)
-    base_check = wc.check(document)
-    current_base = base_check.get("project_hash")
     try:
         edited = apply_edits(document, ops, expected_project_hash=expect_base_hash)
     except EditError as exc:
@@ -254,8 +252,7 @@ def edit_file(base_path, ops, out_path, *, changes_path=None, overwrite=False, e
             raise EditError("BASE_CHANGED", str(exc), expected_hash=expect_base_hash,
                             current_hash=exc.details.get("project_hash")) from None
         raise
-    _given, normalized = normalize_ops(document, ops)
-    key = (current_base or wc.canonical_digest(document), ops_digest(normalized))
+    key = _replay_key(edited["record"])  # the base hash (or digest) and ops digest apply_edits recorded
     if out_path.exists() and not overwrite:
         record = wc.read_json(changes_path) if changes_path.exists() else None
         if record is None:
@@ -441,11 +438,13 @@ def main(argv=None):
             result["status"] = outcome_status(result["run"])
         return result
 
-    return wc.emit(workflow, {**wc.WORKFLOW_EXIT_CODES, "DESCRIBED": 0, "RUN_REFUSED": 4})
+    return wc.emit(workflow, {**wc.WORKFLOW_EXIT_CODES, "DESCRIBED": 0, "RUN_REFUSED": 4},
+                   execution_of=lambda summary: (summary.get("run") or {}).get("execution"))
 
 
 def outcome_status(run):
-    """Exit status of the selected requirements; execution evidence is kept separately."""
+    """Exit status of the selected requirements; the execution is kept separately in ``run`` (a PARTIAL run exits 3
+    whatever this status, ``wc.requirement_exit_code``)."""
     outcome = run.get("outcome")
     if outcome == "OUT_OF_MODEL":
         return "OUT_OF_MODEL_SCOPE"

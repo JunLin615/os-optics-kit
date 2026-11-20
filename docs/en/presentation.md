@@ -20,6 +20,9 @@ os-optics catalog sync
 | `render` | system views and animations, together with an installed Chrome or Chromium |
 | `media` | MP4 animations; GIF needs only `plot` |
 
+A plain system view of a run, such as a case image, needs neither the `render` extra nor a browser: the engine
+writes it with `os-optics view RUN --no-browser --snapshot DIR --views iso` (`--section ALL` for a lens section).
+
 The example below uses a catalog lens, hence `os-optics catalog sync`.
 
 ## Prepare a presentation set
@@ -153,7 +156,8 @@ With several runs, `init` adds:
 
 - one view per run, all framed with the same box (`framing_sources`), so the systems appear at one scale;
 - `targets-compare` (plot type `targets`): each target's value per run, with its bounds and assessment;
-- `views-compare` (kind `compose`): the views side by side, layout `before-after` for two runs, `row` for more.
+- `views-compare` (kind `compose`): the views side by side in a `row`; set `layout` to `before-after` when the
+  second run is the changed first.
 
 A composite figure lists its panels in order, each with an optional label:
 

@@ -496,6 +496,31 @@ class HistoricalBestSampleTests(unittest.TestCase):
             line = next(item for item in lines if item.startswith("Best sample:"))
             self.assertIn(f"{best} (HISTORICAL {summary['best']['outcome']})", line)
             self.assertEqual(report["section"]["best"]["outcome_label"], f"HISTORICAL {summary['best']['outcome']}")
+            record = report["section"]["freshness"]
+            self.assertEqual((record["freshness"], record["current_samples"], record["base_is_current"]),
+                             ("HISTORICAL", [], False))
+            self.assertFalse(any("outcome_label" in s for s in report["section"]["samples"]))
+            # the base Project is the current one: CURRENT, no label
+            base = wc.write_json(tmp / "base.json", designs.expander_focus())
+            report = br.build_report([tmp / "study"], project=base, out_dir=tmp / "base-report")
+            self.assertEqual((report["section"]["freshness"]["freshness"],
+                              report["section"]["freshness"]["base_is_current"]), ("CURRENT", True))
+            self.assertNotIn("outcome_label", report["section"]["best"])
+            # compare of the study directory uses the same study record
+            from os_optics_kit import compare_runs as cr
+
+            document = cr.compare([tmp / "study"], project=current)
+            self.assertEqual(list(document["study_freshness"].values())[0]["freshness"], "HISTORICAL")
+            self.assertTrue(all(r["outcome_label"].startswith("HISTORICAL ") for r in document["runs"]))
+
+    def test_study_without_base_project_is_undetermined(self):
+        spec = {"parameters": [{"name": "f3", "unit": "mm", "values": [90.0, 100.0]}]}
+        with TempDir() as tmp:
+            sp.run_sweep(spec, tmp / "study", documents=[designs.expander_focus(), designs.expander_focus()])
+            current = wc.write_json(tmp / "current.json", designs.expander_focus(max_spot_radius_mm=0.03))
+            report = br.build_report([tmp / "study"], project=current)
+            self.assertEqual(report["section"]["freshness"]["freshness"], "UNDETERMINED")
+            self.assertNotIn("outcome_label", report["section"]["best"] or {})
 
 
 TABULATED_LENS = {"model_id": "metalens", "model": {

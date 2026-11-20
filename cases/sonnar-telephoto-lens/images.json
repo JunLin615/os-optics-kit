@@ -1,0 +1,50 @@
+{
+  "images": [
+    {
+      "file": "images/iso.png",
+      "kind": "system-view",
+      "options": [
+        "--views",
+        "iso",
+        "--size",
+        "1280x560"
+      ],
+      "sha256": "cef977994412e6093c5e84db382487537ffd11f19eeeb4d65510d709d99d1628",
+      "view": "iso"
+    },
+    {
+      "file": "images/section.png",
+      "kind": "system-view",
+      "options": [
+        "--section",
+        "ALL",
+        "--size",
+        "1600x700"
+      ],
+      "sha256": "f79ff948dce3ccc216c156aa73aaba49a848f2012c7982af935bd7e331e16117",
+      "view": "section"
+    },
+    {
+      "file": "images/spot.png",
+      "kind": "figure",
+      "script": "figures.py",
+      "sha256": "b737e1ccf90311c04cd17c66b3596c56aa623d8c31254f9f9943e7065bfcb126"
+    },
+    {
+      "file": "images/mtf.png",
+      "kind": "figure",
+      "script": "figures.py",
+      "sha256": "88b909ca1026c31bac46a877b78e1c11ff4261905ca6fb9110fe0bf45d643ee4"
+    }
+  ],
+  "project_sha256": "431b260d9f2eb7f5debc0a5273509eba113c02df8067435c85cad3439d604e0a",
+  "run": {
+    "catalog": null,
+    "engine": "0.13.0",
+    "engine_input_hash": "527c41c24d3b63d5ca07ab1b8e232061d213d74b7bdb86ef62407e9e7a572b61",
+    "project_hash": "9175f0ff93ed2ffbd1ed281f4175304dbf6e2f9a9aeef59c63fe50bafc42907a",
+    "scene_content_hash": "5b743a42c6ce569ae878876eafd2d9ffc9f155cb3e22323d7273394df3c4581b"
+  },
+  "schema": "os-optics-kit.case-images",
+  "schema_version": 1
+}
