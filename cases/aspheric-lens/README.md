@@ -107,11 +107,22 @@ re-renders them exactly as recorded in `images.json`).
 `figures.py` draws the MTF, Strehl and spot figures from that run with the same `results imaging` call
 (matplotlib comes with `pip install "os-optics-kit[plot]"`); the spherical control has no Project in
 this case, so its numbers stay in the table above.
+The same curves as a table with their status, one figure per field and wavelength:
+`os-optics-kit mtf run --monitor image_plane --request imaging-request.json --out mtf`.
 
 `data/engine-aspheric.json` holds both versions side by side: every quantity with its state, basis and —
 where the engine declined it — the reason and message verbatim. `studies/aspheric.csv` and
 `studies/spherical-control.csv` are the two surface tables; `prescription.csv` is the aspheric one, and
 `input_prescription.csv` is the input prescription, without the stop row.
+
+`studies/optimize-aspheric.json` is an `os-optics-kit optimize` spec on this Project: five surface and image-plane
+variables, the nine spot targets as objectives, the paraxial EFL held at 50 ± 0.25 mm, glass at least 3 mm thick and
+the vignetting bounded (the spot RMS counts arriving rays only). It runs in about five minutes (150 engine
+evaluations); the kit's optimization guide compares its two solvers on it:
+
+```bash
+os-optics-kit optimize studies/optimize-aspheric.json --out opt
+```
 
 The surface table imports directly:
 

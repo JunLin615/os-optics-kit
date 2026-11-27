@@ -49,6 +49,9 @@ walkthrough: [English](en/workflows.md) · [简体中文](zh-CN/workflows.md).
 | `candidates` | `COMPLETED` | `NO_MATCH` | | | invalid input, no catalog |
 | `measurements` | `PASS`, `WARNING` | `FAIL` (RMSE bound exceeded) | `UNKNOWN` (no fit) | | error |
 | `sfr` | `PASS`, `WARNING` | | `UNKNOWN` (too many empty ESF bins) | | refused input |
+| `mtf` | `COMPLETED` | | `INCOMPLETE` (a curve unconverged or declined, or a field not analysed) | | refused (`MONITOR_NOT_FOUND`, `CONFIGURATION_REQUIRED`, `IMAGING_RUN_MISMATCH`, `ANALYSIS_REFUSED`, ...) |
+| `field-points` | `COMPLETED` | | `INCOMPLETE` (a point not evaluated, or an MTF sample not exact) | | refused |
+| `optimize` | `CONVERGED` | `NO_FEASIBLE` (no feasible candidate; `closest` and every margin kept) | `STOPPED` (budget, iteration cap, solver stop, or trf converged outside an active constraint; feasible best) | | refused spec (`SPEC_INVALID`, `NOMINAL_AMBIGUOUS`, `CONFIGURATION_REQUIRED`, `PROJECT_REJECTED`, `OUTPUT_EXISTS`); 130 interrupted |
 | `cases verify` | every case matches `expected.json` | a case differs | | | usage error, unknown case, no engine |
 | case `workflow.py` | nominal `PASS` | nominal `FAIL` | `UNKNOWN` | `OUT_OF_MODEL`; a `PARTIAL` nominal run | `ERROR`, refused |
 
@@ -207,6 +210,7 @@ conversion, original-file preservation and a durable retry record. `changes` obj
 | `set_compute_budget` | `compute_budget` object with supported limits, or `null` for defaults |
 | `add_/remove_component`, `add_/remove_observation`, `add_/remove_target` | object or id |
 | model ops | `add_/update_/remove_optical_model`, `add_/update_/remove_model_material`, `add_/remove_model_coating` |
+| `set_optical_model_value` | `model_id`, `path` (JSON pointer into the model), `value` (a quantity converts to the member's unit) |
 | `transform` | `selector {ids \| groups \| instances \| kinds}`, `translation_mm?`, `rotation? {axis, angle_deg} \| {quaternion_wxyz}`, `frame "design" \| {"component": ID}`, `pivot "frame_origin" \| "selection_centroid" \| {"point_mm": [...]} \| {"component": ID}` |
 
 `transform` is a rigid move computed by the Engine; translation and rotation axis are in
@@ -527,6 +531,47 @@ measured SFR is a system magnitude, the design curve signed optical MTF without 
 aperture, sampling or processing: report both with `comparison.json`'s
 `input_differences`, never one as the other. See [SFR](en/sfr.md).
 
+## Optical MTF
+
+```bash
+os-optics-kit mtf run --monitor image_plane --request imaging-request.json --out mtf
+os-optics-kit mtf --imaging imaging.json --run run --out mtf
+```
+
+One in-process imaging analysis (kept as `mtf/imaging.json`), or none with `--imaging`
+(`--run` checks `engine_input_hash` and `run_result_hash`: `IMAGING_RUN_MISMATCH`). A
+configurations run needs `--configuration ID` (`CONFIGURATION_REQUIRED` lists the ids).
+`mtf.csv` has one row per line (`SRC#0`) x direction x frequency of that line's own axis;
+an empty value has a status (`BEYOND_NYQUIST`, `OUT_OF_MODEL_SCOPE`, `UNKNOWN`, `ABSENT`;
+`NOT_CONVERGED` keeps the value). Set `fields` and `frequencies_cyc_per_mm` in the
+request: without them each line has its own axis and a clipped field is left out (listed
+in `not_analysed` as `OUTSIDE_ACTIVE_AREA`). Optical MTF per spectral line only: no pixel
+aperture, sampling or SFR, no polychromatic weighting, MTF(0) not renormalized, no
+PASS/FAIL. Read `lines[].tangential_status` / `sagittal_status` and `not_analysed` in
+`mtf.json`. See [MTF](en/mtf.md).
+
+## Field points from a Project
+
+```bash
+os-optics-kit field-points project.json --plane image_plane --out fp --angles-deg 0,5,10
+os-optics-kit field-points project.json --plane sensor --source F0W1 --out fp     --image-heights-mm 0,8.654,17.308 --azimuth-deg -33.69 --wavelengths-nm 486,587,656     --mtf-frequencies 40 --expect-field-kind IMAGE_HEIGHT
+```
+
+Each point is a copy of the reference source turned across the beam and aimed at the
+aperture-stop centre (`--pivot-mm` without a stop); all points are sources of one evaluated
+Project (`evaluated-project.json`; its `derivation` lists every change, including a widened
+plane or a raised trace budget). Read `points[].chief_ray` (`image_height_mm` from the
+on-axis hit, `angle_deg` to the plane normal, `stop_offset_mm`, `aim`),
+`points[].first_order` (`FIRST_ORDER_COMPARISON`) and, with `--mtf-frequencies`,
+`points[].mtf` and `minima[]` (`per_line_minimum`, `CONFIRMED` only when every sample is
+`EXACT`; `missing[]` gives each reason). A point that cannot be evaluated keeps `reason`
+(`NO_ARRIVAL`, `OUTSIDE_PLANE`, `STOP_NOT_REACHED`, `CHIEF_RAY_PATH_DIFFERS`,
+`AIM_NOT_CONVERGED`, `HEIGHT_NOT_REACHED`, `TRACE_BUDGET_EXHAUSTED`). Refusals:
+`FIELD_KIND_MIXED`, `FIELD_KIND_MISMATCH`, `OBJECT_AT_INFINITY`, `CONJUGATE_UNDETERMINED`,
+`NO_APERTURE_STOP`, `SOURCE_REQUIRED`, `CONFIGURATION_REQUIRED`. `os-optics-kit mtf
+--imaging` draws `imaging.json`; `--write-run` writes `DIR/run` for `field`, `fans` and
+`mtf`. See [Field points](en/field-points.md).
+
 ## Sensitivity
 
 ```bash
@@ -581,6 +626,19 @@ reproduces the nominal project and result hashes exactly. `--resume` with a larg
 class with denominators, target-value statistics over exact valid selected quantities
 (count stated), `samples_with_warnings`, sampling assumptions. Specs:
 `cases/*/studies/tolerance_*.json`.
+
+## Optimization
+
+`os-optics-kit optimize SPEC.json --out DIR [--method trf|slsqp] [--max-evaluations N] [--overwrite]`
+refines the variables of one Project within bounds (spec `os-optics-kit.optimize-spec` v1:
+`project`, `variables` `{name, unit, ops, bounds, nominal?, scale}`, `objectives`,
+`constraints` with sources `target`, `rays`, `paraxial`, `solids`, `mtf` (constraint only),
+`ray_loss`, `solver`, `verify`). The whole spec is checked first (`SPEC_INVALID` with `path`).
+DIR holds `spec.json` (reruns as is), `history.jsonl` (every engine evaluation, probes
+included), `result.json` and, when a candidate is feasible, `best-project.json`. Read
+`status`, then `best.active_constraints`, `best.worst_residual.conditions`,
+`infeasible_reasons` / `closest`, and `verification.reproduction.status`. Guide:
+[Optimization](en/optimize.md); skill pages `skills show optimize spec.md`, `interpret.md`.
 
 ## Design workflows
 

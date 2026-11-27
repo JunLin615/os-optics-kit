@@ -292,6 +292,77 @@ def relative(path, start):
         return Path(path).resolve().as_posix()
 
 
+def _produced(name, produced):
+    """Whether the entry ``name`` is one of ``produced``: exact names, or compiled patterns matched in full."""
+    return any(entry.fullmatch(name) if hasattr(entry, "fullmatch") else name == entry for entry in produced)
+
+
+def _same_file(a, b):
+    try:
+        return os.path.samefile(a, b)
+    except OSError:
+        return False
+
+
+def check_output(out_dir, overwrite, produced=(), *, keep=(), writes=None):
+    """Refuse an output directory before any work, without changing it (``prepare_output`` states the rule).
+
+    An existing file, or a non-empty directory without ``overwrite``, is ``OUTPUT_EXISTS``. With ``overwrite``, an
+    input (``keep``) that this run would replace (an entry of ``writes``, default ``produced``) or remove (inside a
+    ``produced`` directory) is ``OUTPUT_IS_INPUT``: inputs are never modified."""
+    out_dir = Path(out_dir)
+    if out_dir.exists() and not out_dir.is_dir():
+        raise WorkflowError("OUTPUT_EXISTS", f"{out_dir.as_posix()} is a file, not a directory", out=out_dir.as_posix())
+    if not (out_dir.is_dir() and any(out_dir.iterdir())):
+        return out_dir
+    if not overwrite:
+        raise WorkflowError("OUTPUT_EXISTS", f"{out_dir.as_posix()} is not empty; choose a new directory or use "
+                            "--overwrite", out=out_dir.as_posix())
+    root = out_dir.resolve()
+    writes = produced if writes is None else writes
+    for item in keep:
+        if item is None:
+            continue
+        path = Path(item).resolve()
+        replaced = path.parent == root and _produced(path.name, writes)
+        removed = any(parent.parent == root and _produced(parent.name, produced) for parent in path.parents)
+        if not (replaced or removed) and path.exists():  # an output entry that is the input itself: a link to it,
+            replaced = any(_same_file(entry, path) for entry in out_dir.iterdir()  # or another case of its name
+                           if _produced(entry.name, writes) or _produced(entry.name.lower(), writes))
+            if not replaced:
+                replaced = any(_same_file(out_dir / name, path) for name in writes if isinstance(name, str))
+        if replaced or removed:
+            raise WorkflowError("OUTPUT_IS_INPUT", f"--overwrite would {'replace' if replaced else 'remove'} the input "
+                                f"{path.as_posix()}; choose another --out", out=out_dir.as_posix(),
+                                input=path.as_posix())
+    return out_dir
+
+
+def prepare_output(out_dir, overwrite, produced=(), *, keep=(), writes=None):
+    """A command's output directory, created when missing: the one output-directory rule of the kit's commands.
+
+    A new or empty directory is used as is. A non-empty one is refused (``OUTPUT_EXISTS``) unless ``overwrite``, which
+    first removes the entries this command writes, so no stale artifact survives: ``produced`` holds exact entry
+    names or compiled patterns (``imaging-<n>.json`` as a regular expression) matched against whole names; a matching
+    directory is removed with its contents, other entries are left as they are. ``keep``: the command's input paths,
+    never removed or replaced (``check_output``); ``writes``: the entries this run writes, when not all of
+    ``produced``."""
+    import shutil
+
+    out_dir = check_output(out_dir, overwrite, produced, keep=keep, writes=writes)
+    if out_dir.is_dir() and overwrite:
+        kept = {Path(item).resolve() for item in keep if item is not None}
+        for path in out_dir.iterdir():
+            if not _produced(path.name, produced) or path.resolve() in kept:
+                continue
+            if path.is_dir() and not path.is_symlink():
+                shutil.rmtree(path)
+            else:
+                path.unlink()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    return out_dir
+
+
 def bounded(rows, limit):
     """The first ``limit`` rows and how many were left out."""
     rows = list(rows)

@@ -5,6 +5,60 @@ version and catalog release it was verified with (`baseline.json`). A release he
 the tag `vX.Y.Z`; `python scripts/check_repo.py` requires a section for the version in `baseline.json`. Changes
 that are not in a release yet come first, under "Unreleased".
 
+## Unreleased
+
+### Added
+
+- `os-optics-kit mtf RUN --monitor PLANE` (or `--imaging FILE [--run RUN]`): the engine's optical MTF per spectral
+  line as `mtf.csv` (a status per value: `KNOWN`, `NOT_CONVERGED`, `BEYOND_NYQUIST`, the engine's state of a
+  declined curve, `ABSENT`), `mtf.json` (run and analysis identity, request, conventions, curves with model basis
+  and convergence, image point, fields not analysed with their reason) and one figure per line in the kit themes;
+  one in-process imaging analysis, or none with a saved analysis. Optical MTF only: no pixel aperture, sampling or
+  SFR, no polychromatic weighting, no PASS/FAIL. Skill `mtf`, `docs/en/mtf.md` (#31).
+- `os-optics-kit field-points PROJECT --plane PLANE --out DIR (--angles-deg | --object-heights-mm |
+  --image-heights-mm)`: field points of a native Project as copies of its on-axis source turned across the beam
+  and aimed at the aperture-stop centre, all in one evaluated Project (the input is never modified; every change is
+  listed in `derivation`). Per point: the chief ray's hit point, real image height and angle, a first-order
+  comparison (f tan(theta) or m h, not a distortion figure) and, with `--mtf-frequencies`, the tangential and
+  sagittal optical MTF of each spectral line, with sampled field minima per line and over all lines (`CONFIRMED`
+  only when every sample is exact, else an `UNCONFIRMED` upper bound with what is missing). The report binds the
+  input by its sha256, its LF-normalized sha256 (os-optics-lens records) and the Engine's hashes; `--write-run`
+  writes a run that `field`, `fans` and `mtf` read. Skill `field-points` with the four field-point traps and the
+  Lens record mapping, `docs/en/field-points.md` (#48, #60).
+- `os-optics-kit optimize SPEC.json --out DIR`: bounded local optimization of a Project (trf least squares on the
+  evaluation adapter's residuals, or SLSQP with every constraint margin >= 0). Finite-difference probes are
+  counted, cached and kept in bounds; `max_evaluations` is a hard cap. Writes `spec.json`, `history.jsonl`,
+  `result.json` (termination, counts, best/start/closest with active constraints, infeasible reasons, reproduction
+  of `best-project.json` in a fresh session, a dense re-check) and `best-project.json`. Exit 0 `CONVERGED`, 1
+  `NO_FEASIBLE`, 2 `STOPPED` (also when trf converges just outside an active constraint: `CONVERGED_INFEASIBLE`), 130
+  interrupted. Skill `optimize`, `docs/en/optimize.md`, case specs in
+  `interop-optimization/studies` and `aspheric-lens/studies` (#33).
+- `os_optics_kit.imaging_results`: one reader of the imaging analysis (lines, curves with their state, convergence
+  and a usable flag, values with a status, scalars, fields not analysed) used by `mtf`, `field-points`, `sfr`, the
+  evaluation adapter and the case figure scripts.
+- Evaluation adapter: `paraxial`, `solids` and `rays` quantity sources; pupil-ray counts on spot readings with
+  `Problem.ray_loss` (`infeasible` / `report`); MTF requests narrowed to the fields and lines every constraint
+  names (#33).
+- `edit`: `set_optical_model_value {model_id, path, value}` sets one number of a declared optical model by JSON
+  pointer; `sensitivity`, `tolerance` and `optimize` read its nominal from the base Project (#33).
+
+### Changed
+
+- The sonnar-telephoto-lens, aspheric-lens and midwave-infrared-imager figure scripts run the imaging analysis
+  in-process and read it through `imaging_results`; achromatic-imaging's `analysis.py` reads its MTF curves the
+  same way. Recorded figures are unchanged (#31).
+- The `field`, `fans` and `sfr` skills point to `mtf` for MTF curves; `field` points to `field-points` for
+  creating field points. `field_aberrations` exposes `stop_crossings` and `paraxial_efl`;
+  `workflow_common.prepare_output` holds the output-directory rule of `mtf`, `field-points` and `optimize`
+  (`--overwrite` removes only what the run writes; an input it would replace or remove is `OUTPUT_IS_INPUT`);
+  `geometry3d` holds the quaternion helpers.
+
+### Fixed
+
+- `sfr --design` no longer takes a curve the engine declines (a geometric MTF outside its regime, the curves of a
+  stand-in pupil) although os-optics 0.14 keeps its array: `DESIGN_CURVE_UNAVAILABLE` with the engine's state and
+  reason (#31).
+
 ## 0.5.0
 
 Requires `os-optics>=0.14,<0.15`; verified with os-optics 0.14.0 and catalog release 2026-10-28.1. Every case

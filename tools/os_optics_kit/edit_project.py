@@ -20,6 +20,11 @@ vocabulary, applied in order to a copy of BASE; ``changes`` objects are merged a
   add_component / remove_component, add_observation / remove_observation, add_target / remove_target
   add_optical_model / update_optical_model / remove_optical_model, add_model_material / update_model_material /
   remove_model_material, add_model_coating / remove_model_coating
+  set_optical_model_value {model_id, path, value}   one number of a declared model's document, by JSON pointer
+                          into "model" (e.g. "/surfaces/1/radius_mm", "/surfaces/0/aspheric_coefficients/0"); the
+                          member must exist and hold a number or a decimal string (a string stays a string, written
+                          with repr); value in the unit of the member's name suffix or {"value", "unit"}. Applied as
+                          the Engine's update_optical_model with the whole model document
   transform              {selector: {ids|groups|instances|kinds}, translation_mm?, rotation?: {axis, angle_deg} |
                           {quaternion_wxyz}, frame?: "design" | {"component": ID}, pivot?: "frame_origin" |
                           "selection_centroid" | {"point_mm": [x, y, z]} | {"component": ID}}
@@ -59,6 +64,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import math
 from pathlib import Path
 
 from . import workflow_common as wc
@@ -66,6 +72,8 @@ from . import workflow_common as wc
 PROG = "os-optics-kit edit"
 TARGET_VALUE_KEYS = ("minimum", "maximum", "target_value", "tolerance_abs")
 RECORD_KIND = "opensci-example.project-edit"
+#: Operations of the kit applied as Engine operations (``engine_op``): their record keeps them as given.
+KIT_OPS = ("set_optical_model_value",)
 
 
 class EditError(wc.WorkflowError):
@@ -75,7 +83,8 @@ class EditError(wc.WorkflowError):
 
 
 def _op_error(op_code, message, index):
-    return EditError("PROJECT_OP_INVALID", f"op {index}: {message}", op_index=index, op_code=op_code)
+    prefix = "" if index is None else f"op {index}: "
+    return EditError("PROJECT_OP_INVALID", f"{prefix}{message}", op_index=index, op_code=op_code)
 
 
 # --------------------------------------------------------------------------------------------- normalization
@@ -93,8 +102,10 @@ def normalize_op(op, index, document):
     from os_optics.local.project_ops import PROJECT_OPS
 
     name = op.get("op")
-    if name not in PROJECT_OPS:
-        raise _op_error("UNKNOWN_OP", f"unknown op {name!r}; known: {', '.join(PROJECT_OPS)}", index)
+    if name not in PROJECT_OPS and name not in KIT_OPS:
+        raise _op_error("UNKNOWN_OP", f"unknown op {name!r}; known: {', '.join((*PROJECT_OPS, *KIT_OPS))}", index)
+    if name == "set_optical_model_value":
+        return _normalize_model_value(op, index)
     try:
         if name in ("set_target", "add_target"):
             if name == "set_target":
@@ -123,6 +134,116 @@ def normalize_op(op, index, document):
             raise EditError("PROJECT_OP_INVALID", f"op {index}: {exc}", op_index=index, op_code=exc.code,
                             **exc.details) from None
         raise
+
+
+def _pointer(path, index):
+    """The reference tokens of a JSON pointer (RFC 6901) to a member of a model document."""
+    if not isinstance(path, str) or not path.startswith("/") or path == "/":
+        raise _op_error("BAD_ARGUMENT", f"path must be a JSON pointer to a member of the model, e.g. "
+                        f"\"/surfaces/0/radius_mm\"; got {path!r}", index)
+    return [part.replace("~1", "/").replace("~0", "~") for part in path[1:].split("/")]
+
+
+def _member_unit(tokens):
+    """Schema unit of a model member: the suffix of its name, or of the list holding it (``position_mm/2``)."""
+    named = [t for t in tokens if not t.isdigit()]
+    return wc.field_unit(named[-1]) if named else None
+
+
+def _normalize_model_value(op, index):
+    unknown = sorted(set(op) - {"op", "model_id", "path", "value"})
+    if unknown:
+        raise _op_error("BAD_ARGUMENT", f"set_optical_model_value takes model_id, path and value, not "
+                        f"{', '.join(unknown)}", index)
+    for key in ("model_id", "path", "value"):
+        if key not in op:
+            raise _op_error("BAD_ARGUMENT", f"set_optical_model_value needs {key}", index)
+    if not isinstance(op["model_id"], str) or not op["model_id"]:
+        raise _op_error("BAD_ARGUMENT", "model_id must be a model id", index)
+    tokens = _pointer(op["path"], index)
+    unit = _member_unit(tokens)
+    value = op["value"]
+    try:
+        if wc.is_quantity(value):
+            if unit is None:
+                if value["unit"] not in wc.UNITLESS:
+                    raise wc.WorkflowError("UNIT_INCOMPATIBLE", f"value: member {op['path']} has no unit; got "
+                                           f"{value['unit']!r}", path="value", unit=value["unit"])
+                value = value["value"]
+            else:
+                value = wc.to_unit(value, unit, path="value")
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+            raise wc.WorkflowError("BAD_ARGUMENT", f"value: expected a finite number, got {value!r}", path="value")
+    except wc.WorkflowError as exc:
+        raise EditError("PROJECT_OP_INVALID", f"op {index}: {exc}", op_index=index, op_code=exc.code,
+                        **exc.details) from None
+    return {"op": "set_optical_model_value", "model_id": op["model_id"], "path": op["path"], "value": float(value)}
+
+
+def _model_member(document, model_id, path, index):
+    """``(model document copy, parent container, key)`` of the member ``path`` of declared model ``model_id``."""
+    entry = next((m for m in document.get("optical_models") or []
+                  if isinstance(m, dict) and m.get("model_id") == model_id), None)
+    if entry is None or not isinstance(entry.get("model"), dict):
+        raise _op_error("NOT_FOUND", f"optical model {model_id!r} does not exist", index)
+    model = copy.deepcopy(entry["model"])
+    parent, key = None, None
+    node = model
+    for token in _pointer(path, index):
+        parent = node
+        if isinstance(node, dict) and token in node:
+            key = token
+        elif isinstance(node, list) and token.isdigit() and int(token) < len(node):
+            key = int(token)
+        else:
+            raise _op_error("NOT_FOUND", f"optical model {model_id!r} has no member {path}", index)
+        node = node[key]
+    return model, parent, key
+
+
+def _as_number(value):
+    """A model member's number: a JSON number or a decimal string (``None`` for anything else)."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            number = float(value)
+        except ValueError:
+            return None
+        return number if math.isfinite(number) else None
+    return None
+
+
+def model_value(document, model_id, path):
+    """The number a ``set_optical_model_value`` op with ``model_id`` and ``path`` would replace (a decimal string read
+    as a float); raises ``EditError`` (``PROJECT_OP_INVALID``, ``NOT_FOUND`` / ``BAD_ARGUMENT``)."""
+    _, parent, key = _model_member(document, model_id, path, None)
+    number = _as_number(parent[key])
+    if number is None:
+        raise _op_error("BAD_ARGUMENT", f"member {path} of optical model {model_id!r} is not a number", None)
+    return number
+
+
+def model_value_unit(path):
+    """Schema unit of the model member a ``set_optical_model_value`` path names (``None``: unitless)."""
+    return _member_unit(_pointer(path, None))
+
+
+def engine_op(op, document, index):
+    """The Engine operation of a normalized op on the current ``document``: a ``set_optical_model_value`` becomes
+    ``update_optical_model`` with the model's document and that one member replaced; every other op is returned as
+    is."""
+    if op.get("op") != "set_optical_model_value":
+        return op
+    model, parent, key = _model_member(document, op["model_id"], op["path"], index)
+    current = parent[key]
+    if _as_number(current) is None:
+        raise _op_error("BAD_ARGUMENT", f"member {op['path']} of optical model {op['model_id']!r} holds "
+                        f"{current!r}, not a number or a decimal string", index)
+    parent[key] = repr(float(op["value"])) if isinstance(current, str) else float(op["value"])
+    return {"op": "update_optical_model", "model_id": op["model_id"], "changes": {"model": model}}
 
 
 # Engine operations own edit semantics; the adapter below records display differences.
@@ -195,15 +316,16 @@ def apply_edits(document, ops, *, validate=True, expected_project_hash=None):
 
     base = copy.deepcopy(document)
     given, normalized = normalize_ops(base, ops)
-    changes, current = [], base
+    changes, current, applied = [], base, []
     try:
         for index, op in enumerate(normalized):
             before = current
-            current = apply_project_ops(current, [op])
+            applied.append(engine_op(op, current, index))  # a kit op becomes an Engine op on the current document
+            current = apply_project_ops(current, [applied[-1]])
             changes.append({"op_index": index, "op": op["op"], "affected": _affected(before, current)})
         # require_check: an edited Project that does not pass the Engine's check is refused (PROJECT_REJECTED with
         # the check's problems), not returned with an unchecked result
-        updated = update_project(base, normalized, expected_project_hash=expected_project_hash,
+        updated = update_project(base, applied, expected_project_hash=expected_project_hash,
                                  require_check=True) if validate else None
     except (ProjectOpError, ProjectUpdateError) as exc:
         details = exc.as_dict()
@@ -389,7 +511,8 @@ def describe(document, ids=None):
                 model = (models.get(c["optical_model_id"]) or {}).get("model") or {}
                 entry["optical_model"] = {"optical_model_id": c["optical_model_id"],
                                           "model_kind": model.get("model_kind")}
-                entry["ops"] += ["set_component_model", "set_component_product", "update_optical_model"]
+                entry["ops"] += ["set_component_model", "set_component_product", "update_optical_model",
+                                 "set_optical_model_value"]
                 entry["applicability"]["model_valid_band_nm"] = model.get("valid_band_nm")
             details.append(entry)
         elif o is not None:

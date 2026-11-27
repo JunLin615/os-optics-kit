@@ -22,6 +22,8 @@ os-optics results targets run
 python -m pip install -r requirements-optimization.txt
 python optimize_expander.py --out opt
 python optimize_expander.py --out opt-strict --max-divergence-rad 1e-9
+os-optics-kit optimize studies/optimize-expander.json --out kit-opt
+os-optics-kit optimize studies/optimize-expander-infeasible.json --out kit-strict
 ```
 
 ## 结果
@@ -40,3 +42,12 @@ python optimize_expander.py --out opt-strict --max-divergence-rad 1e-9
 `evaluations.jsonl` 记录每次计算的输入、状态与运行标识。任何设计都无法满足的要求（`--max-divergence-rad 1e-9`）以
 NO_FEASIBLE_RESULT 结束，退出码 2。优化曾在 Python 3.14.7 与 os-optics 0.13.0 下运行（SciPy 1.18.1、Optuna 5.0.0、
 SALib 1.6.0）。引擎运行已用 os-optics 0.14.0 验证，光路处于真空中（`environment.pressure_pa` 为 0），数值相同。
+
+## 用 kit 的优化器
+
+`studies/optimize-expander.json` 把同一个搜索写成 `os-optics-kit optimize` 的规格，无需额外安装软件包：间距是唯一
+变量（150–250 mm；编辑操作把 L2 放在 x = 100 mm + 间距处），`collimated` 的发散角是目标量，其 1 mrad 上限是约束。
+在 os-optics 0.14.0 上，信赖域求解器（`trf`）用 42 次引擎计算（含有限差分探测）收敛到 200.057287 mm，SLSQP
+（`--method slsqp`）用 9 次收敛到 200.057287 mm；两者与 ABCD 最优解之差都在 4e-7 mm 以内，`best-project.json` 在新会话
+中精确复现其发散角。`studies/optimize-expander-infeasible.json` 要求发散角至多 1e-9 rad：状态 `NO_FEASIBLE`，退出码 1，
+不写出最佳 Project，`history.jsonl` 保留每个候选设计的负裕量；`closest` 给出最接近该上限的间距（即同一最优解）。

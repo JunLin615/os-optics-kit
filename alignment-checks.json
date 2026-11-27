@@ -269,6 +269,21 @@
       "expected_status": "COMPLETED"
     },
     {
+      "name": "optimize-expander",
+      "description": "Kit optimizer (trf) finds the beam expander's lens separation; best Project reproduced in a fresh session",
+      "argv": ["{python}", "-m", "os_optics_kit", "optimize", "cases/interop-optimization/studies/optimize-expander.json", "--out", "{runs}/optimize-expander"],
+      "optional": true,
+      "expected_status": "CONVERGED"
+    },
+    {
+      "name": "optimize-expander-infeasible",
+      "description": "Kit optimizer with an unreachable divergence bound: NO_FEASIBLE with the closest candidate",
+      "argv": ["{python}", "-m", "os_optics_kit", "optimize", "cases/interop-optimization/studies/optimize-expander-infeasible.json", "--out", "{runs}/optimize-expander-infeasible"],
+      "optional": true,
+      "expected_exit": 1,
+      "expected_status": "NO_FEASIBLE"
+    },
+    {
       "name": "workflow-expansion-full",
       "description": "Beam expansion/focus workflow, default studies",
       "argv": ["{python}", "cases/expansion-focus/workflow.py", "--out", "{runs}/wf-expansion-full"],

@@ -10,7 +10,7 @@ from scipy.optimize import brentq
 from scipy.special import j0, j1
 from os_optics.local.paraxial import paraxial_analysis
 from os_optics.results import load_run
-from os_optics_kit import workflow_common as wc
+from os_optics_kit import imaging_results as ir, workflow_common as wc
 
 HERE = Path(__file__).resolve().parent
 WAVELENGTHS = [486.1327, 587.5618, 656.2725]
@@ -23,28 +23,37 @@ def imaging(run, output, *, grid=48, wavelengths=None):
     if wavelengths is not None:
         request['wavelengths_nm'] = wavelengths
     start = time.perf_counter()
-    result = load_run(run).imaging('image', request).model_dump(mode='json')
+    result = ir.load(load_run(run).imaging('image', request))  # the JSON 'os-optics results imaging' prints
     wc.write_json(output, result)
     return result, time.perf_counter() - start
 
 
 def metrics(analysis):
+    """Per spectral line of SRC: the engine's imaging values, read through os_optics_kit.imaging_results (a value or
+    curve the engine does not state as KNOWN raises), and the case's derived checks."""
     quantities = {q['quantity_id']: q for q in analysis['quantities']}
     arrays = analysis['arrays']
     rows = []
-    for index, wavelength in enumerate(WAVELENGTHS):
-        prefix = f'SRC#{index}.'
-        if prefix + 'image_space_na' not in quantities:
+    for line in ir.lines(analysis):
+        line_id, prefix = line['line_id'], line['line_id'] + '.'
+        if line['source_id'] != 'SRC' or prefix + 'image_space_na' not in quantities:
             continue
+        wavelength = line['wavelength_nm']
+
         def value(name):
-            q = quantities[prefix + name]
+            q = ir.scalar(analysis, line_id, name)
             if q['state'] != 'KNOWN':
-                raise ValueError(f'{prefix}{name}: {q["state"]}, {q.get("reason")}')
-            return q['value'] if q['values_ref'] is None else arrays[q['values_ref']]
+                raise ValueError(f'{prefix}{name}: {q["state"]}, {q["reason"]}')
+            return q['value']
+
+        def curve(kind, direction):
+            c = ir.curve(analysis, line_id, kind, direction)
+            if c['state'] != 'KNOWN' or not c['usable']:
+                raise ValueError(f'{c["quantity_id"]}: {c["state"]}, {c["reason"]}')
+            return c['values']
         na = value('image_space_na')
-        mtf = {direction: value('mtf_' + direction) for direction in ('tangential', 'sagittal')}
-        reference = {direction: value('diffraction_limited_mtf_' + direction)
-                     for direction in ('tangential', 'sagittal')}
+        mtf = {direction: curve('mtf', direction) for direction in ir.DIRECTIONS}
+        reference = {direction: curve('diffraction_limited_mtf', direction) for direction in ir.DIRECTIONS}
         cutoff = 2 * na / (wavelength * 1e-6)
         normalized = np.clip(np.asarray(FREQUENCIES) / cutoff, 0, 1)
         circular = 2 / np.pi * (np.arccos(normalized) - normalized * np.sqrt(1 - normalized ** 2))
@@ -56,7 +65,7 @@ def metrics(analysis):
                'circular_pupil_mtf_reference': circular.tolist(),
                'circular_reference_max_difference': float(np.max(np.abs(circular - reference['tangential']))),
                'window_light_share': arrays[prefix + 'psf']['window_light_share'],
-               'pupil': arrays[prefix + 'rays'],
+               'pupil': line['rays'],
                'convergence': {q['quantity_id'][len(prefix):]: q['convergence'] for q in quantities.values()
                                if q['quantity_id'].startswith(prefix) and q['convergence'] is not None}}
         pupil = row['pupil']

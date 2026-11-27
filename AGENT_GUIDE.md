@@ -13,8 +13,7 @@ os-optics-kit skills show NAME [PAGE]
 os-optics-kit skills install --dest DIR
 ```
 
-Read a skill before its command; `skills show NAME PAGE` prints subpages. `skills install` copies skills to your
-host dir (`--force` overwrites).
+Read a skill before its command; `skills show NAME PAGE` prints subpages; `skills install` copies them (`--force`).
 
 ## Route by task
 
@@ -30,21 +29,21 @@ host dir (`--force` overwrites).
 | Plots and a report | `plot sweep STUDY --y target:ID`; `report STUDY --project CURRENT.json` |
 | Presentation-grade 3D figures (Chrome) | `render RUN --out FIGURES --camera 55,22 --background transparent` |
 | Presentation material | `present` skill: `present init RUN STUDY --out DIR`; `present build DIR/presentation.json` |
-| Restyle without rerunning | `present build DIR/presentation.json --set theme.language=zh-CN` |
-| Compare saved alternatives | `present init RUN_A RUN_B --labels A,B --out DIR` |
+| Restyle; compare saved runs | `present build DIR/presentation.json --set theme.language=zh-CN`; `present init RUN_A RUN_B --labels A,B --out DIR` |
 | Gallery or bundle handoff | `present list DIR`; `present bundle DIR --out X.zip --only ID,...` |
 | Orbit, detail move, sample playback | `present init ... --animate`; fields: `present settings` |
-| Sensitivity, tolerance | `sensitivity SPEC.json --out DIR`; `tolerance SPEC.json --out DIR` |
+| Sensitivity, tolerance, optimization | `sensitivity SPEC.json --out DIR`; `tolerance SPEC.json --out DIR`; `optimize SPEC.json --out DIR` |
 | Zoom positions, fixed image plane | `zoom SPEC.json --out DIR [--study]` |
 | Parallel, resumable runs | `study` skill: `sweep SPEC.json --out S --workers 4`; `study run S --resume`; `study candidates P1.json P2.json --out C` |
 | Catalog parts | `candidates --category ... --wavelength-nm ...` |
 | Detector CSV data | `measurements DATA.csv --x ... --signal ... --out DIR` |
 | Slanted-edge SFR vs design MTF | `sfr IMG --roi X,Y,W,H --out DIR`; `--design imaging.json --pixel-pitch-um P` |
+| Optical MTF per line | `mtf RUN --monitor P --out DIR` |
+| Field points, CRA, MTF | `field-points P.json --plane ID --angles-deg 0,5 --out DIR` |
 
 Unprefixed commands are `os-optics-kit <command>`; `--help` specifies each.
 `render` and `present` need `os-optics-kit[render]` and Chrome or Chromium; case images do not.
-[Workflow recipes](docs/workflow-recipes.md) list specs, outputs and errors. Cases `expansion-focus`,
-`polarization-control` and `mirror-alignment` ship `workflow.py --list-parameters`.
+[Workflow recipes](docs/workflow-recipes.md) list specs, outputs and errors.
 
 ## What the outputs state
 

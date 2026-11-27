@@ -1,7 +1,7 @@
 ---
 name: edit
 description: List a Project's objects with editable values, units and frames, then apply edit operations by object ID with explicit units, checked by the engine and written atomically to a new file (optionally run). Use it to change a design reproducibly.
-version: 0.2.0
+version: 0.3.0
 command: os-optics-kit edit
 requires: os-optics>=0.14,<0.15
 kind: tool
@@ -25,8 +25,9 @@ kind: tool
 - `BASE.json`: a Project (never modified).
 - `--edits EDITS.json`: a list of operations (or `{"ops": [...]}`): `set_component_pose`,
   `set_source_model`, `set_observation_pose`, `set_target`, `set_component_product`, add/remove ops,
-  and `transform` (`selector`, `translation_mm`, `rotation`, `frame` `"design"` or `{"component": ID}`,
-  `pivot`). Numbers are in the field's unit (name suffix `_mm`, `_nm`, `_w`, `_deg`) or
+  `transform` (`selector`, `translation_mm`, `rotation`, `frame` `"design"` or `{"component": ID}`,
+  `pivot`), and `set_optical_model_value` (`model_id`, `path`: a JSON pointer into the model such as
+  `/surfaces/0/radius_mm` or `/surfaces/0/aspheric_coefficients/0`, `value`; a decimal string stays one). Numbers are in the field's unit (name suffix `_mm`, `_nm`, `_w`, `_deg`) or
   `{"value": x, "unit": "um"}`; unknown or incompatible units are refused.
 - `--out NEW.json`; optional `--run RUN_DIR`, `--changes FILE`, `--overwrite`, `--expect-base-hash H`.
 
@@ -63,4 +64,5 @@ The moved lens misses the `focus_position` target: status FAIL, exit 1.
 
 ## Version
 
+0.3.0 (unreleased, after os-optics-kit 0.5.0): `set_optical_model_value`.
 0.2.0 (os-optics-kit 0.2.0), verified with os-optics 0.13.0 and catalog release 2026-10-28.1.
