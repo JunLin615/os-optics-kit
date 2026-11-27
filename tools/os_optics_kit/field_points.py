@@ -26,7 +26,8 @@ the Engine's paraxial analysis; not a distortion figure), pupil rays launched/ar
 the tangential and sagittal optical MTF of every spectral line from the Engine's imaging analysis (one curve per line,
 no polychromatic weighting) with sampled minima per line and over all lines (CONFIRMED only when every sample is an
 exact value). A point that cannot be evaluated keeps a reason (NO_ARRIVAL, OUTSIDE_PLANE, STOP_NOT_REACHED,
-CHIEF_RAY_PATH_DIFFERS, AIM_NOT_CONVERGED, HEIGHT_NOT_REACHED) and leaves the minima UNCONFIRMED.
+CHIEF_RAY_PATH_DIFFERS, AIM_NOT_CONVERGED, HEIGHT_NOT_REACHED, TRACE_BUDGET_EXHAUSTED) and leaves the minima
+UNCONFIRMED. The evaluated Project raises the trace budget when the field points need more (derivation).
 
 Writes DIR/field-points.json (schema os-optics-kit.field-points 1), DIR/evaluated-project.json, DIR/imaging.json
 (imaging-<n>.json for more than 32 points; 'os-optics-kit mtf --imaging' draws them) and, with --write-run, the
@@ -77,6 +78,8 @@ WORKING_APERTURE_MM = 1.0e4
 #: spectral lines of one source match within this many nm
 LINE_MATCH_NM = 1e-6
 AXIS_SOURCE_ID = "FP_AXIS"
+#: the evaluated Project's trace budget covers this many times the field points' own chief-ray paths and steps
+BUDGET_HEADROOM = 2
 FILES = ("field-points.json", "evaluated-project.json", "imaging.json", "imaging-*.json", "run")
 SCOPE = {
     "supported": ("centred, rotationally symmetric imaging prescriptions: a reference GAUSSIAN_BEAM source on the "
@@ -322,20 +325,47 @@ def _component(reference: dict, point: Point, frame: fg.Frame, lines: list[dict]
 
 
 def _project(base: dict, reference: dict, points: Sequence[Point], frame: fg.Frame, lines: list[dict],
-             plane_id: str, aperture: dict | None, label: str, aiming_copy: bool = False) -> dict:
-    """``base`` (the flattened input) with its sources replaced by the field points, its targets removed and the
-    plane's aperture replaced by ``aperture`` (None: as declared). ``aiming_copy``: a working Project of the aim
-    (``lines`` is then the chief-ray line alone, linearly polarized)."""
+             plane_id: str, aperture: dict | None, label: str, aiming_copy: bool = False,
+             budget: dict | None = None) -> dict:
+    """``base`` (the flattened input) with its sources replaced by the field points, its targets removed, the
+    plane's aperture replaced by ``aperture`` and the compute budget by ``budget`` (None: as declared).
+    ``aiming_copy``: a working Project of the aim (``lines`` is then the chief-ray line alone, linearly
+    polarized)."""
     document = copy.deepcopy(base)
     document["components"] = [c for c in document.get("components") or [] if c.get("optical_role") != "source"] + [
         _component(reference, p, frame, lines, f"{label} {p.source_id} of {reference['instance_id']}", aiming_copy)
         for p in points]
     document["targets"] = []
+    if budget is not None:
+        document["compute_budget"] = budget
     if aperture is not None:
         for observation in document.get("observations") or []:
             if observation.get("observation_id") == plane_id:
                 observation["aperture"] = aperture
     return document
+
+
+def beams(sources: int, lines: int, polarization: dict | None) -> int:
+    """The beam paths a set of field-point sources starts: one per line, two for unpolarized light (the Engine traces
+    it as two incoherent components)."""
+    kind = str((polarization or {}).get("kind") or "")
+    return sources * lines * (2 if kind == "UNPOLARIZED" or kind.startswith("PARTIAL") else 1)
+
+
+def trace_budget(declared: dict | None, limits: dict, paths: int, steps_per_path: int) -> dict | None:
+    """The compute budget of a field-point Project: the declared one (``limits``: the Engine's effective budget of
+    it), with ``max_paths`` and ``max_trace_steps`` raised to BUDGET_HEADROOM times what ``paths`` chief-ray paths of
+    ``steps_per_path`` steps need; None when the declared budget already covers them. The Engine traces the
+    strongest paths first, so the field points come before their reflections."""
+    need = {"max_paths": BUDGET_HEADROOM * paths, "max_trace_steps": BUDGET_HEADROOM * paths * steps_per_path}
+    raised = {key: value for key, value in need.items() if value > int(limits.get(key) or 0)}
+    return None if not raised else {**(declared or {}), **raised}
+
+
+def execution_of(evaluation: Any) -> dict:
+    """The Engine's execution record of an evaluation: outcome (COMPLETED or PARTIAL), termination and budgets."""
+    outcome = evaluation.result.outcome.model_dump(mode="json")
+    return dict(outcome.get("execution") or {})
 
 
 def _working_aperture(declared: dict) -> dict:
@@ -395,8 +425,8 @@ def measure(results: Any, plane_id: str, source_ids: Sequence[str], line_count: 
             candidates = arrivals.get((source_id, index)) or []
             arrival = next((a for a in candidates if a["beam"].get("path_id") == path_id), None) or max(
                 candidates, key=lambda a: a["beam"].get("power_W") or 0.0, default=None)
-            row: dict[str, Any] = {"path_id": path_id, "where": "NO_ARRIVAL", "uv_mm": None, "aoi_deg": None,
-                                   "surfaces": None,
+            row: dict[str, Any] = {"source_id": source_id, "path_id": path_id, "where": "NO_ARRIVAL", "uv_mm": None,
+                                   "aoi_deg": None, "surfaces": None,
                                    "crossing_index": None, "pupil_rays_launched": None, "pupil_rays_arrived": None,
                                    "pupil_rms_radius_mm": None, "crossing_mm": None, "stop_offset_mm": None,
                                    "stop_problem": None}
@@ -518,7 +548,8 @@ def solve(session: Any, context: dict, points: list[Point]) -> dict:
     for evaluations in range(1, MAX_EVALUATIONS + 1):
         traced = [p for p in points if not p.done or p is axis_point]
         document = _project(context["base"], context["reference"], traced, frame, chief_line, context["plane_id"],
-                            context["working_aperture"], "aim of field point", aiming_copy=True)
+                            context["working_aperture"], "aim of field point", aiming_copy=True,
+                            budget=context["budget"](len(traced), 1, True))
         results = _evaluate(session, document).results()
         measured = measure(results, context["plane_id"], [p.source_id for p in traced], 1, context["stops"],
                            context["stop"])
@@ -579,13 +610,18 @@ def solve(session: Any, context: dict, points: list[Point]) -> dict:
 
 # ---------------------------------------------------------------------------------------------- MTF
 
-def _final_state(row: dict, axis_surfaces: list[str] | None) -> tuple[str | None, str | None]:
-    """The reason a field point is not evaluated in the evaluated Project, from its chief ray there: it reaches the
-    plane outside the evaluated area (OUTSIDE_PLANE) or not at all (NO_ARRIVAL), or it meets other surfaces, or the
-    same ones with other events, than the on-axis chief ray (CHIEF_RAY_PATH_DIFFERS: it misses an element, is
-    reflected or vignetted before the plane)."""
+def _final_state(row: dict, axis_surfaces: list[str] | None,
+                 execution: dict | None = None) -> tuple[str | None, str | None]:
+    """The reason a field point is not evaluated, from its chief ray: it reaches the plane outside the evaluated
+    area (OUTSIDE_PLANE) or not at all (NO_ARRIVAL; TRACE_BUDGET_EXHAUSTED when the evaluation's trace budget ran out
+    on its source), or it meets other surfaces, or the same ones with other events, than the on-axis chief ray
+    (CHIEF_RAY_PATH_DIFFERS: it misses an element, or is reflected before the plane)."""
     if row["where"] == "OUTSIDE_PLANE":
         return "OUTSIDE_PLANE", "the chief ray meets the plane outside its evaluated area"
+    budgets = (execution or {}).get("budgets") or {}
+    if row["where"] != "ARRIVED" and row.get("source_id") in (budgets.get("affected_source_ids") or []):
+        return "TRACE_BUDGET_EXHAUSTED", (f"the evaluation's trace budget ({', '.join(budgets.get('exhausted') or [])}) "
+                                          "ran out before this line was traced")
     if row["where"] != "ARRIVED":
         return "NO_ARRIVAL", "the chief ray does not reach the plane"
     surfaces = row.get("surfaces")
@@ -845,10 +881,13 @@ def run(request: Request, out_dir: str | Path, *, overwrite: bool = False, sessi
     working = _working_aperture(declared_aperture)
     reference_doc = copy.deepcopy(base)
     reference_doc["targets"] = []
+    reference_doc["components"] = [c for c in base.get("components") or [] if c.get("optical_role") != "source"
+                                   or c.get("instance_id") == reference["instance_id"]]
     for observation in reference_doc.get("observations") or []:
         if observation.get("observation_id") == request.plane:
             observation["aperture"] = working
     first = _evaluate(session, reference_doc, ("readings", "view"))
+    limits = (execution_of(first).get("budgets") or {}).get("limits") or {}
     results = first.results()
     plane_frame = results.monitor(request.plane)["plane"]
     stops = fa.scene_stops(first.optical_view.model_dump(mode="json"))
@@ -878,6 +917,15 @@ def run(request: Request, out_dir: str | Path, *, overwrite: bool = False, sessi
                              stop)[reference["instance_id"]]
     reference_row = reference_rows[next((i for i, w in enumerate(reference_lines) if w is not None
                                          and abs(w - chief_wavelength) <= LINE_MATCH_NM), 0)]
+    # chief-ray steps of one path: a step to each surface it meets (the plane included) and one to leave the scene
+    steps_per_path = len(reference_row["surfaces"] or []) + 2
+    declared_budget = base.get("compute_budget")
+    polarization = (reference.get("source_model") or {}).get("polarization")
+
+    def budget(sources: int, line_count: int, aiming_copy: bool) -> dict | None:
+        paths = beams(sources, line_count, None if aiming_copy else polarization)
+        return trace_budget(declared_budget, limits, paths, steps_per_path)
+
     first_order = paraxial_reference(base, reference["instance_id"], request.plane, chief_wavelength, frame,
                                      plane_frame["origin_mm"])
 
@@ -919,7 +967,7 @@ def run(request: Request, out_dir: str | Path, *, overwrite: bool = False, sessi
             for p in probes:
                 p.source_id += "_"
         probe_doc = _project(base, reference, probes, frame, [lines[chief]], request.plane, working, "aim probe",
-                             aiming_copy=True)
+                             aiming_copy=True, budget=budget(len(probes), 1, True))
         probe_rows = measure(_evaluate(session, probe_doc).results(), request.plane, [p.source_id for p in probes], 1,
                              stops, stop)
         evaluations += 1
@@ -937,7 +985,7 @@ def run(request: Request, out_dir: str | Path, *, overwrite: bool = False, sessi
         "base": base, "reference": reference, "lines": lines, "plane_id": request.plane, "working_aperture": working,
         "stops": stops, "stop": stop, "declared_aperture": declared_aperture, "first_order": first_order,
         "imaging_base": imaging_base, "frequencies": sorted(set(request.mtf_frequencies or [])),
-        "max_object_height_mm": _max_object_height(frame)}
+        "max_object_height_mm": _max_object_height(frame), "budget": budget}
     loop = solve(session, context, points)
     evaluations += loop["evaluations"]
     if (axis_point.measured or {}).get("uv_mm") is None:
@@ -949,11 +997,14 @@ def run(request: Request, out_dir: str | Path, *, overwrite: bool = False, sessi
         (p.measured["uv_mm"], p.measured.get("pupil_rms_radius_mm") or 0.0) for p in points
         if p.reason is None and p.measured is not None and p.measured.get("uv_mm") is not None]
     widened = fg.widened_aperture(declared_aperture, footprints)
-    evaluated = _project(base, reference, points, frame, lines, request.plane, widened, "field point")
+    evaluated_budget = budget(len(points), len(lines), False)
+    evaluated = _project(base, reference, points, frame, lines, request.plane, widened, "field point",
+                         budget=evaluated_budget)
     evaluated_file = out / "evaluated-project.json"
     wc.write_json(evaluated_file, evaluated)
     evaluated_check = wc.check(evaluated)
     final_ev = _evaluate(session, evaluated)
+    final_execution = execution_of(final_ev)
     evaluations += 1
     final = measure(final_ev.results(), request.plane, [p.source_id for p in points], len(lines), stops, stop)
     axis_surfaces = final[axis_point.source_id][chief]["surfaces"]
@@ -961,7 +1012,11 @@ def run(request: Request, out_dir: str | Path, *, overwrite: bool = False, sessi
         row = final[point.source_id][chief]
         point.measured = row
         if point.reason is None:
-            point.reason, point.message = _final_state(row, axis_surfaces)
+            point.reason, point.message = _final_state(row, axis_surfaces, final_execution)
+    for rows in final.values():  # a line the budget left untraced says so
+        for item in rows:
+            if item["where"] == "NO_ARRIVAL" and _final_state(item, None, final_execution)[0] == "TRACE_BUDGET_EXHAUSTED":
+                item["where"] = "TRACE_BUDGET_EXHAUSTED"
     run_dir = None
     imaging_source = final_ev.results()
     if request.write_run:
@@ -987,9 +1042,15 @@ def run(request: Request, out_dir: str | Path, *, overwrite: bool = False, sessi
                       "project_hash": evaluated_check.get("project_hash"),
                       "engine_input_hash": evaluated_check.get("engine_input_hash"),
                       "catalog_version": evaluated_check.get("catalog_version"),
-                      "run": None if run_dir is None else "run",
-                      "derivation": _derivation(base, reference, points, frame, request, declared_aperture, widened,
-                                                identity)},
+                      "run": None if run_dir is None else "run", "execution": final_execution,
+                      "derivation": {**_derivation(base, reference, points, frame, request, declared_aperture, widened,
+                                                   identity),
+                                     "compute_budget": {"declared": declared_budget,
+                                                        "evaluated": evaluated_budget or declared_budget,
+                                                        "raised": evaluated_budget is not None,
+                                                        "rule": (f"max_paths and max_trace_steps at least "
+                                                                 f"{BUDGET_HEADROOM} x the field points' chief-ray "
+                                                                 "paths and steps")}}},
         "engine": {"version": engine["engine_version"], "build_id": engine["engine_build_id"]},
         "plane": {"observation_id": request.plane, "pose": plane.get("pose"), "origin_mm": plane_frame["origin_mm"],
                   "u_axis": plane_frame["u_axis"], "v_axis": plane_frame["v_axis"], "normal": plane_frame["normal"],

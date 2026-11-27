@@ -56,6 +56,10 @@ os-optics-kit field-points project.json --plane image_plane --out fp \
 - **像面孔径**：瞄准时临时放大像面的有效区域，以读到每个落点；评估用 Project 保留声明的孔径，只有
   当某个视场点落在其外时才放大（位姿不变，`plane.widened`）。`within_declared_aperture` 逐点说明
   声明的像面是否容纳该点。
+- **追迹预算**：输入的计算预算是按它自己的光源设定的。当视场点的主光线路径需要更多时，评估用 Project
+  把 `max_paths` 和 `max_trace_steps` 提高到所需的两倍（`derivation.compute_budget`），使 Engine 在追迹
+  这些视场点的反射光之前先追迹全部视场点。`evaluated.execution` 是 Engine 的执行记录；若某条谱线仍因
+  预算耗尽而未被追迹，会标为 `TRACE_BUDGET_EXHAUSTED`。
 - **一阶比较**（`FIRST_ORDER_COMPARISON`，不是畸变数值）：物在无穷远时为 `f tan(theta)`，其中 EFL
   取自 Engine 对参考轴上元件在主光线波长处的近轴分析，并给出近轴焦点到像面的距离；有限远物时为
   `|m| h`，`m` 是从物面到像面的近轴 ABCD 矩阵的 A 元素。近轴分析被拒绝时，参考值为 null 并附原因。
@@ -69,14 +73,15 @@ os-optics-kit field-points project.json --plane image_plane --out fp \
 
 - `input`：`path`、按读入字节计算的 `sha256`、`sha256_lf`（CRLF 换成 LF 之后）、Engine 的
   `project_hash`、`engine_input_hash`、`catalog_version` 以及 `configuration_id`。
-- `evaluated`：`evaluated-project.json` 及其哈希和 `derivation`（去掉的光源和目标、加入的光源及其
-  位姿、像面声明的孔径与评估时的孔径）；`engine` 给出版本和构建号。
+- `evaluated`：`evaluated-project.json` 及其哈希、Engine 的 `execution` 执行记录和 `derivation`
+  （去掉的光源和目标、加入的光源及其位姿、像面声明的孔径与评估时的孔径、计算预算）；`engine` 给出版本
+  和构建号。
 - `conditions`：视场类型和单位、方位角和视场方向、`requested`（按请求顺序）、共轭、参考光源的事实
   （其光轴、像面法线、其主光线的落点和光阑偏移）、主光线波长、各谱线及其功率、频率、成像请求、瞄准
   （`pupil_magnification`、`entrance_pupil_from_stop_mm`）和一阶参考。
 - `points[]`：`status`（`EVALUATED`，或 `NOT_EVALUATED` 并附 `reason`：`NO_ARRIVAL`、
   `OUTSIDE_PLANE`、`STOP_NOT_REACHED`、`CHIEF_RAY_PATH_DIFFERS`、`AIM_NOT_CONVERGED`、
-  `HEIGHT_NOT_REACHED`）、`field`（角度、物高）、`pose`、`chief_ray`（`image_point_uv_mm`、
+  `HEIGHT_NOT_REACHED`、`TRACE_BUDGET_EXHAUSTED`）、`field`（角度、物高）、`pose`、`chief_ray`（`image_point_uv_mm`、
   `image_height_mm`、`image_azimuth_deg`、相对像面法线的 `angle_deg`、`stop_offset_mm`、`aim`、
   `iterations`、`within_declared_aperture`）、`first_order`、`spot`（发射和到达的光瞳光线数）、
   `lines`（逐谱线的同类数据）以及 `mtf[]`。

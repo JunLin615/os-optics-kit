@@ -78,6 +78,12 @@ configurations: in a lens Project configurations are design states.
   point is read; the evaluated Project keeps the declared aperture unless a point
   would fall outside it, and then widens it (pose unchanged, `plane.widened`).
   `within_declared_aperture` says, per point, whether the declared plane holds it.
+- **Trace budget**: the input's compute budget was set for its own sources. When the
+  field points' chief-ray paths need more, the evaluated Project raises `max_paths`
+  and `max_trace_steps` to twice their need (`derivation.compute_budget`), so the
+  Engine traces every field point before their reflections. `evaluated.execution` is
+  the Engine's execution record; a line a budget still left untraced reads
+  `TRACE_BUDGET_EXHAUSTED`.
 - **First-order comparison** (`FIRST_ORDER_COMPARISON`, not a distortion figure):
   object at infinity, `f tan(theta)` with the EFL of the Engine's paraxial analysis
   of the elements on the reference axis at the chief-ray wavelength, and the
@@ -96,9 +102,10 @@ configurations: in a lens Project configurations are design states.
 - `input`: `path`, `sha256` of the bytes as read, `sha256_lf` (after CRLF -> LF),
   the Engine's `project_hash`, `engine_input_hash`, `catalog_version`, and
   `configuration_id`.
-- `evaluated`: `evaluated-project.json` with its hashes and `derivation` (removed
-  sources and targets, added sources with their poses, the plane's declared and
-  evaluated aperture); `engine` version and build.
+- `evaluated`: `evaluated-project.json` with its hashes, the Engine's `execution`
+  record and `derivation` (removed sources and targets, added sources with their
+  poses, the plane's declared and evaluated aperture, the compute budget); `engine`
+  version and build.
 - `conditions`: field kind and unit, azimuth and field direction, `requested` (in
   request order), conjugate, reference source facts (its axis, the plane normal,
   its chief ray's hit and stop offset), chief-ray wavelength, lines and their
@@ -106,7 +113,7 @@ configurations: in a lens Project configurations are design states.
   `entrance_pupil_from_stop_mm`) and the first-order reference.
 - `points[]`: `status` (`EVALUATED` or `NOT_EVALUATED` with `reason`: `NO_ARRIVAL`,
   `OUTSIDE_PLANE`, `STOP_NOT_REACHED`, `CHIEF_RAY_PATH_DIFFERS`, `AIM_NOT_CONVERGED`,
-  `HEIGHT_NOT_REACHED`), `field` (angle, object height), `pose`, `chief_ray`
+  `HEIGHT_NOT_REACHED`, `TRACE_BUDGET_EXHAUSTED`), `field` (angle, object height), `pose`, `chief_ray`
   (`image_point_uv_mm`, `image_height_mm`, `image_azimuth_deg`, `angle_deg` to the
   plane normal, `stop_offset_mm`, `aim`, `iterations`, `within_declared_aperture`),
   `first_order`, `spot` (pupil rays launched and arrived), `lines` (the same per

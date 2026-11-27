@@ -348,6 +348,25 @@ class MeasureTests(unittest.TestCase):
         self.assertIn("L/S1:refract", message)
 
 
+class BudgetTests(unittest.TestCase):
+    def test_the_trace_budget_is_raised_only_when_the_field_points_need_more(self):
+        self.assertEqual(fp.beams(11, 3, {"kind": "UNPOLARIZED"}), 66)
+        self.assertEqual(fp.beams(11, 3, {"kind": "LINEAR", "angle_deg": 0.0}), 33)
+        limits = {"max_paths": 512, "max_trace_steps": 2048}
+        self.assertIsNone(fp.trace_budget(None, limits, 10, 30))
+        raised = fp.trace_budget({"pupil_ring_count": 8}, limits, 72, 33)
+        self.assertEqual(raised, {"pupil_ring_count": 8, "max_trace_steps": fp.BUDGET_HEADROOM * 72 * 33})
+
+    def test_a_line_the_budget_left_untraced_says_so(self):
+        row = {"source_id": "FP3", "where": "NO_ARRIVAL", "surfaces": None}
+        execution = {"outcome": "PARTIAL", "budgets": {"exhausted": ["max_trace_steps"],
+                                                       "affected_source_ids": ["FP3"]}}
+        reason, message = fp._final_state(row, None, execution)
+        self.assertEqual(reason, "TRACE_BUDGET_EXHAUSTED")
+        self.assertIn("max_trace_steps", message)
+        self.assertEqual(fp._final_state(dict(row, source_id="FP4"), None, execution)[0], "NO_ARRIVAL")
+
+
 class ImagingObjectTests(unittest.TestCase):
     def test_the_engines_result_object_is_read_by_its_field_aliases(self):
         class Result:  # the Engine's AnalysisResultV1 names its schema field schema_ (alias schema)
