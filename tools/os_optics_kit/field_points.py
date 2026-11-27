@@ -991,7 +991,7 @@ def run(request: Request, out_dir: str | Path, *, overwrite: bool = False, sessi
                       "derivation": _derivation(base, reference, points, frame, request, declared_aperture, widened,
                                                 identity)},
         "engine": {"version": engine["engine_version"], "build_id": engine["engine_build_id"]},
-        "plane": {"observation_id": request.plane, "origin_mm": plane_frame["origin_mm"],
+        "plane": {"observation_id": request.plane, "pose": plane.get("pose"), "origin_mm": plane_frame["origin_mm"],
                   "u_axis": plane_frame["u_axis"], "v_axis": plane_frame["v_axis"], "normal": plane_frame["normal"],
                   "aperture_declared": declared_aperture, "aperture_evaluated": widened or declared_aperture,
                   "widened": widened is not None,

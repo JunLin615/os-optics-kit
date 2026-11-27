@@ -308,6 +308,46 @@ class RequestTests(unittest.TestCase):
         self.assertEqual(missing.exception.code, "CONFIGURATION_UNKNOWN")
 
 
+class FakeResults:
+    """RunResults-shaped readings of two field points: FP0 arrives (two polarization paths), FP1 lands outside."""
+
+    STOP = {"stop_id": "L/STOP-stop", "label": "L/STOP/stop", "centre_mm": [0.0, 0.0, 0.0], "normal": [1.0, 0.0, 0.0],
+            "opening_center_mm": [0.0, 0.0], "clear_radius_mm": 5.0, "geometry_issue": None}
+
+    def monitor(self, plane):
+        beam = {"source_id": "FP0", "spectral_index": 0}
+        return {"arrivals": [
+            {"beam": {**beam, "path_id": "FP0#0:p1", "power_W": 2.0}, "uv_mm": [9.0, 9.0], "aoi_deg": 9.0,
+             "crossing_index": 0, "pupil_ray_count": 96, "pupil_rays_arrived": 90, "pupil_rms_radius_mm": 0.1},
+            {"beam": {**beam, "path_id": "FP0#0", "power_W": 1.0}, "uv_mm": [1.0, 2.0], "aoi_deg": 3.0,
+             "crossing_index": 0, "pupil_ray_count": 96, "pupil_rays_arrived": 96, "pupil_rms_radius_mm": 0.02}],
+            "outside_active_area": [{"path_id": "FP1#0", "uv_mm": [40.0, 0.0], "crossing_index": 0}]}
+
+    def paths(self):
+        return [{"path_id": "FP0#0", "parent_path_id": None, "lineage": ["L/STOP-stop:aperture_stop", "L/S1:refract"]},
+                {"path_id": "FP1#0", "parent_path_id": None, "lineage": ["L/STOP-stop:aperture_stop"]}]
+
+    def segments(self, path):
+        y = 0.0004 if path == "FP0#0" else 0.2
+        return [{"end_surface_id": "L/STOP-stop", "end_event": "aperture_stop", "end_x_mm": 0.0, "end_y_mm": y,
+                 "end_z_mm": 0.0}]
+
+
+class MeasureTests(unittest.TestCase):
+    def test_the_chief_path_its_stop_crossing_and_an_outside_arrival_are_read(self):
+        rows = fp.measure(FakeResults(), "image", ["FP0", "FP1"], 1, [FakeResults.STOP], FakeResults.STOP)
+        first, second = rows["FP0"][0], rows["FP1"][0]
+        self.assertEqual((first["path_id"], first["where"], first["uv_mm"]), ("FP0#0", "ARRIVED", [1.0, 2.0]))
+        self.assertAlmostEqual(first["stop_offset_mm"], 0.0004, places=12)
+        self.assertEqual((first["pupil_rays_launched"], first["pupil_rays_arrived"]), (96, 96))
+        self.assertEqual((second["where"], second["uv_mm"]), ("OUTSIDE_PLANE", [40.0, 0.0]))
+        self.assertEqual(fp._final_state(first, first["surfaces"]), (None, None))
+        self.assertEqual(fp._final_state(second, first["surfaces"])[0], "OUTSIDE_PLANE")
+        reason, message = fp._final_state(dict(first, surfaces=["L/STOP-stop:aperture_stop"]), first["surfaces"])
+        self.assertEqual(reason, "CHIEF_RAY_PATH_DIFFERS")
+        self.assertIn("L/S1:refract", message)
+
+
 class ImagingObjectTests(unittest.TestCase):
     def test_the_engines_result_object_is_read_by_its_field_aliases(self):
         class Result:  # the Engine's AnalysisResultV1 names its schema field schema_ (alias schema)
