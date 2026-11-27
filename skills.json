@@ -73,7 +73,7 @@
       "requires": "os-optics>=0.14,<0.15",
       "path": "skills/fans/SKILL.md",
       "tokens": 900,
-      "sha256": "35ce5c3c7d8b7aa867237a9d56e7fcd828ca0e48be53b8a8d52e5cf40e05eead"
+      "sha256": "b46f3a5718b683dc4a066253b92db60235e45f1861211ed3ab41a10d7b0fb2ad"
     },
     {
       "name": "field",
@@ -84,7 +84,7 @@
       "requires": "os-optics>=0.14,<0.15",
       "path": "skills/field/SKILL.md",
       "tokens": 898,
-      "sha256": "3c26e412fca2a140812ddc13cd3e483cfec482b88059cd2b7abfc9f3de80a5f7"
+      "sha256": "c6bfef0101989f278c78bef12c650ec0c008d4f86cc72b63849835274d2851e3"
     },
     {
       "name": "field-points",
@@ -111,13 +111,13 @@
     {
       "name": "mtf",
       "kind": "tool",
-      "description": "Tangential and sagittal optical MTF of an os-optics imaging analysis as a table, a JSON document and one figure per line.",
+      "description": "Tangential and sagittal optical MTF of an os-optics imaging analysis per spectral line, with the diffraction limit and geometric MTF, as a CSV, a JSON document and one figure per line; declined curves keep their reason and are never drawn.",
       "version": "0.1.0",
       "command": "os-optics-kit mtf",
-      "requires": "os-optics>=0.14,<0.15",
+      "requires": "os-optics>=0.14,<0.15; os-optics-kit[plot] for figures",
       "path": "skills/mtf/SKILL.md",
-      "tokens": 127,
-      "sha256": "234c7cc1bc3e5f8fb5243a070cfe81ac2e9790dd86174fb87b6c29865deb2f64"
+      "tokens": 842,
+      "sha256": "38f8271c84f31818022a82def85ef07b2d49934983ec4470602a3545bec56753"
     },
     {
       "name": "optimize",
@@ -204,8 +204,8 @@
       "command": "os-optics-kit sfr",
       "requires": "os-optics-kit[plot] for PNG/TIFF and plots",
       "path": "skills/sfr/SKILL.md",
-      "tokens": 744,
-      "sha256": "7f429554b8aeff495e2ad63c6b4e38323a26777ce006807554f4da01334242f9"
+      "tokens": 773,
+      "sha256": "1f7e179ed4a7d3f41decee83263111afb4d6aa9db390c69edb907fe756178746"
     },
     {
       "name": "study",

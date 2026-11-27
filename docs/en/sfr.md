@@ -102,6 +102,13 @@ there are several; `--design-direction` (`both`, `tangential`, `sagittal`) and
 curve. A cycles/mm design curve needs the pixel pitch (`PIXEL_PITCH_REQUIRED`):
 `f[cy/px] = f[cy/mm] × pitch[mm]`.
 
+Only a curve the engine states as `KNOWN` (or `KNOWN_ZERO`) is taken: a declined curve (for example a
+geometric MTF outside its regime, or the curves of a stand-in pupil) is refused with
+`DESIGN_CURVE_UNAVAILABLE` and the engine's state and reason, even when the JSON
+holds an array for it. `os-optics-kit mtf` writes the design's optical MTF on its
+own, as a table, a JSON document and one figure per line ([MTF](mtf.md)); the
+`imaging.json` it keeps is a valid `--design`.
+
 The two curves are different quantities:
 
 | Aspect | Measured SFR | Design curve |

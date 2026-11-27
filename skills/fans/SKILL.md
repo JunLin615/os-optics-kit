@@ -17,7 +17,7 @@ kind: tool
 
 ## When not to use
 
-- For PSF, MTF or encircled energy: use `os-optics results imaging`.
+- For MTF: `mtf`; PSF, encircled energy: `os-optics results imaging`.
 - For the wavefront of one path only: use `os-optics results wavefront`.
 - To change the design: use `edit`.
 

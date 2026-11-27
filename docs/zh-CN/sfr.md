@@ -93,6 +93,11 @@ os-optics-kit sfr edge.png --roi 400,300,80,120 --pixel-pitch-um 3.45 --design i
 `sagittal`）和 `--design-curve`（`mtf`、`diffraction_limited_mtf`、`geometric_mtf`）选择曲线。
 周期/毫米的设计曲线需要像元尺寸（否则 `PIXEL_PITCH_REQUIRED`）：`f[cy/px] = f[cy/mm] × pitch[mm]`。
 
+只采用引擎状态为 `KNOWN`（或 `KNOWN_ZERO`）的曲线：被引擎拒绝的曲线（例如超出适用范围的几何 MTF，或替代光瞳下的曲线）
+即使 JSON 中保留了数组，也会以 `DESIGN_CURVE_UNAVAILABLE` 拒绝，并给出引擎的状态和原因。
+`os-optics-kit mtf` 单独输出设计的光学 MTF：一张表、一个 JSON 文档和每条谱线一张图（[MTF](mtf.md)）；
+它保存的 `imaging.json` 可直接作为 `--design`。
+
 两条曲线是不同的量：
 
 | 方面 | 测得的 SFR | 设计曲线 |
