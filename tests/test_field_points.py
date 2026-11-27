@@ -16,7 +16,7 @@ from os_optics_kit import field_points as fp
 from os_optics_kit import geometry3d as g
 from os_optics_kit import imaging_results as ir
 
-from workflow_fixtures import BEAM_ALONG_X, invoke
+from workflow_fixtures import BEAM_ALONG_X, TempDir, invoke
 
 U_AXIS, V_AXIS = (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)  # an image plane posed with BEAM_ALONG_X
 
@@ -365,6 +365,23 @@ class BudgetTests(unittest.TestCase):
         self.assertEqual(reason, "TRACE_BUDGET_EXHAUSTED")
         self.assertIn("max_trace_steps", message)
         self.assertEqual(fp._final_state(dict(row, source_id="FP4"), None, execution)[0], "NO_ARRIVAL")
+
+
+class OutputDirectoryTests(unittest.TestCase):
+    def test_a_non_empty_directory_needs_overwrite_which_removes_only_the_commands_files(self):
+        from os_optics_kit import workflow_common as wc
+
+        with TempDir() as base:
+            out = base / "fp"
+            self.assertEqual(wc.prepare_output(out, False, fp.FILES), out)
+            for name in ("field-points.json", "imaging-2.json", "notes.txt"):
+                (out / name).write_text("x", encoding="utf-8")
+            (out / "run").mkdir()
+            with self.assertRaises(wc.WorkflowError) as exists:
+                wc.prepare_output(out, False, fp.FILES)
+            self.assertEqual(exists.exception.code, "OUTPUT_EXISTS")
+            wc.prepare_output(out, True, fp.FILES)
+            self.assertEqual(sorted(p.name for p in out.iterdir()), ["notes.txt"])
 
 
 class ImagingObjectTests(unittest.TestCase):
