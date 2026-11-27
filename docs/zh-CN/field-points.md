@@ -29,6 +29,8 @@ os-optics-kit field-points project.json --plane image_plane --out fp \
 - **MTF**：`--mtf-frequencies F,..`（周/毫米）在评估用 Project 上运行一次成像分析（每次调用最多
   32 个视场点）。`--launch-grid`、`--no-convergence` 和 `--imaging-request FILE`（`os-optics schema
   imaging-request` 中的其他字段）设定光瞳采样；视场、谱线、频率和主光线的穿越序号由本命令自行设定。
+  成像分析是最耗时的一步：对 30 个面的 Yutong P2b 镜头，默认发射网格（64，细化到 128）下一条非偏振谱线
+  在本机约需 13 分钟，而十一个视场点的几何计算只需 2 分钟。
 - **文件**：`--out DIR` 须为新目录或空目录（`--overwrite` 会替换本命令写出的文件）。`--write-run`
   另写出评估运行 `DIR/run`，供 `os-optics-kit field`、`fans` 和 `mtf` 读取；这是一次完整运行，
   大型镜头需要数分钟。

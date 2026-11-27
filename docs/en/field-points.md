@@ -37,7 +37,10 @@ os-optics-kit field-points project.json --plane image_plane --out fp \
   evaluated Project (32 field points per call). `--launch-grid`, `--no-convergence`
   and `--imaging-request FILE` (any other key of `os-optics schema imaging-request`)
   set the pupil sampling; the command sets the fields, lines, frequencies and the
-  chief ray's crossing itself.
+  chief ray's crossing itself. The imaging analysis is the expensive step: one
+  unpolarized line of the 30-surface Yutong P2b lens at the default launch grid
+  (64, refined to 128) takes about 13 minutes here, the field-point geometry of
+  eleven points 2 minutes.
 - **Files**: `--out DIR` must be new or empty (`--overwrite` replaces this
   command's files). `--write-run` also writes the evaluated run `DIR/run`, which
   `os-optics-kit field`, `fans` and `mtf` read; it is a full run (minutes on a large
