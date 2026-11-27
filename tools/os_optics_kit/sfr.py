@@ -47,6 +47,7 @@ try:
 except ModuleNotFoundError:  # numpy comes with os-optics; only an install without it lacks numpy
     np = None  # type: ignore[assignment]
 
+from . import imaging_results
 from ._engine import require_matplotlib
 from .result_summary import ArgumentParser, emit_cli
 
@@ -531,65 +532,55 @@ def read_design(path, *, line=None, direction="both", curve="mtf", unit=None):
         record.update(kind="csv", frequency_unit=unit, curves={"csv": (frequency, values)},
                       description="frequency,value CSV")
         return record
-    try:  # a Windows shell redirect ('>') writes UTF-16 with a byte-order mark
-        document = json.loads(data.decode("utf-16" if data[:2] in (b"\xff\xfe", b"\xfe\xff") else "utf-8-sig"))
-    except (UnicodeDecodeError, ValueError) as exc:
-        raise SfrError("DESIGN_INVALID", f"--design {path.name} is neither JSON nor .csv: {exc}") from None
-    if not isinstance(document, dict) or document.get("schema") != "opensci.analysis_result" \
-            or document.get("analysis") != "IMAGING" or not isinstance(document.get("arrays"), dict):
-        raise SfrError("DESIGN_INVALID", "--design JSON must be the output of 'os-optics results imaging' "
-                                         "(schema opensci.analysis_result, analysis IMAGING)")
+    try:
+        document = imaging_results.load(path)
+    except imaging_results.ImagingDocumentError as exc:
+        raise SfrError("DESIGN_INVALID", f"--design must be the output of 'os-optics results imaging' or a .csv: "
+                                         f"{exc}") from None
     if unit not in (None, "cy/mm"):
         raise SfrError("BAD_ARGUMENT", "engine imaging frequencies are cycles/mm; omit --design-unit")
-    arrays = document["arrays"]
-    suffix = ".frequencies_cyc_per_mm"
-    lines = sorted(key[:-len(suffix)] for key in arrays if key.endswith(suffix))
-    scopes = {}
-    for quantity in document.get("quantities") or []:
-        prefix = str(quantity.get("quantity_id", "")).split(".", 1)[0]
-        scopes.setdefault(prefix, quantity.get("scope") or {})
-    if not lines:
+    lines = imaging_results.lines(document)
+    if not any(entry["frequencies_cyc_per_mm"] for entry in lines):
         raise SfrError("DESIGN_CURVE_UNAVAILABLE", "the imaging result holds no MTF frequencies (no field was analysed)")
-    available = ", ".join(f"{name} ({scopes.get(name, {}).get('wavelength_nm')} nm)" for name in lines)
+    available = ", ".join(f"{entry['line_id']} ({entry['wavelength_nm']} nm)" for entry in lines)
+    names = [entry["line_id"] for entry in lines]
     if line is None:
-        if len(lines) > 1:
-            raise SfrError("DESIGN_SELECTION_REQUIRED", f"the imaging result holds {len(lines)} lines; choose one "
+        if len(names) > 1:
+            raise SfrError("DESIGN_SELECTION_REQUIRED", f"the imaging result holds {len(names)} lines; choose one "
                                                         f"with --design-line: {available}")
-        chosen = lines[0]
-    elif line in lines:
+        chosen = names[0]
+    elif line in names:
         chosen = line
     else:
-        matches = [name for name in lines if name.split("#", 1)[0] == line]
+        matches = [name for name in names if name.rpartition("#")[0] == line]
         if len(matches) != 1:
             raise SfrError("DESIGN_SELECTION_UNKNOWN", f"--design-line {line} is not one line of: {available}")
         chosen = matches[0]
-    frequency = np.array(arrays[chosen + suffix], dtype=np.float64)
-    quantities = {q.get("quantity_id"): q for q in document.get("quantities") or []}
-    curves, dropped = {}, {}
+    entry = lines[names.index(chosen)]
+    curves, dropped, status = {}, {}, {}
     for name in (DIRECTIONS if direction == "both" else (direction,)):
-        key = f"{chosen}.{curve}_{name}"
-        if key not in arrays:
-            quantity = quantities.get(key) or {}
-            reason = quantity.get("reason") or "absent"
-            raise SfrError("DESIGN_CURVE_UNAVAILABLE", f"{key} is not in the imaging result ({reason}: "
-                                                       f"{quantity.get('message') or 'no values'})")
-        raw = arrays[key]
-        if len(raw) != frequency.size:
-            raise SfrError("DESIGN_INVALID", f"{key} and its frequencies differ in length")
-        keep = np.array([value is not None for value in raw], dtype=bool)
-        values = np.array([np.nan if value is None else value for value in raw], dtype=np.float64)
+        # only a curve the Engine states as KNOWN: a declined one keeps an array in the document, never a curve here
+        found = imaging_results.curve(document, chosen, curve, name)
+        if not found["usable"]:
+            raise SfrError("DESIGN_CURVE_UNAVAILABLE", f"{found['quantity_id']} is {found['status']} in the imaging "
+                                                       f"result ({found['reason'] or 'no reason stated'}: "
+                                                       f"{found['message'] or 'no values'})")
+        frequency = np.array(found["frequencies_cyc_per_mm"], dtype=np.float64)
+        keep = np.array([value is not None for value in found["values"]], dtype=bool)
+        values = np.array([np.nan if value is None else value for value in found["values"]], dtype=np.float64)
         dropped[name] = [float(f) for f in frequency[~keep]]
-        curves[name] = _checked_curve(frequency[keep], values[keep], key)
-    scope = scopes.get(chosen, {})
+        status[name] = {"status": found["status"], "converged": found["converged"],
+                        "value_kind": found["value_kind"], "model_basis": found["model_basis"]}
+        curves[name] = _checked_curve(frequency[keep], values[keep], found["quantity_id"])
+    identity = imaging_results.identity(document)
     record.update(kind="os_optics_results_imaging", frequency_unit="cy/mm", curves=curves,
                   description=f"os-optics results imaging: {curve}, line {chosen}",
-                  line=chosen, source_id=scope.get("source_id"), wavelength_nm=scope.get("wavelength_nm"),
-                  observation_id=scope.get("observation_id"), curve=curve,
+                  line=chosen, source_id=entry["source_id"], wavelength_nm=entry["wavelength_nm"],
+                  observation_id=entry["observation_id"], curve=curve, curve_status=status,
                   dropped_null_frequencies=dropped,
                   identity=(document.get("identity") or {}).get("physical"),
-                  analysis_version=document.get("analysis_version"),
-                  execution_outcome=(document.get("execution") or {}).get("outcome"),
-                  axes=(arrays.get("conventions") or {}).get("axes"))
+                  analysis_version=identity["analysis_version"], execution_outcome=identity["execution_outcome"],
+                  axes=((document.get("arrays") or {}).get("conventions") or {}).get("axes"))
     return record
 
 

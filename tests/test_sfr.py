@@ -290,6 +290,21 @@ class RefusalTests(unittest.TestCase):
         self.assertIn("SRC0#0 (587.5618 nm)", self.refuse(
             "DESIGN_SELECTION_REQUIRED", ["EDGE", "--design", DESIGN, "--pixel-pitch-um", "5"]))
 
+    def test_design_takes_only_curves_the_engine_states_known(self):
+        # os-optics 0.14 keeps the array of a geometric MTF outside its regime; it is still no design curve
+        sonnar = ROOT / "tests" / "data" / "mtf-sonnar-imaging.json"
+        self.assertIn("SRC2#0.geometric_mtf_tangential", json.loads(sonnar.read_text(encoding="utf-8"))["arrays"])
+        with self.assertRaises(S.SfrError) as caught:
+            S.read_design(sonnar, line="SRC2", curve="geometric_mtf")
+        self.assertEqual(caught.exception.code, "DESIGN_CURVE_UNAVAILABLE")
+        self.assertIn("OUT_OF_MODEL_SCOPE", str(caught.exception))
+        design = S.read_design(sonnar, line="SRC1", curve="geometric_mtf", direction="sagittal")
+        self.assertEqual(design["curve_status"]["sagittal"]["status"], "KNOWN")
+        stand_in = ROOT / "tests" / "data" / "mtf-edge-imaging.json"  # UNKNOWN (stand-in pupil) with arrays
+        with self.assertRaises(S.SfrError) as caught:
+            S.read_design(stand_in, line="B#0")
+        self.assertIn("PUPIL_NOT_BOUNDED", str(caught.exception))
+
     def test_existing_output_needs_overwrite(self):
         with TempDir() as tmp:
             edge = tmp / "edge.npy"
