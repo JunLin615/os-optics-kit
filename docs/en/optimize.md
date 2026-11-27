@@ -96,7 +96,8 @@ start that holds it. The best candidate is always taken from the feasible evalua
 
 Active constraints. `trf` treats each constraint as a quadratic penalty, so where a constraint is active it
 converges just outside it. Its last point is then not feasible: the termination reason is `CONVERGED_INFEASIBLE` and
-the status `STOPPED`, with the best feasible evaluation as `best`. Use `slsqp`, or a smaller constraint `scale` (a
+the status `STOPPED`, with the best feasible evaluation as `best`. A last point within 1e-6 of every limit (in
+constraint scales), as SLSQP lands on a binding nonlinear constraint, counts as on it. Use `slsqp`, or a smaller constraint `scale` (a
 stiffer penalty), when a constraint is expected to bind.
 
 ## Read the result

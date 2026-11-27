@@ -149,6 +149,55 @@ def test_trf_converging_outside_an_active_constraint_is_not_converged(fake, tmp_
     assert outcome.reason == "CONVERGED" and outcome.solver_record.result.feasible is True
 
 
+class RoundSession(QuadraticSession):
+    """``sum`` is a^2 + b^2: a nonlinear constraint SLSQP meets only to rounding."""
+
+    def evaluate(self, document, outputs=(), targets=None):
+        reply = super().evaluate(document, outputs, targets)
+        x = document.get("x", {})
+        for target in reply.result.targets:
+            if target.target_id == "sum":
+                target.value = float(x.get("a", 0.0)) ** 2 + float(x.get("b", 0.0)) ** 2
+        return reply
+
+
+@scipy_needed
+@pytest.mark.parametrize("limit", [0.37, 1.0, 2.0, 3.3])
+def test_slsqp_on_a_binding_nonlinear_constraint_is_converged(limit):
+    spec = _spec(constraints=[{"name": "radius", "source": {"target": "sum"}, "maximum": limit}])
+    loaded = optimize.load_spec(spec, edit=_set)
+    adapter = ea.Adapter(loaded["problem"], session=RoundSession(), edit=_set)
+    outcome = solvers.solve(adapter, solvers.Settings(method="slsqp", max_evaluations=200))
+    margin = outcome.solver_record.result.constraints[0]["margin"]
+    assert abs(margin) <= solvers.FEASIBILITY_TOLERANCE  # the constraint binds at the solver's point
+    assert outcome.reason == "CONVERGED"
+
+
+def test_overwrite_never_writes_through_a_link_or_another_case_of_an_input(tmp_path):
+    real = tmp_path / "real-spec.json"
+    real.write_text("{}", encoding="utf-8")
+    out = tmp_path / "out"
+    out.mkdir()
+    try:
+        (out / "spec.json").symlink_to(real)
+    except (OSError, NotImplementedError):
+        pytest.skip("this system cannot create symbolic links")
+    with pytest.raises(wc.WorkflowError) as linked:
+        wc.prepare_output(out, True, optimize.FILES, keep=(real,))
+    assert linked.value.code == "OUTPUT_IS_INPUT" and real.read_text(encoding="utf-8") == "{}"
+
+
+def test_overwrite_refuses_an_input_named_in_another_case(tmp_path):
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "Spec.json").write_text("{}", encoding="utf-8")
+    if not (out / "spec.json").exists():
+        pytest.skip("case-sensitive file system: Spec.json and spec.json are different files")
+    with pytest.raises(wc.WorkflowError) as refused:
+        wc.prepare_output(out, True, optimize.FILES, keep=(out / "Spec.json",))
+    assert refused.value.code == "OUTPUT_IS_INPUT" and (out / "Spec.json").is_file()
+
+
 def test_overwrite_never_replaces_the_input_spec_or_project(fake, tmp_path):
     out = tmp_path / "run"
     out.mkdir()

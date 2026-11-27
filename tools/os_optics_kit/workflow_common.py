@@ -297,6 +297,13 @@ def _produced(name, produced):
     return any(entry.fullmatch(name) if hasattr(entry, "fullmatch") else name == entry for entry in produced)
 
 
+def _same_file(a, b):
+    try:
+        return os.path.samefile(a, b)
+    except OSError:
+        return False
+
+
 def check_output(out_dir, overwrite, produced=(), *, keep=(), writes=None):
     """Refuse an output directory before any work, without changing it (``prepare_output`` states the rule).
 
@@ -319,6 +326,11 @@ def check_output(out_dir, overwrite, produced=(), *, keep=(), writes=None):
         path = Path(item).resolve()
         replaced = path.parent == root and _produced(path.name, writes)
         removed = any(parent.parent == root and _produced(parent.name, produced) for parent in path.parents)
+        if not (replaced or removed) and path.exists():  # an output entry that is the input itself: a link to it,
+            replaced = any(_same_file(entry, path) for entry in out_dir.iterdir()  # or another case of its name
+                           if _produced(entry.name, writes) or _produced(entry.name.lower(), writes))
+            if not replaced:
+                replaced = any(_same_file(out_dir / name, path) for name in writes if isinstance(name, str))
         if replaced or removed:
             raise WorkflowError("OUTPUT_IS_INPUT", f"--overwrite would {'replace' if replaced else 'remove'} the input "
                                 f"{path.as_posix()}; choose another --out", out=out_dir.as_posix(),

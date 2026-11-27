@@ -279,16 +279,33 @@ def solve(adapter: Any, settings: Settings, recorder: Recorder | None = None) ->
     return outcome
 
 
+#: A solver's last point counts as on a constraint when every margin (in constraint scales) is at least minus this:
+#: SLSQP meets a binding nonlinear constraint only to rounding (margins of -1e-13 to -1e-10 are usual).
+FEASIBILITY_TOLERANCE = 1e-6
+
+
+def _within_tolerance(result: Any) -> bool:
+    """Feasible, or violating no more than ``FEASIBILITY_TOLERANCE`` and for no other reason (lost rays, ...)."""
+    if not result.valid:
+        return False
+    if result.feasible is True:
+        return True
+    reasons = list(getattr(result, "infeasible", None) or [])
+    margins = [c.get("margin") for c in result.constraints]
+    return (reasons == ["CONSTRAINT_VIOLATED"] and all(m is not None for m in margins)
+            and all(c.get("satisfied") is not None for c in result.constraints)
+            and min(float(m) for m in margins) >= -FEASIBILITY_TOLERANCE)
+
+
 def _final_point(evaluator: Evaluator, space: _Space, z: Sequence[float], outcome: SolveOutcome) -> None:
-    """Record the evaluation at the solver's last point; a convergence there that is not feasible is
-    ``CONVERGED_INFEASIBLE`` (trf treats constraints as quadratic penalties, so with an active constraint it converges
-    just outside it)."""
+    """Record the evaluation at the solver's last point; a convergence there that is not feasible, even within
+    ``FEASIBILITY_TOLERANCE``, is ``CONVERGED_INFEASIBLE`` (trf treats constraints as quadratic penalties, so with an
+    active constraint it converges just outside it)."""
     key = tuple(float(v) for v in space.x(z))
     if key not in evaluator.cache:
         evaluator(key, "step")  # normally cached: both solvers evaluate the point they return
     outcome.solver_record = evaluator.cache[key]
-    result = outcome.solver_record.result
-    if outcome.reason == "CONVERGED" and not (result.valid and result.feasible is True):
+    if outcome.reason == "CONVERGED" and not _within_tolerance(outcome.solver_record.result):
         outcome.reason = "CONVERGED_INFEASIBLE"
         outcome.message = (f"{outcome.message} The solver's last point is not feasible; the best candidate is the "
                            "best feasible evaluation, not the solver's optimum.").strip()
@@ -347,6 +364,6 @@ def _slsqp(evaluator: Evaluator, space: _Space, settings: Settings, outcome: Sol
     _final_point(evaluator, space, res.x, outcome)
 
 
-__all__ = ["BudgetExhausted", "DIFFERENCES", "EvaluationRecord", "Evaluator", "METHODS", "ROLES", "Settings",
-           "SettingsError", "SolveOutcome", "TERMINATIONS", "X_SCALES", "best", "closest", "margins", "objective_value",
-           "solve"]
+__all__ = ["BudgetExhausted", "DIFFERENCES", "EvaluationRecord", "Evaluator", "FEASIBILITY_TOLERANCE", "METHODS", "ROLES",
+           "Settings", "SettingsError", "SolveOutcome", "TERMINATIONS", "X_SCALES", "best", "closest", "margins",
+           "objective_value", "solve"]
