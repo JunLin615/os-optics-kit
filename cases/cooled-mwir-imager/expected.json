@@ -1,0 +1,18 @@
+{
+  "catalog": null,
+  "engine": "0.14.0",
+  "execution": "COMPLETED",
+  "schema": "os-optics-kit.case-expected",
+  "schema_version": 2,
+  "targets": {
+    "spot_rms_f0deg_3000nm": "MET",
+    "spot_rms_f0deg_4000nm": "MET",
+    "spot_rms_f0deg_5000nm": "MET",
+    "spot_rms_f0p75deg_3000nm": "MET",
+    "spot_rms_f0p75deg_4000nm": "MET",
+    "spot_rms_f0p75deg_5000nm": "MET",
+    "spot_rms_f1p5deg_3000nm": "MET",
+    "spot_rms_f1p5deg_4000nm": "MET",
+    "spot_rms_f1p5deg_5000nm": "MET"
+  }
+}

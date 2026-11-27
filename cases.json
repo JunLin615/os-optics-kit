@@ -266,6 +266,58 @@
       "project_sha256": "aad5b00ec78801618d78529801cfecb25b3e501c40f1f89877510f74c8958ae9"
     },
     {
+      "name": "cooled-mwir-imager",
+      "title": "A cooled 3-5 um imager with the cold stop as its aperture stop",
+      "summary": "A four-element F/2 imager for 3-5 um, EFL 100 mm, half field 1.5 deg, whose aperture stop is the cold stop of a cooled detector in image space (CSH 13 mm).",
+      "path": "cases/cooled-mwir-imager",
+      "class": "lens",
+      "domain": [
+        "imaging"
+      ],
+      "provenance": "self-built",
+      "publication": "own-work",
+      "scale": {
+        "band": "medium",
+        "elements": 5,
+        "sources": 9,
+        "branches": 0
+      },
+      "engine": "0.14.0",
+      "catalog": null,
+      "tools": [
+        "summary"
+      ],
+      "tags": [
+        "mid-infrared",
+        "aperture-stop",
+        "detector"
+      ],
+      "images": [
+        {
+          "file": "images/iso.png",
+          "kind": "system-view",
+          "view": "iso"
+        },
+        {
+          "file": "images/section.png",
+          "kind": "system-view",
+          "view": "section"
+        }
+      ],
+      "files": [
+        "CASE.md",
+        "README.md",
+        "README.zh-CN.md",
+        "expected.json",
+        "images.json",
+        "images/iso.png",
+        "images/section.png",
+        "prescription.csv",
+        "project.json"
+      ],
+      "project_sha256": "5931b294e265f4b2e6b07a4e27a64b50137a1a06b596ccc5e809cc2544e29a28"
+    },
+    {
       "name": "cylindrical-light-sheet",
       "title": "Cylindrical light-sheet thickness and range",
       "summary": "A two-surface cylindrical lens focuses a 488 nm Gaussian beam along y. Compare 50 and 40 mm focal lengths to measure the tradeoff between waist FWHM and the propagation range within sqrt(2) of that thickness.",

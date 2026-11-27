@@ -1,0 +1,43 @@
+#! format=csv-surface-table/1
+#! units=mm
+#! name=cooled-mwir-imager
+#! wavelength_min_nm=3000
+#! wavelength_max_nm=5000
+
+# A cooled 3-5 um imager whose aperture stop IS the cold stop of a cooled
+# detector: the stop sits in image space, CSH = 13 mm before the focal plane.
+#
+# The focal ratio is set by the entrance pupil, D = EFL / F# = 50 mm, which is
+# the image of the cold stop through the front group: F# = 2.0.
+#
+# Two diameters of the stop are worth distinguishing:
+#   * CSH / F# = 6.5 mm is the smallest stop that passes the ON-AXIS cone;
+#   * a real cold stop is larger, because the beam walks across it as the
+#     field angle grows -- at the design field the marginal ray lands well
+#     outside the axial footprint.  The stop here is 9.0 mm, measured from the
+#     traced pupil rays rather than assumed.
+#
+# The clear semi-diameters carry the beam plus the field walk (the 200 mm
+# object distance times the tangent of the field angle) plus a 1.5 mm
+# mounting margin.  The axial gaps keep neighbouring surfaces from
+# intersecting inside the clear aperture.
+#
+# Layout: object -> L1 (Si) -> L2 (ZnSe) -> L3 (CaF2) -> L4 (Sapphire)
+#         -> COLD STOP -> detector window (Si) -> focal plane
+#
+# Materials are the four the public catalog publishes across 3-5 um.
+
+[surfaces]
+surface,radius,thickness,material,semi_diameter,edge_semi_diameter,conic,a4,a6
+S1,227.0,10.8,SILICON,33.5,33.5
+S2,582.868,5.4,,33.9,33.9
+S3,103.9991,8.1,ZNSE,34.0,34.0
+S4,107.6064,7.2,,34.3,34.3
+S5,438.6239,12.6,CAF2,34.6,34.6
+S6,-328.2219,5.4,,35.0,35.0
+S7,238.7069,7.2,SAPPHIRE,35.2,35.2
+S8,294.169,14.4,,35.5,35.5
+STO,,13.0,,4.5,4.5
+W1,,1.0,SILICON,7.0,7.0
+W2,,2.0,,7.0,7.0
+IMG,,,,7.0,7.0
