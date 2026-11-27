@@ -100,6 +100,14 @@ python figures.py run --out images
 与 `message` 原文。`studies/aspheric.csv` 与 `studies/spherical-control.csv` 是两个面型表，
 `prescription.csv` 是非球面版，`input_prescription.csv` 是输入处方（不含光阑行）。
 
+`studies/optimize-aspheric.json` 是针对本 Project 的 `os-optics-kit optimize` 规格：五个面型与像面变量，九个光斑目标
+作为目标量，近轴 EFL 保持在 50 ± 0.25 mm，玻璃厚度至少 3 mm，并限制渐晕（光斑 RMS 只统计到达的光线）。它约五分钟
+完成（150 次引擎计算）；kit 的优化指南用它比较两种求解器：
+
+```bash
+os-optics-kit optimize studies/optimize-aspheric.json --out opt
+```
+
 面型表可直接导入：
 
 ```bash

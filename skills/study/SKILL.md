@@ -18,7 +18,7 @@ kind: tool
 
 ## When not to use
 
-- One run: `os-optics project run`. A sequential optimiser keeps its own loop and calls
+- One run: `os-optics project run`. A sequential optimiser: `optimize`, or your own loop on
   `os_optics_kit.study.evaluation_adapter` (variables to residuals, `docs/en/evaluation-adapter.md`).
 
 ## Inputs

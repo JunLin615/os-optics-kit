@@ -6,7 +6,9 @@
 a root finder or a scan you write yourself. Each call edits the Project, evaluates only what the declared quantities
 need on one `os_optics.local.EvaluationSession` (os-optics 0.14), and returns a fixed-length residual vector with
 every value, margin and reason behind it. For a batch of independent Projects in worker processes, use the study
-executor instead ([Studies](studies.md#candidate-designs-and-external-search-code)).
+executor instead ([Studies](studies.md#candidate-designs-and-external-search-code)). For a bounded local search
+with a history and the best feasible Project, use `os-optics-kit optimize` ([Optimization](optimize.md)), which runs
+on this adapter.
 
 ## Declare the problem
 
@@ -31,7 +33,7 @@ result = adapter.evaluate({"refocus": 0.3})   # or adapter.evaluate([0.3]), in d
 | `Variable` | `name`, `ops` (edit ops of `os-optics-kit edit`; `"$value"` is the value in `unit`), `bounds` (finite, low < high), `nominal`, `scale` |
 | `Objective` | `name`, `source`, `goal`, `scale` (> 0), `weight` (>= 0) |
 | `Constraint` | `name`, `source`, `minimum` and/or `maximum` (finite, `minimum <= maximum`), `scale` (> 0) |
-| `Problem` | `project`, `variables`, `objectives`, `constraints`, `aggregation` (`sum_squares`, `sum_abs`, `max_abs`), `imaging`, `invalid_residual`, `value_use` (`exact`, `reported`) |
+| `Problem` | `project`, `variables`, `objectives`, `constraints`, `aggregation` (`sum_squares`, `sum_abs`, `max_abs`), `imaging`, `invalid_residual`, `value_use` (`exact`, `reported`), `ray_loss` (`infeasible`, `report`) |
 
 Objective and constraint names are unique together: they name the residuals (`problem.residual_names`). A
 declaration that breaks these rules raises `ProblemError` when the `Problem` is built.
@@ -39,6 +41,16 @@ declaration that breaks these rules raises `ProblemError` when the `Problem` is 
 ## Quantity sources
 
 - `{"target": TARGET_ID}`: a target the Project declares, evaluated through the Engine's `requirements`.
+- `{"paraxial": {"components": [ID, ...], "wavelength_nm": W, "quantity": Q}}`: the Engine's paraxial analysis
+  (`os_optics.local.paraxial_analysis`) of the candidate's components at `W`; `Q` is `efl_mm`, `bfl_mm`, `ffd_mm`,
+  `front_principal_plane_mm` or `rear_principal_plane_mm` (optional `axis` `X` / `Y` and `source_id` as in the
+  analysis). Conic and polynomial terms do not change paraxial power. A value the analysis states as null (the
+  `efl_mm` of an afocal pair) is `NO_VALUE`; an analysis it refuses is `ANALYSIS_REFUSED` (stage `paraxial`). One
+  analysis per request serves every quantity of a candidate.
+- `{"solids": {"quantity": Q, "component": ID, "member": ID}}`: the optical-solid check (`solid_check`): the smallest
+  `Q` (`min_thickness_mm`, `edge_thickness_mm`, `centre_thickness_mm`, `clear_aperture_min_thickness_mm`) over the
+  glass gaps of the component (and COMPOUND member; every element when none is named). The reading names the binding
+  gap under `binding` (instance, member, surfaces, medium).
 - `{"mtf": {"observation": ID, "frequency_cyc_per_mm": F, "direction": "tangential"}}`: the MTF curves of the
   imaging analysis of plane `ID`, read at `F`. MTF is a constraint only: an MTF source, or a target whose metric
   name contains `mtf`, is refused as an objective.
@@ -53,7 +65,21 @@ analysis states.
 
 `Problem.imaging` is the imaging request (`launch_grid`, `psf_half_width_um`, `psf_samples`, ...). Without it
 the adapter uses `launch_grid` 24, which undersamples many pupils: the curves then read `OUT_OF_MODEL_SCOPE`.
-Pass the case's own request, for example `cases/achromatic-imaging/imaging-request.json`.
+Pass the case's own request, for example `cases/achromatic-imaging/imaging-request.json`. When every MTF constraint
+of a plane names its `source_id` (32 at most), the request asks for those fields only, and when every one names
+`wavelength_nm`, for the Engine's spectral lines within 0.05 nm of them only; a request that states `fields` or
+`wavelengths_nm` itself is kept. The Engine analyses each line on its own, so the numbers are the same and fewer
+lines are traced. Each MTF result records the request it was read from (`imaging_request`).
+
+## Lost rays
+
+`spot_rms_mm` and `spot_centroid_*` are computed from the pupil rays that reach the plane: a ray clipped on the way is
+not part of the RMS, so vignetting can make a spot smaller. A reading of such a target carries
+`pupil_rays_launched` and `pupil_rays_arrived` of the arrivals it selects (plane, `source_id`, `wavelength_nm`,
+`path_id`, `crossing_index`), and the source `{"rays": {"target": ID}}` reads their ratio `arrived / launched` (unit 1)
+for such a target, so a constraint can bound the vignetting. `Problem.ray_loss` decides what a loss means: `"infeasible"` (default) makes the
+candidate `feasible: false` with `RAYS_LOST` in `infeasible`; `"report"` only records it. The residuals are the same
+either way, and `ray_loss` lists each objective or constraint that read a loss.
 
 ## What a value is
 
@@ -79,7 +105,8 @@ it, and `feasible` is `null` when a constraint is not established.
 | `residuals` | always `len(objectives) + len(constraints)` entries: `sqrt(weight) * (value - goal) / scale` per objective, then `max(0, -margin)` per constraint |
 | `objective` | the `aggregation` of the objective errors (constraint violations do not count) |
 | `residual_objective` | `sum(r ** 2 for r in residuals)`; with `sum_squares` it equals `objective + sum(violation ** 2)` and `dls_compatible` is true |
-| `feasible` | every constraint holds (`true`), one is violated (`false`), or not established (`null`) |
+| `feasible` | every constraint holds (`true`), one is violated or pupil rays were lost under `ray_loss: "infeasible"` (`false`), or not established (`null`) |
+| `infeasible`, `ray_loss` | why a valid candidate is not feasible (`CONSTRAINT_VIOLATED`, `RAYS_LOST`); the readings that lost pupil rays |
 | `objectives`, `constraints` | one entry per declared item with value, kind and facts; empty on an invalid candidate |
 | `evaluation`, `identity` | the Engine's evaluation scope and the identity of the numbers |
 | `reason` | for an invalid candidate: `code`, `stage`, `message` and details |
@@ -97,7 +124,7 @@ for a candidate. Reason codes:
 | `UNKNOWN_VARIABLE`, `MISSING_VARIABLE` | the candidate names a variable the problem does not declare, or omits one (a sequence: too many or too few values) |
 | `EDIT_REFUSED` | the edit ops refused the value |
 | `PROJECT_REFUSED`, `PLAN_REFUSED`, `RUN_STOPPED` | the Engine refused the Project or the evaluation plan, or stopped |
-| `ANALYSIS_REFUSED` | the imaging analysis refused the request |
+| `ANALYSIS_REFUSED` | the imaging or paraxial analysis refused the request (`stage` `imaging` or `paraxial`) |
 | `MTF_SOURCE_NOT_FOUND` | an MTF selection matches no curve |
 | `QUANTITY_UNAVAILABLE` | a quantity was not computed, or its value is not used under `value_use` |
 | `RESIDUAL_NOT_FINITE` | a residual or margin overflowed (for residuals, `not_finite` names them and `residuals` holds `null` in their place) |

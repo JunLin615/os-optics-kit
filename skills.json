@@ -57,12 +57,12 @@
       "name": "edit",
       "kind": "tool",
       "description": "List a Project's objects with editable values, units and frames, then apply edit operations by object ID with explicit units, checked by the engine and written atomically to a new file (optionally run). Use it to change a design reproducibly.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "command": "os-optics-kit edit",
       "requires": "os-optics>=0.14,<0.15",
       "path": "skills/edit/SKILL.md",
-      "tokens": 665,
-      "sha256": "2ffcbef281eae5bbb116cabd6f9f96b9b9d368ca857576958eaeab2571a6fe56"
+      "tokens": 727,
+      "sha256": "8a6257b84a6789c1efcd71761dcee540e19dc67bf0613254c3343714cf083599"
     },
     {
       "name": "fans",
@@ -122,13 +122,13 @@
     {
       "name": "optimize",
       "kind": "tool",
-      "description": "Bounded optimization of a Project from a JSON spec: variables, objectives and constraints, with a history and the best feasible Project.",
+      "description": "Bounded local optimization of a Project from a JSON spec (trf least squares or SLSQP): named variables, objectives and constraints with margins, a hard evaluation budget, a full history and the best feasible Project, re-checked in a fresh session. Use it to refine a fixed layout.",
       "version": "0.1.0",
       "command": "os-optics-kit optimize",
       "requires": "os-optics>=0.14,<0.15",
       "path": "skills/optimize/SKILL.md",
-      "tokens": 136,
-      "sha256": "fff349fa535ab31caab369008e603c073a2ecc8771ec072b5b15387dd4df861d"
+      "tokens": 776,
+      "sha256": "98fb9b36f845e25f6b74bb101f50c491ad7a00fd043efd0a835ad638bb0eee8b"
     },
     {
       "name": "plot",
@@ -215,8 +215,8 @@
       "command": "os-optics-kit study",
       "requires": "os-optics>=0.14,<0.15",
       "path": "skills/study/SKILL.md",
-      "tokens": 898,
-      "sha256": "a91d2963fd610236a1e8daa193e19b0f6ead1ecaa6e8f308838f8f80783878fa"
+      "tokens": 899,
+      "sha256": "a5580e9efbc990e125c8156a2bcc72f851e278d31b20d5fa2e7618ce2072d020"
     },
     {
       "name": "summary",

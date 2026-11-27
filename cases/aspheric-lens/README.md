@@ -115,6 +115,15 @@ where the engine declined it — the reason and message verbatim. `studies/asphe
 `studies/spherical-control.csv` are the two surface tables; `prescription.csv` is the aspheric one, and
 `input_prescription.csv` is the input prescription, without the stop row.
 
+`studies/optimize-aspheric.json` is an `os-optics-kit optimize` spec on this Project: five surface and image-plane
+variables, the nine spot targets as objectives, the paraxial EFL held at 50 ± 0.25 mm, glass at least 3 mm thick and
+the vignetting bounded (the spot RMS counts arriving rays only). It runs in about five minutes (150 engine
+evaluations); the kit's optimization guide compares its two solvers on it:
+
+```bash
+os-optics-kit optimize studies/optimize-aspheric.json --out opt
+```
+
 The surface table imports directly:
 
 ```bash

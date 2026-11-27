@@ -88,7 +88,7 @@ import time
 from . import workflow_common as wc
 from . import sweep_parameters as sweep
 from ._engine import matplotlib_missing_message
-from .edit_project import EditError, apply_edits
+from .edit_project import EditError, apply_edits, model_value, model_value_unit
 from .study import aggregate as agg, execute as ex, options as opts, requests as rq, store
 
 PROG = "os-optics-kit sensitivity"
@@ -217,6 +217,16 @@ def base_nominal(document, parameter):
             raise wc.WorkflowError("SPEC_INVALID", f"parameter {name!r}: {exc}", parameter=name,
                                    error=exc.as_dict()) from None
     first, second = (_written_fields(document, probe, document) for probe in probes)
+    for op in ops:  # a model member a set_optical_model_value op writes (inside lists, which the diff does not open)
+        if isinstance(op, dict) and op.get("op") == "set_optical_model_value":
+            key = ("optical_model", op.get("model_id"), op.get("path"), None)
+            try:
+                unit = model_value_unit(op.get("path"))
+                values = [model_value(d, op.get("model_id"), op.get("path")) for d in (document, *probes)]
+            except EditError as exc:
+                raise wc.WorkflowError("SPEC_INVALID", f"parameter {name!r}: {exc}", parameter=name,
+                                       error=exc.as_dict()) from None
+            first[key], second[key] = (values[0], values[1], unit), (values[0], values[2], unit)
     candidates = {}
     for key in sorted(set(first) | set(second), key=repr):
         base_value, _, field_unit = (first.get(key) or second[key])

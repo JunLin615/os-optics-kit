@@ -1,0 +1,297 @@
+{
+ "schema": "os-optics-kit.optimize-spec",
+ "schema_version": 1,
+ "description": "Refine the five-element F/3.5 aspheric lens for RMS spot size at every field (0, 12.5, 25 deg) and wavelength (F, d, C): free the L1 front radius, the L5 back radius, the L5 front fourth-order term, the L2 front conic and the image-plane position, each within a local range around the start. Held: the focal length at 50 +- 0.25 mm (paraxial EFL at 587.56 nm), the glass at least 3 mm thick (optical-solid check) and the working aperture: the stop opening is not a variable, every pupil ray arrives on axis and at 12.5 deg, and at least 75 % at 25 deg (the start: 96, 89 and 86 of 96 at F, d, C). The spot RMS counts arriving rays only, so these rays constraints keep the search from shrinking spots by vignetting; ray_loss is report because the start already loses rays at 25 deg. The best design is re-checked with twice the pupil rings.",
+ "project": "../project.json",
+ "variables": [
+  {
+   "name": "R1_L1",
+   "unit": "mm",
+   "bounds": [
+    30.9,
+    31.9
+   ],
+   "scale": 0.5,
+   "ops": [
+    {
+     "op": "set_optical_model_value",
+     "model_id": "AS-L1",
+     "path": "/surfaces/0/radius_mm",
+     "value": "$value"
+    }
+   ]
+  },
+  {
+   "name": "R2_L5",
+   "unit": "mm",
+   "bounds": [
+    160,
+    186
+   ],
+   "scale": 5.0,
+   "ops": [
+    {
+     "op": "set_optical_model_value",
+     "model_id": "AS-L5",
+     "path": "/surfaces/1/radius_mm",
+     "value": "$value"
+    }
+   ]
+  },
+  {
+   "name": "A4_L5_front",
+   "bounds": [
+    -2.55e-06,
+    -1.55e-06
+   ],
+   "scale": 5e-07,
+   "ops": [
+    {
+     "op": "set_optical_model_value",
+     "model_id": "AS-L5",
+     "path": "/surfaces/0/aspheric_coefficients/0",
+     "value": "$value"
+    }
+   ]
+  },
+  {
+   "name": "conic_L2_front",
+   "bounds": [
+    37.9,
+    47.9
+   ],
+   "scale": 5.0,
+   "ops": [
+    {
+     "op": "set_optical_model_value",
+     "model_id": "AS-L2",
+     "path": "/surfaces/0/conic",
+     "value": "$value"
+    }
+   ]
+  },
+  {
+   "name": "image_x",
+   "unit": "mm",
+   "bounds": [
+    87.3,
+    87.8
+   ],
+   "scale": 0.05,
+   "ops": [
+    {
+     "op": "set_observation_pose",
+     "observation_id": "image_plane",
+     "position_mm": [
+      "$value",
+      0.0,
+      0.0
+     ]
+    }
+   ]
+  }
+ ],
+ "objectives": [
+  {
+   "name": "spot_0deg_F",
+   "source": {
+    "target": "spot_rms_f0deg_486.133nm"
+   },
+   "scale": 0.01
+  },
+  {
+   "name": "spot_0deg_d",
+   "source": {
+    "target": "spot_rms_f0deg_587.562nm"
+   },
+   "scale": 0.01
+  },
+  {
+   "name": "spot_0deg_C",
+   "source": {
+    "target": "spot_rms_f0deg_656.273nm"
+   },
+   "scale": 0.01
+  },
+  {
+   "name": "spot_12.5deg_F",
+   "source": {
+    "target": "spot_rms_f12.5deg_486.133nm"
+   },
+   "scale": 0.01
+  },
+  {
+   "name": "spot_12.5deg_d",
+   "source": {
+    "target": "spot_rms_f12.5deg_587.562nm"
+   },
+   "scale": 0.01
+  },
+  {
+   "name": "spot_12.5deg_C",
+   "source": {
+    "target": "spot_rms_f12.5deg_656.273nm"
+   },
+   "scale": 0.01
+  },
+  {
+   "name": "spot_25deg_F",
+   "source": {
+    "target": "spot_rms_f25deg_486.133nm"
+   },
+   "scale": 0.01
+  },
+  {
+   "name": "spot_25deg_d",
+   "source": {
+    "target": "spot_rms_f25deg_587.562nm"
+   },
+   "scale": 0.01
+  },
+  {
+   "name": "spot_25deg_C",
+   "source": {
+    "target": "spot_rms_f25deg_656.273nm"
+   },
+   "scale": 0.01
+  }
+ ],
+ "constraints": [
+  {
+   "name": "efl",
+   "source": {
+    "paraxial": {
+     "components": [
+      "AS"
+     ],
+     "wavelength_nm": 587.5618,
+     "quantity": "efl_mm"
+    }
+   },
+   "minimum": 49.75,
+   "maximum": 50.25,
+   "scale": 0.25
+  },
+  {
+   "name": "min_thickness",
+   "source": {
+    "solids": {
+     "component": "AS",
+     "quantity": "min_thickness_mm"
+    }
+   },
+   "minimum": 3.0,
+   "scale": 0.5
+  },
+  {
+   "name": "rays_0deg_F",
+   "source": {
+    "rays": {
+     "target": "spot_rms_f0deg_486.133nm"
+    }
+   },
+   "minimum": 0.99,
+   "scale": 0.01
+  },
+  {
+   "name": "rays_0deg_d",
+   "source": {
+    "rays": {
+     "target": "spot_rms_f0deg_587.562nm"
+    }
+   },
+   "minimum": 0.99,
+   "scale": 0.01
+  },
+  {
+   "name": "rays_0deg_C",
+   "source": {
+    "rays": {
+     "target": "spot_rms_f0deg_656.273nm"
+    }
+   },
+   "minimum": 0.99,
+   "scale": 0.01
+  },
+  {
+   "name": "rays_12.5deg_F",
+   "source": {
+    "rays": {
+     "target": "spot_rms_f12.5deg_486.133nm"
+    }
+   },
+   "minimum": 0.99,
+   "scale": 0.01
+  },
+  {
+   "name": "rays_12.5deg_d",
+   "source": {
+    "rays": {
+     "target": "spot_rms_f12.5deg_587.562nm"
+    }
+   },
+   "minimum": 0.99,
+   "scale": 0.01
+  },
+  {
+   "name": "rays_12.5deg_C",
+   "source": {
+    "rays": {
+     "target": "spot_rms_f12.5deg_656.273nm"
+    }
+   },
+   "minimum": 0.99,
+   "scale": 0.01
+  },
+  {
+   "name": "rays_25deg_F",
+   "source": {
+    "rays": {
+     "target": "spot_rms_f25deg_486.133nm"
+    }
+   },
+   "minimum": 0.75,
+   "scale": 0.01
+  },
+  {
+   "name": "rays_25deg_d",
+   "source": {
+    "rays": {
+     "target": "spot_rms_f25deg_587.562nm"
+    }
+   },
+   "minimum": 0.75,
+   "scale": 0.01
+  },
+  {
+   "name": "rays_25deg_C",
+   "source": {
+    "rays": {
+     "target": "spot_rms_f25deg_656.273nm"
+    }
+   },
+   "minimum": 0.75,
+   "scale": 0.01
+  }
+ ],
+ "ray_loss": "report",
+ "solver": {
+  "method": "trf",
+  "max_evaluations": 150,
+  "diff_step": 0.001
+ },
+ "verify": {
+  "ops": [
+   {
+    "op": "set_compute_budget",
+    "compute_budget": {
+     "max_interactions_per_path": 96,
+     "max_paths": 8192,
+     "max_trace_steps": 200000,
+     "pupil_points_per_ring": 12,
+     "pupil_ring_count": 16
+    }
+   }
+  ]
+ }
+}

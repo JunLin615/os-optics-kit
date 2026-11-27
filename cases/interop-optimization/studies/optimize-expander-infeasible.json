@@ -1,0 +1,18 @@
+{
+ "schema": "os-optics-kit.optimize-spec",
+ "schema_version": 1,
+ "description": "The beam expander under a divergence limit no separation reaches (at most 1e-9 rad, about 1e5 times below the 0.113 mrad optimum): the search ends NO_FEASIBLE, writes no best Project and keeps every candidate's margin in history.jsonl.",
+ "project": "../project.json",
+ "variables": [
+  {"name": "separation", "unit": "mm", "bounds": [150, 250], "scale": 1.0,
+   "ops": [{"op": "set_component_pose", "instance_id": "L2", "position_mm": [{"$value": {"offset": 100.0}}, 0.0, 50.0]}]}
+ ],
+ "objectives": [
+  {"name": "divergence", "source": {"target": "collimated"}, "goal": 0.0, "scale": 1e-4}
+ ],
+ "constraints": [
+  {"name": "collimated", "source": {"target": "collimated"}, "maximum": 1e-9, "scale": 1e-4}
+ ],
+ "solver": {"method": "trf", "max_evaluations": 60, "tolerances": {"ftol": 1e-12, "xtol": 1e-12, "gtol": 1e-12},
+            "diff_step": 1e-3}
+}

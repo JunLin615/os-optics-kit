@@ -25,6 +25,8 @@ os-optics results targets run
 python -m pip install -r requirements-optimization.txt
 python optimize_expander.py --out opt
 python optimize_expander.py --out opt-strict --max-divergence-rad 1e-9
+os-optics-kit optimize studies/optimize-expander.json --out kit-opt
+os-optics-kit optimize studies/optimize-expander-infeasible.json --out kit-strict
 ```
 
 ## Results
@@ -44,3 +46,14 @@ python optimize_expander.py --out opt-strict --max-divergence-rad 1e-9
 meet (`--max-divergence-rad 1e-9`) ends with NO_FEASIBLE_RESULT, exit code 2. The optimization ran with
 os-optics 0.13.0 on Python 3.14.7 (SciPy 1.18.1, Optuna 5.0.0, SALib 1.6.0). The engine run is verified with
 os-optics 0.14.0, in vacuum (`environment.pressure_pa` 0), and gives the same values.
+
+## With the kit's optimizer
+
+`studies/optimize-expander.json` states the same search for `os-optics-kit optimize`, with no extra packages: the
+separation is the one variable (150-250 mm; the op writes L2 at x = 100 mm + separation), the divergence of
+`collimated` is the objective and its 1 mrad limit a constraint. On os-optics 0.14.0 the trust-region solver (`trf`)
+converges to 200.057287 mm in 42 engine evaluations (finite-difference probes included), SLSQP (`--method slsqp`)
+to 200.057287 mm in 9; both lie within 4e-7 mm of the ABCD optimum, and `best-project.json` reproduces its divergence
+exactly in a fresh session. `studies/optimize-expander-infeasible.json` asks for at most 1e-9 rad: status
+`NO_FEASIBLE`, exit 1, no best Project, and `history.jsonl` keeps every candidate's negative margin; `closest`
+names the separation nearest to the limit (the same optimum).
