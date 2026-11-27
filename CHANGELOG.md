@@ -30,7 +30,8 @@ that are not in a release yet come first, under "Unreleased".
   counted, cached and kept in bounds; `max_evaluations` is a hard cap. Writes `spec.json`, `history.jsonl`,
   `result.json` (termination, counts, best/start/closest with active constraints, infeasible reasons, reproduction
   of `best-project.json` in a fresh session, a dense re-check) and `best-project.json`. Exit 0 `CONVERGED`, 1
-  `NO_FEASIBLE`, 2 `STOPPED`, 130 interrupted. Skill `optimize`, `docs/en/optimize.md`, case specs in
+  `NO_FEASIBLE`, 2 `STOPPED` (also when trf converges just outside an active constraint: `CONVERGED_INFEASIBLE`), 130
+  interrupted. Skill `optimize`, `docs/en/optimize.md`, case specs in
   `interop-optimization/studies` and `aspheric-lens/studies` (#33).
 - `os_optics_kit.imaging_results`: one reader of the imaging analysis (lines, curves with their state, convergence
   and a usable flag, values with a status, scalars, fields not analysed) used by `mtf`, `field-points`, `sfr`, the
@@ -48,7 +49,9 @@ that are not in a release yet come first, under "Unreleased".
   same way. Recorded figures are unchanged (#31).
 - The `field`, `fans` and `sfr` skills point to `mtf` for MTF curves; `field` points to `field-points` for
   creating field points. `field_aberrations` exposes `stop_crossings` and `paraxial_efl`;
-  `workflow_common.prepare_output` holds the output-directory rule; `geometry3d` holds the quaternion helpers.
+  `workflow_common.prepare_output` holds the output-directory rule of `mtf`, `field-points` and `optimize`
+  (`--overwrite` removes only what the run writes; an input it would replace or remove is `OUTPUT_IS_INPUT`);
+  `geometry3d` holds the quaternion helpers.
 
 ### Fixed
 
