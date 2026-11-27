@@ -195,6 +195,35 @@ Verified with os-optics 0.14.0:
   record's stop-aimed sources within 2e-4° (6.58848° at 0.1, 42.78214° at 0.8), with
   a chief-ray angle of 14.4153° at 0.8.
 
+## Comparison with the saved P2b evidence
+
+The Lens record's MTF evidence (engine 0.13.0) is a weighted multispectral MTF; `field-points` reports the
+MTF of each spectral line. At 40 cycles/mm on the same eleven heights (launch grid 64, refined to 128):
+
+| | value | where |
+| --- | --- | --- |
+| kit `minima[].all_lines` (`per_line_minimum`) | 0.697, `UNCONFIRMED` upper bound (55 of 66 samples exact) | 0.8, sagittal, 486 nm |
+| record `mtf_field_minimum` (complex-OTF sum, weights 1, 1, 1) | 0.723 | 0.8, tangential |
+| kit at 0.8, tangential 486 / 587 / 656 nm | 0.832 / 0.878 / 0.827 | |
+| record at 0.8, weighted tangential | 0.723 | |
+
+The two are different metrics and are not filed under each other's conditions. The differences:
+
+1. **Metric.** A modulus per line against a complex-OTF sum of three lines; lateral colour and OTF phase are lost
+   per line, so neither bounds the other.
+2. **Plane.** os-optics 0.14 puts each line's MTF on the plane normal to its image-space axis (14.4° from the sensor
+   at 0.8); the record uses the sensor plane.
+3. **Reference point.** Each line's own centroid; the record combines about one common point.
+4. **Aiming.** One source per point, aimed for 587 nm (486 and 656 nm cross the stop 0.16 mm off centre at 0.8); the
+   record aims every line.
+5. **Weights.** No weighting across lines; the record states equal incident weights.
+6. **Sampling and version.** The 0.55 and 0.6 fields are not converged at grid 128, and 0.6 at 486 nm is
+   `PUPIL_UNDERSAMPLED`; engine 0.14.0 against 0.13.0.
+7. **Kernel.** 0.14.0 uses its vector Debye kernel at this NA (0.22).
+
+The weighted MTF on a stated plane is an Engine capability, requested in
+[os-optics#97](https://github.com/JunLin615/os-optics/issues/97); the kit does not combine per-line moduli.
+
 ## Reuse from Python
 
 ```python
