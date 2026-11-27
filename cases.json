@@ -146,6 +146,7 @@
         "prescription.csv",
         "project.json",
         "studies/aspheric.csv",
+        "studies/optimize-aspheric.json",
         "studies/spherical-control.csv"
       ],
       "project_sha256": "3a21f17579691051de13eeb4ea3a1d46ac45bb89e40f5a41ee043be2d97c22c8"
@@ -685,7 +686,9 @@
       },
       "engine": "0.14.0",
       "catalog": null,
-      "tools": [],
+      "tools": [
+        "optimize"
+      ],
       "tags": [
         "beam-expander",
         "optimization",
@@ -717,7 +720,9 @@
         "images/section.png",
         "optimize_expander.py",
         "project.json",
-        "requirements-optimization.txt"
+        "requirements-optimization.txt",
+        "studies/optimize-expander-infeasible.json",
+        "studies/optimize-expander.json"
       ],
       "project_sha256": "19c8bd348039163d1df4abd8b0f3b221c9b03ae8939cb3e822c1140cfaf79a7c"
     },

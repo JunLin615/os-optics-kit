@@ -1,0 +1,18 @@
+{
+ "schema": "os-optics-kit.optimize-spec",
+ "schema_version": 1,
+ "description": "Collimate the Keplerian beam expander: move L2 along the axis (L1-L2 separation, 150 to 250 mm) to minimise the output divergence half-angle of target collimated, held at most 1 mrad. The independent ABCD optimum is 200.0573 mm.",
+ "project": "../project.json",
+ "variables": [
+  {"name": "separation", "unit": "mm", "bounds": [150, 250], "scale": 1.0,
+   "ops": [{"op": "set_component_pose", "instance_id": "L2", "position_mm": [{"$value": {"offset": 100.0}}, 0.0, 50.0]}]}
+ ],
+ "objectives": [
+  {"name": "divergence", "source": {"target": "collimated"}, "goal": 0.0, "scale": 1e-4}
+ ],
+ "constraints": [
+  {"name": "collimated", "source": {"target": "collimated"}, "maximum": 1e-3, "scale": 1e-4}
+ ],
+ "solver": {"method": "trf", "max_evaluations": 120, "tolerances": {"ftol": 1e-12, "xtol": 1e-12, "gtol": 1e-12},
+            "diff_step": 1e-3}
+}
