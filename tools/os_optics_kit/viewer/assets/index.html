@@ -27,7 +27,7 @@
       <div class="status-pills">
         <span class="pill pill-live" id="badge-live"><span class="live-dot"></span><span id="badge-live-text">Connecting</span></span>
         <span class="pill" id="badge-mode">Loading…</span>
-        <span class="pill hidden" id="badge-freshness"></span>
+        <span class="pill hidden" id="badge-freshness" aria-hidden="true"></span>
         <span class="pill pill-mono" id="badge-rev">Rev #0</span>
       </div>
     </div>
@@ -51,8 +51,8 @@
       <div class="pane-header">
         <div class="pane-title-group">
           <h2 id="lbl-scene-title">Optical Path &amp; Traced Rays</h2>
-          <span class="pill pill-info hidden" id="badge-geom-only">Geometry Only</span>
-          <span class="pill pill-warn hidden" id="badge-schematic">Schematic Parts</span>
+          <span class="pill pill-info hidden" id="badge-geom-only" aria-hidden="true"></span>
+          <span class="pill pill-warn hidden" id="badge-schematic" aria-hidden="true"></span>
         </div>
         <div class="pane-meta" id="scene-meta"></div>
       </div>
@@ -60,7 +60,7 @@
       <div class="viewport-frame-wrap">
         <iframe id="engine-frame-a" class="engine-frame active" title="Interactive 3D Optical Simulation View"></iframe>
         <iframe id="engine-frame-b" class="engine-frame staging" title="Interactive 3D Optical Simulation View Staging" aria-hidden="true"></iframe>
-        <div id="frame-updating" class="frame-updating hidden">Syncing 3D scene…</div>
+        <div id="frame-updating" class="frame-updating hidden" aria-hidden="true"></div>
       </div>
 
       <div class="viewport-footer">
@@ -82,7 +82,7 @@
       <section class="card" id="card-power">
         <div class="card-head">
           <h3 id="lbl-power-title">Power Ledger</h3>
-          <span class="pill hidden" id="badge-conserved"></span>
+          <span class="pill hidden" id="badge-conserved" aria-hidden="true"></span>
         </div>
         <div id="power-body"></div>
       </section>

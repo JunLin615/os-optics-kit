@@ -799,8 +799,10 @@ def _apply_configuration(document: dict[str, Any], selected_cfg: str) -> dict[st
         return _apply_configuration_dict(document, selected_cfg)
 
 
-def _preview_scene_content_hash(project_hash: str | None, title: str, parts: list[Any]) -> str:
-    payload = {
+def _preview_scene_content_hash(
+    project_hash: str | None, title: str, parts: list[Any], *, camera_basis: str | None = None
+) -> str:
+    payload: dict[str, Any] = {
         "project_hash": project_hash,
         "title": title,
         "parts": [
@@ -818,6 +820,9 @@ def _preview_scene_content_hash(project_hash: str | None, title: str, parts: lis
             for p in parts
         ],
     }
+    if camera_basis is not None:
+        # framed like that traced view (``_historical_camera_basis``): a different document, so a different hash
+        payload["camera_basis"] = camera_basis
     raw = json.dumps(json_safe(payload), sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
 
@@ -965,6 +970,7 @@ def _build_project_preview_scene(
     title: str,
     note_code: str,
     note_text: str,
+    camera_basis: dict[str, Any] | None = None,
 ) -> tuple[Any, dict[str, Any], dict[str, Any], dict[str, dict[str, list[float]]]]:
     """Build a geometry-only ``ViewerScene`` from a configuration-applied Project document (zero ray tracing).
 
@@ -1151,8 +1157,12 @@ def _build_project_preview_scene(
     else:
         lo = np.asarray([-10.0, -10.0, -10.0], dtype=float)
         hi = np.asarray([10.0, 10.0, 10.0], dtype=float)
+    focus_lo, focus_hi = _preview_focus_box(parts, lo, hi)
 
-    scene_content_hash = _preview_scene_content_hash(project_hash, title, parts)
+    scene_content_hash = _preview_scene_content_hash(
+        project_hash, title, parts,
+        camera_basis=None if camera_basis is None else (camera_basis.get("scene_content_hash") or "HISTORICAL_RUN"),
+    )
     scene = ViewerScene(
         view_kind=OPTICAL_VIEW,
         frame="PROJECT_DESIGN_FRAME",
@@ -1160,8 +1170,8 @@ def _build_project_preview_scene(
         parts=tuple(parts),
         beams=(),
         markers=(),
-        focus_min=lo,
-        focus_max=hi,
+        focus_min=focus_lo,
+        focus_max=focus_hi,
         bounds_min=lo,
         bounds_max=hi,
         identity={
@@ -1171,7 +1181,67 @@ def _build_project_preview_scene(
         },
         notes=({"code": note_code, "text": note_text},),
     )
-    return scene, view_document(scene), scene_summary(scene), plane_frames
+    doc = view_document(scene)
+    if camera_basis is not None:
+        # A geometry-only view of a Project whose run is historical: frame it like that run's traced view (same preset
+        # directions, camera frame and beam axis), so the default view does not turn when the rays are withheld or
+        # come back. The beams themselves stay withheld.
+        for key in ("camera_presets", "camera_frame", "main_axis"):
+            if key in camera_basis:
+                doc[key] = camera_basis[key]
+    return scene, doc, scene_summary(scene), plane_frames
+
+
+def _preview_focus_box(parts: list[Any], lo: Any, hi: Any) -> tuple[Any, Any]:
+    """The default framing box of a geometry-only view, by the engine's rule for its traced views
+    (``os_optics.viewer.optical``): the element meshes, plus every observation/target plane within
+    ``FAR_PLANE_FACTOR`` times their extent; the view-only source placeholder is left out. Falls back to every part."""
+    import numpy as np
+
+    try:
+        from os_optics.optical_view.section import FAR_PLANE_FACTOR
+    except ImportError:  # pragma: no cover - engine layout moved; the whole scene is then the framing box
+        return lo, hi
+    planes = ("OBSERVATION_PLANE", "TARGET_PLANE")
+    element_points = [
+        m.positions
+        for p in parts
+        if p.part_class not in planes and not (p.facts or {}).get("view_placeholder")
+        for m in p.meshes
+    ]
+    if not element_points:
+        return lo, hi
+    pts = np.concatenate(element_points)
+    f_lo, f_hi = pts.min(axis=0), pts.max(axis=0)
+    extent = max(float(np.linalg.norm(f_hi - f_lo)), 1.0)
+    for p in parts:
+        if p.part_class not in planes:
+            continue
+        plo, phi = p.bounds
+        gap = np.maximum(np.maximum(f_lo - phi, plo - f_hi), 0.0)
+        if float(np.linalg.norm(gap)) <= FAR_PLANE_FACTOR * extent:
+            f_lo, f_hi = np.minimum(f_lo, plo), np.maximum(f_hi, phi)
+    return f_lo, f_hi
+
+
+def _historical_camera_basis(run_dir: Path | None) -> dict[str, Any] | None:
+    """The camera fields of a historical run's traced view (presets, camera frame, beam axis), or ``None`` when the run
+    cannot be drawn. Only directions are taken from the run: no ray, number or geometry of the run is shown."""
+    if run_dir is None:
+        return None
+    try:
+        from os_optics.viewer import optical_view_scene, view_document
+
+        run_scene = optical_view_scene(run_dir)
+        run_doc = view_document(run_scene)
+    except Exception:  # noqa: BLE001 - best effort: the geometry-only view then uses its own default framing
+        return None
+    basis: dict[str, Any] = {key: run_doc[key] for key in ("camera_presets", "camera_frame", "main_axis")
+                             if key in run_doc}
+    if not basis.get("camera_presets"):
+        return None
+    basis["scene_content_hash"] = (run_scene.identity or {}).get("scene_content_hash")
+    return basis
 
 
 def _count_drawable_rays(viewer_scene: Any) -> int:
@@ -1847,6 +1917,7 @@ def _build_preview_or_stale_snapshot(
         title=title,
         note_code=note_code,
         note_text=note_text,
+        camera_basis=_historical_camera_basis(effective_run) if result_mode == "stale_run" else None,
     )
     scene_payload = _compact_scene_payload(
         scene_sum,

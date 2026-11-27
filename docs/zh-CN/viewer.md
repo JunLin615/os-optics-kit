@@ -9,7 +9,7 @@
 ## 快速开始
 
 ```bash
-python -m pip install "os-optics[protected]" os-optics-kit
+python -m pip install os-optics os-optics-kit
 
 # 查看并实时跟随一个已保存的运行目录（3D 光路、功率账本、执行状态与指标评估）
 os-optics-kit view run
@@ -52,6 +52,20 @@ os-optics-kit view project.json --evaluate
 - **几何预览绝不冒充计算结果**：未关联运行结果的 Project 只展示几何布局并明确标注「未计算」；`--evaluate` 仅在启动时于临时目录计算一次，后续文件编辑不会反复触发重算。
 - **过期结果不误标**：当 Project 修改后与关联运行不再匹配时，新鲜度立即转为「历史过期」，旧功率与光线会被隐藏，只展示新工程几何，直到新运行写入完成。
 - **半写入容错与自动恢复**：当外部 Agent 正在写文件（JSON 截断或目录尚未写齐）时，页面会保持上一份有效快照并显示「等待写入」提示，写入完成后自动恢复更新。
+- **视角保持不变**：新的修订（Project 编辑、新的运行、追迹光线变为仅几何再变回来）沿用你当前的相机视角绘制，无论你是否手动调整过视角。视图按钮、Fit 与 Reset 可按需重新取景。历史运行的仅几何视图从该运行的视图方向开始。
+
+## Agent 可读取的状态
+
+页面以两种方式说明当前显示的内容，二者都与 `GET /api/snapshot`（其信封中的 `snapshot`）一致：
+
+- **`#app` 上的属性**（对应屏幕上的快照）：`data-revision`、`data-snapshot-id`、`data-status`（`ok`、`waiting`、`error`）、`data-result-mode`（`computed_run`、`stale_run`、`geometry_preview`）、`data-computed`、`data-freshness`（`CURRENT`、`HISTORICAL`、`UNDETERMINED`、`RUN_ONLY`，未检查时为空）、`data-project-hash`、`data-execution-outcome`、`data-requirement-outcome`、`data-power-available`、`data-power-conserved`（`true`、`false`，账本被隐去时为空）、`data-branch-count`、`data-geometry-only` 与 `data-drawable-ray-count`。每个属性都是快照中同名字段的值，字段为 null 时为空。
+- **可见文本**：不适用的徽标会被隐藏**并清空**（`aria-hidden="true"`），页面文本中不会残留早先快照的结论。例如在过期运行上，DOM 中任何地方都没有「功率守恒」。
+
+当前的 3D 画面（`iframe.engine-frame.active`）带有相同的 `data-snapshot-id`，`data-camera` 说明它沿用了上一画面的相机（`carried`）还是从引擎默认取景开始（`default`）。
+
+## 在浏览器中检查已发布版本
+
+在本仓库的检出目录中运行 `python scripts/released_viewer_check.py OUT_DIR --engine-version 0.14.0 --kit-version 0.5.0`：它把已发布的 wheel 安装到检出目录之外的全新环境，核对其 SHA-256 与 PyPI 一致，并在本地 Chrome 的同一页面中跟随已保存的运行、一次 Project 编辑和一次重新运行，每一步比对页面、`/api/snapshot` 与引擎 `results` 命令的结果。`OUT_DIR` 中保存每项检查的 JSON 记录和每个修订的截图；`--kit-source .` 改为检查本检出目录的构建。`Released viewer check` 工作流在 Linux 与 Windows 上运行它（`workflow_dispatch`）。
 
 ## 与其他命令的分工
 
