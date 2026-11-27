@@ -128,6 +128,8 @@ The 3D view and the section are the engine's snapshots of a run of `project.json
 lines above, with the recorded options; in a kit checkout `os-optics-kit cases images sonnar-telephoto-lens`
 re-renders them exactly as recorded in `images.json`). `figures.py` draws the spot and MTF figures from that
 run with the same `results imaging` call (matplotlib comes with `pip install "os-optics-kit[plot]"`).
+The same curves as a table with their status, one figure per field and wavelength:
+`os-optics-kit mtf run --monitor image_plane --request imaging-request.json --out mtf`.
 
 `os-optics-kit cases verify sonnar-telephoto-lens` repeats the run and compares the target
 assessments with `expected.json`.

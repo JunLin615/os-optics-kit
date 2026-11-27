@@ -132,7 +132,10 @@ Recorded with os-optics 0.14.0. The sonnar-telephoto-lens case (85 mm, f/2.4,
 | SRC2#0 (14°) | T | 0.7158 | 0.5533 | 0.3352 | 0.8680 | `OUT_OF_MODEL_SCOPE` |
 
 The tables equal the engine's arrays value for value (tests on the saved
-analysis `tests/data/mtf-sonnar-imaging.json`). The case figure scripts of
+analysis `tests/data/mtf-sonnar-imaging.json`). On the achromatic-imaging case (its
+request, three lines on axis) the command's 24 MTF values equal the case's
+recorded `data/snapshot.json` exactly, for example 0.6891 / 0.6323 / 0.5889 at
+40 cycles/mm for 486 / 588 / 656 nm. The case figure scripts of
 sonnar-telephoto-lens, aspheric-lens and midwave-infrared-imager now run the
 analysis in-process and read it through the same reader, and redraw their
 recorded figures byte for byte. An engine test runs the command once on the

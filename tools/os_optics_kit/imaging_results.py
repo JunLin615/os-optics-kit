@@ -22,7 +22,8 @@ stored array is a curve:
 
 Use :func:`load` for a document (a path, a parsed dict or the Engine's result object), :func:`lines` for the analysed
 lines and :func:`curves` / :func:`curve` for the curves. :func:`value_at` reads a usable curve at a frequency of its own
-axis (no interpolation). Pure Python: no Engine, numpy or matplotlib import.
+axis (no interpolation). :func:`line_of_path` names the line of a run's path id (for example a monitor's
+``outside_active_area`` crossing). Pure Python: no Engine, numpy or matplotlib import.
 """
 
 from __future__ import annotations

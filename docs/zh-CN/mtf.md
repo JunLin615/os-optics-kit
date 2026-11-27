@@ -112,7 +112,8 @@ os-optics-kit mtf --imaging imaging.json --run run --out mtf
 | SRC1#0（7°） | S | 0.3762 | 0.0597 | 0.0240 | 0.9260 | 40 处 0.0624 |
 | SRC2#0（14°） | T | 0.7158 | 0.5533 | 0.3352 | 0.8680 | `OUT_OF_MODEL_SCOPE` |
 
-表中数值与引擎的数组逐一相等（在保存的分析 `tests/data/mtf-sonnar-imaging.json` 上测试）。
+表中数值与引擎的数组逐一相等（在保存的分析 `tests/data/mtf-sonnar-imaging.json` 上测试）。在 achromatic-imaging 案例上（使用案例的请求，轴上三条谱线），本命令的 24 个 MTF 值与案例记录的
+`data/snapshot.json` 完全相同，例如 40 cycles/mm 处 486 / 588 / 656 nm 的 0.6891 / 0.6323 / 0.5889。
 sonnar-telephoto-lens、aspheric-lens 和 midwave-infrared-imager 三个案例的绘图脚本现在在进程内运行分析，
 并通过同一个读取模块读取，重新绘制的图与记录的图逐字节相同。一个引擎测试在 achromatic-imaging 的
 Project 上运行一次本命令，检查只运行了一次分析、表格与直接调用 `RunResults.imaging` 的结果相同、
