@@ -89,6 +89,7 @@ import numbers
 import sys
 from typing import Any, Callable, Mapping, Sequence
 
+from ..imaging_results import basis_facts as _basis_facts, quantity_kind as _quantity_kind
 from ..workflow_common import VALUE_USES, target_value_use, value_usable
 
 AGGREGATIONS = ("sum_squares", "sum_abs", "max_abs")
@@ -707,21 +708,6 @@ def _mtf_member(analysis: Any, q: Any, frequency: float) -> dict[str, Any]:
     return reading
 
 
-def _quantity_kind(state: str, value: Any, basis_kind: str | None, basis_failed: bool, converged: bool | None) -> str:
-    """The kind of an analysis quantity's number (the module docstring's rules)."""
-    if not _finite(value):
-        return "NO_VALUE"
-    if state == "OUT_OF_MODEL_SCOPE" or basis_failed:
-        return "OUTSIDE_MODEL"
-    if state == "BOUNDED" or basis_kind in ("LOWER_BOUND", "UPPER_BOUND"):
-        return "BOUNDED"
-    if state == "UNKNOWN" or basis_kind == "ESTIMATE" or converged is False:
-        return "QUANTITY_UNKNOWN"
-    if state in USABLE_STATES:
-        return "EXACT"
-    return "NO_VALUE"
-
-
 def _target_reading(t: Any, findings: list[tuple[str, tuple[str, ...]]]) -> dict[str, Any]:
     """A target's reading with the kind of its value (``workflow_common.target_value_use`` on the Engine's facts)."""
     applicability = sorted({code for code, ids in findings if t.target_id in ids})
@@ -766,16 +752,6 @@ def _basis_entry(basis: Any) -> Any:
     if isinstance(basis, dict) and "kind" not in basis:
         return basis.get("value") or basis.get("*")
     return basis
-
-
-def _basis_facts(entry: Any) -> tuple[str | None, bool]:
-    """``(kind, a validity check failed)`` of a value basis entry (``(None, False)`` without one)."""
-    if entry is None:
-        return None, False
-    kind = _get(entry, "kind")
-    kind = None if kind is None else str(getattr(kind, "value", kind))
-    failed = any(_get(check, "within") is False for check in _get(entry, "validity") or ())
-    return kind, failed
 
 
 def _apply_ops(document: dict[str, Any], ops: list[dict[str, Any]]) -> dict[str, Any]:

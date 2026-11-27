@@ -87,6 +87,17 @@
       "sha256": "3c26e412fca2a140812ddc13cd3e483cfec482b88059cd2b7abfc9f3de80a5f7"
     },
     {
+      "name": "field-points",
+      "kind": "tool",
+      "description": "Field points of a Project at stated angles or heights: chief-ray hit point and angle, first-order comparison and optical MTF at a fixed image plane.",
+      "version": "0.1.0",
+      "command": "os-optics-kit field-points",
+      "requires": "os-optics>=0.14,<0.15",
+      "path": "skills/field-points/SKILL.md",
+      "tokens": 143,
+      "sha256": "eaa48e0d9ddbf0fc850dee76ff6f2a569f3c8995d05ff67194583afc0ecce747"
+    },
+    {
       "name": "measurements",
       "kind": "tool",
       "description": "Subtract backgrounds from detector CSV data, optionally normalize by a reference channel, and fit a straight line with residuals, a plot and a provenance record; the input file is never modified. Use it to analyze a measured response curve.",
@@ -96,6 +107,28 @@
       "path": "skills/measurements/SKILL.md",
       "tokens": 582,
       "sha256": "6c66e2edd54bbc815033e42b1faebfa401880b9f96f299f79517c68b57ffff0e"
+    },
+    {
+      "name": "mtf",
+      "kind": "tool",
+      "description": "Tangential and sagittal optical MTF of an os-optics imaging analysis as a table, a JSON document and one figure per line.",
+      "version": "0.1.0",
+      "command": "os-optics-kit mtf",
+      "requires": "os-optics>=0.14,<0.15",
+      "path": "skills/mtf/SKILL.md",
+      "tokens": 127,
+      "sha256": "234c7cc1bc3e5f8fb5243a070cfe81ac2e9790dd86174fb87b6c29865deb2f64"
+    },
+    {
+      "name": "optimize",
+      "kind": "tool",
+      "description": "Bounded optimization of a Project from a JSON spec: variables, objectives and constraints, with a history and the best feasible Project.",
+      "version": "0.1.0",
+      "command": "os-optics-kit optimize",
+      "requires": "os-optics>=0.14,<0.15",
+      "path": "skills/optimize/SKILL.md",
+      "tokens": 136,
+      "sha256": "fff349fa535ab31caab369008e603c073a2ecc8771ec072b5b15387dd4df861d"
     },
     {
       "name": "plot",
