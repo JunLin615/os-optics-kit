@@ -30,6 +30,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import re
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
@@ -43,6 +44,7 @@ USABLE_STATES = ("KNOWN", "KNOWN_ZERO")
 FREQUENCY_SUFFIX = ".frequencies_cyc_per_mm"
 #: Frequency match of :func:`value_at`: relative to max(1, frequency) cycles/mm.
 FREQUENCY_MATCH = 1e-9
+_LINE_OF_PATH = re.compile(r"^(.+?#\d+)(?=$|[:.~])")
 
 # Statuses of a curve and of one of its values (the status column of the kit's MTF tables).
 KNOWN = "KNOWN"
@@ -118,7 +120,7 @@ def load(source: Any) -> dict[str, Any]:
         dump = getattr(source, "model_dump", None)
         if not callable(dump):
             raise ImagingDocumentError(f"not an imaging analysis: {type(source).__name__}")
-        document = dump(mode="json")
+        document = dump(mode="json", by_alias=True)  # as 'os-optics results imaging' prints it ("schema", not "schema_")
     if not isinstance(document, dict) or document.get("schema") != SCHEMA or document.get("analysis") != ANALYSIS \
             or not isinstance(document.get("arrays"), dict) or not isinstance(document.get("quantities"), list):
         raise ImagingDocumentError("not the output of 'os-optics results imaging' (schema opensci.analysis_result, "
@@ -188,6 +190,14 @@ def lines(document: dict[str, Any]) -> list[dict[str, Any]]:
                     "field_state": entry.get("field_state"), "field_reason": entry.get("field_reason")})
     out.sort(key=lambda e: (str(e["source_id"]), -1 if e["spectral_index"] is None else e["spectral_index"]))
     return out
+
+
+def line_of_path(path_id: Any) -> str | None:
+    """The line (``<source>#<spectral index>``) a run's path belongs to: a path id is the line id, then the mark of a
+    source's second polarization component (``:p1``) and its branches (``SRC#0``, ``SRC#0:p1``, ``SRC#0.1`` -> ``SRC#0``).
+    ``None`` for anything else."""
+    match = _LINE_OF_PATH.match(path_id) if isinstance(path_id, str) else None
+    return match.group(1) if match else None
 
 
 def unanalysed_fields(document: dict[str, Any]) -> list[dict[str, Any]]:
@@ -317,5 +327,5 @@ def scalar(document: dict[str, Any], line_id: str, name: str) -> dict[str, Any]:
 
 __all__ = ["ABSENT", "ANALYSIS", "BEYOND_NYQUIST", "CURVE_KINDS", "DIRECTIONS", "FREQUENCY_MATCH", "ImagingDocumentError",
            "KNOWN", "NOT_CONVERGED", "SCHEMA", "USABLE_STATES", "basis_facts", "curve", "curves", "file_sha256",
-           "frequency_index", "identity", "lines", "load", "quantity_kind", "scalar", "unanalysed_fields", "value_at",
+           "frequency_index", "identity", "line_of_path", "lines", "load", "quantity_kind", "scalar", "unanalysed_fields", "value_at",
            "value_status"]
