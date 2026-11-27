@@ -894,7 +894,7 @@ def _pupil_counts(ev: Any, target: dict[str, Any]) -> dict[str, Any]:
             "pupil_rays_arrived": sum(int(a.pupil_rays_arrived) for a in arrivals)}
 
 
-def _rays_reading(ev: Any, target_id: str, declared: dict[str, dict[str, Any]]) -> dict[str, Any]:
+def _rays_reading(ev: Any, target_id: str, declared: dict[Any, dict[str, Any]]) -> dict[str, Any]:
     """``pupil_rays_arrived / pupil_rays_launched`` of the arrivals a pupil-ray target selects (unit 1)."""
     counts = _pupil_counts(ev, declared.get(target_id) or {})
     reading: dict[str, Any] = {"value": None, "unit": "1", "state": "NO_VALUE", "value_kind": "NO_VALUE",
