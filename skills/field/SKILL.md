@@ -16,10 +16,11 @@ kind: tool
 ## When not to use
 
 - For ray-fan curves of one field: use `fans`. For MTF or PSF: use `os-optics results imaging`.
+- To create field points in a Project: use `field-points`.
 
 ## Inputs
 
-- `RUN`: a saved run (`project.json`, `--ray-data full`); never modified, nothing is traced. It needs an on-axis
+- `RUN`: a saved run (`--ray-data full`); never modified, nothing is traced. It needs an on-axis
   field (chief ray on the plane origin, within 1e-3 mm), sources aimed at the stop opening's centre, no reflection
   before the plane.
 - `--monitor PLANE`: the image plane.
@@ -27,7 +28,7 @@ kind: tool
   engine's paraxial EFL and rear focal plane (`os-optics project paraxial`) of the elements on the on-axis field's
   line, per wavelength.
 - `--stop-tolerance-mm MM`: chief-ray distance allowed from the stop opening's centre (default 0.01).
-- `--out FILE`: write the JSON there.
+- `--out FILE`: JSON file.
 
 ## Outputs
 
@@ -61,11 +62,11 @@ os-optics-kit field run --monitor image_plane
 
 ## Limits
 
-- Geometric optics; one plane crossing. Focus comes from the innermost sampled zone, not a paraxial trace.
-- Assumes no image rotation and a rotationally symmetric reference (h = EFL tan(theta)).
-- Reflected paths (any mirror, internal reflection) are unsupported, even with `--efl`:
+- Geometric optics; one plane crossing. Focus: the innermost sampled zone, not a paraxial trace.
+- Assumes no image rotation and a rotationally symmetric reference (EFL tan(theta)).
+- Reflected paths (a mirror, internal reflection) are unsupported, even with `--efl`:
   refused with `REFLECTED_PATH_UNSUPPORTED` (`stop.md`).
-- The default EFL needs the elements on one straight axis; else state `--efl`.
+- The default EFL needs the elements on one straight axis, else `--efl`.
 
 ## Version
 

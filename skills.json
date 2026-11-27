@@ -83,19 +83,19 @@
       "command": "os-optics-kit field",
       "requires": "os-optics>=0.14,<0.15",
       "path": "skills/field/SKILL.md",
-      "tokens": 898,
-      "sha256": "3c26e412fca2a140812ddc13cd3e483cfec482b88059cd2b7abfc9f3de80a5f7"
+      "tokens": 900,
+      "sha256": "0677d4f554a32b65987ae6249b5b3b4ce51c96bf0f9ef1bf7ac7e47e61163cbf"
     },
     {
       "name": "field-points",
       "kind": "tool",
-      "description": "Field points of a Project at stated angles or heights: chief-ray hit point and angle, first-order comparison and optical MTF at a fixed image plane.",
+      "description": "Field points of a native Project at stated angles, object heights or real image heights: turned, stop-aimed sources; chief-ray hit point, height and angle; first-order comparison; optical MTF per line at a fixed plane with sampled field minima.",
       "version": "0.1.0",
       "command": "os-optics-kit field-points",
       "requires": "os-optics>=0.14,<0.15",
       "path": "skills/field-points/SKILL.md",
-      "tokens": 143,
-      "sha256": "eaa48e0d9ddbf0fc850dee76ff6f2a569f3c8995d05ff67194583afc0ecce747"
+      "tokens": 889,
+      "sha256": "f86c9a5d32458f7033a608da0cb27f1ee63edae53a1b4b44b14c0465256c6352"
     },
     {
       "name": "measurements",
