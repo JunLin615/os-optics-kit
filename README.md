@@ -149,10 +149,13 @@ Each case holds `project.json` (the Project with its targets), `CASE.md` (for ag
 | `present` | `os-optics-kit present` | Build themed views, plots, comparisons and animations from saved results, with a gallery and bundle |
 | `sensitivity` | `os-optics-kit sensitivity` | Rank design parameters by finite-difference sensitivity at two step sizes |
 | `tolerance` | `os-optics-kit tolerance` | Run a seeded tolerance study under declared distributions |
+| `optimize` | `os-optics-kit optimize` | Refine a Project's parameters within bounds (trf least squares or SLSQP) against objectives and constraints; history, margins and the best feasible Project, re-checked in a fresh session |
 | `study` | `os-optics-kit study` | Run, resume, inspect and aggregate a planned study, serially or in worker processes; plan candidate Projects |
 | `candidates` | `os-optics-kit candidates` | List catalog products that pass explicit filters, sorted by closeness to a value |
 | `measurements` | `os-optics-kit measurements` | Subtract backgrounds, normalize by a reference channel and fit detector CSV data |
 | `sfr` | `os-optics-kit sfr` | Measure slanted-edge SFR (ISO 12233 e-SFR) of an image, optionally beside a design MTF |
+| `mtf` | `os-optics-kit mtf` | Write the optical MTF of a run's imaging analysis per spectral line as a CSV, a JSON document and one figure per line, each value with its engine status |
+| `field-points` | `os-optics-kit field-points` | Build field points of a Project at angles, object heights or real image heights (turned, stop-aimed sources): chief-ray hit, CRA, first-order comparison and per-line MTF with sampled field minima |
 | `run-case` | `os-optics-kit cases` | Find, copy, run, check and adapt a case |
 | `contrib-case` | `os-optics-kit contrib case` | Turn a finished design into a pull-request-ready case |
 | `contrib-tool` | `os-optics-kit contrib tool` | Package a helper as a kit command with its skill page and tests |

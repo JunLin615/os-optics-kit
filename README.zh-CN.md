@@ -139,10 +139,13 @@ os-optics-kit present bundle talk-zh --out talk-zh.zip
 | `present` | `os-optics-kit present` | 依据已保存的结果生成带主题的视图、结果图、比较图和动画，附图库和材料包 |
 | `sensitivity` | `os-optics-kit sensitivity` | 以两种步长的有限差分灵敏度对设计参数排序 |
 | `tolerance` | `os-optics-kit tolerance` | 在声明的分布下运行带种子的公差研究 |
+| `optimize` | `os-optics-kit optimize` | 在边界内（trf 最小二乘或 SLSQP）按目标量与约束细化 Project 参数；给出历史、裕量和在新会话中复核的最佳可行 Project |
 | `study` | `os-optics-kit study` | 串行或在工作进程中运行、续跑、查看和汇总已规划的研究；规划候选 Project 研究 |
 | `candidates` | `os-optics-kit candidates` | 列出满足明确筛选条件的目录产品，按与给定值的接近程度排序 |
 | `measurements` | `os-optics-kit measurements` | 扣除背景、按参考通道归一化并拟合探测器 CSV 数据 |
 | `sfr` | `os-optics-kit sfr` | 按 ISO 12233 e-SFR 测量图像的斜边 SFR，可与设计 MTF 并列比较 |
+| `mtf` | `os-optics-kit mtf` | 把运行的成像分析中每条谱线的光学 MTF 写成 CSV、JSON 文档和每条谱线一张图，每个值附引擎状态 |
+| `field-points` | `os-optics-kit field-points` | 按视场角、物高或实际像高在 Project 中建立视场点（转动并对准光阑的光源）：主光线落点、主光线角、一阶比较，以及逐谱线 MTF 和视场采样最小值 |
 | `run-case` | `os-optics-kit cases` | 查找、复制、运行、核对并修改案例 |
 | `contrib-case` | `os-optics-kit contrib case` | 把完成的设计整理成可直接提交拉取请求的案例 |
 | `contrib-tool` | `os-optics-kit contrib tool` | 把辅助脚本打包为套件命令，附技能说明和测试 |

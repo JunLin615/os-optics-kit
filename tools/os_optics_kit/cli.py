@@ -51,8 +51,14 @@ COMMANDS: dict[str, tuple[str, str]] = {
     "sfr": ("sfr", "slanted-edge SFR (ISO 12233 e-SFR) of an image, optionally beside a design MTF"),
     "study": ("study_tool", "run, resume, inspect and aggregate planned studies, in parallel worker processes"),
     "mtf": ("mtf", "optical MTF curves of a run's imaging analysis: CSV, JSON and one figure per line"),
-    "field-points": ("field_points", "turned-source field points of a Project: chief-ray hit, angle and MTF at a fixed plane"),
-    "optimize": ("optimize", "bounded optimization of a Project from a JSON spec, with history and the best feasible Project"),
+    "field-points": (
+        "field_points",
+        "turned-source field points of a Project: chief-ray hit, angle and MTF at a fixed plane",
+    ),
+    "optimize": (
+        "optimize",
+        "bounded optimization of a Project from a JSON spec, with history and the best feasible Project",
+    ),
     "zoom": ("zoom_study", "two moving groups' positions per focal length with the focus held on a fixed image plane"),
     "render": (
         "render_views",

@@ -64,5 +64,5 @@ The moved lens misses the `focus_position` target: status FAIL, exit 1.
 
 ## Version
 
-0.3.0 (os-optics-kit 0.5.0): `set_optical_model_value`.
+0.3.0 (unreleased, after os-optics-kit 0.5.0): `set_optical_model_value`.
 0.2.0 (os-optics-kit 0.2.0), verified with os-optics 0.13.0 and catalog release 2026-10-28.1.

@@ -62,4 +62,4 @@ os-optics-kit field-points project.json --plane image_plane --out fp --angles-de
 
 ## Version
 
-0.1.0 (os-optics-kit 0.5.0): first version, for os-optics 0.14.
+0.1.0 (unreleased, after os-optics-kit 0.5.0): first version, verified with os-optics 0.14.0.

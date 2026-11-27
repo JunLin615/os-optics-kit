@@ -61,8 +61,8 @@
       "command": "os-optics-kit edit",
       "requires": "os-optics>=0.14,<0.15",
       "path": "skills/edit/SKILL.md",
-      "tokens": 727,
-      "sha256": "8a6257b84a6789c1efcd71761dcee540e19dc67bf0613254c3343714cf083599"
+      "tokens": 732,
+      "sha256": "bfb723445481945272eb393a975f14bebedf3c28f6f493b5b2c96e1a8c9e913c"
     },
     {
       "name": "fans",
@@ -94,8 +94,8 @@
       "command": "os-optics-kit field-points",
       "requires": "os-optics>=0.14,<0.15",
       "path": "skills/field-points/SKILL.md",
-      "tokens": 889,
-      "sha256": "f86c9a5d32458f7033a608da0cb27f1ee63edae53a1b4b44b14c0465256c6352"
+      "tokens": 896,
+      "sha256": "757e5de8fe3cb435ef18e0964f4e2db92ff51994b577b281468a309b83ef4856"
     },
     {
       "name": "measurements",
@@ -116,8 +116,8 @@
       "command": "os-optics-kit mtf",
       "requires": "os-optics>=0.14,<0.15; os-optics-kit[plot] for figures",
       "path": "skills/mtf/SKILL.md",
-      "tokens": 842,
-      "sha256": "38f8271c84f31818022a82def85ef07b2d49934983ec4470602a3545bec56753"
+      "tokens": 847,
+      "sha256": "d95ecd3b85ad44337b9e76cd33adfc2e12101c3ec9aa9589db96fe18cdc050a6"
     },
     {
       "name": "optimize",
@@ -127,8 +127,8 @@
       "command": "os-optics-kit optimize",
       "requires": "os-optics>=0.14,<0.15",
       "path": "skills/optimize/SKILL.md",
-      "tokens": 776,
-      "sha256": "98fb9b36f845e25f6b74bb101f50c491ad7a00fd043efd0a835ad638bb0eee8b"
+      "tokens": 789,
+      "sha256": "96e5b440478271215cd0aa9916173fe95f33b35c8e8e352f36f1a0b2d2843bcc"
     },
     {
       "name": "plot",

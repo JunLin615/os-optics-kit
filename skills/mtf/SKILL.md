@@ -61,4 +61,4 @@ os-optics-kit mtf --imaging mtf/imaging.json --run run --out mtf-zh --set langua
 
 ## Version
 
-0.1.0 (os-optics-kit 0.5.0): first version, verified with os-optics 0.14.0.
+0.1.0 (unreleased, after os-optics-kit 0.5.0): first version, verified with os-optics 0.14.0.

@@ -65,4 +65,4 @@ L2 moves to a 200.0573 mm separation (the ABCD optimum): `CONVERGED`, exit 0.
 
 ## Version
 
-0.1.0 (os-optics-kit 0.5.0): first version.
+0.1.0 (unreleased, after os-optics-kit 0.5.0): first version, verified with os-optics 0.14.0.
