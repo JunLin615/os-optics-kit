@@ -49,7 +49,7 @@ import subprocess
 import sys
 from typing import Any, Callable
 
-from . import ray_fans
+from . import geometry3d, ray_fans
 
 # How far the chief ray nearest the plane origin may be from it and still count as the on-axis field; a caller may only
 # tighten it.
@@ -59,6 +59,8 @@ STOP_TOLERANCE_MM = 1e-2
 # Lateral distance from the on-axis field's emission line within which a component counts as on that line.
 ON_AXIS_LINE_MM = 1e-6
 ZERO_ANGLE_DEG = 1e-6
+# How a refusal for a missing EFL tells the caller to recover.
+EFL_HINT = "state the EFL with --efl"
 
 # chief_ray_stops: the chief ray crosses a stop (stop_offset_mm measured); the tolerance then decides between the next two
 STOP_CROSSED = "STOP_CROSSED"
@@ -86,23 +88,9 @@ class FieldError(RuntimeError):
         self.details = details
 
 
-def _rotate(q: list[float], v: tuple[float, float, float]) -> tuple[float, float, float]:
-    w, x, y, z = q
-    norm = math.sqrt(w * w + x * x + y * y + z * z)
-    w, x, y, z = w / norm, x / norm, y / norm, z / norm
-    vx, vy, vz = v
-    # v' = q v q*
-    tx = 2 * (y * vz - z * vy)
-    ty = 2 * (z * vx - x * vz)
-    tz = 2 * (x * vy - y * vx)
-    return (vx + w * tx + (y * tz - z * ty), vy + w * ty + (z * tx - x * tz), vz + w * tz + (x * ty - y * tx))
-
-
-def _qmul(a: list[float], b: list[float]) -> list[float]:
-    aw, ax, ay, az = a
-    bw, bx, by, bz = b
-    return [aw * bw - ax * bx - ay * by - az * bz, aw * bx + ax * bw + ay * bz - az * by,
-            aw * by - ax * bz + ay * bw + az * bx, aw * bz + ax * by - ay * bx + az * bw]
+# the kit's quaternion helpers (Hamilton, active; rotate(q, v) = q v q*)
+_rotate = geometry3d.rotate
+_qmul = geometry3d.qmul
 
 
 def source_axes(project: dict) -> dict[str, tuple[float, float, float]]:
@@ -327,9 +315,10 @@ def _engine_command() -> list[str]:
     return [engine] if engine else [sys.executable, "-m", "os_optics"]
 
 
-def axis_components(project: dict, axis_source_id: str, monitor: str) -> list[str]:
+def axis_components(project: dict, axis_source_id: str, monitor: str, hint: str = EFL_HINT) -> list[str]:
     """Instance ids of the components on the on-axis field's emission line, between its source and the plane, in the
-    order light meets them. Refuses (EFL_NOT_STATED) when a component ahead of the source lies off that line."""
+    order light meets them. Refuses (EFL_NOT_STATED, the message ending in ``hint``) when a component ahead of the
+    source lies off that line."""
     source = next(c for c in project.get("components", []) if c.get("instance_id") == axis_source_id)
     origin = source["nominal_pose"]["position_mm"]
     axis = _rotate(source["nominal_pose"]["quaternion_wxyz"], (0.0, 0.0, 1.0))
@@ -345,7 +334,7 @@ def axis_components(project: dict, axis_source_id: str, monitor: str) -> list[st
         end, lateral = place(plane["pose"]["position_mm"])
         if lateral > AXIS_TOLERANCE_MM:
             raise FieldError("EFL_NOT_STATED", f"the plane {monitor} is {lateral:.6g} mm off the emission line of the "
-                                               f"on-axis field {axis_source_id}; state the EFL with --efl")
+                                               f"on-axis field {axis_source_id}; {hint}")
     listed = []
     for component in project.get("components", []):
         if component.get("optical_role") == "source":
@@ -357,11 +346,11 @@ def axis_components(project: dict, axis_source_id: str, monitor: str) -> list[st
             raise FieldError("EFL_NOT_STATED",
                              f"component {component['instance_id']} lies {lateral:.6g} mm off the emission line of the "
                              f"on-axis field {axis_source_id}, so the elements do not stand on one straight axis for "
-                             f"the engine's paraxial EFL; state the EFL with --efl")
+                             f"the engine's paraxial EFL; {hint}")
         listed.append((along, component["instance_id"]))
     if not listed:
         raise FieldError("EFL_NOT_STATED", f"no element on the emission line of the on-axis field {axis_source_id} "
-                                           f"before the plane; state the EFL with --efl")
+                                           f"before the plane; {hint}")
     return [instance for _along, instance in sorted(listed)]
 
 
@@ -384,12 +373,21 @@ def paraxial_reference(project_file: Path, project: dict, axis_source_id: str, m
             or (done.stderr or done.stdout or "").strip()[-300:]
         raise FieldError("EFL_NOT_STATED", f"the engine's paraxial analysis of {' '.join(components)} at "
                                            f"{wavelength_nm} nm gave no EFL ({detail}); state the EFL with --efl")
+    return paraxial_efl(reply, components, wavelength_nm)
+
+
+def paraxial_efl(reply: dict, components: list[str], wavelength_nm: float, hint: str = EFL_HINT) -> dict:
+    """The EFL reference of an Engine paraxial reply (``os-optics project paraxial`` / ``paraxial_analysis``):
+    ``efl_mm`` (> 0), ``basis``, ``rear_focal_point_mm`` and the outgoing ``axis_direction`` (the last stretch of the
+    paraxial axis path). Refuses (EFL_NOT_STATED) an afocal or non-positive EFL or a reply without a focal plane."""
+    system = reply.get("system") if isinstance(reply, dict) else None
+    system = system if isinstance(system, dict) else {}
     stated: Any = system.get("efl_mm")
     efl = float(stated) if _finite(stated) else math.nan
     if system.get("afocal") or not efl > 0:
         raise FieldError("EFL_NOT_STATED", f"the engine's paraxial EFL of {' '.join(components)} at {wavelength_nm} nm "
                                            f"is {stated!r} (afocal {system.get('afocal')!r}), not a positive length; "
-                                           f"distortion against EFL tan(theta) needs one: state it with --efl")
+                                           f"the first-order reference needs one; {hint}")
     focus = _point(system.get("rear_focal_point_mm"))
     stretches = reply.get("axis_path")
     axis = _unit(stretches[-1].get("direction") if isinstance(stretches, list) and stretches
@@ -398,7 +396,7 @@ def paraxial_reference(project_file: Path, project: dict, axis_source_id: str, m
         raise FieldError("EFL_NOT_STATED", f"the engine's paraxial analysis of {' '.join(components)} at "
                                            f"{wavelength_nm} nm gives no rear focal point "
                                            f"({system.get('rear_focal_point_mm')!r}) or outgoing axis to measure "
-                                           f"distortion on; state the EFL with --efl")
+                                           f"the reference height on; {hint}")
     return {"efl_mm": efl, "basis": (f"engine paraxial EFL of {' '.join(components)} at {wavelength_nm} nm in the "
                                      f"air of the Project's environment (os-optics project paraxial)"),
             "rear_focal_point_mm": focus, "axis_direction": axis}
@@ -484,6 +482,15 @@ def _offset(point: list[float], stop: dict) -> float:
     return math.sqrt(max(0.0, _dot3(d, d) - normal * normal))
 
 
+def segment_end(segment: dict) -> list[float] | None:
+    """The end point of a chief-ray segment (design frame, mm): ``end_mm`` of a run's simulation_result.json, or
+    ``end_x_mm`` / ``end_y_mm`` / ``end_z_mm`` of ``RunResults.segments()``; None when it states none."""
+    point = _point(segment.get("end_mm"))
+    if point is None and "end_x_mm" in segment:
+        point = _point([segment.get(f"end_{k}_mm") for k in "xyz"])
+    return point
+
+
 def _crossing(segment: dict, by_id: dict[str, dict], stops: list[dict]) -> tuple[dict | None, str | None, str | None]:
     """The stop a segment ends on: (stop, identified_by, None); (None, None, why) when it ends on a stop that is not
     resolved; (None, None, None) when it does not end on a stop."""
@@ -499,7 +506,7 @@ def _crossing(segment: dict, by_id: dict[str, dict], stops: list[dict]) -> tuple
         return None, None, None
     if event != "aperture_stop":
         return None, None, None
-    point = _point(segment.get("end_mm"))
+    point = segment_end(segment)
     if point is None:
         return None, None, "the segment ends at an aperture stop without a surface id or an end point"
     planes = [stop for stop in stops if stop["centre_mm"] is not None and _in_plane(point, stop)]
@@ -509,6 +516,35 @@ def _crossing(segment: dict, by_id: dict[str, dict], stops: list[dict]) -> tuple
                         f"of {len(planes)} aperture stops of the scene, not exactly one")
 
 
+def stop_crossings(segments: list[dict], stops: list[dict]) -> list[dict]:
+    """Every crossing of an aperture stop by one path's chief-ray ``segments`` (in order), as ``stop`` (a
+    ``scene_stops`` entry), ``point_mm``, ``offset_mm`` (distance from the centre of the stop's opening, in the stop
+    plane), ``identified_by`` and ``problem`` (why the crossing is not resolved; ``point_mm`` / ``offset_mm`` are then
+    None). A list ends at its first unresolved crossing."""
+    by_id = {stop["stop_id"]: stop for stop in stops if stop["stop_id"] is not None}
+    found: list[dict] = []
+    for segment in segments:
+        stop, identified_by, problem = _crossing(segment, by_id, stops)
+        if stop is None and problem is None:
+            continue
+        point = segment_end(segment)
+        if stop is not None:
+            if stop["centre_mm"] is None:
+                problem = stop["geometry_issue"]
+            elif point is None:
+                problem = f"the segment ending at {stop['stop_id']} has no end point"
+            elif not _in_plane(point, stop):
+                problem = (f"the segment ends at {stop['stop_id']} {_plane_distance(point, stop):.6g} mm off "
+                           f"the stop plane the scene gives")
+        if problem is not None or stop is None or point is None:
+            found.append({"stop": stop, "point_mm": None, "offset_mm": None, "identified_by": identified_by,
+                          "problem": problem or "the stop crossing is not resolved"})
+            break
+        found.append({"stop": stop, "point_mm": point, "offset_mm": _offset(point, stop),
+                      "identified_by": identified_by, "problem": None})
+    return found
+
+
 def chief_ray_stops(result: dict, scene: dict) -> dict[str, dict]:
     """path_id -> where the path's chief ray crosses the aperture stop: status, stop_id, stop_offset_mm (its distance
     from the centre of the stop's opening, in the stop plane; the largest one when it crosses several), identified_by
@@ -516,35 +552,22 @@ def chief_ray_stops(result: dict, scene: dict) -> dict[str, dict]:
     stop's complex_transmission; STOP_PLANE: a segment without a surface id whose aperture_stop end lies in exactly one
     stop plane) and detail (why a crossing is CHIEF_RAY_STOP_UNRESOLVED)."""
     stops = scene_stops(scene)
-    by_id = {stop["stop_id"]: stop for stop in stops if stop["stop_id"] is not None}
     states: dict[str, dict] = {}
     for path in result.get("paths") or []:
         state: dict = {"status": NO_APERTURE_STOP, "stop_id": None, "stop_offset_mm": None, "identified_by": None,
                        "detail": None}
         if stops:
             state["status"] = STOP_NOT_CROSSED
-            for segment in path.get("segments") or []:
-                stop, identified_by, problem = _crossing(segment, by_id, stops)
-                if stop is None and problem is None:
-                    continue
-                point = _point(segment.get("end_mm"))
-                if stop is not None:
-                    if stop["centre_mm"] is None:
-                        problem = stop["geometry_issue"]
-                    elif point is None:
-                        problem = f"the segment ending at {stop['stop_id']} has no end point"
-                    elif not _in_plane(point, stop):
-                        problem = (f"the segment ends at {stop['stop_id']} {_plane_distance(point, stop):.6g} mm off "
-                                   f"the stop plane the scene gives")
-                if problem is not None or stop is None or point is None:
+            for crossing in stop_crossings(path.get("segments") or [], stops):
+                stop = crossing["stop"]
+                if crossing["problem"] is not None:
                     state.update(status=STOP_UNRESOLVED, stop_id=None if stop is None else stop["stop_id"],
-                                 stop_offset_mm=None, identified_by=identified_by,
-                                 detail=problem or "the stop crossing is not resolved")
+                                 stop_offset_mm=None, identified_by=crossing["identified_by"],
+                                 detail=crossing["problem"])
                     break
-                offset = _offset(point, stop)
-                if state["stop_offset_mm"] is None or offset > state["stop_offset_mm"]:
-                    state.update(status=STOP_CROSSED, stop_id=stop["stop_id"], stop_offset_mm=offset,
-                                 identified_by=identified_by)
+                if state["stop_offset_mm"] is None or crossing["offset_mm"] > state["stop_offset_mm"]:
+                    state.update(status=STOP_CROSSED, stop_id=stop["stop_id"], stop_offset_mm=crossing["offset_mm"],
+                                 identified_by=crossing["identified_by"])
         states[path["path_id"]] = state
     return states
 

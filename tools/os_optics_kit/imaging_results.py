@@ -118,7 +118,7 @@ def load(source: Any) -> dict[str, Any]:
         dump = getattr(source, "model_dump", None)
         if not callable(dump):
             raise ImagingDocumentError(f"not an imaging analysis: {type(source).__name__}")
-        document = dump(mode="json")
+        document = dump(mode="json", by_alias=True)  # the Engine names its schema field schema_ (alias schema)
     if not isinstance(document, dict) or document.get("schema") != SCHEMA or document.get("analysis") != ANALYSIS \
             or not isinstance(document.get("arrays"), dict) or not isinstance(document.get("quantities"), list):
         raise ImagingDocumentError("not the output of 'os-optics results imaging' (schema opensci.analysis_result, "
