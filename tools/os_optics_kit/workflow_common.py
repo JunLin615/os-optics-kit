@@ -292,6 +292,29 @@ def relative(path, start):
         return Path(path).resolve().as_posix()
 
 
+def prepare_output(out_dir, overwrite, produced=()):
+    """A command's output directory, created when missing. An existing directory with any entry is refused
+    (``OUTPUT_EXISTS``) unless ``overwrite``, which first removes the entries the command writes: ``produced`` names
+    files or directories, glob patterns allowed (``imaging-*.json``); other entries are left as they are."""
+    import shutil
+
+    out_dir = Path(out_dir)
+    if out_dir.exists() and not out_dir.is_dir():
+        raise WorkflowError("OUTPUT_EXISTS", f"{out_dir} is a file, not a directory", out=out_dir.as_posix())
+    if out_dir.is_dir() and any(out_dir.iterdir()):
+        if not overwrite:
+            raise WorkflowError("OUTPUT_EXISTS", f"{out_dir} is not empty; choose a new directory or use --overwrite",
+                                out=out_dir.as_posix())
+        for pattern in produced:
+            for path in out_dir.glob(pattern):
+                if path.is_dir():
+                    shutil.rmtree(path)
+                else:
+                    path.unlink()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    return out_dir
+
+
 def bounded(rows, limit):
     """The first ``limit`` rows and how many were left out."""
     rows = list(rows)
