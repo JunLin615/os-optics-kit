@@ -486,21 +486,8 @@ def _status(outcome: solvers.SolveOutcome, chosen: solvers.EvaluationRecord | No
         return "INTERRUPTED"
     if chosen is None:
         return "NO_FEASIBLE"
+    # CONVERGED only where the solver converged on a feasible point; a feasible best found elsewhere is STOPPED
     return "CONVERGED" if outcome.converged else "STOPPED"
-
-
-def _prepare_output(out_dir: Path, overwrite: bool) -> None:
-    if out_dir.exists():
-        if not out_dir.is_dir():
-            raise wc.WorkflowError("OUTPUT_EXISTS", f"{out_dir.as_posix()} is a file; choose a new --out directory",
-                                   out=out_dir.as_posix())
-        if any(out_dir.iterdir()):
-            if not overwrite:
-                raise wc.WorkflowError("OUTPUT_EXISTS", f"{out_dir.as_posix()} is not empty; choose a new --out or "
-                                       "use --overwrite", out=out_dir.as_posix())
-            for name in FILES:  # a stale best-project.json must not outlive a rerun that finds none
-                (out_dir / name).unlink(missing_ok=True)
-    out_dir.mkdir(parents=True, exist_ok=True)
 
 
 def run(spec: Any, out_dir: str | Path, *, spec_dir: str | Path | None = None, method: str | None = None,
@@ -519,7 +506,8 @@ def run(spec: Any, out_dir: str | Path, *, spec_dir: str | Path | None = None, m
     loaded = load_spec(spec, spec_dir=spec_dir, method=method, max_evaluations=max_evaluations,
                        edit=adapter_options.get("edit"))
     base_identity = _base_identity(loaded["base"])
-    _prepare_output(out, overwrite)
+    inputs = (Path(spec) if isinstance(spec, (str, Path)) else None, loaded["project"].get("file"))
+    wc.prepare_output(out, overwrite, FILES, keep=inputs)  # a stale best-project.json must not outlive a rerun
     if session_factory is None:
         def session_factory() -> Any:
             from os_optics.local import EvaluationSession
@@ -560,7 +548,8 @@ def run(spec: Any, out_dir: str | Path, *, spec_dir: str | Path | None = None, m
         "schema": RESULT_SCHEMA, "schema_version": SCHEMA_VERSION, "status": status,
         "description": loaded["spec"]["description"],
         "termination": {"reason": outcome.reason, "method": outcome.method, "solver_message": outcome.message,
-                        "solver_status": outcome.status, "solver_x": outcome.solver_x},
+                        "solver_status": outcome.status, "solver_x": outcome.solver_x,
+                        "solver_index": outcome.solver_record.index if outcome.solver_record is not None else None},
         "counts": {"evaluations": len(records), "by_role": dict(sorted(roles.items())),
                    "cache_hits": outcome.cache_hits, "iterations": outcome.iterations,
                    "solver_calls": outcome.solver_calls, "max_evaluations": settings.max_evaluations,

@@ -51,7 +51,7 @@ walkthrough: [English](en/workflows.md) · [简体中文](zh-CN/workflows.md).
 | `sfr` | `PASS`, `WARNING` | | `UNKNOWN` (too many empty ESF bins) | | refused input |
 | `mtf` | `COMPLETED` | | `INCOMPLETE` (a curve unconverged or declined, or a field not analysed) | | refused (`MONITOR_NOT_FOUND`, `CONFIGURATION_REQUIRED`, `IMAGING_RUN_MISMATCH`, `ANALYSIS_REFUSED`, ...) |
 | `field-points` | `COMPLETED` | | `INCOMPLETE` (a point not evaluated, or an MTF sample not exact) | | refused |
-| `optimize` | `CONVERGED` | `NO_FEASIBLE` (no feasible candidate; `closest` and every margin kept) | `STOPPED` (budget, iteration cap or solver stop; feasible best) | | refused spec (`SPEC_INVALID`, `NOMINAL_AMBIGUOUS`, `CONFIGURATION_REQUIRED`, `PROJECT_REJECTED`, `OUTPUT_EXISTS`); 130 interrupted |
+| `optimize` | `CONVERGED` | `NO_FEASIBLE` (no feasible candidate; `closest` and every margin kept) | `STOPPED` (budget, iteration cap, solver stop, or trf converged outside an active constraint; feasible best) | | refused spec (`SPEC_INVALID`, `NOMINAL_AMBIGUOUS`, `CONFIGURATION_REQUIRED`, `PROJECT_REJECTED`, `OUTPUT_EXISTS`); 130 interrupted |
 | `cases verify` | every case matches `expected.json` | a case differs | | | usage error, unknown case, no engine |
 | case `workflow.py` | nominal `PASS` | nominal `FAIL` | `UNKNOWN` | `OUT_OF_MODEL`; a `PARTIAL` nominal run | `ERROR`, refused |
 

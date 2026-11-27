@@ -44,7 +44,7 @@ CLI: `--out DIR`, `--method`, `--max-evaluations`, `--overwrite`. Python: `os_op
 `DIR/spec.json` (as run, Project inlined: reruns as is), `history.jsonl` (every evaluation,
 finite-difference probes included), `result.json`, `best-project.json` (only when feasible).
 Stdout: status, termination, counts, best candidate with active constraints and worst residual.
-Exit 0 `CONVERGED`, 1 `NO_FEASIBLE`, 2 `STOPPED` (budget or iteration cap), 4 refused spec, 130
+Exit 0 `CONVERGED`, 1 `NO_FEASIBLE`, 2 `STOPPED` (budget, iteration cap, or `trf` converged outside an active constraint), 4 refused spec, 130
 interrupted. Reading `result.json`: `interpret.md`.
 
 ## Minimal example

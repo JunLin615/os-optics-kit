@@ -485,23 +485,9 @@ def _figures(report: dict[str, Any], out_dir: Path, imaging_path: Path, theme: A
 
 # --------------------------------------------------------------------------------------------- command
 
-def _prepare_output(out_dir: Path, overwrite: bool, keep: Path | None) -> None:
-    """New or empty directory, else OUTPUT_EXISTS unless ``overwrite``; with it, this command's earlier artifacts
-    (not ``keep``, the input) are removed so no stale figure survives."""
-    if out_dir.exists() and not out_dir.is_dir():
-        raise wc.WorkflowError("OUTPUT_EXISTS", f"{out_dir} is a file; choose a new --out directory")
-    if not out_dir.exists() or not any(out_dir.iterdir()):
-        return
-    if not overwrite:
-        raise wc.WorkflowError("OUTPUT_EXISTS", f"{out_dir} is not empty; choose a new --out or use --overwrite",
-                               out=out_dir.as_posix())
-    keep = keep.resolve() if keep is not None else None
-    for path in out_dir.iterdir():
-        name = path.name
-        own = name in (CSV_FILE, JSON_FILE, IMAGING_FILE) or (
-            name.startswith("mtf-") and name.endswith(_FIGURE_SUFFIXES))
-        if own and path.is_file() and path.resolve() != keep:
-            path.unlink()
+#: the entries mtf writes (figures: mtf-<source>-<index> with each format and companion file)
+FILES = (CSV_FILE, JSON_FILE, IMAGING_FILE,
+         re.compile(r"mtf-.+(" + "|".join(re.escape(suffix) for suffix in _FIGURE_SUFFIXES) + ")"))
 
 
 def _read_request(path: Path | None) -> dict[str, Any] | None:
@@ -560,7 +546,9 @@ def analyse(out_dir: str | Path, *, run: str | Path | None = None, monitor: str 
         from ._engine import require_matplotlib
 
         require_matplotlib()
-    _prepare_output(out_dir, overwrite, imaging_path)
+    inputs = (imaging_path, request_file)  # never removed; imaging.json is written only from a run
+    wc.prepare_output(out_dir, overwrite, FILES, keep=inputs,
+                      writes=FILES if imaging_path is None else tuple(f for f in FILES if f != IMAGING_FILE))
     results = identity = run_dir = clipped = None
     if run is not None:
         run_dir = resolve_run(run, configuration)

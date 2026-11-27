@@ -38,7 +38,8 @@ METHODS = ("trf", "slsqp")
 DIFFERENCES = ("central", "forward")
 X_SCALES = ("variables", "jac")
 #: Why a search stopped (``SolveOutcome.reason``).
-TERMINATIONS = ("CONVERGED", "BUDGET_EXHAUSTED", "ITERATION_LIMIT", "SOLVER_STOPPED", "INTERRUPTED")
+TERMINATIONS = ("CONVERGED", "CONVERGED_INFEASIBLE", "BUDGET_EXHAUSTED", "ITERATION_LIMIT", "SOLVER_STOPPED",
+                "INTERRUPTED")
 #: Roles of an evaluation in the history.
 ROLES = ("start", "step", "jacobian")
 
@@ -122,6 +123,7 @@ class SolveOutcome:
     evaluations: list[EvaluationRecord] = field(default_factory=list)
     cache_hits: int = 0
     seconds: float = 0.0
+    solver_record: EvaluationRecord | None = None
 
     @property
     def converged(self) -> bool:
@@ -277,6 +279,21 @@ def solve(adapter: Any, settings: Settings, recorder: Recorder | None = None) ->
     return outcome
 
 
+def _final_point(evaluator: Evaluator, space: _Space, z: Sequence[float], outcome: SolveOutcome) -> None:
+    """Record the evaluation at the solver's last point; a convergence there that is not feasible is
+    ``CONVERGED_INFEASIBLE`` (trf treats constraints as quadratic penalties, so with an active constraint it converges
+    just outside it)."""
+    key = tuple(float(v) for v in space.x(z))
+    if key not in evaluator.cache:
+        evaluator(key, "step")  # normally cached: both solvers evaluate the point they return
+    outcome.solver_record = evaluator.cache[key]
+    result = outcome.solver_record.result
+    if outcome.reason == "CONVERGED" and not (result.valid and result.feasible is True):
+        outcome.reason = "CONVERGED_INFEASIBLE"
+        outcome.message = (f"{outcome.message} The solver's last point is not feasible; the best candidate is the "
+                           "best feasible evaluation, not the solver's optimum.").strip()
+
+
 def _trf(evaluator: Evaluator, space: _Space, settings: Settings, outcome: SolveOutcome) -> None:
     import numpy as np
     from scipy.optimize import least_squares
@@ -295,6 +312,7 @@ def _trf(evaluator: Evaluator, space: _Space, settings: Settings, outcome: Solve
     outcome.solver_x = evaluator.adapter.mapping(space.x(res.x))
     outcome.iterations, outcome.solver_calls = int(res.njev or 0), int(res.nfev)
     outcome.reason = "CONVERGED" if res.status > 0 else ("ITERATION_LIMIT" if res.status == 0 else "SOLVER_STOPPED")
+    _final_point(evaluator, space, res.x, outcome)
 
 
 def _slsqp(evaluator: Evaluator, space: _Space, settings: Settings, outcome: SolveOutcome, count: int,
@@ -326,6 +344,7 @@ def _slsqp(evaluator: Evaluator, space: _Space, settings: Settings, outcome: Sol
     outcome.solver_x = evaluator.adapter.mapping(space.x(res.x))
     outcome.iterations, outcome.solver_calls = int(getattr(res, "nit", 0) or 0), calls[0]
     outcome.reason = "CONVERGED" if res.status == 0 else ("ITERATION_LIMIT" if res.status == 9 else "SOLVER_STOPPED")
+    _final_point(evaluator, space, res.x, outcome)
 
 
 __all__ = ["BudgetExhausted", "DIFFERENCES", "EvaluationRecord", "Evaluator", "METHODS", "ROLES", "Settings",

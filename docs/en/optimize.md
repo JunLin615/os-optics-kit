@@ -92,16 +92,20 @@ by vignetting it. Under the default `ray_loss: infeasible` a candidate that lose
 the start already loses rays, set `ray_loss: report` and bound the loss with `rays` constraints, as the aspheric
 example below does. A `rays` value changes in steps of one ray: its finite-difference derivative is zero, or a spike
 where a probe crosses a step, so neither solver can see the limit coming. Keep the variable bounds local around a
-start that holds it; `trf` then steps across, sees the quadratic penalty and steps back, while the best candidate is
-always taken from the feasible evaluations.
+start that holds it. The best candidate is always taken from the feasible evaluations.
+
+Active constraints. `trf` treats each constraint as a quadratic penalty, so where a constraint is active it
+converges just outside it. Its last point is then not feasible: the termination reason is `CONVERGED_INFEASIBLE` and
+the status `STOPPED`, with the best feasible evaluation as `best`. Use `slsqp`, or a smaller constraint `scale` (a
+stiffer penalty), when a constraint is expected to bind.
 
 ## Read the result
 
 | Status | Exit | Meaning |
 | --- | --- | --- |
-| `CONVERGED` | 0 | the solver met its tolerance; a feasible best exists |
+| `CONVERGED` | 0 | the solver met its tolerance at a feasible point (`termination.solver_index`) |
 | `NO_FEASIBLE` | 1 | no candidate was feasible: no `best-project.json`; `closest` and every margin in `history.jsonl` |
-| `STOPPED` | 2 | budget, iteration cap or a solver stop, with a feasible best |
+| `STOPPED` | 2 | budget, iteration cap, a solver stop, or convergence at an infeasible point, with a feasible best |
 | `INTERRUPTED` | 130 | Ctrl-C; the files written so far are kept |
 
 `--out` holds `spec.json` (the spec as run, defaults filled in and the base Project inlined: it runs again by
@@ -109,8 +113,9 @@ itself), `history.jsonl` (one line per engine evaluation: `index`, `role` (`star
 `candidate`, objective, values, margins, `infeasible`, `rays_lost`, `reason`, `seconds`, identity hashes),
 `result.json` and `best-project.json`. `result.json` (schema `os-optics-kit.optimize` v1):
 
-- `termination`: `reason` (`CONVERGED`, `BUDGET_EXHAUSTED`, `ITERATION_LIMIT`, `SOLVER_STOPPED`, `INTERRUPTED`), the
-  solver's message and status, its last point;
+- `termination`: `reason` (`CONVERGED`, `CONVERGED_INFEASIBLE`, `BUDGET_EXHAUSTED`, `ITERATION_LIMIT`,
+  `SOLVER_STOPPED`, `INTERRUPTED`), the solver's message and status, its last point (`solver_x`) and that point's
+  evaluation index (`solver_index`);
 - `counts`: `evaluations` (by role), `cache_hits`, `iterations` (null when the budget stopped the solver before it
   returned), `seconds`, `verification_evaluations`;
 - `variables`: each nominal and where it was read (`given`, `base`, `default`);

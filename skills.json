@@ -127,8 +127,8 @@
       "command": "os-optics-kit optimize",
       "requires": "os-optics>=0.14,<0.15",
       "path": "skills/optimize/SKILL.md",
-      "tokens": 789,
-      "sha256": "96e5b440478271215cd0aa9916173fe95f33b35c8e8e352f36f1a0b2d2843bcc"
+      "tokens": 800,
+      "sha256": "b155331aec7956e79fd0fa2bb27a2ab4621edfa08c519d0349cc73b6b44970c4"
     },
     {
       "name": "plot",

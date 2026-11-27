@@ -83,16 +83,19 @@ nominal 为 `NOMINAL_AMBIGUOUS`，带配置却未给出 `configuration` 的 Proj
 丢失的光线。光斑 RMS（`spot_rms_mm`）只统计到达平面的光瞳光线，因此搜索可能靠渐晕把光斑变小。在默认的
 `ray_loss: infeasible` 下，丢失光瞳光线的候选设计不可行。起点已经丢失光线时，请设置 `ray_loss: report`，并用
 `rays` 约束限制丢失，如下面的非球面示例。`rays` 的值以一条光线为台阶变化：其有限差分导数为零，或在探测点跨过台阶时
-出现尖峰，因此两种求解器都无法预见这一限值。请把变量边界限定在满足该限值的起点附近；此时 `trf` 会越过限值、看到二次
-罚项后再退回，而最佳候选始终只从可行的计算中选取。
+出现尖峰，因此两种求解器都无法预见这一限值。请把变量边界限定在满足该限值的起点附近。最佳候选始终只从可行的计算中选取。
+
+起作用的约束。`trf` 把每个约束当作二次罚项，因此约束起作用时它会收敛到约束之外不远处。此时其最后一点不可行：终止原因为
+`CONVERGED_INFEASIBLE`，状态为 `STOPPED`，`best` 为最佳的可行计算。预计约束会起作用时，请用 `slsqp`，或减小约束的
+`scale`（罚项更陡）。
 
 ## 读取结果
 
 | 状态 | 退出码 | 含义 |
 | --- | --- | --- |
-| `CONVERGED` | 0 | 求解器达到容差；存在可行的最佳设计 |
+| `CONVERGED` | 0 | 求解器在可行点上达到容差（`termination.solver_index`） |
 | `NO_FEASIBLE` | 1 | 没有可行的候选：不写 `best-project.json`；给出 `closest`，`history.jsonl` 中有每个裕量 |
-| `STOPPED` | 2 | 预算、迭代上限或求解器停止，存在可行的最佳设计 |
+| `STOPPED` | 2 | 预算、迭代上限、求解器停止，或在不可行点上收敛，存在可行的最佳设计 |
 | `INTERRUPTED` | 130 | Ctrl-C；保留已写出的文件 |
 
 `--out` 中有 `spec.json`（实际运行的规格：补全默认值，内联基础 Project，可单独再次运行）、`history.jsonl`（每次
@@ -100,8 +103,8 @@ nominal 为 `NOMINAL_AMBIGUOUS`，带配置却未给出 `configuration` 的 Proj
 `rays_lost`、`reason`、`seconds`、标识哈希）、`result.json` 与 `best-project.json`。`result.json`（schema
 `os-optics-kit.optimize` v1）：
 
-- `termination`：`reason`（`CONVERGED`、`BUDGET_EXHAUSTED`、`ITERATION_LIMIT`、`SOLVER_STOPPED`、`INTERRUPTED`）、
-  求解器的消息与状态、其最后一点；
+- `termination`：`reason`（`CONVERGED`、`CONVERGED_INFEASIBLE`、`BUDGET_EXHAUSTED`、`ITERATION_LIMIT`、
+  `SOLVER_STOPPED`、`INTERRUPTED`）、求解器的消息与状态、其最后一点（`solver_x`）及该点的计算序号（`solver_index`）；
 - `counts`：`evaluations`（按角色）、`cache_hits`、`iterations`（预算在求解器返回前终止搜索时为 null）、`seconds`、
   `verification_evaluations`；
 - `variables`：每个 nominal 及其读取来源（`given`、`base`、`default`）；

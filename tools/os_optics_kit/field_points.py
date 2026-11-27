@@ -43,6 +43,7 @@ from dataclasses import dataclass, field
 import hashlib
 import math
 from pathlib import Path
+import re
 import time
 from typing import Any, Sequence
 
@@ -80,7 +81,8 @@ LINE_MATCH_NM = 1e-6
 AXIS_SOURCE_ID = "FP_AXIS"
 #: the evaluated Project's trace budget covers this many times the field points' own chief-ray paths and steps
 BUDGET_HEADROOM = 2
-FILES = ("field-points.json", "evaluated-project.json", "imaging.json", "imaging-*.json", "run")
+#: the entries field-points writes; ``produced(request)`` gives those of one request
+FILES = ("field-points.json", "evaluated-project.json", "imaging.json", re.compile(r"imaging-\d+\.json"), "run")
 SCOPE = {
     "supported": ("centred, rotationally symmetric imaging prescriptions: a reference GAUSSIAN_BEAM source on the "
                   "optical axis, one aperture stop (or a stated pivot), field points traced through one crossing "
@@ -836,6 +838,14 @@ def _point_report(point: Point, context: dict, final: dict[str, list[dict]], sam
 
 # ----------------------------------------------------------------------------------------------- run
 
+def produced(request: Request) -> tuple:
+    """The entries of ``FILES`` this request writes: ``run`` only with ``write_run``, the imaging documents only with
+    ``mtf_frequencies``; ``--overwrite`` removes these and nothing else."""
+    return tuple(entry for entry in FILES
+                 if (entry != "run" or request.write_run)
+                 and (request.mtf_frequencies is not None or not str(getattr(entry, "pattern", entry)).startswith("imaging")))
+
+
 def run(request: Request, out_dir: str | Path, *, overwrite: bool = False, session: Any = None) -> dict:
     """Build, aim and evaluate the field points of ``request``; write the report files into ``out_dir``; return the
     report (``field-points.json``)."""
@@ -871,7 +881,8 @@ def run(request: Request, out_dir: str | Path, *, overwrite: bool = False, sessi
             parse_request({**imaging_base, "fields": ["FP0"], "frequencies_cyc_per_mm": request.mtf_frequencies})
         except ImagingError as exc:
             raise FieldPointsError("IMAGING_INVALID", str(exc)) from None
-    out = wc.prepare_output(out_dir, overwrite, FILES)
+    produced_files, inputs = produced(request), (request.project, request.imaging_request_file)
+    wc.check_output(out_dir, overwrite, produced_files, keep=inputs)  # refuse now; remove stale files before writing
 
     from os_optics.local import EvaluationSession
 
@@ -1000,6 +1011,7 @@ def run(request: Request, out_dir: str | Path, *, overwrite: bool = False, sessi
     evaluated_budget = budget(len(points), len(lines), False)
     evaluated = _project(base, reference, points, frame, lines, request.plane, widened, "field point",
                          budget=evaluated_budget)
+    out = wc.prepare_output(out_dir, overwrite, produced_files, keep=inputs)
     evaluated_file = out / "evaluated-project.json"
     wc.write_json(evaluated_file, evaluated)
     evaluated_check = wc.check(evaluated)

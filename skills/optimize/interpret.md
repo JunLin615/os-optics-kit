@@ -3,12 +3,13 @@
 `result.json` answers what to do next. Read it in this order:
 
 1. `status` and `termination.reason`:
-   - `CONVERGED` (exit 0): the solver met its tolerance and a feasible candidate exists. Check
+   - `CONVERGED` (exit 0): the solver met its tolerance at a feasible point. Check
      `verification.reproduction.status` (`REPRODUCED`: best-project.json gives the same numbers in a
      fresh session) and `verification.dense` (values and feasibility with denser sampling). A
      feasibility change there means the search sampling was too coarse.
    - `STOPPED` (exit 2): a feasible best exists but the budget (`BUDGET_EXHAUSTED`), the iteration
-     cap or the solver (`SOLVER_STOPPED`, its `solver_message`) ended the search. Rerun from the best:
+     cap or the solver (`SOLVER_STOPPED`, its `solver_message`) ended the search, or `trf` converged
+     just outside an active constraint (`CONVERGED_INFEASIBLE`: rerun with `slsqp`). Rerun from the best:
      set each variable's `nominal` to `best.candidate`, or raise `max_evaluations`.
    - `NO_FEASIBLE` (exit 1): no candidate met every constraint. `infeasible_reasons` counts why
      (`CONSTRAINT_VIOLATED`, `RAYS_LOST`, an invalid candidate's reason code such as

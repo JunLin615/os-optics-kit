@@ -132,6 +132,39 @@ def test_slsqp_holds_an_active_constraint():
 
 
 @scipy_needed
+def test_trf_converging_outside_an_active_constraint_is_not_converged(fake, tmp_path):
+    """trf treats a constraint as a quadratic penalty: where it binds, the solver's last point lies just outside it.
+    That is CONVERGED_INFEASIBLE / STOPPED, never CONVERGED with a feasible best taken from elsewhere."""
+    spec = _spec(constraints=[{"name": "a_floor", "source": {"target": "a"}, "minimum": 1.5}])
+    spec["variables"][0]["nominal"] = 2.0  # a feasible start; the penalized optimum is a = 1.25
+    result = fake(spec, tmp_path / "out", method="trf")
+    assert result["termination"]["reason"] == "CONVERGED_INFEASIBLE"
+    assert result["status"] == "STOPPED" and optimize.EXIT_CODES[result["status"]] == 2
+    assert result["termination"]["solver_x"]["a"] < 1.5  # just outside the floor
+    assert result["termination"]["solver_index"] is not None
+    assert result["best"]["candidate"]["a"] >= 1.5  # the best is feasible
+    loaded = optimize.load_spec(spec, edit=_set)
+    adapter = ea.Adapter(loaded["problem"], session=QuadraticSession(), edit=_set)
+    outcome = solvers.solve(adapter, solvers.Settings(method="slsqp", max_evaluations=80))
+    assert outcome.reason == "CONVERGED" and outcome.solver_record.result.feasible is True
+
+
+def test_overwrite_never_replaces_the_input_spec_or_project(fake, tmp_path):
+    out = tmp_path / "run"
+    out.mkdir()
+    (out / "spec.json").write_text(json.dumps(_spec()), encoding="utf-8")
+    before = (out / "spec.json").read_bytes()
+    with pytest.raises(wc.WorkflowError) as refused:
+        fake(str(out / "spec.json"), out, overwrite=True)
+    assert refused.value.code == "OUTPUT_IS_INPUT" and (out / "spec.json").read_bytes() == before
+    (tmp_path / "best-project.json").write_text(json.dumps(PROJECT), encoding="utf-8")
+    (tmp_path / "s.json").write_text(json.dumps(_spec(project="best-project.json")), encoding="utf-8")
+    with pytest.raises(wc.WorkflowError) as project:
+        fake(str(tmp_path / "s.json"), tmp_path, overwrite=True)
+    assert project.value.code == "OUTPUT_IS_INPUT" and (tmp_path / "best-project.json").is_file()
+
+
+@scipy_needed
 def test_infeasible_problem_has_no_best_and_keeps_every_margin(fake, tmp_path):
     out = tmp_path / "out"
     result = fake(_spec(constraints=[{"name": "a_above_10", "source": {"target": "a"}, "minimum": 10.0}]), out)

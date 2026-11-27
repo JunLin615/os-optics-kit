@@ -383,6 +383,27 @@ class OutputDirectoryTests(unittest.TestCase):
             wc.prepare_output(out, True, fp.FILES)
             self.assertEqual(sorted(p.name for p in out.iterdir()), ["notes.txt"])
 
+    def test_overwrite_keeps_inputs_and_what_this_request_does_not_write(self):
+        from os_optics_kit import workflow_common as wc
+
+        with TempDir() as base:
+            out = base / "fp"
+            out.mkdir()
+            for name in ("field-points.json", "imaging.json", "imaging-request.json", "project.json"):
+                (out / name).write_text("x", encoding="utf-8")
+            (out / "run").mkdir()
+            request = fp.Request(project=str(out / "project.json"), plane="P", kind="ANGULAR", values=[0.0])
+            produced = fp.produced(request)  # no --write-run, no --mtf-frequencies
+            wc.prepare_output(out, True, produced, keep=(request.project,))
+            self.assertEqual(sorted(p.name for p in out.iterdir()),
+                             ["imaging-request.json", "imaging.json", "project.json", "run"])
+            mtf_request = fp.Request(project=str(out / "imaging.json"), plane="P", kind="ANGULAR", values=[0.0],
+                                     mtf_frequencies=[40.0])
+            with self.assertRaises(wc.WorkflowError) as replaced:  # an input this run would write is refused
+                wc.check_output(out, True, fp.produced(mtf_request), keep=(mtf_request.project,))
+            self.assertEqual(replaced.exception.code, "OUTPUT_IS_INPUT")
+            self.assertTrue((out / "imaging.json").is_file())
+
 
 class ImagingObjectTests(unittest.TestCase):
     def test_the_engines_result_object_is_read_by_its_field_aliases(self):
