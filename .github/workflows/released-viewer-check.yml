@@ -1,0 +1,70 @@
+name: Released viewer check
+
+# A browser check of the local live viewer as a user installs it: the os-optics and os-optics-kit wheels from PyPI
+# (SHA-256 compared with PyPI's), a saved run, a Project edit and a re-run followed in one page; see
+# scripts/released_viewer_check.py. Run it by hand after a kit release (or on a branch with kit_source).
+on:
+  workflow_dispatch:
+    inputs:
+      engine_version:
+        description: "os-optics release from PyPI"
+        required: true
+        default: "0.14.0"
+        type: string
+      kit_version:
+        description: "os-optics-kit release from PyPI (ignored with kit_source)"
+        required: true
+        default: "0.5.0"
+        type: string
+      kit_source:
+        description: "Build the kit from this checkout instead of PyPI (the engine still comes from PyPI)"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: released-viewer-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Released viewer (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+      - name: Run the released viewer check
+        shell: bash
+        env:
+          ENGINE_VERSION: ${{ inputs.engine_version }}
+          KIT_VERSION: ${{ inputs.kit_version }}
+          KIT_SOURCE: ${{ inputs.kit_source }}
+          EVIDENCE: ${{ runner.temp }}/released-viewer-evidence
+          WORK: ${{ runner.temp }}/released-viewer-work
+        # The environments and inputs live under the runner's temporary directory, outside the checkout; the
+        # browser is the runner's Chrome. The step fails when a check fails (known defects of the release do not).
+        run: |
+          args=("$EVIDENCE" --engine-version "$ENGINE_VERSION" --kit-version "$KIT_VERSION" --work-dir "$WORK")
+          if [[ "$KIT_SOURCE" == "true" ]]; then
+            args+=(--kit-source "$GITHUB_WORKSPACE")
+          fi
+          python scripts/released_viewer_check.py "${args[@]}"
+      - name: Upload the evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: released-viewer-evidence-${{ matrix.os }}
+          path: ${{ runner.temp }}/released-viewer-evidence
+          if-no-files-found: error

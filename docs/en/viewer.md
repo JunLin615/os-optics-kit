@@ -11,7 +11,7 @@ requires **no** `[render]` or `[plot]` extras, **no** Playwright/Chromium downlo
 ## Quick start
 
 ```bash
-python -m pip install "os-optics[protected]" os-optics-kit
+python -m pip install os-optics os-optics-kit
 
 # Watch a saved run directory (3D rays, power ledger, execution status and targets)
 os-optics-kit view run
@@ -54,6 +54,20 @@ Press `Ctrl-C` to stop the server cleanly.
 - **Geometry preview is never a computed result**: opening a Project without a run shows nominal component/plane geometry only, with no rays and an explicit uncomputed state. `--evaluate` runs once into a temporary directory and never auto-reruns on subsequent edits.
 - **No stale misattribution**: when an attached Project changes relative to its run, freshness flips to `HISTORICAL`, old numbers and rays are withheld, and the updated geometry is shown until a matching run is written.
 - **Graceful recovery from partial writes**: if an agent is mid-write (truncated JSON or half-copied run), the viewer enters a waiting state while holding the last valid snapshot, then updates automatically as soon as valid files settle.
+- **The camera stays where you put it**: a new revision (a Project edit, a new run, traced rays giving way to geometry only and back) is drawn through the camera you were looking through, whether you moved it or left the first framing. The view buttons, Fit and Reset reframe on request. A geometry-only view of a historical run starts on that run's view directions.
+
+## What an agent can read
+
+The page states what it shows twice, and both agree with `GET /api/snapshot` (the `snapshot` of its envelope):
+
+- **Attributes of `#app`** for the snapshot on screen: `data-revision`, `data-snapshot-id`, `data-status` (`ok`, `waiting`, `error`), `data-result-mode` (`computed_run`, `stale_run`, `geometry_preview`), `data-computed`, `data-freshness` (`CURRENT`, `HISTORICAL`, `UNDETERMINED`, `RUN_ONLY`, or empty when not checked), `data-project-hash`, `data-execution-outcome`, `data-requirement-outcome`, `data-power-available`, `data-power-conserved` (`true`, `false`, or empty when the ledger is withheld), `data-branch-count`, `data-geometry-only` and `data-drawable-ray-count`. Each is the value of the same field of the snapshot, empty where that field is null.
+- **The visible text**: a badge that does not apply is hidden **and empty** (`aria-hidden="true"`), so the page's text never holds the verdict of an earlier snapshot. On a stale run, for example, there is no "Power conserved" anywhere in the DOM.
+
+The active 3D frame (`iframe.engine-frame.active`) carries the same `data-snapshot-id`, and `data-camera` says whether it took over the previous frame's camera (`carried`) or starts on the engine's framing (`default`).
+
+## Checking a release in a browser
+
+`python scripts/released_viewer_check.py OUT_DIR --engine-version 0.14.0 --kit-version 0.5.0` (in a checkout of this repository) installs the published wheels into a fresh environment outside the checkout, checks their SHA-256 against PyPI, and follows a saved run, a Project edit and a re-run in one page of a local Chrome, comparing the page, `/api/snapshot` and the engine's `results` commands at each step. `OUT_DIR` receives a JSON record of every check and a screenshot per revision; `--kit-source .` checks a build of the checkout instead. The `Released viewer check` workflow runs it on Linux and Windows (`workflow_dispatch`).
 
 ## Relation to other commands
 

@@ -41,6 +41,16 @@ that are not in a release yet come first, under "Unreleased".
   names (#33).
 - `edit`: `set_optical_model_value {model_id, path, value}` sets one number of a declared optical model by JSON
   pointer; `sensitivity`, `tolerance` and `optimize` read its nominal from the base Project (#33).
+- `view`: agent-readable state on `#app`, each attribute the value of the same `/api/snapshot` field
+  (`data-result-mode`, `data-computed`, `data-freshness`, `data-project-hash`, `data-execution-outcome`,
+  `data-requirement-outcome`, `data-power-available`, `data-power-conserved`, `data-branch-count`,
+  `data-geometry-only`, `data-drawable-ray-count`); the active 3D frame states `data-camera` (`carried` or
+  `default`). Documented in `docs/en/viewer.md`, "What an agent can read" (#45).
+- `scripts/released_viewer_check.py` and the `Released viewer check` workflow (`workflow_dispatch`, Linux and
+  Windows): the published os-optics and os-optics-kit wheels (SHA-256 checked against PyPI) in a fresh environment
+  outside the checkout, a saved run, a Project edit and a re-run followed in one Chrome page; the page, `/api/snapshot`
+  and the engine's `results` commands compared at each step, with a JSON record of every check (pass, fail or a
+  known defect of the release) and a screenshot per revision. `--kit-source DIR` checks a build of a branch.
 
 ### Changed
 
@@ -58,6 +68,15 @@ that are not in a release yet come first, under "Unreleased".
 - `sfr --design` no longer takes a curve the engine declines (a geometric MTF outside its regime, the curves of a
   stand-in pupil) although os-optics 0.14 keeps its array: `DESIGN_CURVE_UNAVAILABLE` with the engine's state and
   reason (#31).
+- `view` keeps the camera across revisions: a Project edit that withholds the rays (stale run) and the re-run that
+  brings them back are drawn through the camera of the previous frame, moved or not, instead of the engine's
+  default framing of the new scene, which turned with the beams; a geometry-only view of a historical run starts on
+  that run's view directions, and its default framing box follows the engine's rule (the source placeholder and far
+  planes left out) (#45).
+- `view`: a hidden badge is empty and `aria-hidden` (`#badge-conserved`, `#badge-freshness`, `#badge-geom-only`,
+  `#badge-schematic`, the syncing overlay): on a stale run the DOM no longer holds "Power conserved" or the
+  previous freshness from the last computed snapshot (#45).
+- `docs/en/viewer.md` and `docs/zh-CN/viewer.md` install plain `os-optics` (not `os-optics[protected]`).
 
 ## 0.5.0
 

@@ -620,15 +620,34 @@
     }
   }
 
+  // A hidden pill carries no text and no tone: what a reader of the DOM (an agent, a screen reader, a text search)
+  // finds is what the page shows, never the label of an earlier snapshot.
   function setPill(id, label, tone) {
     var node = el(id);
     if (!label) {
-      node.classList.add("hidden");
+      node.textContent = "";
+      node.className = "pill hidden";
+      node.setAttribute("aria-hidden", "true");
       return;
     }
-    node.classList.remove("hidden");
     node.textContent = label;
     node.className = "pill" + (tone ? " " + tone : "");
+    node.removeAttribute("aria-hidden");
+  }
+
+  // The "syncing" overlay follows the same rule as the pills: hidden means empty.
+  function showUpdating(text) {
+    var node = el("frame-updating");
+    node.textContent = text;
+    node.classList.remove("hidden");
+    node.removeAttribute("aria-hidden");
+  }
+
+  function hideUpdating() {
+    var node = el("frame-updating");
+    node.textContent = "";
+    node.classList.add("hidden");
+    node.setAttribute("aria-hidden", "true");
   }
 
   function renderLiveBadge() {
@@ -651,9 +670,8 @@
     el("app-title").textContent = t("appTitle");
     el("badge-readonly").textContent = t("readOnly");
     el("lbl-scene-title").textContent = t("sceneTitle");
-    el("badge-geom-only").textContent = t("geomOnlyBadge");
-    el("badge-schematic").textContent = t("schematicBadge");
-    el("frame-updating").textContent = t("updating3d");
+    // The geometry-only / schematic badges and the syncing overlay are labelled where they are shown
+    // (commitSnapshotPanel, showUpdating): a hidden one keeps no text.
     el("lbl-exec-title").textContent = t("execTitle");
     el("lbl-power-title").textContent = t("powerTitle");
     el("lbl-targets-title").textContent = t("targetsTitle");
@@ -818,12 +836,12 @@
 
   function renderPowerLedger(snap) {
     var body = el("power-body");
-    var badge = el("badge-conserved");
     clear(body);
 
     var power = snap.power_ledger || {};
     if (!power.available) {
-      badge.classList.add("hidden");
+      // Withheld ledger (stale run, no run, configuration not in the run): no conserved/residual verdict either.
+      setPill("badge-conserved", "", "");
       var isStale = power.reason === "STALE_RUN" || snap.result_mode === "stale_run";
       var box = h("div", "empty-state" + (isStale ? " warn" : ""));
       var msg = power.reason === "NO_RUN"
@@ -846,7 +864,7 @@
     } else if (power.conserved === false) {
       setPill("badge-conserved", t("conservedNo"), "warn");
     } else {
-      badge.classList.add("hidden");
+      setPill("badge-conserved", "", "");
     }
 
     var hero = h("div", "power-hero");
@@ -1280,6 +1298,37 @@
     return parts.join(" · ");
   }
 
+  function boolAttr(value) {
+    return value === true ? "true" : (value === false ? "false" : "");
+  }
+
+  // Machine-readable state of the shown snapshot on #app, each attribute the value of the same field of /api/snapshot
+  // ("" where that field is null or absent), so an agent reads what the page shows without parsing localized text.
+  function setStateAttributes(appEl, snap) {
+    var s = snap || {};
+    var fresh = s.freshness || {};
+    var power = s.power_ledger || {};
+    var scene = s.scene || {};
+    var exec = s.execution || {};
+    var identity = s.identity || {};
+    var attrs = {
+      "data-result-mode": s.result_mode || "",
+      "data-computed": snap ? boolAttr(s.is_computed_result === true) : "",
+      "data-freshness": fresh.checked ? String(fresh.state || "") : "",
+      "data-project-hash": identity.project_hash || "",
+      "data-execution-outcome": exec.outcome || "",
+      "data-requirement-outcome": exec.requirement_outcome || ((s.target_summary || {}).requirement_outcome) || "",
+      "data-power-available": snap ? boolAttr(power.available === true) : "",
+      "data-power-conserved": power.available ? boolAttr(power.conserved) : "",
+      "data-branch-count": snap ? String((s.branches || []).length) : "",
+      "data-geometry-only": snap ? boolAttr(scene.geometry_only === true) : "",
+      "data-drawable-ray-count": (snap && typeof scene.drawable_ray_count === "number") ? String(scene.drawable_ray_count) : ""
+    };
+    Object.keys(attrs).forEach(function (name) {
+      appEl.setAttribute(name, attrs[name]);
+    });
+  }
+
   function commitSnapshotPanel(snap) {
     displayedSnapshot = snap;
     displayedSnapshotId = snap ? (snap.snapshot_id || null) : null;
@@ -1289,10 +1338,13 @@
     appEl.setAttribute("data-snapshot-id", displayedSnapshotId || "");
 
     setPill("badge-rev", "Rev #" + (snap ? snap.revision : (latestStatusEnvelope ? (latestStatusEnvelope.revision || 0) : 0)), "pill-mono");
+    setStateAttributes(appEl, snap);
 
     if (!snap) {
       setPill("badge-mode", t("modeNone"), "warn");
       setPill("badge-freshness", "", "");
+      setPill("badge-geom-only", "", "");
+      setPill("badge-schematic", "", "");
       renderBannerError(latestStatusEnvelope);
       return;
     }
@@ -1323,8 +1375,8 @@
     renderNotices(snap);
 
     var scene = snap.scene || {};
-    el("badge-geom-only").classList.toggle("hidden", !scene.geometry_only);
-    el("badge-schematic").classList.toggle("hidden", !scene.has_schematic_geometry);
+    setPill("badge-geom-only", scene.geometry_only ? t("geomOnlyBadge") : "", "pill-info");
+    setPill("badge-schematic", scene.has_schematic_geometry ? t("schematicBadge") : "", "pill-warn");
     el("scene-meta").textContent = formatSceneMeta(scene);
 
     renderExecutionCard(snap);
@@ -1362,11 +1414,148 @@
     var next = queuedSnapshot;
     queuedSnapshot = null;
     if (next.snapshot_id === displayedSnapshotId) {
-      el("frame-updating").classList.add("hidden");
+      hideUpdating();
       commitSnapshotPanel(next);
       return;
     }
     startStaging(next);
+  }
+
+  // ---------------------------------------------------------------------------------------------- camera carry-over
+  //
+  // Every snapshot is drawn in a fresh engine frame, and the engine page always starts on its own "iso" preset, which
+  // it derives from the scene's beams and fit box: a geometry-only view (stale run, no run) and a traced view of the
+  // same layout therefore start from different cameras. The page instead keeps the camera the reader is looking
+  // through: at each swap the outgoing frame's camera (projection, eye, target, screen up, extent) is applied to the
+  // incoming frame before it becomes visible. Fit, Fit all, Reset and the view buttons still reframe on request. The
+  // first frame keeps the engine's own framing. Everything read here is guarded: a frame without a working viewer
+  // falls back to the engine's default view.
+  function vecArray(v) {
+    return (v && typeof v.toArray === "function") ? v.toArray() : null;
+  }
+
+  function finiteArray(a, n) {
+    if (!a || a.length !== n) {
+      return false;
+    }
+    for (var i = 0; i < n; i++) {
+      if (typeof a[i] !== "number" || !isFinite(a[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function captureCameraPose(frame) {
+    try {
+      var win = frame && frame.contentWindow;
+      var v = win && win.__opensciViewer;
+      if (!v || !v.camera || !v.controls || !v.controls.target) {
+        return null;
+      }
+      var cam = v.camera;
+      var pose = {
+        orthographic: !!cam.isOrthographicCamera,
+        position: vecArray(cam.position),
+        target: vecArray(v.controls.target),
+        up: vecArray(cam.up),
+        near: cam.near,
+        far: cam.far,
+        zoom: cam.zoom,
+        view: v.currentView || null,
+        auto_frame: null
+      };
+      if (!finiteArray(pose.position, 3) || !finiteArray(pose.target, 3) || !finiteArray(pose.up, 3)) {
+        return null;
+      }
+      if (pose.orthographic) {
+        pose.top = cam.top;
+        pose.bottom = cam.bottom;
+        pose.left = cam.left;
+        pose.right = cam.right;
+      }
+      var af = v.autoFrame;
+      if (af && af.dir && af.up && af.box && af.box.min && af.box.max) {
+        // Not moved by the reader since the view was framed: keep it framed on the same box when the area resizes.
+        pose.auto_frame = {
+          dir: vecArray(af.dir),
+          up: vecArray(af.up),
+          min: vecArray(af.box.min),
+          max: vecArray(af.box.max),
+          aim: af.aim ? vecArray(af.aim) : null
+        };
+      }
+      return pose;
+    } catch (_e) {
+      return null;
+    }
+  }
+
+  function applyCameraPose(frame, pose) {
+    if (!pose) {
+      return false;
+    }
+    try {
+      var win = frame && frame.contentWindow;
+      var v = win && win.__opensciViewer;
+      if (!v || !v.perspective || !v.orthographic || !v.controls || typeof v.useCamera !== "function") {
+        return false;
+      }
+      var cam = pose.orthographic ? v.orthographic : v.perspective;
+      v.useCamera(cam);
+      cam.up.fromArray(pose.up);
+      // OrbitControls take their rotation basis from camera.up when created: new up (or camera) -> new controls.
+      if (typeof v.makeControls === "function"
+          && (!v.controlsUp || !cam.up.equals(v.controlsUp) || v.controls.object !== cam)) {
+        v.makeControls();
+      }
+      v.controls.target.fromArray(pose.target);
+      cam.position.fromArray(pose.position);
+      if (pose.near > 0 && pose.far > pose.near) {
+        cam.near = pose.near;
+        cam.far = pose.far;
+      }
+      if (pose.orthographic && pose.top > 0) {
+        cam.top = pose.top;
+        cam.bottom = pose.bottom;
+        cam.left = pose.left;
+        cam.right = pose.right;
+      }
+      if (pose.zoom > 0) {
+        cam.zoom = pose.zoom;
+      }
+      cam.updateProjectionMatrix();
+      v.controls.update();
+      v.autoFrame = null;
+      var af = pose.auto_frame;
+      if (af && finiteArray(af.dir, 3) && finiteArray(af.up, 3) && finiteArray(af.min, 3) && finiteArray(af.max, 3)
+          && v.focusBox && typeof v.focusBox.clone === "function") {
+        var box = v.focusBox.clone();
+        box.min.fromArray(af.min);
+        box.max.fromArray(af.max);
+        v.autoFrame = {
+          dir: cam.position.clone().fromArray(af.dir),
+          up: cam.position.clone().fromArray(af.up),
+          box: box,
+          aim: finiteArray(af.aim, 3) ? cam.position.clone().fromArray(af.aim) : null
+        };
+      }
+      v.currentView = pose.view;
+      var doc = frame.contentDocument;
+      if (doc) {
+        doc.querySelectorAll("#views button, #planes button").forEach(function (b) {
+          b.classList.toggle("active", !!pose.view && b.dataset.view === pose.view);
+        });
+      }
+      if (typeof v.renderNow === "function") {
+        v.renderNow();
+      } else if (typeof v.requestRender === "function") {
+        v.requestRender();
+      }
+      return true;
+    } catch (_e) {
+      return false;
+    }
   }
 
   function startStaging(snap) {
@@ -1384,9 +1573,7 @@
       return;
     }
 
-    var updating = el("frame-updating");
-    updating.textContent = t("updatingRev", { rev: snap.revision });
-    updating.classList.remove("hidden");
+    showUpdating(t("updatingRev", { rev: snap.revision }));
 
     var staging = getStagingFrame();
     var oldActive = getActiveFrame();
@@ -1398,6 +1585,11 @@
       }
       stopPendingPoll();
       syncIframeLang(staging, true);
+
+      // The reader's camera, read at the moment of the swap (an orbit made while this scene loaded is kept), is the
+      // camera of the incoming frame's first visible picture.
+      var carried = applyCameraPose(staging, captureCameraPose(oldActive));
+      staging.setAttribute("data-camera", carried ? "carried" : "default");
 
       // Atomic synchronous swap: visible 3D scene AND right-hand panel flip together in one JS tick,
       // while #banner-error stays bound to latestStatusEnvelope (never cleared by a delayed valid scene!).
@@ -1420,7 +1612,7 @@
         pumpQueuedSnapshot();
       } else {
         queuedSnapshot = null;
-        updating.classList.add("hidden");
+        hideUpdating();
       }
     }
 
@@ -1567,7 +1759,7 @@
       transitionToken++;
       stagingSnapshot = null;
       queuedSnapshot = null;
-      el("frame-updating").classList.add("hidden");
+      hideUpdating();
       commitSnapshotPanel(null);
       return;
     }
@@ -1577,7 +1769,7 @@
     if (snap.snapshot_id === displayedSnapshotId) {
       queuedSnapshot = null;
       if (stagingSnapshot === null) {
-        el("frame-updating").classList.add("hidden");
+        hideUpdating();
         commitSnapshotPanel(snap);
       }
       return;
@@ -1592,9 +1784,7 @@
       }
       // Coalesce newer snapshots into the single queue slot; it will start immediately when staging finishes.
       queuedSnapshot = snap;
-      var updating = el("frame-updating");
-      updating.textContent = t("updatingRev", { rev: snap.revision });
-      updating.classList.remove("hidden");
+      showUpdating(t("updatingRev", { rev: snap.revision }));
       return;
     }
 

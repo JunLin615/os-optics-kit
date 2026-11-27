@@ -837,3 +837,365 @@ def test_snapshot_api_failure_is_retried_until_it_recovers(browser_env, tmp_path
                     finally:
                         failing.clear()
                         browser.close()
+
+
+# ------------------------------------------------------------------------------------------------------------------
+# Project + saved run followed through a Project edit (stale) and a re-run (current again): kit #45 V1 and V2.
+
+_HIDDEN_STATE_JS = """() => {
+    const app = document.getElementById('app');
+    const pill = (id) => {
+        const n = document.getElementById(id);
+        return {
+            hidden: n.classList.contains('hidden'),
+            text: n.textContent,
+            aria_hidden: n.getAttribute('aria-hidden'),
+            class_name: n.className,
+        };
+    };
+    const hiddenWithText = [];
+    document.querySelectorAll('.pill.hidden, #frame-updating.hidden').forEach((n) => {
+        if ((n.textContent || '') !== '' || n.getAttribute('aria-hidden') !== 'true') {
+            hiddenWithText.push(n.id || n.className);
+        }
+    });
+    const attrs = {};
+    for (const a of app.attributes) {
+        if (a.name.startsWith('data-')) attrs[a.name] = a.value;
+    }
+    return {
+        attrs: attrs,
+        conserved: pill('badge-conserved'),
+        freshness: pill('badge-freshness'),
+        mode: pill('badge-mode'),
+        geom_only: pill('badge-geom-only'),
+        schematic: pill('badge-schematic'),
+        updating: pill('frame-updating'),
+        hidden_with_text: hiddenWithText,
+        body_text: document.body.textContent,
+        power_text: (document.getElementById('power-body')?.textContent || '').trim(),
+    };
+}"""
+
+_CAMERA_JS = """() => {
+    const f = document.querySelector('iframe.engine-frame.active');
+    const v = f && f.contentWindow && f.contentWindow.__opensciViewer;
+    if (!v) return null;
+    const c = v.camera;
+    return {
+        orthographic: !!c.isOrthographicCamera,
+        position: c.position.toArray(),
+        target: v.controls.target.toArray(),
+        up: c.up.toArray(),
+        zoom: c.zoom,
+        stage: [v.width, v.height],
+        auto_framed: v.autoFrame !== null && v.autoFrame !== undefined,
+        beams: Array.isArray(v.doc.beams) ? v.doc.beams.length : 0,
+        frame_snapshot_id: f.getAttribute('data-snapshot-id') || '',
+        camera_attr: f.getAttribute('data-camera') || '',
+        iso_view_direction: (v.doc.camera_presets && v.doc.camera_presets.iso) ? v.doc.camera_presets.iso.view_direction : null,
+    };
+}"""
+
+_STRINGS = {
+    "en": {
+        "conserved": "Power conserved",
+        "not_conserved": "Residual outside tolerance",
+        "current": "Current",
+        "historical": "Historical",
+        "geom_only": "Geometry Only",
+        "stale_mode": "Stale Run · Project Updated",
+        "computed_mode": "Computed Result",
+    },
+    "zh": {
+        "conserved": "功率守恒",
+        "not_conserved": "残差超容差",
+        "current": "最新匹配",
+        "historical": "历史过期",
+        "geom_only": "仅几何预览",
+        "stale_mode": "结果已过期 · 工程已更新",
+        "computed_mode": "已计算结果",
+    },
+}
+
+
+def _fixture_a_power(power_w: float) -> dict:
+    doc = _fixture_a()
+    for comp in doc["components"]:
+        if comp["instance_id"] == "SRC":
+            comp["source_model"]["power_w"] = power_w
+    return doc
+
+
+def _write_json_from_subprocess(path: Path, doc: dict) -> None:
+    staged = path.parent / (path.name + ".src")
+    staged.write_text(json.dumps(doc, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+    _copy_file_from_subprocess(staged, path)
+    staged.unlink()
+
+
+@pytest.fixture(scope="module")
+def stale_env(browser_env, tmp_path_factory):
+    """Fixture A at 1 mW (the saved run) and at 3 mW (the Project edit and its re-run): same geometry, new physics."""
+    from os_optics.local import run_optical_project
+    from os_optics.results import load_run
+
+    browser_path, run_a, _run_b, hash_a, _hash_b = browser_env
+    base = tmp_path_factory.mktemp("viewer-stale")
+    run_3mw = base / "run_3mw"
+    run_optical_project(_fixture_a_power(0.003), output_dir=run_3mw)
+    hash_3mw = load_run(run_3mw, verify=True).identity()["project_hash"]
+    assert hash_3mw != hash_a
+    return browser_path, run_a, hash_a, run_3mw, hash_3mw
+
+
+def _snapshot_api(page, server_url: str) -> dict:
+    response = page.request.get(f"{server_url}api/snapshot")
+    assert response.ok, response.status
+    return response.json()["snapshot"]
+
+
+def _expected_attrs(snap: dict) -> dict:
+    """The #app state attributes the page must show for an /api/snapshot snapshot (setStateAttributes in viewer.js)."""
+    power = snap["power_ledger"]
+    fresh = snap["freshness"] or {}
+    scene = snap["scene"] or {}
+    execution = snap["execution"] or {}
+
+    def flag(value):
+        return "true" if value is True else ("false" if value is False else "")
+
+    return {
+        "data-revision": str(snap["revision"]),
+        "data-snapshot-id": snap["snapshot_id"],
+        "data-result-mode": snap["result_mode"],
+        "data-computed": flag(snap["is_computed_result"] is True),
+        "data-freshness": str(fresh.get("state") or "") if fresh.get("checked") else "",
+        "data-project-hash": snap["identity"].get("project_hash") or "",
+        "data-execution-outcome": execution.get("outcome") or "",
+        "data-power-available": flag(power["available"] is True),
+        "data-power-conserved": flag(power["conserved"]) if power["available"] else "",
+        "data-branch-count": str(len(snap["branches"])),
+        "data-geometry-only": flag(scene.get("geometry_only") is True),
+        "data-drawable-ray-count": str(scene["drawable_ray_count"]),
+    }
+
+
+def _assert_attrs_match_api(state: dict, snap: dict) -> None:
+    expected = _expected_attrs(snap)
+    shown = {k: state["attrs"].get(k) for k in expected}
+    assert shown == expected, f"#app state attributes disagree with /api/snapshot: {shown} != {expected}"
+
+
+def _assert_hidden_pill_empty(pill: dict, name: str) -> None:
+    assert pill["hidden"], f"{name} should be hidden: {pill}"
+    assert pill["text"] == "", f"hidden {name} keeps text in the DOM: {pill}"
+    assert pill["aria_hidden"] == "true", f"hidden {name} is not aria-hidden: {pill}"
+    assert pill["class_name"] == "pill hidden", f"hidden {name} keeps a tone class: {pill}"
+
+
+def _assert_shown_pill(pill: dict, text: str, name: str) -> None:
+    assert not pill["hidden"], f"{name} should be shown: {pill}"
+    assert pill["text"] == text, f"{name} text: {pill}"
+    assert pill["aria_hidden"] is None, f"shown {name} is aria-hidden: {pill}"
+
+
+@pytest.mark.parametrize("lang", ["en", "zh"])
+def test_stale_project_hides_badges_without_text_and_states_agree(stale_env, tmp_path, lang):
+    """Kit #45 V2: computed -> stale (Project edit) -> current (re-run). A hidden badge carries no text, no tone and is
+    aria-hidden; the #app data attributes state the shown snapshot exactly as /api/snapshot does."""
+    from playwright.sync_api import expect, sync_playwright
+
+    browser_path, run_a, hash_a, run_3mw, hash_3mw = stale_env
+    words = _STRINGS[lang]
+    project = tmp_path / "project.json"
+    project.write_text(json.dumps(_fixture_a_power(0.001), indent=1, sort_keys=True) + "\n", encoding="utf-8")
+    run_dir = tmp_path / "run"
+    shutil.copytree(run_a, run_dir)
+
+    with ViewerSession(resolve_target(project, run=run_dir), poll_interval=0.05) as session:
+        session.load_initial()
+        session.start()
+        with LocalViewerServer(session, host="127.0.0.1", port=0, heartbeat_interval=2.0) as server:
+            with sync_playwright() as playwright:
+                browser = playwright.chromium.launch(executable_path=browser_path, headless=True)
+                try:
+                    page = browser.new_page(viewport={"width": 1280, "height": 840})
+                    console_errors: list[str] = []
+                    page.on("console", lambda msg: console_errors.append(msg.text) if msg.type == "error" else None)
+                    page.goto(f"{server.url}?lang={lang}", wait_until="domcontentloaded")
+
+                    # rev 1: the saved run, computed and current.
+                    expect(page.locator("#app")).to_have_attribute("data-revision", "1", timeout=20000)
+                    expect(page.locator("#app")).to_have_attribute("data-status", "ok", timeout=10000)
+                    s1 = page.evaluate(_HIDDEN_STATE_JS)
+                    api1 = _snapshot_api(page, server.url)
+                    assert api1["result_mode"] == "computed_run" and api1["power_ledger"]["conserved"] is True, api1
+                    _assert_shown_pill(s1["conserved"], words["conserved"], "#badge-conserved")
+                    _assert_shown_pill(s1["freshness"], words["current"], "#badge-freshness")
+                    _assert_shown_pill(s1["mode"], words["computed_mode"], "#badge-mode")
+                    _assert_hidden_pill_empty(s1["geom_only"], "#badge-geom-only")
+                    _assert_hidden_pill_empty(s1["schematic"], "#badge-schematic")
+                    assert s1["hidden_with_text"] == [], s1["hidden_with_text"]
+                    assert words["geom_only"] not in s1["body_text"]
+                    _assert_attrs_match_api(s1, api1)
+                    assert s1["attrs"]["data-project-hash"] == hash_a
+
+                    # rev 2: the Project is edited (3 mW), the run is historical: rays, ledger and verdict withheld.
+                    _write_json_from_subprocess(project, _fixture_a_power(0.003))
+                    expect(page.locator("#app")).to_have_attribute("data-revision", "2", timeout=20000)
+                    expect(page.locator("#app")).to_have_attribute("data-result-mode", "stale_run", timeout=10000)
+                    s2 = page.evaluate(_HIDDEN_STATE_JS)
+                    api2 = _snapshot_api(page, server.url)
+                    assert api2["result_mode"] == "stale_run", api2["result_mode"]
+                    assert api2["power_ledger"]["available"] is False and api2["power_ledger"]["conserved"] is None
+                    _assert_hidden_pill_empty(s2["conserved"], "#badge-conserved")
+                    _assert_shown_pill(s2["freshness"], words["historical"], "#badge-freshness")
+                    _assert_shown_pill(s2["mode"], words["stale_mode"], "#badge-mode")
+                    _assert_shown_pill(s2["geom_only"], words["geom_only"], "#badge-geom-only")
+                    assert s2["hidden_with_text"] == [], s2["hidden_with_text"]
+                    for stale_word in (words["conserved"], words["not_conserved"],
+                                       _STRINGS["en"]["conserved"], _STRINGS["zh"]["conserved"]):
+                        assert stale_word not in s2["body_text"], f"stale text {stale_word!r} left in the DOM"
+                    assert "mW" not in s2["power_text"], s2["power_text"]
+                    _assert_attrs_match_api(s2, api2)
+                    assert s2["attrs"]["data-project-hash"] == hash_3mw
+                    assert s2["attrs"]["data-power-available"] == "false"
+                    assert s2["attrs"]["data-power-conserved"] == ""
+                    assert s2["attrs"]["data-freshness"] == "HISTORICAL"
+
+                    # rev 3: the edited Project is re-run into the same directory: current again.
+                    _replace_dir_from_subprocess(run_3mw, run_dir)
+                    expect(page.locator("#app")).to_have_attribute("data-revision", "3", timeout=20000)
+                    expect(page.locator("#app")).to_have_attribute("data-result-mode", "computed_run", timeout=10000)
+                    s3 = page.evaluate(_HIDDEN_STATE_JS)
+                    api3 = _snapshot_api(page, server.url)
+                    assert abs(api3["power_ledger"]["total_input_W"] - 0.003) < 1e-12
+                    assert "3 mW" in s3["power_text"], s3["power_text"]
+                    _assert_shown_pill(s3["conserved"], words["conserved"], "#badge-conserved")
+                    _assert_shown_pill(s3["freshness"], words["current"], "#badge-freshness")
+                    _assert_hidden_pill_empty(s3["geom_only"], "#badge-geom-only")
+                    assert s3["hidden_with_text"] == [], s3["hidden_with_text"]
+                    assert words["geom_only"] not in s3["body_text"]
+                    _assert_attrs_match_api(s3, api3)
+                    assert s3["attrs"]["data-project-hash"] == hash_3mw
+                    assert console_errors == [], f"unexpected browser console errors: {console_errors}"
+                finally:
+                    browser.close()
+
+
+def _direction(pose: dict) -> list[float]:
+    d = [p - t for p, t in zip(pose["position"], pose["target"], strict=True)]
+    n = sum(x * x for x in d) ** 0.5
+    return [x / n for x in d]
+
+
+def _max_diff(a: list[float], b: list[float]) -> float:
+    return max(abs(x - y) for x, y in zip(a, b, strict=True))
+
+
+def _assert_same_pose(pose: dict, ref: dict, label: str) -> None:
+    """Same camera: projection, line of sight, aim point and screen up. The eye position is the same too, except for a
+    camera still framed by the viewer (never moved by the reader) on a drawing area of another size: the engine frames
+    the same box again for the new area (its resize rule), which only moves the eye along the same line of sight."""
+    assert pose is not None and ref is not None, (label, pose, ref)
+    assert pose["orthographic"] == ref["orthographic"], (label, pose, ref)
+    assert _max_diff(_direction(pose), _direction(ref)) <= 1e-9, f"{label}: line of sight turned: {pose} != {ref}"
+    assert _max_diff(pose["target"], ref["target"]) <= 1e-6, f"{label}: aim point moved: {pose} != {ref}"
+    assert _max_diff(pose["up"], ref["up"]) <= 1e-9, f"{label}: screen up turned: {pose} != {ref}"
+    if pose["auto_framed"] and ref["auto_framed"] and pose["stage"] != ref["stage"]:
+        return
+    assert _max_diff(pose["position"], ref["position"]) <= 1e-6, f"{label}: eye moved: {pose} != {ref}"
+    assert abs(pose["zoom"] - ref["zoom"]) <= 1e-9, (label, pose, ref)
+
+
+@pytest.mark.parametrize("moved", [False, True], ids=["auto-framed", "user-moved"])
+def test_camera_pose_survives_rays_to_geometry_only_and_back(stale_env, tmp_path, moved):
+    """Kit #45 V1: the camera the reader looks through is kept when the view goes from traced rays (computed run) to
+    geometry only (stale run) and back (re-run), whether the reader moved it or left the engine's framing."""
+    from playwright.sync_api import expect, sync_playwright
+
+    browser_path, run_a, hash_a, run_3mw, hash_3mw = stale_env
+    project = tmp_path / "project.json"
+    project.write_text(json.dumps(_fixture_a_power(0.001), indent=1, sort_keys=True) + "\n", encoding="utf-8")
+    run_dir = tmp_path / "run"
+    shutil.copytree(run_a, run_dir)
+
+    with ViewerSession(resolve_target(project, run=run_dir), poll_interval=0.05) as session:
+        session.load_initial()
+        session.start()
+        with LocalViewerServer(session, host="127.0.0.1", port=0, heartbeat_interval=2.0) as server:
+            with sync_playwright() as playwright:
+                browser = playwright.chromium.launch(executable_path=browser_path, headless=True)
+                try:
+                    page = browser.new_page(viewport={"width": 1280, "height": 840})
+                    console_errors: list[str] = []
+                    page.on("console", lambda msg: console_errors.append(msg.text) if msg.type == "error" else None)
+                    page.goto(f"{server.url}?lang=en", wait_until="domcontentloaded")
+                    expect(page.locator("#app")).to_have_attribute("data-revision", "1", timeout=20000)
+                    expect(page.locator("#app")).to_have_attribute("data-status", "ok", timeout=10000)
+                    pose1 = page.evaluate(_CAMERA_JS)
+                    assert pose1 is not None and pose1["beams"] > 0, pose1
+
+                    if moved:
+                        # Orbit like a reader: a real drag on the 3D view (OrbitControls), then a wheel zoom.
+                        box = page.locator("iframe.engine-frame.active").bounding_box()
+                        cx, cy = box["x"] + box["width"] * 0.5, box["y"] + box["height"] * 0.5
+                        page.mouse.move(cx, cy)
+                        page.mouse.down()
+                        for step in range(1, 11):
+                            page.mouse.move(cx + 14 * step, cy + 6 * step)
+                        page.mouse.up()
+                        page.mouse.wheel(0, -240)
+                        page.wait_for_timeout(300)
+                        moved_pose = page.evaluate(_CAMERA_JS)
+                        assert not moved_pose["auto_framed"], moved_pose
+                        assert _max_diff(moved_pose["position"], pose1["position"]) > 1.0, (moved_pose, pose1)
+                        reference = moved_pose
+                    else:
+                        reference = pose1
+
+                    # rev 2: geometry only (stale run).
+                    _write_json_from_subprocess(project, _fixture_a_power(0.003))
+                    expect(page.locator("#app")).to_have_attribute("data-revision", "2", timeout=20000)
+                    pose2 = page.evaluate(_CAMERA_JS)
+                    assert pose2["beams"] == 0 and pose2["frame_snapshot_id"] != pose1["frame_snapshot_id"], pose2
+                    _assert_same_pose(pose2, reference, "rays -> geometry only")
+                    assert pose2["auto_framed"] == (not moved), pose2
+
+                    # rev 3: traced rays again (re-run).
+                    _replace_dir_from_subprocess(run_3mw, run_dir)
+                    expect(page.locator("#app")).to_have_attribute("data-revision", "3", timeout=20000)
+                    pose3 = page.evaluate(_CAMERA_JS)
+                    assert pose3["beams"] > 0, pose3
+                    _assert_same_pose(pose3, reference, "geometry only -> rays")
+
+                    # A resize keeps the line of sight: an auto-framed camera is framed again on the same box, a camera
+                    # the reader moved stays aimed where it was.
+                    page.set_viewport_size({"width": 1180, "height": 800})
+                    page.wait_for_timeout(300)
+                    pose4 = page.evaluate(_CAMERA_JS)
+                    assert _max_diff(_direction(pose4), _direction(reference)) <= 1e-6, (pose4, reference)
+                    if moved:
+                        assert _max_diff(pose4["target"], reference["target"]) <= 1e-6, (pose4, reference)
+
+                    if not moved:
+                        # Nothing to carry (a page opened on a stale revision): the geometry-only view still starts on
+                        # the traced view's direction, as it is framed like the historical run's view.
+                        _write_json_from_subprocess(project, _fixture_a_power(0.002))
+                        expect(page.locator("#app")).to_have_attribute("data-revision", "4", timeout=20000)
+                        fresh = browser.new_page(viewport={"width": 1280, "height": 840})
+                        fresh.goto(f"{server.url}?lang=en", wait_until="domcontentloaded")
+                        expect(fresh.locator("#app")).to_have_attribute("data-result-mode", "stale_run", timeout=20000)
+                        expect(fresh.locator("#app")).to_have_attribute("data-status", "ok", timeout=10000)
+                        fresh_pose = fresh.evaluate(_CAMERA_JS)
+                        assert fresh_pose["beams"] == 0 and fresh_pose["camera_attr"] == "default", fresh_pose
+                        assert fresh_pose["iso_view_direction"] == pose3["iso_view_direction"], (fresh_pose, pose3)
+                        assert _max_diff(_direction(fresh_pose), _direction(pose1)) <= 1e-6, (fresh_pose, pose1)
+                        assert _max_diff(fresh_pose["up"], pose1["up"]) <= 1e-6, (fresh_pose, pose1)
+                    # The page states which frames took the reader's camera: the first frame keeps the engine's framing.
+                    assert (pose1["camera_attr"], pose2["camera_attr"], pose3["camera_attr"]) == (
+                        "default", "carried", "carried"), (pose1, pose2, pose3)
+                    assert console_errors == [], f"unexpected browser console errors: {console_errors}"
+                finally:
+                    browser.close()
