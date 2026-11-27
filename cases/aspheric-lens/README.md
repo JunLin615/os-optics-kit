@@ -107,6 +107,8 @@ re-renders them exactly as recorded in `images.json`).
 `figures.py` draws the MTF, Strehl and spot figures from that run with the same `results imaging` call
 (matplotlib comes with `pip install "os-optics-kit[plot]"`); the spherical control has no Project in
 this case, so its numbers stay in the table above.
+The same curves as a table with their status, one figure per field and wavelength:
+`os-optics-kit mtf run --monitor image_plane --request imaging-request.json --out mtf`.
 
 `data/engine-aspheric.json` holds both versions side by side: every quantity with its state, basis and —
 where the engine declined it — the reason and message verbatim. `studies/aspheric.csv` and

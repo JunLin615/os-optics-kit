@@ -18,6 +18,7 @@ kind: tool
 ## When not to use
 
 - Design-side SFR (optics x pixel x sampling): the engine's optical MTF has no pixel term; this tool never adds one.
+- The design's optical MTF curves alone (table, JSON, figures): use `mtf`; its `imaging.json` is a valid `--design`.
 - Several edges, a curved target or an ROI without one straight edge.
 
 ## Inputs

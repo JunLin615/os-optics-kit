@@ -101,6 +101,8 @@ python figures.py run --out images
 由 `os-optics-kit cases images midwave-infrared-imager` 按 `images.json` 中的记录原样重新渲染）。`figures.py` 用同一条
 `results imaging` 调用从这次运行画出 MTF、弥散斑与波前图（matplotlib 随
 `pip install "os-optics-kit[plot]"` 安装）。
+同一组曲线连同其状态写成表格，并为每个视场和波长各画一张图：
+`os-optics-kit mtf run --monitor image_plane --request imaging-request.json --out mtf`。
 
 `data/engine-midwave.json` 收录了引擎为这次运行产出的每一个量，连同它的状态、依据，以及引擎拒绝给出
 时的 `reason` 与 `message` 原文。`expected.json` 记录运行状态与每条目标的判定。

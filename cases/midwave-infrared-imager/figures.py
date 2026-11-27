@@ -2,9 +2,10 @@
 
     python figures.py RUN --out images
 
-RUN is the directory written by ``os-optics project run project.json --out-dir RUN``. The script reads the imaging
-results exactly as the README does, ``os-optics results imaging RUN --monitor image_plane --request
-imaging-request.json`` (``--imaging FILE`` reuses that command's saved JSON output for the same run), and writes
+RUN is the directory written by ``os-optics project run project.json --out-dir RUN``. The script runs the imaging
+analysis of the README's ``os-optics results imaging RUN --monitor image_plane --request imaging-request.json``
+in-process (``--imaging FILE`` reads that command's saved JSON output for the same run instead), reads it through
+``os_optics_kit.imaging_results`` (only curves and values the engine states as known) and writes
 mtf.png, spot.png and wavefront.png.
 """
 from __future__ import annotations
@@ -12,8 +13,6 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import subprocess
-import sys
 from pathlib import Path
 
 import matplotlib
@@ -21,7 +20,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
-from os_optics_kit import presentation as pr  # noqa: E402
+from os_optics_kit import imaging_results as ir, mtf, presentation as pr  # noqa: E402
+from os_optics_kit.workflow_common import WorkflowError  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 MONITOR = "image_plane"
@@ -30,20 +30,13 @@ MAX_BYTES = 400 * 1024
 
 
 def imaging(run, saved=None):
-    """The JSON of ``os-optics results imaging RUN --monitor image_plane --request imaging-request.json``."""
-    if saved is not None:
-        result = json.loads(Path(saved).read_text(encoding="utf-8"))
-    else:
-        command = [sys.executable, "-m", "os_optics", "results", "imaging", str(run), "--monitor", MONITOR,
-                   "--request", str(HERE / "imaging-request.json")]
-        done = subprocess.run(command, capture_output=True, text=True, encoding="utf-8")
-        if done.returncode not in (0, 2):  # 2: a quantity outside its model, with the reason in the JSON
-            raise SystemExit(f"results imaging exited {done.returncode}: {(done.stderr or done.stdout).strip()}")
-        result = json.loads(done.stdout)
-    manifest = json.loads((Path(run) / "manifest.json").read_text(encoding="utf-8"))
-    if result["identity"]["physical"]["engine_input_hash"] != manifest["engine_run"]["input_hash"]["digest"]:
-        raise SystemExit("the imaging results are not from RUN (engine_input_hash differs)")
-    return result
+    """The imaging analysis of RUN at image_plane with imaging-request.json, run in-process, or its saved JSON
+    (``--imaging``), which must come from RUN."""
+    request = json.loads((HERE / "imaging-request.json").read_text(encoding="utf-8"))
+    try:
+        return mtf.imaging_of(run, MONITOR, request, saved=saved)
+    except WorkflowError as exc:
+        raise SystemExit(f"{exc.code}: {exc}") from None
 
 
 def sources(run):
@@ -78,10 +71,20 @@ def bars(ax, labels, heights, colors, digits, size):
 
 
 def draw(result, beams, out):
-    values = {}
-    for quantity in result["quantities"]:
-        values[(quantity["scope"]["source_id"], quantity["quantity_id"].split(".", 1)[1])] = quantity["value"]
-    arrays = result["arrays"]
+    line = {entry["source_id"]: entry["line_id"] for entry in ir.lines(result)}  # one spectral line per source
+
+    def value(sid, name):
+        quantity = ir.scalar(result, line[sid], name)
+        if quantity["value"] is None:
+            raise SystemExit(f"{quantity['quantity_id']} is {quantity['state']} ({quantity['reason']}): not drawn")
+        return quantity["value"]
+
+    def curve(sid, kind, direction):
+        record = ir.curve(result, line[sid], kind, direction)
+        if not record["usable"]:
+            raise SystemExit(f"{record['quantity_id']} is {record['status']} ({record['reason']}): not drawn")
+        return record["frequencies_cyc_per_mm"], record["values"]
+
     fields = sorted({field for field, _ in beams.values()})
     waves = sorted({wave for _, wave in beams.values()})
     by = {(field, wave): sid for sid, (field, wave) in beams.items()}
@@ -97,11 +100,9 @@ def draw(result, beams, out):
         fig, axes = plt.subplots(1, 2, figsize=(12, 5.6), sharey=True, layout="constrained")
         for ax, direction in zip(axes, ("tangential", "sagittal")):
             for field, wave in order:
-                path = by[(field, wave)] + "#0"
-                ax.plot(arrays[f"{path}.frequencies_cyc_per_mm"], arrays[f"{path}.mtf_{direction}"], styles[field],
+                ax.plot(*curve(by[(field, wave)], "mtf", direction), styles[field],
                         color=color[wave], linewidth=1.3)
-            path = reference + "#0"
-            ax.plot(arrays[f"{path}.frequencies_cyc_per_mm"], arrays[f"{path}.diffraction_limited_mtf_{direction}"],
+            ax.plot(*curve(reference, "diffraction_limited_mtf", direction),
                     "-.", color=theme.colors["text"], linewidth=1.8)
             ax.set(title=direction.capitalize(), xlabel="spatial frequency (cycles/mm)", xlim=(0, 30), ylim=(0, 1.02))
         axes[0].set_ylabel("MTF")
@@ -118,8 +119,8 @@ def draw(result, beams, out):
 
         # Geometric ray spot RMS radius, with the on-axis 80 % diffraction-limited encircled radius.
         fig, ax = plt.subplots(figsize=(11, 4.6), layout="constrained")
-        bars(ax, labels, [values[(by[k], "geometric_spot_rms_radius")] for k in order], colors, 2, small)
-        limit = values[(reference, "diffraction_limited_encircled_radius_80")]
+        bars(ax, labels, [value(by[k], "geometric_spot_rms_radius") for k in order], colors, 2, small)
+        limit = value(reference, "diffraction_limited_encircled_radius_80")
         ax.axhline(limit, linestyle="--", color=theme.colors["text"],
                    label=f"diffraction-limited encircled radius 80% (on axis, {waves[1] / 1000:g} µm) {limit:.2f} µm")
         ax.set(ylabel="geometric spot RMS radius (µm)")
@@ -130,13 +131,13 @@ def draw(result, beams, out):
 
         # Wavefront error and Strehl ratio.
         fig, axes = plt.subplots(1, 2, figsize=(12, 4.8), layout="constrained")
-        bars(axes[0], labels, [values[(by[k], "opd_rms_waves")] for k in order], colors, 3, small)
+        bars(axes[0], labels, [value(by[k], "opd_rms_waves") for k in order], colors, 3, small)
         axes[0].axhline(1.0, linestyle="--", color=theme.colors["text"])
         axes[0].text(-0.4, 1.02, "1 wave: below it the engine marks its geometric MTF out of scope", fontsize=small,
                      va="bottom")
         axes[0].set(ylabel="wavefront OPD RMS (waves)", ylim=(0, 1.2),
                     title="Wavefront error on the reference sphere")
-        bars(axes[1], labels, [values[(by[k], "strehl_ratio")] for k in order], colors, 3, small)
+        bars(axes[1], labels, [value(by[k], "strehl_ratio") for k in order], colors, 3, small)
         axes[1].set(ylabel="Strehl ratio", ylim=(0, 1.08), title="Strehl ratio of the scalar diffraction model")
         for ax in axes:
             ax.tick_params(axis="x", labelsize=small * 0.9)

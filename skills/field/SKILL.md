@@ -15,7 +15,7 @@ kind: tool
 
 ## When not to use
 
-- For ray-fan curves of one field: use `fans`. For MTF or PSF: use `os-optics results imaging`.
+- For ray-fan curves of one field: use `fans`. For MTF: `mtf`; PSF: `os-optics results imaging`.
 
 ## Inputs
 

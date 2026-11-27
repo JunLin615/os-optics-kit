@@ -1,0 +1,2448 @@
+{
+  "schema": "opensci.analysis_result",
+  "schema_version": "1.0",
+  "analysis": "IMAGING",
+  "analysis_version": "1.2",
+  "identity": {
+    "physical": {
+      "engine_build_id": "0.14.0+32b6d324d2be88f6",
+      "engine_input_hash": "a6e2023bcc4f636074f00e77cb04258b7a71f7441a194cd37db1d416cefa65fc",
+      "run_result_hash": "0d7d106002c41caebebf24b7694b7c6f3d770878055e4d2cee4e61de2f31692f",
+      "settings_hash": "3e190b00a6408ffaf5cb816c7b661c8f77ecec485779eb2ccbd2c6584eb44f29"
+    },
+    "requirements": null
+  },
+  "execution": {
+    "outcome": "COMPLETED",
+    "termination": "COMPLETED",
+    "reason": "",
+    "complete": true,
+    "budgets": {
+      "limits": {},
+      "exhausted": [],
+      "exhausted_by_phase": {},
+      "affected_source_ids": [],
+      "untraced_power_W": null,
+      "affected_path_ids": [],
+      "affected_observation_ids": []
+    }
+  },
+  "settings": {
+    "request": {
+      "fields": null,
+      "wavelengths_nm": null,
+      "crossing_index": null,
+      "launch_grid": 256,
+      "launch_radius_beam_radii": 8.8542,
+      "psf_samples": 256,
+      "psf_half_width_um": 250.0,
+      "frequencies_cyc_per_mm": [
+        10.0,
+        20.0,
+        30.0,
+        40.0,
+        50.0,
+        60.0,
+        80.0,
+        100.0
+      ],
+      "reference": "CENTROID",
+      "include_psf_map": false
+    },
+    "monitor": "image_plane",
+    "random_seed": null,
+    "sampling": "a square grid of rays over the launch disc, deterministic"
+  },
+  "models": [
+    {
+      "model_id": "geometric_ray_bundle",
+      "name": "geometric ray bundle of the traced rays",
+      "version": "1.2",
+      "assumptions": [
+        "the traced rays of a uniformly lit pupil; the geometric MTF stands for the MTF where the wavefront error is large"
+      ],
+      "validity": []
+    },
+    {
+      "model_id": "SRC0#0.geometric_mtf",
+      "name": "geometric MTF of the ray spot",
+      "version": "1.2",
+      "assumptions": [
+        "|sum over the rays of p_j exp(-i 2 pi f (r_j - r_c))|, p_j each ray's share of the irradiance on the pupil"
+      ],
+      "validity": [
+        {
+          "parameter": "opd_rms_waves",
+          "unit": null,
+          "minimum": 1.0,
+          "maximum": null,
+          "observed": 0.327561092,
+          "within": false
+        }
+      ]
+    },
+    {
+      "model_id": "SRC0#0.diffraction",
+      "name": "vector Debye integral over the traced rays",
+      "version": "1.2",
+      "assumptions": [
+        "a point object lights the pupil uniformly; each ray carries the irradiance its field keeps to the plane (a sample's amplitude, the interfaces' and coatings' transmissions); a partially polarized or unpolarized source's two components are mutually incoherent: each component's pupil field is propagated to the image apart and their point spread functions add in irradiance, each by its share of the light that reaches the plane",
+        "each ray stands for the solid angle its tube fills in image space and carries the phase of its optical path difference",
+        "Debye integral over the rays' directions about the reference point (Fresnel number of the converging cone much above 1)",
+        "monochromatic: one spectral line per field",
+        "unpolarized light: two orthogonal pupil polarizations, each carried as by an aplanatic lens, added in irradiance"
+      ],
+      "validity": [
+        {
+          "parameter": "neighbour_phase_step_rad",
+          "unit": null,
+          "minimum": null,
+          "maximum": 3.141592653589793,
+          "observed": 0.0529007634,
+          "within": true
+        },
+        {
+          "parameter": "window_half_width_over_ray_period",
+          "unit": null,
+          "minimum": null,
+          "maximum": 0.5,
+          "observed": 0.34710738,
+          "within": true
+        },
+        {
+          "parameter": "window_light_share",
+          "unit": null,
+          "minimum": 0.95,
+          "maximum": null,
+          "observed": 0.999255956,
+          "within": true
+        },
+        {
+          "parameter": "image_space_na",
+          "unit": null,
+          "minimum": null,
+          "maximum": null,
+          "observed": 0.208542523,
+          "within": true
+        }
+      ]
+    },
+    {
+      "model_id": "SRC1#0.geometric_mtf",
+      "name": "geometric MTF of the ray spot",
+      "version": "1.2",
+      "assumptions": [
+        "|sum over the rays of p_j exp(-i 2 pi f (r_j - r_c))|, p_j each ray's share of the irradiance on the pupil"
+      ],
+      "validity": [
+        {
+          "parameter": "opd_rms_waves",
+          "unit": null,
+          "minimum": 1.0,
+          "maximum": null,
+          "observed": 1.19538344,
+          "within": true
+        }
+      ]
+    },
+    {
+      "model_id": "SRC1#0.diffraction",
+      "name": "vector Debye integral over the traced rays",
+      "version": "1.2",
+      "assumptions": [
+        "a point object lights the pupil uniformly; each ray carries the irradiance its field keeps to the plane (a sample's amplitude, the interfaces' and coatings' transmissions); a partially polarized or unpolarized source's two components are mutually incoherent: each component's pupil field is propagated to the image apart and their point spread functions add in irradiance, each by its share of the light that reaches the plane",
+        "each ray stands for the solid angle its tube fills in image space and carries the phase of its optical path difference",
+        "Debye integral over the rays' directions about the reference point (Fresnel number of the converging cone much above 1)",
+        "monochromatic: one spectral line per field",
+        "unpolarized light: two orthogonal pupil polarizations, each carried as by an aplanatic lens, added in irradiance"
+      ],
+      "validity": [
+        {
+          "parameter": "neighbour_phase_step_rad",
+          "unit": null,
+          "minimum": null,
+          "maximum": 3.141592653589793,
+          "observed": 0.444058914,
+          "within": true
+        },
+        {
+          "parameter": "window_half_width_over_ray_period",
+          "unit": null,
+          "minimum": null,
+          "maximum": 0.5,
+          "observed": 0.348685551,
+          "within": true
+        },
+        {
+          "parameter": "window_light_share",
+          "unit": null,
+          "minimum": 0.95,
+          "maximum": null,
+          "observed": 0.999220983,
+          "within": true
+        },
+        {
+          "parameter": "image_space_na",
+          "unit": null,
+          "minimum": null,
+          "maximum": null,
+          "observed": 0.207302391,
+          "within": true
+        }
+      ]
+    },
+    {
+      "model_id": "SRC2#0.geometric_mtf",
+      "name": "geometric MTF of the ray spot",
+      "version": "1.2",
+      "assumptions": [
+        "|sum over the rays of p_j exp(-i 2 pi f (r_j - r_c))|, p_j each ray's share of the irradiance on the pupil"
+      ],
+      "validity": [
+        {
+          "parameter": "opd_rms_waves",
+          "unit": null,
+          "minimum": 1.0,
+          "maximum": null,
+          "observed": 0.460645236,
+          "within": false
+        }
+      ]
+    },
+    {
+      "model_id": "SRC2#0.diffraction",
+      "name": "vector Debye integral over the traced rays",
+      "version": "1.2",
+      "assumptions": [
+        "a point object lights the pupil uniformly; each ray carries the irradiance its field keeps to the plane (a sample's amplitude, the interfaces' and coatings' transmissions); a partially polarized or unpolarized source's two components are mutually incoherent: each component's pupil field is propagated to the image apart and their point spread functions add in irradiance, each by its share of the light that reaches the plane",
+        "each ray stands for the solid angle its tube fills in image space and carries the phase of its optical path difference",
+        "Debye integral over the rays' directions about the reference point (Fresnel number of the converging cone much above 1)",
+        "monochromatic: one spectral line per field",
+        "unpolarized light: two orthogonal pupil polarizations, each carried as by an aplanatic lens, added in irradiance"
+      ],
+      "validity": [
+        {
+          "parameter": "neighbour_phase_step_rad",
+          "unit": null,
+          "minimum": null,
+          "maximum": 3.141592653589793,
+          "observed": 0.321883598,
+          "within": true
+        },
+        {
+          "parameter": "window_half_width_over_ray_period",
+          "unit": null,
+          "minimum": null,
+          "maximum": 0.5,
+          "observed": 0.343987358,
+          "within": true
+        },
+        {
+          "parameter": "window_light_share",
+          "unit": null,
+          "minimum": 0.95,
+          "maximum": null,
+          "observed": 0.998841738,
+          "within": true
+        },
+        {
+          "parameter": "image_space_na",
+          "unit": null,
+          "minimum": null,
+          "maximum": null,
+          "observed": 0.208212387,
+          "within": true
+        }
+      ]
+    }
+  ],
+  "quantities": [
+    {
+      "quantity_id": "SRC0#0.image_space_na",
+      "name": "numerical aperture of the traced image-space cone",
+      "unit": null,
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC0",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": 0.208542523,
+      "values_ref": null,
+      "interval": null,
+      "basis": "geometric_ray_bundle",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": 0.208535393,
+        "fine": 0.208542523,
+        "difference": 7.12981711e-06,
+        "resolution": 7.12981711e-06,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC0#0.geometric_spot_rms_radius",
+      "name": "RMS radius of the ray spot about its centroid",
+      "unit": "um",
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC0",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": 4.05460094,
+      "values_ref": null,
+      "interval": null,
+      "basis": "geometric_ray_bundle",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": 4.05459798,
+        "fine": 4.05460094,
+        "difference": 2.96865923e-06,
+        "resolution": 2.96865923e-06,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC0#0.opd_rms_waves",
+      "name": "RMS optical path difference on the reference sphere",
+      "unit": "waves",
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC0",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": 0.327561092,
+      "values_ref": null,
+      "interval": null,
+      "basis": "geometric_ray_bundle",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": 0.327554509,
+        "fine": 0.327561092,
+        "difference": 6.58340417e-06,
+        "resolution": 6.58340417e-06,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC0#0.opd_pv_waves",
+      "name": "peak-to-valley optical path difference on the reference sphere",
+      "unit": "waves",
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC0",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": 0.906239843,
+      "values_ref": null,
+      "interval": null,
+      "basis": "geometric_ray_bundle",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": 0.906239843,
+        "fine": 0.906239843,
+        "difference": 1.93489225e-10,
+        "resolution": 9.06239843e-09,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC0#0.geometric_mtf_tangential",
+      "name": "geometric MTF, tangential",
+      "unit": null,
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC0",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "OUT_OF_MODEL_SCOPE",
+      "origin": "MODELED",
+      "value": null,
+      "values_ref": "SRC0#0.geometric_mtf_tangential",
+      "interval": null,
+      "basis": "SRC0#0.geometric_mtf",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": null,
+        "fine": null,
+        "difference": 4.81556282e-05,
+        "resolution": null,
+        "converged": true
+      },
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "message": "diffraction sets the MTF here: read mtf_tangential",
+      "missing": [],
+      "depends_on": [
+        "opd_rms_waves"
+      ],
+      "source": null,
+      "value_basis": {
+        "kind": "ESTIMATE",
+        "validity": [
+          {
+            "parameter": "opd_rms_waves",
+            "unit": null,
+            "minimum": 1.0,
+            "maximum": null,
+            "observed": 0.327561092,
+            "within": false
+          }
+        ]
+      }
+    },
+    {
+      "quantity_id": "SRC0#0.geometric_mtf_sagittal",
+      "name": "geometric MTF, sagittal",
+      "unit": null,
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC0",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "OUT_OF_MODEL_SCOPE",
+      "origin": "MODELED",
+      "value": null,
+      "values_ref": "SRC0#0.geometric_mtf_sagittal",
+      "interval": null,
+      "basis": "SRC0#0.geometric_mtf",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": null,
+        "fine": null,
+        "difference": 5.23372592e-05,
+        "resolution": null,
+        "converged": true
+      },
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "message": "diffraction sets the MTF here: read mtf_sagittal",
+      "missing": [],
+      "depends_on": [
+        "opd_rms_waves"
+      ],
+      "source": null,
+      "value_basis": {
+        "kind": "ESTIMATE",
+        "validity": [
+          {
+            "parameter": "opd_rms_waves",
+            "unit": null,
+            "minimum": 1.0,
+            "maximum": null,
+            "observed": 0.327561092,
+            "within": false
+          }
+        ]
+      }
+    },
+    {
+      "quantity_id": "SRC0#0.strehl_ratio",
+      "name": "peak of the point spread function over that of the same rays without their phase",
+      "unit": null,
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC0",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": 0.0603189783,
+      "values_ref": null,
+      "interval": null,
+      "basis": "SRC0#0.diffraction",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": 0.0602873553,
+        "fine": 0.0603189783,
+        "difference": 3.16230479e-05,
+        "resolution": 3.16230479e-05,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC0#0.mtf_tangential",
+      "name": "mtf, tangential (null beyond the map's Nyquist frequency)",
+      "unit": null,
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC0",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": null,
+      "values_ref": "SRC0#0.mtf_tangential",
+      "interval": null,
+      "basis": "SRC0#0.diffraction",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": null,
+        "fine": null,
+        "difference": 0.000196682205,
+        "resolution": null,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC0#0.mtf_sagittal",
+      "name": "mtf, sagittal (null beyond the map's Nyquist frequency)",
+      "unit": null,
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC0",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": null,
+      "values_ref": "SRC0#0.mtf_sagittal",
+      "interval": null,
+      "basis": "SRC0#0.diffraction",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": null,
+        "fine": null,
+        "difference": 0.000205599222,
+        "resolution": null,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC0#0.diffraction_limited_mtf_tangential",
+      "name": "diffraction limited mtf, tangential (null beyond the map's Nyquist frequency)",
+      "unit": null,
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC0",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": null,
+      "values_ref": "SRC0#0.diffraction_limited_mtf_tangential",
+      "interval": null,
+      "basis": "SRC0#0.diffraction",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": null,
+        "fine": null,
+        "difference": 0.00014874028,
+        "resolution": null,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC0#0.diffraction_limited_mtf_sagittal",
+      "name": "diffraction limited mtf, sagittal (null beyond the map's Nyquist frequency)",
+      "unit": null,
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC0",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": null,
+      "values_ref": "SRC0#0.diffraction_limited_mtf_sagittal",
+      "interval": null,
+      "basis": "SRC0#0.diffraction",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": null,
+        "fine": null,
+        "difference": 0.000158845099,
+        "resolution": null,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC0#0.encircled_radius_50",
+      "name": "radius around the peak holding 50 % of the light",
+      "unit": "um",
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC0",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": 3.97746505,
+      "values_ref": null,
+      "interval": null,
+      "basis": "SRC0#0.diffraction",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": 3.97758083,
+        "fine": 3.97746505,
+        "difference": 0.000115775038,
+        "resolution": 0.000115775038,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC0#0.encircled_radius_80",
+      "name": "radius around the peak holding 80 % of the light",
+      "unit": "um",
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC0",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": 6.6073359,
+      "values_ref": null,
+      "interval": null,
+      "basis": "SRC0#0.diffraction",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": 6.60801473,
+        "fine": 6.6073359,
+        "difference": 0.000678828656,
+        "resolution": 0.000678828656,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC0#0.diffraction_limited_encircled_radius_80",
+      "name": "radius holding 80 % of the light of the same rays without their phase",
+      "unit": "um",
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC0",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": 1.32604488,
+      "values_ref": null,
+      "interval": null,
+      "basis": "SRC0#0.diffraction",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": 1.3260638,
+        "fine": 1.32604488,
+        "difference": 1.89138518e-05,
+        "resolution": 1.89138518e-05,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC1#0.image_space_na",
+      "name": "numerical aperture of the traced image-space cone",
+      "unit": null,
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC1",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": 0.207302391,
+      "values_ref": null,
+      "interval": null,
+      "basis": "geometric_ray_bundle",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": 0.20728187,
+        "fine": 0.207302391,
+        "difference": 2.0521491e-05,
+        "resolution": 2.0521491e-05,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC1#0.geometric_spot_rms_radius",
+      "name": "RMS radius of the ray spot about its centroid",
+      "unit": "um",
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC1",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": 13.9353687,
+      "values_ref": null,
+      "interval": null,
+      "basis": "geometric_ray_bundle",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": 13.9341774,
+        "fine": 13.9353687,
+        "difference": 0.00119133449,
+        "resolution": 0.00119133449,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC1#0.opd_rms_waves",
+      "name": "RMS optical path difference on the reference sphere",
+      "unit": "waves",
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC1",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": 1.19538344,
+      "values_ref": null,
+      "interval": null,
+      "basis": "geometric_ray_bundle",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": 1.1956229,
+        "fine": 1.19538344,
+        "difference": 0.000239462763,
+        "resolution": 0.000239462763,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC1#0.opd_pv_waves",
+      "name": "peak-to-valley optical path difference on the reference sphere",
+      "unit": "waves",
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC1",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": 5.77675507,
+      "values_ref": null,
+      "interval": null,
+      "basis": "geometric_ray_bundle",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": 5.74685772,
+        "fine": 5.77675507,
+        "difference": 0.0298973537,
+        "resolution": 0.0298973537,
+        "converged": false
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC1#0.geometric_mtf_tangential",
+      "name": "geometric MTF, tangential",
+      "unit": null,
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC1",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": null,
+      "values_ref": "SRC1#0.geometric_mtf_tangential",
+      "interval": null,
+      "basis": "SRC1#0.geometric_mtf",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": null,
+        "fine": null,
+        "difference": 0.000136420275,
+        "resolution": null,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC1#0.geometric_mtf_sagittal",
+      "name": "geometric MTF, sagittal",
+      "unit": null,
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC1",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": null,
+      "values_ref": "SRC1#0.geometric_mtf_sagittal",
+      "interval": null,
+      "basis": "SRC1#0.geometric_mtf",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": null,
+        "fine": null,
+        "difference": 0.000163354079,
+        "resolution": null,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC1#0.strehl_ratio",
+      "name": "peak of the point spread function over that of the same rays without their phase",
+      "unit": null,
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC1",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": 0.0175230547,
+      "values_ref": null,
+      "interval": null,
+      "basis": "SRC1#0.diffraction",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": 0.0175336296,
+        "fine": 0.0175230547,
+        "difference": 1.05749237e-05,
+        "resolution": 1.05749237e-05,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC1#0.mtf_tangential",
+      "name": "mtf, tangential (null beyond the map's Nyquist frequency)",
+      "unit": null,
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC1",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": null,
+      "values_ref": "SRC1#0.mtf_tangential",
+      "interval": null,
+      "basis": "SRC1#0.diffraction",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": null,
+        "fine": null,
+        "difference": 0.000171832957,
+        "resolution": null,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC1#0.mtf_sagittal",
+      "name": "mtf, sagittal (null beyond the map's Nyquist frequency)",
+      "unit": null,
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC1",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": null,
+      "values_ref": "SRC1#0.mtf_sagittal",
+      "interval": null,
+      "basis": "SRC1#0.diffraction",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": null,
+        "fine": null,
+        "difference": 0.000114144884,
+        "resolution": null,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC1#0.diffraction_limited_mtf_tangential",
+      "name": "diffraction limited mtf, tangential (null beyond the map's Nyquist frequency)",
+      "unit": null,
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC1",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": null,
+      "values_ref": "SRC1#0.diffraction_limited_mtf_tangential",
+      "interval": null,
+      "basis": "SRC1#0.diffraction",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": null,
+        "fine": null,
+        "difference": 0.000166693399,
+        "resolution": null,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC1#0.diffraction_limited_mtf_sagittal",
+      "name": "diffraction limited mtf, sagittal (null beyond the map's Nyquist frequency)",
+      "unit": null,
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC1",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": null,
+      "values_ref": "SRC1#0.diffraction_limited_mtf_sagittal",
+      "interval": null,
+      "basis": "SRC1#0.diffraction",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": null,
+        "fine": null,
+        "difference": 0.000155417083,
+        "resolution": null,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC1#0.encircled_radius_50",
+      "name": "radius around the peak holding 50 % of the light",
+      "unit": "um",
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC1",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": 19.442187,
+      "values_ref": null,
+      "interval": null,
+      "basis": "SRC1#0.diffraction",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": 19.4516198,
+        "fine": 19.442187,
+        "difference": 0.00943273335,
+        "resolution": 0.00943273335,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC1#0.encircled_radius_80",
+      "name": "radius around the peak holding 80 % of the light",
+      "unit": "um",
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC1",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": 28.1037661,
+      "values_ref": null,
+      "interval": null,
+      "basis": "SRC1#0.diffraction",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": 28.1092851,
+        "fine": 28.1037661,
+        "difference": 0.00551904486,
+        "resolution": 0.00551904486,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC1#0.diffraction_limited_encircled_radius_80",
+      "name": "radius holding 80 % of the light of the same rays without their phase",
+      "unit": "um",
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC1",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": 1.34402602,
+      "values_ref": null,
+      "interval": null,
+      "basis": "SRC1#0.diffraction",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": 1.34404578,
+        "fine": 1.34402602,
+        "difference": 1.97615009e-05,
+        "resolution": 1.97615009e-05,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC2#0.image_space_na",
+      "name": "numerical aperture of the traced image-space cone",
+      "unit": null,
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC2",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": 0.208212387,
+      "values_ref": null,
+      "interval": null,
+      "basis": "geometric_ray_bundle",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": 0.208274229,
+        "fine": 0.208212387,
+        "difference": 6.18420094e-05,
+        "resolution": 6.18420094e-05,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC2#0.geometric_spot_rms_radius",
+      "name": "RMS radius of the ray spot about its centroid",
+      "unit": "um",
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC2",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": 9.29401075,
+      "values_ref": null,
+      "interval": null,
+      "basis": "geometric_ray_bundle",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": 9.29552231,
+        "fine": 9.29401075,
+        "difference": 0.00151155544,
+        "resolution": 0.00151155544,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC2#0.opd_rms_waves",
+      "name": "RMS optical path difference on the reference sphere",
+      "unit": "waves",
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC2",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": 0.460645236,
+      "values_ref": null,
+      "interval": null,
+      "basis": "geometric_ray_bundle",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": 0.460686061,
+        "fine": 0.460645236,
+        "difference": 4.08249722e-05,
+        "resolution": 4.08249722e-05,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC2#0.opd_pv_waves",
+      "name": "peak-to-valley optical path difference on the reference sphere",
+      "unit": "waves",
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC2",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": 1.75864874,
+      "values_ref": null,
+      "interval": null,
+      "basis": "geometric_ray_bundle",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": 1.75857772,
+        "fine": 1.75864874,
+        "difference": 7.1020292e-05,
+        "resolution": 7.1020292e-05,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC2#0.geometric_mtf_tangential",
+      "name": "geometric MTF, tangential",
+      "unit": null,
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC2",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "OUT_OF_MODEL_SCOPE",
+      "origin": "MODELED",
+      "value": null,
+      "values_ref": "SRC2#0.geometric_mtf_tangential",
+      "interval": null,
+      "basis": "SRC2#0.geometric_mtf",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": null,
+        "fine": null,
+        "difference": 8.75545938e-05,
+        "resolution": null,
+        "converged": true
+      },
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "message": "diffraction sets the MTF here: read mtf_tangential",
+      "missing": [],
+      "depends_on": [
+        "opd_rms_waves"
+      ],
+      "source": null,
+      "value_basis": {
+        "kind": "ESTIMATE",
+        "validity": [
+          {
+            "parameter": "opd_rms_waves",
+            "unit": null,
+            "minimum": 1.0,
+            "maximum": null,
+            "observed": 0.460645236,
+            "within": false
+          }
+        ]
+      }
+    },
+    {
+      "quantity_id": "SRC2#0.geometric_mtf_sagittal",
+      "name": "geometric MTF, sagittal",
+      "unit": null,
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC2",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "OUT_OF_MODEL_SCOPE",
+      "origin": "MODELED",
+      "value": null,
+      "values_ref": "SRC2#0.geometric_mtf_sagittal",
+      "interval": null,
+      "basis": "SRC2#0.geometric_mtf",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": null,
+        "fine": null,
+        "difference": 0.000371752482,
+        "resolution": null,
+        "converged": true
+      },
+      "reason": "GEOMETRIC_REGIME_NOT_MET",
+      "message": "diffraction sets the MTF here: read mtf_sagittal",
+      "missing": [],
+      "depends_on": [
+        "opd_rms_waves"
+      ],
+      "source": null,
+      "value_basis": {
+        "kind": "ESTIMATE",
+        "validity": [
+          {
+            "parameter": "opd_rms_waves",
+            "unit": null,
+            "minimum": 1.0,
+            "maximum": null,
+            "observed": 0.460645236,
+            "within": false
+          }
+        ]
+      }
+    },
+    {
+      "quantity_id": "SRC2#0.strehl_ratio",
+      "name": "peak of the point spread function over that of the same rays without their phase",
+      "unit": null,
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC2",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": 0.122820409,
+      "values_ref": null,
+      "interval": null,
+      "basis": "SRC2#0.diffraction",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": 0.122873491,
+        "fine": 0.122820409,
+        "difference": 5.30812273e-05,
+        "resolution": 5.30812273e-05,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC2#0.mtf_tangential",
+      "name": "mtf, tangential (null beyond the map's Nyquist frequency)",
+      "unit": null,
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC2",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": null,
+      "values_ref": "SRC2#0.mtf_tangential",
+      "interval": null,
+      "basis": "SRC2#0.diffraction",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": null,
+        "fine": null,
+        "difference": 0.000123805677,
+        "resolution": null,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC2#0.mtf_sagittal",
+      "name": "mtf, sagittal (null beyond the map's Nyquist frequency)",
+      "unit": null,
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC2",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": null,
+      "values_ref": "SRC2#0.mtf_sagittal",
+      "interval": null,
+      "basis": "SRC2#0.diffraction",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": null,
+        "fine": null,
+        "difference": 0.000346471625,
+        "resolution": null,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC2#0.diffraction_limited_mtf_tangential",
+      "name": "diffraction limited mtf, tangential (null beyond the map's Nyquist frequency)",
+      "unit": null,
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC2",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": null,
+      "values_ref": "SRC2#0.diffraction_limited_mtf_tangential",
+      "interval": null,
+      "basis": "SRC2#0.diffraction",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": null,
+        "fine": null,
+        "difference": 0.000136761693,
+        "resolution": null,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC2#0.diffraction_limited_mtf_sagittal",
+      "name": "diffraction limited mtf, sagittal (null beyond the map's Nyquist frequency)",
+      "unit": null,
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC2",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": null,
+      "values_ref": "SRC2#0.diffraction_limited_mtf_sagittal",
+      "interval": null,
+      "basis": "SRC2#0.diffraction",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": null,
+        "fine": null,
+        "difference": 0.000266835014,
+        "resolution": null,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC2#0.encircled_radius_50",
+      "name": "radius around the peak holding 50 % of the light",
+      "unit": "um",
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC2",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": 6.87355958,
+      "values_ref": null,
+      "interval": null,
+      "basis": "SRC2#0.diffraction",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": 6.87530361,
+        "fine": 6.87355958,
+        "difference": 0.00174403249,
+        "resolution": 0.00174403249,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC2#0.encircled_radius_80",
+      "name": "radius around the peak holding 80 % of the light",
+      "unit": "um",
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC2",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": 11.8064569,
+      "values_ref": null,
+      "interval": null,
+      "basis": "SRC2#0.diffraction",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": 11.8047059,
+        "fine": 11.8064569,
+        "difference": 0.00175095374,
+        "resolution": 0.00175095374,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    },
+    {
+      "quantity_id": "SRC2#0.diffraction_limited_encircled_radius_80",
+      "name": "radius holding 80 % of the light of the same rays without their phase",
+      "unit": "um",
+      "scope": {
+        "configuration_id": null,
+        "observation_id": "image_plane",
+        "field_id": null,
+        "source_id": "SRC2",
+        "path_id": null,
+        "surface_id": null,
+        "wavelength_nm": 587.5618
+      },
+      "state": "KNOWN",
+      "origin": "MODELED",
+      "value": 1.96628343,
+      "values_ref": null,
+      "interval": null,
+      "basis": "SRC2#0.diffraction",
+      "convergence": {
+        "method": "REFINEMENT",
+        "parameter": "launch_grid 256 doubled",
+        "coarse": 1.96650167,
+        "fine": 1.96628343,
+        "difference": 0.000218236892,
+        "resolution": 0.000218236892,
+        "converged": true
+      },
+      "reason": null,
+      "message": "",
+      "missing": [],
+      "depends_on": [],
+      "source": null
+    }
+  ],
+  "arrays": {
+    "conventions": {
+      "plane": "the point spread function, the spot and the MTF lie on the plane normal to the image-space axis (the rays' mean direction) through the reference point",
+      "axes": "tangential: the projection of the image plane's normal on that plane (the image plane's u axis on axis); sagittal: axis x tangential",
+      "units": "um for positions, cycles/mm for frequencies, waves at the field's wavelength for the wavefront, 1/um^2 for the normalized point spread function"
+    },
+    "SRC0#0.rays": {
+      "launch_radius_beam_radii": 8.8542,
+      "pupil": "LAUNCH_DISC",
+      "pupil_search_radii": null,
+      "launch_grid": [
+        256,
+        512
+      ],
+      "rays_arrived": [
+        51468,
+        205892
+      ],
+      "rays_without_neighbours": [
+        0,
+        0
+      ],
+      "path_id": "SRC0#0",
+      "crossing_index": 0,
+      "reference_point_mm": [
+        129.231438,
+        1.47276079e-20,
+        9.7060665e-19
+      ],
+      "image_axis": [
+        1.0,
+        -2.91843469e-19,
+        6.782279e-18
+      ],
+      "tangential_axis": [
+        2.91843469e-19,
+        1.0,
+        1.97936383e-36
+      ],
+      "reference_sphere_radius_mm": 27.9959338,
+      "reference_sphere": "INFINITY",
+      "last_surface_sphere_radius_mm": 27.9959338,
+      "opd_rms_waves_on_last_surface_sphere": 0.327466934
+    },
+    "SRC0#0.frequencies_cyc_per_mm": [
+      10.0,
+      20.0,
+      30.0,
+      40.0,
+      50.0,
+      60.0,
+      80.0,
+      100.0
+    ],
+    "SRC0#0.geometric_mtf_tangential": [
+      0.983742996,
+      0.936268417,
+      0.861336651,
+      0.764799467,
+      0.654024642,
+      0.537180575,
+      0.317314452,
+      0.158138688
+    ],
+    "SRC0#0.geometric_mtf_sagittal": [
+      0.984022494,
+      0.93735653,
+      0.86367622,
+      0.768700323,
+      0.659631719,
+      0.544460309,
+      0.327173442,
+      0.168781461
+    ],
+    "SRC0#0.psf": {
+      "window_light_share": [
+        1.00252592,
+        0.999255956
+      ],
+      "half_width_um": 250.0,
+      "samples": 512,
+      "peak_um": [
+        3.61351363e-09,
+        0.0
+      ],
+      "mtf_nyquist_cyc_per_mm": 512.0,
+      "cutoff_cyc_per_mm": 709.857323,
+      "kernel": "vector"
+    },
+    "SRC0#0.mtf_tangential": [
+      0.965643655,
+      0.901452638,
+      0.81200233,
+      0.703934984,
+      0.585444435,
+      0.465205691,
+      0.249985766,
+      0.0995215923
+    ],
+    "SRC0#0.mtf_sagittal": [
+      0.966285497,
+      0.903172971,
+      0.815143745,
+      0.708701705,
+      0.591865378,
+      0.473123661,
+      0.259825762,
+      0.109444995
+    ],
+    "SRC0#0.diffraction_limited_mtf_tangential": [
+      0.981615994,
+      0.963266432,
+      0.94496286,
+      0.926702384,
+      0.908501034,
+      0.89035164,
+      0.854203984,
+      0.818266259
+    ],
+    "SRC0#0.diffraction_limited_mtf_sagittal": [
+      0.981988258,
+      0.963958348,
+      0.945923709,
+      0.927884582,
+      0.909860288,
+      0.891845754,
+      0.855849726,
+      0.819921642
+    ],
+    "SRC0#0.encircled_energy": {
+      "radius_um": [
+        0.0,
+        7.8125,
+        15.625,
+        23.4375,
+        31.25,
+        39.0625,
+        46.875,
+        54.6875,
+        62.5,
+        70.3125,
+        78.125,
+        85.9375,
+        93.75,
+        101.5625,
+        109.375,
+        117.1875,
+        125.0,
+        132.8125,
+        140.625,
+        148.4375,
+        156.25,
+        164.0625,
+        171.875,
+        179.6875,
+        187.5,
+        195.3125,
+        203.125,
+        210.9375,
+        218.75,
+        226.5625,
+        234.375,
+        242.1875,
+        250.0
+      ],
+      "fraction": [
+        0.0,
+        1.02026145,
+        1.06626267,
+        1.07275879,
+        1.07582768,
+        1.0777979,
+        1.07898074,
+        1.07998838,
+        1.08062991,
+        1.08117516,
+        1.08157131,
+        1.08190457,
+        1.08224057,
+        1.08245462,
+        1.08267371,
+        1.08285228,
+        1.08303061,
+        1.08320802,
+        1.08332622,
+        1.08343968,
+        1.08355001,
+        1.08368406,
+        1.08377484,
+        1.08386638,
+        1.08393604,
+        1.08401403,
+        1.08410222,
+        1.08419632,
+        1.08426117,
+        1.08431294,
+        1.08438141,
+        1.08446129,
+        1.0845382
+      ],
+      "diffraction_limited_fraction": [
+        0.0,
+        1.41248689,
+        1.42960544,
+        1.43597581,
+        1.43894527,
+        1.44086534,
+        1.44202254,
+        1.44301609,
+        1.44364937,
+        1.44418944,
+        1.44458231,
+        1.44491334,
+        1.44524767,
+        1.44546063,
+        1.44567887,
+        1.44585681,
+        1.44603465,
+        1.44621164,
+        1.44632955,
+        1.44644276,
+        1.4465529,
+        1.44668677,
+        1.44677741,
+        1.44686885,
+        1.44693841,
+        1.44701632,
+        1.44710444,
+        1.44719847,
+        1.44726327,
+        1.447315,
+        1.44738342,
+        1.44746326,
+        1.44754014
+      ]
+    },
+    "SRC1#0.rays": {
+      "launch_radius_beam_radii": 8.8542,
+      "pupil": "LAUNCH_DISC",
+      "pupil_search_radii": null,
+      "launch_grid": [
+        256,
+        512
+      ],
+      "rays_arrived": [
+        51468,
+        205892
+      ],
+      "rays_without_neighbours": [
+        0,
+        0
+      ],
+      "path_id": "SRC1#0",
+      "crossing_index": 0,
+      "reference_point_mm": [
+        129.231438,
+        -6.67629088e-20,
+        -10.430284
+      ],
+      "image_axis": [
+        0.996581241,
+        -5.45585978e-20,
+        -0.0826185814
+      ],
+      "tangential_axis": [
+        0.0826185814,
+        6.58109523e-19,
+        0.996581241
+      ],
+      "reference_sphere_radius_mm": 26.9379543,
+      "reference_sphere": "INFINITY",
+      "last_surface_sphere_radius_mm": 26.9379543,
+      "opd_rms_waves_on_last_surface_sphere": 1.19578697
+    },
+    "SRC1#0.frequencies_cyc_per_mm": [
+      10.0,
+      20.0,
+      30.0,
+      40.0,
+      50.0,
+      60.0,
+      80.0,
+      100.0
+    ],
+    "SRC1#0.geometric_mtf_tangential": [
+      0.860862373,
+      0.678509969,
+      0.486997138,
+      0.318787152,
+      0.223519209,
+      0.211152204,
+      0.17575773,
+      0.0907383564
+    ],
+    "SRC1#0.geometric_mtf_sagittal": [
+      0.814758653,
+      0.399356768,
+      0.0451787125,
+      0.0624488469,
+      0.0245667107,
+      0.120554147,
+      0.0288183701,
+      0.0167407325
+    ],
+    "SRC1#0.psf": {
+      "window_light_share": [
+        1.00244042,
+        0.999220983
+      ],
+      "half_width_um": 250.0,
+      "samples": 512,
+      "peak_um": [
+        0.309945774,
+        15.8886727
+      ],
+      "mtf_nyquist_cyc_per_mm": 512.0,
+      "cutoff_cyc_per_mm": 705.636041,
+      "kernel": "vector"
+    },
+    "SRC1#0.mtf_tangential": [
+      0.858126848,
+      0.66988067,
+      0.500482646,
+      0.349142686,
+      0.247476116,
+      0.202375869,
+      0.161677572,
+      0.106869505
+    ],
+    "SRC1#0.mtf_sagittal": [
+      0.797871596,
+      0.376249869,
+      0.0312510105,
+      0.0597465454,
+      0.0397719619,
+      0.140450239,
+      0.0318037275,
+      0.0240051853
+    ],
+    "SRC1#0.diffraction_limited_mtf_tangential": [
+      0.981643738,
+      0.963281461,
+      0.944925033,
+      0.926574023,
+      0.908249009,
+      0.889939554,
+      0.853378966,
+      0.816911387
+    ],
+    "SRC1#0.diffraction_limited_mtf_sagittal": [
+      0.981418259,
+      0.962879892,
+      0.944393741,
+      0.925957411,
+      0.907586812,
+      0.889273116,
+      0.852814666,
+      0.816583539
+    ],
+    "SRC1#0.encircled_energy": {
+      "radius_um": [
+        0.0,
+        7.8125,
+        15.625,
+        23.4375,
+        31.25,
+        39.0625,
+        46.875,
+        54.6875,
+        62.5,
+        70.3125,
+        78.125,
+        85.9375,
+        93.75,
+        101.5625,
+        109.375,
+        117.1875,
+        125.0,
+        132.8125,
+        140.625,
+        148.4375,
+        156.25,
+        164.0625,
+        171.875,
+        179.6875,
+        187.5,
+        195.3125,
+        203.125,
+        210.9375,
+        218.75,
+        226.5625,
+        234.375,
+        242.1875,
+        250.0
+      ],
+      "fraction": [
+        0.0,
+        0.197694707,
+        0.381159306,
+        0.640416847,
+        0.867595323,
+        0.927866948,
+        0.934178895,
+        0.938031857,
+        0.940104088,
+        0.9413741,
+        0.942213318,
+        0.942801931,
+        0.943229308,
+        0.943584182,
+        0.943879746,
+        0.94411428,
+        0.944320455,
+        0.944502011,
+        0.944657329,
+        0.944792356,
+        0.944919289,
+        0.945026245,
+        0.945127193,
+        0.945215495,
+        0.945305086,
+        0.945381888,
+        0.945449719,
+        0.945513485,
+        0.945577121,
+        0.945638733,
+        0.945695508,
+        0.945745733,
+        0.945790421
+      ],
+      "diffraction_limited_fraction": [
+        0.0,
+        1.3850225,
+        1.40270789,
+        1.408895,
+        1.41215045,
+        1.41411304,
+        1.41533419,
+        1.41615863,
+        1.41686282,
+        1.41734342,
+        1.41777234,
+        1.41814516,
+        1.41845693,
+        1.4186967,
+        1.41892402,
+        1.41910675,
+        1.41926579,
+        1.41942178,
+        1.41955357,
+        1.41966559,
+        1.41978795,
+        1.41991695,
+        1.42002622,
+        1.42009442,
+        1.42016467,
+        1.42023628,
+        1.42031056,
+        1.42038547,
+        1.42046314,
+        1.4205143,
+        1.42057311,
+        1.42064051,
+        1.4206982
+      ]
+    },
+    "SRC2#0.rays": {
+      "launch_radius_beam_radii": 8.8542,
+      "pupil": "APERTURE",
+      "pupil_search_radii": null,
+      "launch_grid": [
+        256,
+        512
+      ],
+      "rays_arrived": [
+        28834,
+        115344
+      ],
+      "rays_without_neighbours": [
+        0,
+        0
+      ],
+      "path_id": "SRC2#0",
+      "crossing_index": 0,
+      "reference_point_mm": [
+        129.231438,
+        -4.8126605e-21,
+        -21.1921651
+      ],
+      "image_axis": [
+        0.968544937,
+        2.02174406e-19,
+        -0.248838711
+      ],
+      "tangential_axis": [
+        0.248838711,
+        -7.86915334e-19,
+        0.968544937
+      ],
+      "reference_sphere_radius_mm": 22.8938172,
+      "reference_sphere": "INFINITY",
+      "last_surface_sphere_radius_mm": 22.8938172,
+      "opd_rms_waves_on_last_surface_sphere": 0.45992751
+    },
+    "SRC2#0.frequencies_cyc_per_mm": [
+      10.0,
+      20.0,
+      30.0,
+      40.0,
+      50.0,
+      60.0,
+      80.0,
+      100.0
+    ],
+    "SRC2#0.geometric_mtf_tangential": [
+      0.907544507,
+      0.737079528,
+      0.647671423,
+      0.596602283,
+      0.524325406,
+      0.470251577,
+      0.374828652,
+      0.301685195
+    ],
+    "SRC2#0.geometric_mtf_sagittal": [
+      0.938317021,
+      0.80281188,
+      0.644226698,
+      0.460635017,
+      0.266228459,
+      0.0843098572,
+      0.181892339,
+      0.258990264
+    ],
+    "SRC2#0.psf": {
+      "window_light_share": [
+        1.00297668,
+        0.998841738
+      ],
+      "half_width_um": 250.0,
+      "samples": 512,
+      "peak_um": [
+        3.97936898,
+        -3.75868328
+      ],
+      "mtf_nyquist_cyc_per_mm": 512.0,
+      "cutoff_cyc_per_mm": 708.733572,
+      "kernel": "vector"
+    },
+    "SRC2#0.mtf_tangential": [
+      0.885361587,
+      0.71579742,
+      0.606580582,
+      0.553303303,
+      0.511768309,
+      0.467643674,
+      0.389299368,
+      0.33515928
+    ],
+    "SRC2#0.mtf_sagittal": [
+      0.925483733,
+      0.789919228,
+      0.629567483,
+      0.455888838,
+      0.281303493,
+      0.12008222,
+      0.119901891,
+      0.226485413
+    ],
+    "SRC2#0.diffraction_limited_mtf_tangential": [
+      0.966888635,
+      0.933781973,
+      0.900798671,
+      0.867950399,
+      0.835241457,
+      0.802736865,
+      0.73833383,
+      0.674951035
+    ],
+    "SRC2#0.diffraction_limited_mtf_sagittal": [
+      0.980292459,
+      0.960705997,
+      0.941179825,
+      0.921682606,
+      0.902260438,
+      0.882899655,
+      0.844326553,
+      0.806017709
+    ],
+    "SRC2#0.encircled_energy": {
+      "radius_um": [
+        0.0,
+        7.8125,
+        15.625,
+        23.4375,
+        31.25,
+        39.0625,
+        46.875,
+        54.6875,
+        62.5,
+        70.3125,
+        78.125,
+        85.9375,
+        93.75,
+        101.5625,
+        109.375,
+        117.1875,
+        125.0,
+        132.8125,
+        140.625,
+        148.4375,
+        156.25,
+        164.0625,
+        171.875,
+        179.6875,
+        187.5,
+        195.3125,
+        203.125,
+        210.9375,
+        218.75,
+        226.5625,
+        234.375,
+        242.1875,
+        250.0
+      ],
+      "fraction": [
+        0.0,
+        0.58523493,
+        0.876950508,
+        0.962881996,
+        0.993582032,
+        1.00586703,
+        1.01153638,
+        1.01425384,
+        1.01599622,
+        1.01723298,
+        1.01798938,
+        1.01855944,
+        1.01907938,
+        1.01949873,
+        1.01984084,
+        1.02011071,
+        1.02033734,
+        1.0205366,
+        1.02071594,
+        1.02089763,
+        1.02107811,
+        1.02122296,
+        1.02133932,
+        1.02143851,
+        1.02154898,
+        1.02165009,
+        1.02175805,
+        1.02185663,
+        1.0219433,
+        1.02203473,
+        1.02213055,
+        1.02220754,
+        1.02228455
+      ],
+      "diffraction_limited_fraction": [
+        0.0,
+        0.870473984,
+        0.894496283,
+        0.903524778,
+        0.907711494,
+        0.910912298,
+        0.912643274,
+        0.913982338,
+        0.91495043,
+        0.915471592,
+        0.916170133,
+        0.916738177,
+        0.917266945,
+        0.917645775,
+        0.917868889,
+        0.918203772,
+        0.918471786,
+        0.918671735,
+        0.918889109,
+        0.919072841,
+        0.919227763,
+        0.919352272,
+        0.919489819,
+        0.919664994,
+        0.919798325,
+        0.919923652,
+        0.92003202,
+        0.920121864,
+        0.920224367,
+        0.920296893,
+        0.92039979,
+        0.92049512,
+        0.9205656
+      ]
+    }
+  },
+  "completeness": null,
+  "issues": []
+}

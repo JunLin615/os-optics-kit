@@ -116,5 +116,7 @@ python figures.py run --out images
 由 `os-optics-kit cases images sonnar-telephoto-lens` 按 `images.json` 中的记录原样重新渲染）。`figures.py` 用同一条
 `results imaging` 调用从这次运行画出弥散斑图与 MTF 图（matplotlib 随
 `pip install "os-optics-kit[plot]"` 安装）。
+同一组曲线连同其状态写成表格，并为每个视场和波长各画一张图：
+`os-optics-kit mtf run --monitor image_plane --request imaging-request.json --out mtf`。
 
 `os-optics-kit cases verify sonnar-telephoto-lens` 会重跑并把目标评估与 `expected.json` 比对。
